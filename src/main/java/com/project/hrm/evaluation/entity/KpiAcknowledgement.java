@@ -13,7 +13,7 @@ import java.util.UUID;
 public class KpiAcknowledgement {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID ackId;
 
     @ManyToOne
