@@ -10,7 +10,7 @@ import java.util.UUID;
 public class KpiLibrary {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "lib_id")
     private UUID libId;
 
