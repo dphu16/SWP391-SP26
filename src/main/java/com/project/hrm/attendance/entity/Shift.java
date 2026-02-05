@@ -16,7 +16,7 @@ public class Shift {
     @Column(name = "shift_id")
     private UUID shiftId;
 
-    @Column(name = "shift_name", nullable = false)
+    @Column(name = "shift_name")
     private String shiftName;
 
     @Column(name = "start_time", nullable = false)
@@ -30,7 +30,4 @@ public class Shift {
 
     @Column(name = "break_end")
     private LocalTime breakEnd;
-
-    @Column(name = "is_active")
-    private Boolean isActive = true;
 }

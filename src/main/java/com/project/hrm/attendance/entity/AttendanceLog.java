@@ -2,6 +2,7 @@ package com.project.hrm.attendance.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
@@ -33,13 +34,15 @@ public class AttendanceLog {
     @Column(name = "check_out")
     private LocalTime checkOut;
 
-    @Column(name = "ot_hours")
-    private Double otHours;
-
-    @Column(name = "working_hours")
-    private Double workingHours;
-
     @Column(length = 20)
     private String status;
+
+
+    @Column(name = "working_hours")
+    private BigDecimal workingHours;
+
+    @Column(name = "ot_hours")
+    private BigDecimal otHours;
+
 
 }
