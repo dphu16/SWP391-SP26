@@ -1,7 +1,8 @@
 package com.project.hrm.module.corehr.entity;
 
+import com.project.hrm.module.corehr.enums.ChangeLogAction;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -12,7 +13,10 @@ import java.util.UUID;
 @Entity
 @Table(name = "system_change_logs")
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class SystemChangeLog {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "log_id")
@@ -24,18 +28,22 @@ public class SystemChangeLog {
     @Column(name = "record_id", nullable = false)
     private UUID recordId;
 
-    @Column(name = "action_type", nullable = false, length = 10)
-    private String actionType; // Hoặc dùng Enum nếu muốn (INSERT, UPDATE)
+    @Enumerated(EnumType.STRING)
+    private ChangeLogAction action;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "changed_by")
     private User changedBy;
 
     @CreationTimestamp
-    @Column(name = "change_date")
-    private OffsetDateTime changeDate;
+    @Column(name = "changed_at")
+    private OffsetDateTime changedAt;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "changes", columnDefinition = "jsonb")
-    private Map<String, Object> changes;
+    @Column(name = "old_value", columnDefinition = "jsonb")
+    private Map<String, Object> oldValue;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "new_value", columnDefinition = "jsonb")
+    private Map<String, Object> newValue;
 }
