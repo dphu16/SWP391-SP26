@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "kpi_acknowledgements")
@@ -12,12 +14,21 @@ public class KpiAcknowledgement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long ackId;
+    private UUID ackId;
 
-    private Long goalId;
-    private Long employeeId;
-    private String status;
-    private String rejectReason;
-    private LocalDateTime confirmedAt;
+    @ManyToOne
+    @JoinColumn(name = "goal_id")
+    private EmployeeGoal  goalID;
+
+    @ManyToOne
+    @JoinColumn(name = "employee_id")
+    private Employee employeeId;
+
+    @Column(name = "is_confirmed")
+    private Boolean status = false;
+
+    @Column(name = "confirmed_at")
+    private OffsetDateTime confirmedAt;
+
 }
 
