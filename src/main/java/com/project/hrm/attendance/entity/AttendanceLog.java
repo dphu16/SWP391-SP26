@@ -33,14 +33,8 @@ public class AttendanceLog {
     @Column(name = "check_out")
     private LocalTime checkOut;
 
-    @Column(name = "late_minutes")
-    private Integer lateMinutes;
-
-    @Column(name = "early_leave_minutes")
-    private Integer earlyLeaveMinutes;
-
-    @Column(name = "ot_minutes")
-    private Integer otMinutes;
+    @Column(name = "ot_hours")
+    private Double otHours;
 
     @Column(name = "working_hours")
     private Double workingHours;
@@ -48,6 +42,4 @@ public class AttendanceLog {
     @Column(length = 20)
     private String status;
 
-    @Column(name = "hrm_note", columnDefinition = "TEXT")
-    private String hrmNote;
 }
