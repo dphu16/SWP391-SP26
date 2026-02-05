@@ -1,9 +1,7 @@
 package com.project.hrm.recruitment.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.project.hrm.recruitment.enums.JobStatus;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -18,6 +16,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "job_requisitions")
 public class JobRequisition {
+
     @Id
     @ColumnDefault("uuid_generate_v4()")
     @Column(name = "req_id", nullable = false)
@@ -32,10 +31,11 @@ public class JobRequisition {
     @Column(name = "quantity")
     private Integer quantity;
 
-    @Size(max = 20)
+    @NotNull
+    @Enumerated(EnumType.STRING)
     @ColumnDefault("'OPEN'")
     @Column(name = "status", length = 20)
-    private String status;
+    private JobStatus status;
 
     @Column(name = "description", length = Integer.MAX_VALUE)
     private String description;
@@ -43,6 +43,4 @@ public class JobRequisition {
     @ColumnDefault("now()")
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
-
-
 }
