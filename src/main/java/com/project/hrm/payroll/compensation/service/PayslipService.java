@@ -17,25 +17,25 @@ public class PayslipService {
     private final PayslipRepository payslipRepository;
     private final SalaryCalculationService salaryCalculationService;
 
-//    public Payslip createPayslip(UUID employeeId, UUID periodId) {
-//
-//        BigDecimal gross =
-//                salaryCalculationService.calculateGrossSalary(employeeId);
-//
-//        BigDecimal deductions = BigDecimal.ZERO;
-//
-//        BigDecimal net =
-//                salaryCalculationService.calculateNetSalary(gross, deductions);
-//
-//        Payslip payslip = new Payslip();
-//        payslip.setEmployeeId(employeeId);
-//        payslip.setPeriodId(periodId);
-//        payslip.setGrossSalary(gross);
-//        payslip.setTotalDeductions(deductions);
-//        payslip.setNetSalary(net);
-//
-//        return payslipRepository.save(payslip);
-//    }
+    public Payslip createPayslip(UUID employeeId, UUID periodId) {
+
+        BigDecimal gross =
+                salaryCalculationService.calculateGrossSalary(employeeId);
+
+        BigDecimal deductions = BigDecimal.ZERO;
+
+        BigDecimal net =
+                salaryCalculationService.calculateNetSalary(gross, deductions);
+
+        Payslip payslip = new Payslip();
+        payslip.setEmployeeId(employeeId);
+        payslip.setPeriodId(periodId);
+        payslip.setGrossSalary(gross);
+        payslip.setTotalDeductions(deductions);
+        payslip.setNetSalary(net);
+
+        return payslipRepository.save(payslip);
+    }
 }
 
 

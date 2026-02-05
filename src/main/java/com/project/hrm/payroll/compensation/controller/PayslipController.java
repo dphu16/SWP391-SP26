@@ -17,12 +17,12 @@ public class PayslipController {
 
     private final PayslipService service;
 
-    @PostMapping("/generate")
-    public Payslip generate(
+    @PostMapping("/create")
+    public Payslip create(
             @RequestParam UUID employeeId,
             @RequestParam UUID periodId) {
 
-        return service.generatePayslip(employeeId, periodId);
+        return service.createPayslip(employeeId, periodId);
     }
 }
 

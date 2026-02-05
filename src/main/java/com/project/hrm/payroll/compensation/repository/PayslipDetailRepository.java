@@ -11,5 +11,7 @@ import java.util.UUID;
 @Repository
 public interface PayslipDetailRepository extends JpaRepository<PayslipDetail, UUID> {
     List<PayslipDetail> findByPayslipId(UUID payslipId);
+
+    List<PayslipDetail> findByPayslipIdAndType(UUID payslipId, String type);
 }
 

@@ -10,7 +10,7 @@ import java.util.UUID;
 public class SalaryProfileDTO {
     private UUID employeeId;
     private BigDecimal baseSalary;
-    private String allowances;
+    private Map<String, Object> allowances;
     private String taxCode;
 }
 
