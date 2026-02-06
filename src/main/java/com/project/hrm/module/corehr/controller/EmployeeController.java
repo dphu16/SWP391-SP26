@@ -39,7 +39,7 @@ public class EmployeeController {
     }
 
     @PutMapping("/employees/{id}/edit")
-    public ResponseEntity<Void> updateSelf(@PathVariable  UUID id, @Valid @RequestBody EmployeeChangeRequestDTO req){
+    public ResponseEntity<Void> updateSelf(@PathVariable  UUID id,                                                                          EmployeeChangeRequestDTO req){
         employeeService.updateSelf(id, req);
         return ResponseEntity.ok().build();
     }

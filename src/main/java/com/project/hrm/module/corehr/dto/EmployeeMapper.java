@@ -5,12 +5,13 @@ import com.project.hrm.module.corehr.entity.Employee;
 public class EmployeeMapper {
     public static EmployeeDTO toDTO(Employee employee) {
         return new EmployeeDTO(
-                employee.getUser().getUsername(),
-                employee.getUser().getRole(),
-                employee.getUser().getStatus(),
+                employee.getAvatarUrl(),
                 employee.getFullName(),
+                employee.getPhone(),
                 employee.getPosition().getTitle(),
-                employee.getStatusPos(),
-                employee.getDateOfJoining());
+                employee.getUser().getRole(),
+                employee.getDepartment().getDeptName(),
+                employee.getUser().getStatus()
+                );
     }
 }

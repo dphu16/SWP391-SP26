@@ -73,6 +73,9 @@ public class Employee {
     @Column(name = "source_application_id")
     private UUID sourceApplicationId;
 
+    @Column(name = "avatar_url", length = 255)
+    private String avatarUrl;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
