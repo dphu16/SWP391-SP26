@@ -15,14 +15,17 @@ public class EmployeeGoal {
     @Column(name = "goal_id")
     private UUID id;
 
-    @Column(name = "employee_id", nullable = false)
-    private UUID employeeId;
+    @ManyToOne
+    @JoinColumn(name = "employee_id")
+    private Employee employee;
 
-    @Column(name = "cycle_id", nullable = false)
-    private UUID cycleId;
+    @ManyToOne
+    @JoinColumn(name = "cycle_id")
+    private PerformanceCycles cycle;
 
-    @Column(name = "kpi_lib_id", nullable = false)
-    private UUID kpiLibId;
+    @ManyToOne
+    @JoinColumn(name = "kpi_lib_id")
+    private KpiLibrary kpiLibrary;
 
     private String title;
 

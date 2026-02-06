@@ -16,11 +16,13 @@ public class ReviewDetails {
     @Column(name = "detail_id")
     private UUID detailId;
 
-    @Column(name = "review_id")
-    private UUID reviewId;
+    @ManyToOne
+    @JoinColumn(name = "review_id")
+    private PerformanceReviews review;
 
-    @Column(name = "goal_id")
-    private UUID goalId;
+    @ManyToOne
+    @JoinColumn(name = "goal_id")
+    private EmployeeGoal goal;
 
     @Column(name = "manager_score", precision = 5, scale = 2)
     private BigDecimal managerScore;

@@ -16,11 +16,13 @@ public class PerformanceRuleResults {
     @Column(name = "result_id")
     private UUID resultId;
 
-    @Column(name = "review_id", nullable = false)
-    private UUID reviewId;
+    @ManyToOne
+    @JoinColumn(name = "review_id")
+    private PerformanceReviews review;
 
-    @Column(name = "rule_id", nullable = false)
-    private UUID ruleId;
+    @ManyToOne
+    @JoinColumn(name = "rule_id")
+    private PerformanceRules rule;
 
     @Column(name = "applied_action")
     private String appliedAction;

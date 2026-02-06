@@ -16,14 +16,17 @@ public class PerformanceReviews {
     @Column(name = "review_id")
     private UUID id;
 
-    @Column(name = "employee_id", nullable = false)
-    private UUID employeeId;
+    @ManyToOne
+    @JoinColumn(name = "employee_id")
+    private Employee employee;
 
-    @Column(name = "cycle_id", nullable = false)
-    private UUID cycleId;
+    @ManyToOne
+    @JoinColumn(name = "cycle_id")
+    private PerformanceCycles cycle;
 
-    @Column(name = "manager_id", nullable = false)
-    private UUID managerId;
+    @ManyToOne
+    @JoinColumn(name = "manager_id")
+    private Employee manager;
 
     @Column(name = "final_score", precision = 5, scale = 2)
     private BigDecimal finalScore;
