@@ -1,7 +1,9 @@
 package com.project.hrm.evaluation.service;
 
+import com.project.hrm.evaluation.entity.EmployeeGoal;
 import com.project.hrm.evaluation.entity.KpiAcknowledgement;
 import com.project.hrm.evaluation.repository.KpiAcknowledgementRepository;
+import com.project.hrm.module.corehr.entity.Employee;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -16,9 +18,9 @@ public class KpiAcknowledgementService {
         this.repository = repository;
     }
 
-    public KpiAcknowledgement confirm(UUID goalId, UUID employeeId){
+    public KpiAcknowledgement confirm(EmployeeGoal goalId, Employee employeeId){
         KpiAcknowledgement ack =
-                repository.findByGoalIdAndEmployee(goalId, employeeId).orElseThrow(() -> new RuntimeException("KPI " +
+                repository.findByGoalIdAndEmployeeId(goalId, employeeId).orElseThrow(() -> new RuntimeException("KPI " +
                         "acknowledgement not found"));
 
         if (Boolean.TRUE.equals(ack.getStatus())){

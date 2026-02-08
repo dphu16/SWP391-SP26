@@ -2,7 +2,6 @@ package com.project.hrm.evaluation.controller;
 
 import com.project.hrm.evaluation.entity.KpiLibrary;
 import com.project.hrm.evaluation.service.KpiLibraryService;
-import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +17,7 @@ public class KpiLibraryController {
     }
 
     @PostMapping
-    public KpiLibrary creKpiLibrary(@RequestBody KpiLibrary kpiLibrary){
+    public KpiLibrary createKpiLibrary(@RequestBody KpiLibrary kpiLibrary){
         return service.create(kpiLibrary);
     };
 
@@ -38,9 +37,9 @@ public class KpiLibraryController {
     }
 
 
-    @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id){
-        service.delete(id);
+    @DeleteMapping("/{idKpi}")
+    public void delete(@PathVariable UUID idKpi){
+        service.delete(idKpi);
     }
 
 }

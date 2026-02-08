@@ -1,5 +1,6 @@
 package com.project.hrm.evaluation.entity;
 
+import com.project.hrm.module.corehr.entity.Employee;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -18,7 +19,7 @@ public class KpiAcknowledgement {
 
     @ManyToOne
     @JoinColumn(name = "goal_id")
-    private EmployeeGoal  goalID;
+    private EmployeeGoal  goalId;
 
     @ManyToOne
     @JoinColumn(name = "employee_id")

@@ -1,5 +1,6 @@
 package com.project.hrm.recruitment.entity;
 
+import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.recruitment.enums.ReviewResult;
 import jakarta.persistence.*;
 import lombok.Getter;

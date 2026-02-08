@@ -22,7 +22,8 @@ public class EmployeeGoalController {
                                   @RequestParam UUID kpiLibId,
                                   @RequestParam String title,
                                   @RequestParam BigDecimal targetValue,
+                                  @RequestParam BigDecimal currenValue,
                                   @RequestParam BigDecimal weight){
-        return service.assignKpi(employeeId, cycleId, kpiLibId, title, targetValue, weight);
+        return service.assignKpi(employeeId, cycleId, kpiLibId, title, currenValue, targetValue, weight);
     }
 }
