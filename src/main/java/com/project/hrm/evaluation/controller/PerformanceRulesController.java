@@ -25,7 +25,7 @@ public class PerformanceRulesController {
         PerformanceRules saved = service.create(req);
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
-                .path("/{id}")
+                .path("/{ruleId}")
                 .buildAndExpand(saved.getRuleId())
                 .toUri();
         return ResponseEntity.created(location).body(saved);
@@ -36,20 +36,19 @@ public class PerformanceRulesController {
         return ResponseEntity.ok(service.getAll());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<PerformanceRules> getById(@PathVariable UUID id){
-        return ResponseEntity.ok(service.getById(id));
+    @GetMapping("/{ruleId}")
+    public ResponseEntity<PerformanceRules> getById(@PathVariable UUID ruleId){
+        return ResponseEntity.ok(service.getById(ruleId));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<PerformanceRules> update(@PathVariable UUID id, @RequestBody PerformanceRules req){
-        return ResponseEntity.ok(service.update(id, req));
+    @PutMapping("/{ruleId}")
+    public ResponseEntity<PerformanceRules> update(@PathVariable UUID ruleId, @RequestBody PerformanceRules req){
+        return ResponseEntity.ok(service.update(ruleId, req));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id){
-        service.delete(id);
+    @DeleteMapping("/{ruleId}")
+    public ResponseEntity<Void> delete(@PathVariable UUID ruleId){
+        service.delete(ruleId);
         return ResponseEntity.noContent().build();
     }
 }
-

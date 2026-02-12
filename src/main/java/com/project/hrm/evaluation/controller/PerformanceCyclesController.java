@@ -26,7 +26,7 @@ public class PerformanceCyclesController {
         PerformanceCycles saved = service.create(req.toEntity());
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
-                .path("/{id}")
+                .path("/{cycleId}")
                 .buildAndExpand(saved.getIdCycle())
                 .toUri();
         return ResponseEntity.created(location).body(saved);
@@ -37,20 +37,19 @@ public class PerformanceCyclesController {
         return ResponseEntity.ok(service.getAll());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<PerformanceCycles> getById(@PathVariable UUID id){
-        return ResponseEntity.ok(service.getById(id));
+    @GetMapping("/{cycleId}")
+    public ResponseEntity<PerformanceCycles> getById(@PathVariable UUID cycleId){
+        return ResponseEntity.ok(service.getById(cycleId));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<PerformanceCycles> update(@PathVariable UUID id, @RequestBody PerformanceCyclesRequest req){
-        return ResponseEntity.ok(service.update(id, req.toEntity()));
+    @PutMapping("/{cycleId}")
+    public ResponseEntity<PerformanceCycles> update(@PathVariable UUID cycleId, @RequestBody PerformanceCyclesRequest req){
+        return ResponseEntity.ok(service.update(cycleId, req.toEntity()));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id){
-        service.delete(id);
+    @DeleteMapping("/{cycleId}")
+    public ResponseEntity<Void> delete(@PathVariable UUID cycleId){
+        service.delete(cycleId);
         return ResponseEntity.noContent().build();
     }
 }
-

@@ -28,7 +28,7 @@ public class KpiLibraryController {
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
-                .path("/{id}")
+                .path("/{kpiId}")
                 .buildAndExpand(saved.getLibId())
                 .toUri();
 
@@ -40,20 +40,20 @@ public class KpiLibraryController {
         return ResponseEntity.ok(service.getAll());
     }
 
-    @GetMapping("/{idKpi}")
-    public ResponseEntity<KpiLibrary> getById(@PathVariable UUID idKpi){
-        return ResponseEntity.ok(service.getById(idKpi));
+    @GetMapping("/{kpiId}")
+    public ResponseEntity<KpiLibrary> getById(@PathVariable UUID kpiId){
+        return ResponseEntity.ok(service.getById(kpiId));
     }
 
-    @PutMapping("/{idKpi}")
-    public ResponseEntity<KpiLibrary> updateById(@PathVariable UUID idKpi, @RequestBody KpiLibrary kpiLibrary){
-        return ResponseEntity.ok(service.updateKpi(idKpi, kpiLibrary));
+    @PutMapping("/{kpiId}")
+    public ResponseEntity<KpiLibrary> updateById(@PathVariable UUID kpiId, @RequestBody KpiLibrary kpiLibrary){
+        return ResponseEntity.ok(service.updateKpi(kpiId, kpiLibrary));
     }
 
 
-    @DeleteMapping("/{idKpi}")
-    public ResponseEntity<Void> delete(@PathVariable UUID idKpi){
-        service.delete(idKpi);
+    @DeleteMapping("/{kpiId}")
+    public ResponseEntity<Void> delete(@PathVariable UUID kpiId){
+        service.delete(kpiId);
         return ResponseEntity.noContent().build();
     }
 

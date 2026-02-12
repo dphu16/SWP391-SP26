@@ -25,7 +25,7 @@ public class PerformanceReviewsController {
         PerformanceReviews saved = service.create(req);
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
-                .path("/{id}")
+                .path("/{reviewId}")
                 .buildAndExpand(saved.getId())
                 .toUri();
         return ResponseEntity.created(location).body(saved);
@@ -36,20 +36,19 @@ public class PerformanceReviewsController {
         return ResponseEntity.ok(service.getAll());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<PerformanceReviews> getById(@PathVariable UUID id){
-        return ResponseEntity.ok(service.getById(id));
+    @GetMapping("/{reviewId}")
+    public ResponseEntity<PerformanceReviews> getById(@PathVariable UUID reviewId){
+        return ResponseEntity.ok(service.getById(reviewId));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<PerformanceReviews> update(@PathVariable UUID id, @RequestBody PerformanceReviews req){
-        return ResponseEntity.ok(service.update(id, req));
+    @PutMapping("/{reviewId}")
+    public ResponseEntity<PerformanceReviews> update(@PathVariable UUID reviewId, @RequestBody PerformanceReviews req){
+        return ResponseEntity.ok(service.update(reviewId, req));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id){
-        service.delete(id);
+    @DeleteMapping("/{reviewId}")
+    public ResponseEntity<Void> delete(@PathVariable UUID reviewId){
+        service.delete(reviewId);
         return ResponseEntity.noContent().build();
     }
 }
-
