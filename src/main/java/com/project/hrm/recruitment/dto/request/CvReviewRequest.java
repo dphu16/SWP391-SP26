@@ -1,21 +1,19 @@
-package com.project.hrm.recruitment.dto.response;
+package com.project.hrm.recruitment.dto.request;
 
 import com.project.hrm.recruitment.enums.ResultStatus;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Getter
 @Setter
-public class CvReviewResponse {
+public class CvReviewRequest {
 
-    private UUID id;
     private UUID appId;
     private UUID reviewerId;
-    private String reviewerName;
     private double interviewScore;
     private String comment;
     private ResultStatus result;
