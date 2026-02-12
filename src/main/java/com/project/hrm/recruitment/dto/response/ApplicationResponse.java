@@ -13,13 +13,12 @@ import java.util.UUID;
 public class ApplicationResponse {
 
     private UUID id;
-    private ApplicationStatus status;
-    private BigDecimal aiMatchScore;
-    private OffsetDateTime appliedAt;
-
-    private UUID candidateId;
-    private String candidateName;
-
-    private UUID reqId;
+    private UUID jobId;
     private String jobTitle;
+    private UUID candidateId;
+    private String fullName;
+    private String email;
+    private String phone;
+    private ApplicationStatus status;
+
 }

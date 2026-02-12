@@ -37,10 +37,6 @@ public class Candidate {
     @Column(name = "phone", length = 20)
     private String phone;
 
-    @Size(max = 255)
-    @Column(name = "cv_url")
-    private String cvUrl;
-
     @ColumnDefault("now()")
     @Column(name = "created_at")
     private OffsetDateTime createdAt;

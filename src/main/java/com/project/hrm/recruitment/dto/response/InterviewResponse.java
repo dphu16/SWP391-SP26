@@ -13,11 +13,11 @@ import java.util.UUID;
 public class InterviewResponse {
 
     private UUID id;
-    private InterviewStatus status;
-    private OffsetDateTime scheduleTime;
-    private BigDecimal rating;
-    private String feedback;
-
+    private UUID appId;
     private UUID interviewerId;
     private String interviewerName;
+    private OffsetDateTime scheduleTime;
+    private InterviewStatus status;
+    private String feedback;
+
 }
