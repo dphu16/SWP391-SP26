@@ -9,4 +9,6 @@ import java.util.UUID;
 
 public interface JobRequestRepository extends JpaRepository<JobRequest, UUID> {
 
+    List<JobRequest> findByDept_DeptId(UUID id);
+
 }

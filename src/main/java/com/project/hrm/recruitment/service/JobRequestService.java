@@ -10,7 +10,7 @@ public interface JobRequestService {
 
     JobRequestResponse create(JobRequestRequest request);
     List<JobRequestResponse> getAllRequest();
-    List<JobRequestResponse> getRequestByCreator(UUID id);
+    List<JobRequestResponse> getRequestByDepartmentId(UUID id);
     JobRequestResponse getRequestById(UUID id);
     JobRequestResponse update(UUID id, JobRequestRequest request);
     void delete(UUID id);

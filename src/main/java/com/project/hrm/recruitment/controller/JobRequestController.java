@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/job-requests")
@@ -34,4 +35,39 @@ public class JobRequestController {
 
         return ResponseEntity.ok(responses);
     }
+
+    @GetMapping("/department/{id}")
+    public ResponseEntity<List<JobRequestResponse>> getRequestByDepartmentId(
+            @PathVariable UUID id) {
+
+        List<JobRequestResponse> responses =
+                jobRequestService.getRequestByDepartmentId(id);
+
+        return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<JobRequestResponse> getById(
+            @PathVariable UUID id) {
+
+        return ResponseEntity.ok(jobRequestService.getRequestById(id));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<JobRequestResponse> updateBefore(
+            @PathVariable UUID id,
+            @RequestBody JobRequestRequest request) {
+
+        return ResponseEntity.ok(
+                jobRequestService.update(id, request)
+        );
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+
+        jobRequestService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
 }

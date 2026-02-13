@@ -66,23 +66,65 @@ public class JobRequestServiceImpl implements JobRequestService {
     }
 
     @Override
-    public List<JobRequestResponse> getRequestByCreator(UUID id) {
-        return List.of();
+    public List<JobRequestResponse> getRequestByDepartmentId(UUID id) {
+        List<JobRequest> entities =
+                jobRequestRepository.findByDept_DeptId(id);
+
+        return entities.stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     @Override
     public JobRequestResponse getRequestById(UUID id) {
-        return null;
+        JobRequest entity = jobRequestRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Job request not found with id: " + id));
+
+        return mapToResponse(entity);
     }
 
     @Override
     public JobRequestResponse update(UUID id, JobRequestRequest request) {
-        return null;
+        JobRequest entity = jobRequestRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Job request not found with id: " + id));
+
+        if (request.getQuantity() <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
+
+        if (request.getDeptId() != null) {
+            Department department = departmentRepository.findById(request.getDeptId())
+                    .orElseThrow(() ->
+                            new RuntimeException("Department not found"));
+            entity.setDept(department);
+        }
+
+        if (request.getReportTo() != null) {
+            Employee reviewer = employeeRepository.findById(request.getReportTo())
+                    .orElseThrow(() ->
+                            new RuntimeException("Employee not found"));
+            entity.setReportsTo(reviewer);
+        }
+
+        entity.setJobTitle(request.getTitle());
+        entity.setQuantity(request.getQuantity());
+        entity.setLocation(request.getLocation());
+        entity.setEmploymentType(request.getType().name());
+        entity.setReason(request.getReason());
+
+        JobRequest updated = jobRequestRepository.save(entity);
+
+        return mapToResponse(updated);
     }
 
     @Override
     public void delete(UUID id) {
+        JobRequest entity = jobRequestRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Job request not found with id: " + id));
 
+        jobRequestRepository.delete(entity);
     }
 
     private JobRequestResponse mapToResponse(JobRequest entity) {
