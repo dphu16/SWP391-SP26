@@ -9,22 +9,22 @@ import java.time.LocalDate;
 
 @Data
 public class PerformanceCyclesRequest {
-    @NotBlank(message = "nameCycle is required")
-    private String nameCycle;
+    @NotBlank(message = "cycleName is required")
+    private String cycleName;
 
-    @NotNull(message = "dateStart is required")
-    private LocalDate dateStart;
+    @NotNull(message = "startDate is required")
+    private LocalDate startDate;
 
-    @NotNull(message = "dateEnd is required")
-    private LocalDate dateEnd;
+    @NotNull(message = "endDate is required")
+    private LocalDate endDate;
 
     private String status = "DRAFT";
 
     public PerformanceCycles toEntity(){
         PerformanceCycles p = new PerformanceCycles();
-        p.setNameCycle(this.nameCycle);
-        p.setDateStart(this.dateStart);
-        p.setDateEnd(this.dateEnd);
+        p.setNameCycle(this.cycleName);
+        p.setDateStart(this.startDate);
+        p.setDateEnd(this.endDate);
         p.setStatus(this.status);
         return p;
     }

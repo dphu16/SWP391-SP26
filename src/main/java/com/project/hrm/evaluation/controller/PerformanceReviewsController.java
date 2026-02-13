@@ -1,5 +1,6 @@
 package com.project.hrm.evaluation.controller;
 
+import com.project.hrm.evaluation.dto.PerformanceReviewsRequest;
 import com.project.hrm.evaluation.entity.PerformanceReviews;
 import com.project.hrm.evaluation.service.PerformanceReviewsService;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +22,7 @@ public class PerformanceReviewsController {
     }
 
     @PostMapping
-    public ResponseEntity<PerformanceReviews> create(@Valid @RequestBody PerformanceReviews req){
+    public ResponseEntity<PerformanceReviews> create(@Valid @RequestBody PerformanceReviewsRequest req){
         PerformanceReviews saved = service.create(req);
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -42,7 +43,7 @@ public class PerformanceReviewsController {
     }
 
     @PutMapping("/{reviewId}")
-    public ResponseEntity<PerformanceReviews> update(@PathVariable UUID reviewId, @RequestBody PerformanceReviews req){
+    public ResponseEntity<PerformanceReviews> update(@PathVariable UUID reviewId, @RequestBody PerformanceReviewsRequest req){
         return ResponseEntity.ok(service.update(reviewId, req));
     }
 

@@ -1,7 +1,6 @@
 package com.project.hrm.evaluation.dto;
 
 import com.project.hrm.evaluation.entity.KpiLibrary;
-import com.project.hrm.evaluation.enums.KpiCategory;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -13,8 +12,8 @@ public class KpiLibraryRequest {
 
     private String description;
 
-    @NotNull(message = "category is required")
-    private KpiCategory category;
+    @NotBlank(message = "category is required")
+    private String category;
 
     public KpiLibrary toEntity() {
         KpiLibrary e = new KpiLibrary();

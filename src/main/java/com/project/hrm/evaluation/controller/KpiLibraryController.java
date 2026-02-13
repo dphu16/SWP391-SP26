@@ -46,8 +46,8 @@ public class KpiLibraryController {
     }
 
     @PutMapping("/{kpiId}")
-    public ResponseEntity<KpiLibrary> updateById(@PathVariable UUID kpiId, @RequestBody KpiLibrary kpiLibrary){
-        return ResponseEntity.ok(service.updateKpi(kpiId, kpiLibrary));
+    public ResponseEntity<KpiLibrary> update(@PathVariable UUID kpiId, @RequestBody KpiLibraryRequest req){
+        return ResponseEntity.ok(service.updateKpi(kpiId, req.toEntity()));
     }
 
 
