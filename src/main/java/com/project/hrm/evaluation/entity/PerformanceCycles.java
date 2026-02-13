@@ -10,8 +10,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "performance_cycles")
 @Data
-
 public class PerformanceCycles {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "cycle_id")

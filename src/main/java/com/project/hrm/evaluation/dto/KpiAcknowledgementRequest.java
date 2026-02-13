@@ -18,7 +18,7 @@ public class KpiAcknowledgementRequest {
 
     public KpiAcknowledgement toEntity(){
         KpiAcknowledgement ack = new KpiAcknowledgement();
-        ack.setStatus(this.isConfirmed);
+        ack.setConfirmed(this.isConfirmed);
         return ack;
     }
 }

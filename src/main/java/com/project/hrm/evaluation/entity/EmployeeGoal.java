@@ -14,20 +14,21 @@ public class EmployeeGoal {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "goal_id")
-    private UUID id;
+    private UUID goalId;
 
-    @ManyToOne
-    @JoinColumn(name = "employee_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    @ManyToOne
-    @JoinColumn(name = "cycle_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cycle_id", nullable = false)
     private PerformanceCycles cycle;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "kpi_lib_id")
     private KpiLibrary kpiLibrary;
 
+    @Column(name = "title")
     private String title;
 
     @Column(name = "target_value")
@@ -36,7 +37,9 @@ public class EmployeeGoal {
     @Column(name = "current_value")
     private BigDecimal currentValue;
 
+    @Column(name = "weight")
     private BigDecimal weight;
 
+    @Column(name = "status")
     private String status = "DRAFT";
 }

@@ -30,10 +30,9 @@ public class PerformanceReviewsService {
     @Transactional
     public PerformanceReviews create(PerformanceReviewsRequest req){
         PerformanceReviews review = new PerformanceReviews();
-        review.setOverallScore(req.getOverallScore());
+        review.setFinalScore(req.getOverallScore());
         review.setStatus(req.getStatus());
 
-        // Set relationships
         PerformanceCycles cycle = cycleRepository.findById(req.getCycleId())
                 .orElseThrow(() -> new RuntimeException("Performance cycle not found"));
         Employee employee = employeeRepository.findById(req.getEmployeeId())
@@ -59,9 +58,8 @@ public class PerformanceReviewsService {
     @Transactional
     public PerformanceReviews update(UUID id, PerformanceReviewsRequest req){
         PerformanceReviews existing = getById(id);
-        existing.setOverallScore(req.getOverallScore());
+        existing.setFinalScore(req.getOverallScore());
         existing.setStatus(req.getStatus());
-        // Optionally update manager/employee/cycle if provided
         if (req.getManagerId() != null) {
             Employee manager = employeeRepository.findById(req.getManagerId())
                     .orElseThrow(() -> new RuntimeException("Manager not found"));

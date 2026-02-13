@@ -4,8 +4,8 @@ import com.project.hrm.evaluation.dto.ReviewDetailsRequest;
 import com.project.hrm.evaluation.entity.ReviewDetails;
 import com.project.hrm.evaluation.entity.PerformanceReviews;
 import com.project.hrm.evaluation.entity.EmployeeGoal;
-import com.project.hrm.evaluation.repository.ReviewDetailsRepository;
 import com.project.hrm.evaluation.repository.PerformanceReviewsRepository;
+import com.project.hrm.evaluation.repository.ReviewDetailsRepository;
 import com.project.hrm.evaluation.repository.EmployeeGoalRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +33,6 @@ public class ReviewDetailsService {
         detail.setScore(req.getScore());
         detail.setComment(req.getComment());
 
-        // Set relationships
         PerformanceReviews review = reviewRepository.findById(req.getReviewId())
                 .orElseThrow(() -> new RuntimeException("Performance review not found"));
         EmployeeGoal goal = goalRepository.findById(req.getGoalId())

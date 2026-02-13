@@ -31,15 +31,15 @@ public class KpiAcknowledgementService {
     @Transactional
     public KpiAcknowledgement create(KpiAcknowledgementRequest req){
         KpiAcknowledgement ack = new KpiAcknowledgement();
-        ack.setStatus(req.getIsConfirmed());
+        ack.setConfirmed(req.getIsConfirmed());
 
         EmployeeGoal goal = goalRepository.findById(req.getGoalId())
                 .orElseThrow(() -> new RuntimeException("Employee goal not found"));
         Employee employee = employeeRepository.findById(req.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
-        ack.setGoalId(goal);
-        ack.setEmployeeId(employee);
+        ack.setGoal(goal);
+        ack.setEmployee(employee);
 
         return repository.save(ack);
     }
@@ -56,7 +56,7 @@ public class KpiAcknowledgementService {
     @Transactional
     public KpiAcknowledgement update(UUID ackId, KpiAcknowledgementRequest req){
         KpiAcknowledgement existing = getById(ackId);
-        existing.setStatus(req.getIsConfirmed());
+        existing.setConfirmed(req.getIsConfirmed());
 
         if (Boolean.TRUE.equals(req.getIsConfirmed())){
             existing.setConfirmedAt(OffsetDateTime.now());
@@ -74,11 +74,11 @@ public class KpiAcknowledgementService {
         KpiAcknowledgement ack = repository.findByGoalIdAndEmployeeId(goalId, employeeId)
                 .orElseThrow(() -> new RuntimeException("KPI acknowledgement not found"));
 
-        if (Boolean.TRUE.equals(ack.getStatus())){
+        if (Boolean.TRUE.equals(ack.getConfirmed())){
             throw new RuntimeException("Kpi already confirmed");
         }
 
-        ack.setStatus(true);
+        ack.setConfirmed(true);
         ack.setConfirmedAt(OffsetDateTime.now());
         return repository.save(ack);
 

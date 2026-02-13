@@ -32,7 +32,6 @@ public class PerformanceRuleResultsService {
         PerformanceRuleResults result = new PerformanceRuleResults();
         result.setResultScore(req.getResultScore());
 
-        // Set relationships
         PerformanceReviews review = reviewRepository.findById(req.getReviewId())
                 .orElseThrow(() -> new RuntimeException("Performance review not found"));
         PerformanceRules rule = ruleRepository.findById(req.getRuleId())

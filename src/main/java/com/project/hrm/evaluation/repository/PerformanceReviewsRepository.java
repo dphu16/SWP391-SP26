@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.UUID;
 
-public interface PerformanceReviewsRepository extends JpaRepository<PerformanceReviews, UUID> {
-
+public interface PerformanceReviewsRepository
+        extends JpaRepository<PerformanceReviews, UUID> {
 }
-

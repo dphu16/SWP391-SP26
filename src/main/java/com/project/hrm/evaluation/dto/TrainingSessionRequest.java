@@ -18,8 +18,8 @@ public class TrainingSessionRequest {
 
     public TrainingSession toEntity(){
         TrainingSession session = new TrainingSession();
-        session.setStartTime(this.startDate);
-        session.setEndTime(this.endDate);
+        session.setStartDate(this.startDate);
+        session.setEndDate(this.endDate);
         session.setLocation(this.location);
         return session;
     }
