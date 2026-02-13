@@ -15,21 +15,20 @@ public class KpiAcknowledgement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "ack_id")
     private UUID ackId;
 
-    @ManyToOne
-    @JoinColumn(name = "goal_id")
-    private EmployeeGoal  goalId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "goal_id", nullable = false)
+    private EmployeeGoal goal;
 
-    @ManyToOne
-    @JoinColumn(name = "employee_id")
-    private Employee employeeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id", nullable = false)
+    private Employee employee;
 
     @Column(name = "is_confirmed")
-    private Boolean status = false;
+    private Boolean confirmed = false;
 
     @Column(name = "confirmed_at")
     private OffsetDateTime confirmedAt;
-
 }
-

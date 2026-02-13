@@ -5,7 +5,6 @@ import com.project.hrm.module.corehr.entity.Employee;
 import jakarta.persistence.*;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -19,16 +18,13 @@ public class TrainingParticipant {
     private UUID participantId;
 
     @ManyToOne
-    @JoinColumn(name = "session_id")
+    @JoinColumn(name = "session_id", nullable = false)
     private TrainingSession session;
 
     @ManyToOne
-    @JoinColumn(name = "employee_id")
+    @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    @Column(name = "status")
-    private String status;
-
-    @Column(name = "score")
-    private BigDecimal score;
+    @Column(name = "attendance_status")
+    private String attendanceStatus;
 }

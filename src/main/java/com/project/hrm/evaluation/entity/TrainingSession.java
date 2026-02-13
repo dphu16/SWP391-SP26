@@ -2,8 +2,6 @@ package com.project.hrm.evaluation.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 
@@ -13,15 +11,20 @@ import java.util.UUID;
 public class TrainingSession {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "session_id")
     private UUID sessionId;
 
     @ManyToOne
-    @JoinColumn(name = "course_id")
+    @JoinColumn(name = "course_id", nullable = false)
     private TrainingCourse course;
 
-    private String trainerName;
-    private OffsetDateTime startTime;
-    private OffsetDateTime endTime;
+    @Column(name = "start_date")
+    private java.time.LocalDate startDate;
+
+    @Column(name = "end_date")
+    private java.time.LocalDate endDate;
+
+    @Column(name = "location")
     private String location;
 }

@@ -27,7 +27,7 @@ public class EmployeeGoalController {
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{goalId}")
-                .buildAndExpand(saved.getId())
+                .buildAndExpand(saved.getGoalId())
                 .toUri();
         return ResponseEntity.created(location).body(saved);
     }
