@@ -3,30 +3,28 @@ package com.project.hrm.evaluation.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 
 @Entity
 @Table(name = "performance_rule_results")
 @Data
-public class PerformanceRuleResults {
 
+public class PerformanceRuleResults {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "result_id")
     private UUID resultId;
 
     @ManyToOne
-    @JoinColumn(name = "review_id", nullable = false)
+    @JoinColumn(name = "review_id")
     private PerformanceReviews review;
 
     @ManyToOne
-    @JoinColumn(name = "rule_id", nullable = false)
+    @JoinColumn(name = "rule_id")
     private PerformanceRules rule;
 
-    @Column(name = "result_score")
-    private BigDecimal resultScore;
+    @Column(name = "applied_action")
+    private String appliedAction;
 
 }
-

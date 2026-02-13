@@ -9,24 +9,30 @@ import java.util.UUID;
 @Entity
 @Table(name = "review_details")
 @Data
-public class ReviewDetails {
 
+public class ReviewDetails {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "detail_id")
     private UUID detailId;
 
     @ManyToOne
-    @JoinColumn(name = "review_id", nullable = false)
+    @JoinColumn(name = "review_id")
     private PerformanceReviews review;
 
     @ManyToOne
-    @JoinColumn(name = "goal_id", nullable = false)
+    @JoinColumn(name = "goal_id")
     private EmployeeGoal goal;
 
-    @Column(name = "score")
-    private BigDecimal score;
+    @Column(name = "manager_score", precision = 5, scale = 2)
+    private BigDecimal managerScore;
 
-    @Column(name = "comment")
+    @Column(name = "self_score", precision = 5, scale = 2)
+    private BigDecimal selfScore;
+
     private String comment;
+
+
+
+
 }

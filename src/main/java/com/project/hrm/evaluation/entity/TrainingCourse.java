@@ -1,6 +1,9 @@
 package com.project.hrm.evaluation.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -12,13 +15,10 @@ import java.util.UUID;
 public class TrainingCourse {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "course_id")
+    @GeneratedValue
     private UUID courseId;
 
-    @Column(name = "course_name", nullable = false)
-    private String courseName;
-
-    @Column(name = "description")
+    private String name;
     private String description;
+    private BigDecimal minScoreRequired;
 }

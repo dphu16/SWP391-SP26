@@ -9,22 +9,20 @@ import java.util.UUID;
 @Entity
 @Table(name = "performance_rules")
 @Data
-public class PerformanceRules {
 
+public class PerformanceRules {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "rule_id")
     private UUID ruleId;
 
-    @Column(name = "rule_name", nullable = false)
-    private String ruleName;
+    @Column(name = "min_score", precision = 5, scale = 2, nullable = false)
+    private BigDecimal minScore;
 
-    @Column(name = "description")
-    private String description;
+    @Column(name = "max_score", precision = 5, scale = 2, nullable = false)
+    private BigDecimal maxScore;
 
-    @Column(name = "condition")
-    private String condition;
+    @Column(name = "action", nullable = false)
+    private String action;
 
-    @Column(name = "score")
-    private BigDecimal score;
 }

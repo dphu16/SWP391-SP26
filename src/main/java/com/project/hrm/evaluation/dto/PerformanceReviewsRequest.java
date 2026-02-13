@@ -23,7 +23,7 @@ public class PerformanceReviewsRequest {
 
     public PerformanceReviews toEntity(){
         PerformanceReviews review = new PerformanceReviews();
-        review.setFinalScore(this.overallScore);
+        review.setOverallScore(this.overallScore);
         review.setStatus(this.status);
         return review;
     }
