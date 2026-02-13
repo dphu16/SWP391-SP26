@@ -76,6 +76,16 @@ public class JobRequestServiceImpl implements JobRequestService {
     }
 
     @Override
+    public List<JobRequestResponse> getRequestByReportTo(UUID id) {
+        List<JobRequest> entities =
+                jobRequestRepository.findByReportsTo_EmployeeId(id);
+
+        return entities.stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
     public JobRequestResponse getRequestById(UUID id) {
         JobRequest entity = jobRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Job request not found with id: " + id));
@@ -119,6 +129,30 @@ public class JobRequestServiceImpl implements JobRequestService {
     }
 
     @Override
+    public JobRequestResponse updateStatus(UUID id, RequestStatus status, String comment) {
+        JobRequest entity = jobRequestRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Job request not found with id: " + id));
+        if (entity.getStatus().equals(RequestStatus.APPROVED.name()) ||
+                entity.getStatus().equals(RequestStatus.REJECTED.name())) {
+
+            throw new IllegalStateException("Request already processed");
+        }
+        if (status == RequestStatus.REJECTED &&
+                (comment == null || comment.isBlank())) {
+
+            throw new IllegalArgumentException("Comment is required when rejecting");
+        }
+        entity.setStatus(status.name());
+
+        if (comment != null) {
+            entity.setHrComment(comment);
+        }
+        JobRequest updated = jobRequestRepository.save(entity);
+        return mapToResponse(updated);
+    }
+
+    @Override
     public void delete(UUID id) {
         JobRequest entity = jobRequestRepository.findById(id)
                 .orElseThrow(() ->
@@ -142,6 +176,7 @@ public class JobRequestServiceImpl implements JobRequestService {
         response.setStatus(RequestStatus.valueOf(entity.getStatus()));
         response.setReportTo(entity.getReportsTo().getEmployeeId());
         response.setReviewer(entity.getReportsTo().getFullName());
+        response.setComment(entity.getHrComment());
 
         return response;
     }

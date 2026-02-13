@@ -2,6 +2,7 @@ package com.project.hrm.recruitment.controller;
 
 import com.project.hrm.recruitment.dto.request.JobRequestRequest;
 import com.project.hrm.recruitment.dto.response.JobRequestResponse;
+import com.project.hrm.recruitment.enums.RequestStatus;
 import com.project.hrm.recruitment.service.JobRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,11 +38,21 @@ public class JobRequestController {
     }
 
     @GetMapping("/department/{id}")
-    public ResponseEntity<List<JobRequestResponse>> getRequestByDepartmentId(
+    public ResponseEntity<List<JobRequestResponse>> getRequestToManager(
             @PathVariable UUID id) {
 
         List<JobRequestResponse> responses =
                 jobRequestService.getRequestByDepartmentId(id);
+
+        return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/hr/{id}")
+    public ResponseEntity<List<JobRequestResponse>> getRequestToHr(
+            @PathVariable UUID id) {
+
+        List<JobRequestResponse> responses =
+                jobRequestService.getRequestByReportTo(id);
 
         return ResponseEntity.ok(responses);
     }
@@ -60,6 +71,17 @@ public class JobRequestController {
 
         return ResponseEntity.ok(
                 jobRequestService.update(id, request)
+        );
+    }
+
+    @PostMapping("/{id}/status")
+    public ResponseEntity<JobRequestResponse> updateStatus(
+            @PathVariable UUID id,
+            @RequestParam RequestStatus status,
+            @RequestParam(required = false) String comment) {
+
+        return ResponseEntity.ok(
+                jobRequestService.updateStatus(id, status, comment)
         );
     }
 
