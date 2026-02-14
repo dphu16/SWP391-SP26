@@ -21,11 +21,12 @@ public class AttendanceLog {
     @Column(name = "employee_id", nullable = false)
     private UUID employeeId;
 
-    @ManyToOne
+    // Quan hệ ManyToOne: Một log thuộc về một lịch làm việc
+    @ManyToOne(fetch = FetchType.EAGER) // Eager để khi query log lấy luôn được thông tin ca
     @JoinColumn(name = "schedule_id")
     private WorkSchedule workSchedule;
 
-    @Column(nullable = false)
+    @Column(name = "date", nullable = false)
     private LocalDate date;
 
     @Column(name = "check_in")
@@ -34,15 +35,13 @@ public class AttendanceLog {
     @Column(name = "check_out")
     private LocalTime checkOut;
 
-    @Column(length = 20)
+    @Column(name = "status", length = 20)
     private String status;
 
-
-    @Column(name = "working_hours")
+    // Map với kiểu NUMERIC(4, 2) trong DB
+    @Column(name = "working_hours", precision = 4, scale = 2)
     private BigDecimal workingHours;
 
-    @Column(name = "ot_hours")
+    @Column(name = "ot_hours", precision = 4, scale = 2)
     private BigDecimal otHours;
-
-
 }

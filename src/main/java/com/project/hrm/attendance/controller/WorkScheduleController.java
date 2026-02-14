@@ -33,7 +33,7 @@ public class WorkScheduleController {
         // Gọi hàm getAllSchedules gốc của bạn
         return ResponseEntity.ok(workScheduleService.getAllSchedules());
     }
-
+    // GET http://localhost:8080/api/v1/attendance/work-schedules/my-schedule?employeeId=...
     @GetMapping("/work-schedules/my-schedule")
     public ResponseEntity<List<WorkScheduleResponse>> getMySchedules(@RequestParam UUID employeeId) {
         return ResponseEntity.ok(workScheduleService.getMySchedules(employeeId));
