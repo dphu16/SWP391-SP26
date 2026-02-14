@@ -1,18 +1,21 @@
 package com.project.hrm.recruitment.service;
 
-import com.project.hrm.recruitment.dto.request.JobRequest;
+import com.project.hrm.recruitment.dto.request.CreateJobRequest;
 import com.project.hrm.recruitment.dto.response.JobResponse;
+import com.project.hrm.recruitment.enums.JobStatus;
 
 import java.util.List;
 import java.util.UUID;
 
 public interface JobService {
 
-    JobResponse create(JobRequest request);
+    JobResponse create(CreateJobRequest request);
     List<JobResponse> getAllJob();
-    List<JobResponse> getJobByCreator(UUID id);
+    List<JobResponse> getJobByEmployeeId(UUID id);
     JobResponse getJobById(UUID id);
-    JobResponse update(UUID id, JobRequest request);
+    List<JobResponse> getJobByStatus(String status);
+    JobResponse update(UUID id, CreateJobRequest request);
+    JobResponse updateStatus(UUID id, JobStatus status);
     void delete(UUID id);
 
 }

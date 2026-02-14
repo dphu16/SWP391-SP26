@@ -21,5 +21,6 @@ public class JobResponse {
     private int quantity;
     private JobStatus status;
     private OffsetDateTime closedTime;
+    private UUID hrId;
 
 }

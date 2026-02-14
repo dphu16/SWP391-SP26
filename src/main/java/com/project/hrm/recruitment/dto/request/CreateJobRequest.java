@@ -9,7 +9,7 @@ import java.util.UUID;
 
 @Getter
 @Setter
-public class JobRequest {
+public class CreateJobRequest {
 
     private UUID requestId;
     private String title;
@@ -20,5 +20,6 @@ public class JobRequest {
     private int quantity;
     private OffsetDateTime closedTime;
     private JobStatus status;
+    private UUID hrId;
 
 }

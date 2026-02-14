@@ -1,5 +1,6 @@
 package com.project.hrm.recruitment.entity;
 
+import com.project.hrm.module.corehr.entity.Employee;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -59,6 +60,10 @@ public class Job {
 
     @Column(name = "closed_at")
     private OffsetDateTime closedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hr_id")
+    private Employee employee;
 
 
 }
