@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class WorkScheduleService {
@@ -69,5 +70,15 @@ public class WorkScheduleService {
             dto.setShift(shiftDto);
         }
         return dto;
+    }
+
+    // THÊM: Cho nhân viên chỉ xem lịch của mình
+    public List<WorkScheduleResponse> getMySchedules(UUID employeeId) {
+        List<WorkSchedule> entities = workScheduleRepository.findByEmployeeId(employeeId);
+        List<WorkScheduleResponse> dtos = new ArrayList<>();
+        for (WorkSchedule entity : entities) {
+            dtos.add(mapToResponse(entity));
+        }
+        return dtos;
     }
 }

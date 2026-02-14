@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/attendance")
@@ -31,5 +32,10 @@ public class WorkScheduleController {
     public ResponseEntity<List<WorkScheduleResponse>> getAllSchedules() {
         // Gọi hàm getAllSchedules gốc của bạn
         return ResponseEntity.ok(workScheduleService.getAllSchedules());
+    }
+
+    @GetMapping("/work-schedules/my-schedule")
+    public ResponseEntity<List<WorkScheduleResponse>> getMySchedules(@RequestParam UUID employeeId) {
+        return ResponseEntity.ok(workScheduleService.getMySchedules(employeeId));
     }
 }
