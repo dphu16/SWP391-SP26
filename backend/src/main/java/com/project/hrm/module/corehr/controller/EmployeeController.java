@@ -1,19 +1,20 @@
 package com.project.hrm.module.corehr.controller;
 
-import com.project.hrm.module.corehr.dto.EmployeeChangeRequestDTO;
-import com.project.hrm.module.corehr.dto.EmployeeDTO;
-import com.project.hrm.module.corehr.dto.JobDTO;
-import com.project.hrm.module.corehr.dto.PersonalDTO;
+import com.project.hrm.module.corehr.dto.*;
 import com.project.hrm.module.corehr.service.EmployeeService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1")
+@CrossOrigin(origins = "http://localhost:5173")
+@RequestMapping("/api")
 public class EmployeeController {
     private final EmployeeService employeeService;
 
@@ -22,25 +23,33 @@ public class EmployeeController {
     }
 
     @GetMapping("/hr/employees")
-    public List<EmployeeDTO> getAllEmployees() {
-        return employeeService.getAllEmployees();
+    public ResponseEntity<Page<EmployeeDTO>> getAllEmployees(
+            @PageableDefault(size = 10, sort = "fullName") Pageable pageable) {
+        return ResponseEntity.ok(employeeService.getAllEmployees(pageable));
     }
 
-    @GetMapping("employee/{id}/personal")
-    public ResponseEntity<PersonalDTO> getPersonalInfo(@PathVariable UUID id) {
-        PersonalDTO dto = employeeService.getPersonalById(id);
-        return ResponseEntity.ok(dto);
-    }
-
-    @GetMapping("employee/{id}/job")
-    public ResponseEntity<JobDTO> getJobInfo(@PathVariable UUID id) {
-        JobDTO dto = employeeService.getJobById(id);
+    @GetMapping("employee/{id}/view-detail")
+    public ResponseEntity<EmployeeDetailDTO> getEmployeeDetail(@PathVariable("id") UUID id) {
+        EmployeeDetailDTO dto = employeeService.getEmployeeDetail(id);
         return ResponseEntity.ok(dto);
     }
 
     @PutMapping("/employees/{id}/edit")
-    public ResponseEntity<Void> updateSelf(@PathVariable  UUID id,                                                                          EmployeeChangeRequestDTO req){
-        employeeService.updateSelf(id, req);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<EmployeeDetailDTO> updateEmployee(
+            @PathVariable("id") UUID id,
+            @Valid @RequestBody EmployeeChangeDTO req) {
+        EmployeeDetailDTO updated = employeeService.updateEmployee(id, req);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/employees/new")
+    public ResponseEntity<NewHireResponseDTO> createEmployee(
+            @Valid @RequestBody CreateNewHireDTO request) {
+
+        NewHireResponseDTO response = employeeService.createNewHire(request);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
     }
 }

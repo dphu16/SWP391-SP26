@@ -15,11 +15,15 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Employee {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "employee_id")
     private UUID employeeId;
+
+    @Column(unique = true, nullable = false)
+    private String employeeCode;
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id", referencedColumnName = "user_id")

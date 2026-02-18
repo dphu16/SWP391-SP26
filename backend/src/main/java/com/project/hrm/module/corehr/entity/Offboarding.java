@@ -1,7 +1,7 @@
 package com.project.hrm.module.corehr.entity;
 
-
 import com.project.hrm.module.corehr.enums.OffboardingStatus;
+import com.project.hrm.module.corehr.enums.OffboardingType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -14,6 +14,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Offboarding {
 
     @Id
@@ -25,9 +26,12 @@ public class Offboarding {
     @JoinColumn(name = "employee_id")
     private Employee employee;
 
-    @Column(name = "request_date")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false, length = 30)
+    private OffboardingType type;
 
-    private LocalDate requestDate = LocalDate.now();
+    @Column(name = "request_date")
+    private LocalDate requestDate;
 
     @Column(name = "expected_last_day")
     private LocalDate expectedLastDay;
@@ -36,11 +40,29 @@ public class Offboarding {
     private String reason;
 
     @Enumerated(EnumType.STRING)
-    private OffboardingStatus status = OffboardingStatus.PENDING;
+    @Column(name = "status", nullable = false, length = 20)
+    private OffboardingStatus status;
 
     @Column(name = "final_settlement_amount", precision = 15, scale = 2)
     private BigDecimal finalSettlementAmount;
 
     @Column(name = "is_finance_cleared")
-    private Boolean isFinanceCleared = false;
+    private Boolean isFinanceCleared;
+
+    /**
+     * Gán giá trị mặc định trước khi persist vào DB.
+     * Dùng @PrePersist thay vì field initializer để tránh vấn đề khi dùng Builder.
+     */
+    @PrePersist
+    protected void onCreate() {
+        if (this.requestDate == null) {
+            this.requestDate = LocalDate.now();
+        }
+        if (this.status == null) {
+            this.status = OffboardingStatus.PENDING;
+        }
+        if (this.isFinanceCleared == null) {
+            this.isFinanceCleared = false;
+        }
+    }
 }
