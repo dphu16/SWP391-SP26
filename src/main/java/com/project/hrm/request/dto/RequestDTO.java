@@ -1,4 +1,4 @@
-package com.project.hrm.attendance.dto;
+package com.project.hrm.request.dto;
 
 import lombok.Data;
 import java.time.LocalDate;

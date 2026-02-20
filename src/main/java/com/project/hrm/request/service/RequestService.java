@@ -1,6 +1,6 @@
 package com.project.hrm.request.service;
 
-import com.project.hrm.attendance.dto.RequestDTO;
+import com.project.hrm.request.dto.RequestDTO;
 import com.project.hrm.request.entity.Request;
 import com.project.hrm.request.repository.RequestRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ public class RequestService {
         req.setReason(dto.getReason());
         req.setStartDate(dto.getStartDate());
         req.setEndDate(dto.getEndDate());
-        // Status mặc định là PENDING do @PrePersist xử lý
+        // Status mặc định là PENDING do @PrePersist xử lý bên Entity
         return requestRepo.save(req);
     }
 
@@ -33,22 +33,38 @@ public class RequestService {
     }
 
     // --- 3. XEM TẤT CẢ (MANAGER) ---
-    // (Dùng để hiển thị danh sách cho sếp vào duyệt)
     public List<Request> getAllRequests() {
         return requestRepo.findAllByOrderByCreatedAtDesc();
     }
 
-    // --- 4. DUYỆT / TỪ CHỐI (MANAGER) ---
-    public Request updateStatus(UUID requestId, RequestDTO dto) {
+    // ================= SỬA ĐOẠN DƯỚI NÀY =================
+
+    // --- 4. DUYỆT YÊU CẦU (APPROVE) ---
+    // Khớp với API: PUT .../{id}/approve
+    public Request approveRequest(UUID requestId, RequestDTO dto) {
         Request req = requestRepo.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu!"));
 
-        // Cập nhật trạng thái (APPROVED / REJECTED)
-        if (dto.getStatus() != null) {
-            req.setStatus(dto.getStatus());
+        req.setStatus("APPROVED"); // Ép cứng trạng thái là Đã duyệt
+
+        // Lưu lời nhắn của sếp (nếu có)
+        if (dto != null && dto.getManagerComment() != null) {
+            req.setManagerComment(dto.getManagerComment());
         }
-        // Cập nhật comment của sếp
-        if (dto.getManagerComment() != null) {
+
+        return requestRepo.save(req);
+    }
+
+    // --- 5. TỪ CHỐI YÊU CẦU (REJECT) ---
+    // Khớp với API: PUT .../{id}/reject
+    public Request rejectRequest(UUID requestId, RequestDTO dto) {
+        Request req = requestRepo.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu!"));
+
+        req.setStatus("REJECTED"); // Ép cứng trạng thái là Từ chối
+
+        // Lưu lý do từ chối (Bắt buộc hoặc tùy chọn tùy bạn)
+        if (dto != null && dto.getManagerComment() != null) {
             req.setManagerComment(dto.getManagerComment());
         }
 
