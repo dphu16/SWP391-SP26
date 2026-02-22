@@ -47,9 +47,4 @@ public class PerformanceCyclesController {
         return ResponseEntity.ok(service.update(cycleId, req.toEntity()));
     }
 
-    @DeleteMapping("/{cycleId}")
-    public ResponseEntity<Void> delete(@PathVariable UUID cycleId){
-        service.delete(cycleId);
-        return ResponseEntity.noContent().build();
-    }
 }

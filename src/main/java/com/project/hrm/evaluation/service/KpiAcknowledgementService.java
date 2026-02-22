@@ -11,76 +11,54 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Service
-public class KpiAcknowledgementService {
-    private final KpiAcknowledgementRepository repository;
+@Transactional
+public class KpiAcknowledgementService{
+
+    private final KpiAcknowledgementRepository acknowledgementRepository;
     private final EmployeeGoalRepository goalRepository;
     private final EmployeeRepository employeeRepository;
 
-    public KpiAcknowledgementService(KpiAcknowledgementRepository repository,
-                                    EmployeeGoalRepository goalRepository,
-                                    EmployeeRepository employeeRepository) {
-        this.repository = repository;
+    public KpiAcknowledgementService(
+            KpiAcknowledgementRepository acknowledgementRepository,
+            EmployeeGoalRepository goalRepository,
+            EmployeeRepository employeeRepository
+    ) {
+        this.acknowledgementRepository = acknowledgementRepository;
         this.goalRepository = goalRepository;
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional
-    public KpiAcknowledgement create(KpiAcknowledgementRequest req){
-        KpiAcknowledgement ack = new KpiAcknowledgement();
-        ack.setConfirmed(req.getIsConfirmed());
+    public KpiAcknowledgement acknowledge(UUID goalId, KpiAcknowledgementRequest request) {
 
-        EmployeeGoal goal = goalRepository.findById(req.getGoalId())
+        // 1️⃣ Check goal exists
+        EmployeeGoal goal = goalRepository.findById(goalId)
                 .orElseThrow(() -> new RuntimeException("Employee goal not found"));
-        Employee employee = employeeRepository.findById(req.getEmployeeId())
+
+        // 2️⃣ Check employee exists
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
+        // 3️⃣ Check employee matches goal owner
+        if (!goal.getEmployee().getEmployeeId().equals(employee.getEmployeeId())) {
+            throw new RuntimeException("Employee does not match goal owner");
+        }
+
+        // 4️⃣ Check already acknowledged
+        boolean exists = acknowledgementRepository.existsByGoal(goal);
+        if (exists) {
+            throw new RuntimeException("KPI already acknowledged");
+        }
+
+        // 5️⃣ Create acknowledgement
+        KpiAcknowledgement ack = new KpiAcknowledgement();
         ack.setGoal(goal);
         ack.setEmployee(employee);
-
-        return repository.save(ack);
-    }
-
-    public List<KpiAcknowledgement> getAll(){
-        return repository.findAll();
-    }
-
-    public KpiAcknowledgement getById(UUID ackId){
-        return repository.findById(ackId)
-                .orElseThrow(() -> new RuntimeException("KPI acknowledgement not found"));
-    }
-
-    @Transactional
-    public KpiAcknowledgement update(UUID ackId, KpiAcknowledgementRequest req){
-        KpiAcknowledgement existing = getById(ackId);
-        existing.setConfirmed(req.getIsConfirmed());
-
-        if (Boolean.TRUE.equals(req.getIsConfirmed())){
-            existing.setConfirmedAt(OffsetDateTime.now());
-        }
-
-        return repository.save(existing);
-    }
-
-    public void delete(UUID ackId){
-        repository.deleteById(ackId);
-    }
-
-    @Transactional
-    public KpiAcknowledgement confirm(EmployeeGoal goalId, Employee employeeId){
-        KpiAcknowledgement ack = repository.findByGoalIdAndEmployeeId(goalId, employeeId)
-                .orElseThrow(() -> new RuntimeException("KPI acknowledgement not found"));
-
-        if (Boolean.TRUE.equals(ack.getConfirmed())){
-            throw new RuntimeException("Kpi already confirmed");
-        }
-
         ack.setConfirmed(true);
         ack.setConfirmedAt(OffsetDateTime.now());
-        return repository.save(ack);
 
+        return acknowledgementRepository.save(ack);
     }
 }

@@ -15,13 +15,12 @@ public class KpiLibrary {
     @Column(name = "lib_id")
     private UUID libId;
 
-    @Column(name = "name")
+    @Column(nullable = false)
     private String name;
 
-    @Column(name = "description")
     private String description;
+    private String category;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "category")
-    private KpiCategory category;
+    @Column(name = "default_weight")
+    private Double defaultWeight;
 }

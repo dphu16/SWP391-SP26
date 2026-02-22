@@ -26,7 +26,7 @@ public class KpiAcknowledgement {
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    @Column(name = "is_confirmed")
+    @Column(name = "is_confirmed", nullable = false)
     private Boolean confirmed = false;
 
     @Column(name = "confirmed_at")
