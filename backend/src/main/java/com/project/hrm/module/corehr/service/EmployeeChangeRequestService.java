@@ -1,7 +1,7 @@
 package com.project.hrm.module.corehr.service;
 
 import com.project.hrm.module.corehr.dto.ChangeRequestCreateDTO;
-import com.project.hrm.module.corehr.dto.ChangeRequestResponseDTO;
+import com.project.hrm.module.corehr.ResponseDTO.ChangeRequestResponseDTO;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.entity.EmployeeChangeRequest;
 import com.project.hrm.module.corehr.enums.ChangeRequestStatus;
@@ -44,7 +44,6 @@ public class EmployeeChangeRequestService {
                         ErrorCode.EMPLOYEE_NOT_FOUND,
                         "Employee not found with id: " + employeeId));
 
-        validateEmployeeActive(employee);
         validateNoPendingRequest(employeeId);
 
         Map<String, Object> oldData = ChangeRequestMapper.buildOldData(employee, dto);
@@ -63,14 +62,6 @@ public class EmployeeChangeRequestService {
         EmployeeChangeRequest saved = changeRequestRepository.saveAndFlush(request);
 
         return ChangeRequestMapper.toResponseDTO(saved);
-    }
-
-    private void validateEmployeeActive(Employee employee) {
-        if (!ACTIVE_STATUSES.contains(employee.getStatusPos())) {
-            throw new BusinessRuleException(
-                    ErrorCode.EMPLOYEE_NOT_ACTIVE,
-                    "Employee is not in an active status. Current status: " + employee.getStatusPos());
-        }
     }
 
     private void validateNoPendingRequest(UUID employeeId) {

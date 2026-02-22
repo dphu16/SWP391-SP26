@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import apiClient from "../services/apiClient";
 import type { Application, PageResponse } from "../types";
 
 const API_URL = "/api/applications/hired";
@@ -126,13 +126,14 @@ const EmployeeOnboarding: React.FC<EmployeeOnboardingProps> = ({
         setLoading(true);
         setError(null);
 
-        const response = await axios.get<PageResponse<Application>>(API_URL);
+        const response = await apiClient.get<PageResponse<Application>>(API_URL);
         setApplications(response.data.content);
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
+      } catch (err: unknown) {
+        if (err instanceof Error && 'response' in err) {
+          const axErr = err as { response?: { status: number; statusText: string } };
           setError(
-            err.response
-              ? `Lỗi ${err.response.status}: ${err.response.statusText}`
+            axErr.response
+              ? `Lỗi ${axErr.response.status}: ${axErr.response.statusText}`
               : "Không thể kết nối đến server. Hãy kiểm tra lại backend.",
           );
         } else {

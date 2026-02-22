@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import axios from "axios";
+import apiClient from "../services/apiClient";
 import type { CreateNewHireDTO } from "../types";
 
 const API_URL = "/api/employees/new";
@@ -19,7 +19,11 @@ interface NewHireCredentials {
 // ============================
 const CheckIcon = () => (
   <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-    <path fillRule="evenodd" d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z" clipRule="evenodd" />
+    <path
+      fillRule="evenodd"
+      d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
@@ -38,50 +42,86 @@ const CopyIcon = () => (
 
 const ShieldCheckIcon = () => (
   <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-    <path fillRule="evenodd" d="M9.661 2.237a.531.531 0 01.678 0 11.947 11.947 0 007.078 2.749.5.5 0 01.479.425c.069.52.104 1.05.104 1.589 0 5.162-3.26 9.563-7.834 11.256a.48.48 0 01-.332 0C5.26 16.563 2 12.162 2 7c0-.538.035-1.069.104-1.589a.5.5 0 01.48-.425 11.947 11.947 0 007.077-2.749zm4.196 5.954a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+    <path
+      fillRule="evenodd"
+      d="M9.661 2.237a.531.531 0 01.678 0 11.947 11.947 0 007.078 2.749.5.5 0 01.479.425c.069.52.104 1.05.104 1.589 0 5.162-3.26 9.563-7.834 11.256a.48.48 0 01-.332 0C5.26 16.563 2 12.162 2 7c0-.538.035-1.069.104-1.589a.5.5 0 01.48-.425 11.947 11.947 0 007.077-2.749zm4.196 5.954a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
 const WarningIcon = () => (
   <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+    <path
+      fillRule="evenodd"
+      d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
 const ArrowRightIcon = () => (
   <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-    <path fillRule="evenodd" d="M8.22 2.97a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06l2.97-2.97H3.75a.75.75 0 010-1.5h7.44L8.22 4.03a.75.75 0 010-1.06z" clipRule="evenodd" />
+    <path
+      fillRule="evenodd"
+      d="M8.22 2.97a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06l2.97-2.97H3.75a.75.75 0 010-1.5h7.44L8.22 4.03a.75.75 0 010-1.06z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
 const ArrowLeftIcon = () => (
   <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-    <path fillRule="evenodd" d="M7.78 12.53a.75.75 0 01-1.06 0L2.47 8.28a.75.75 0 010-1.06l4.25-4.25a.75.75 0 011.06 1.06L4.81 7h7.44a.75.75 0 010 1.5H4.81l2.97 2.97a.75.75 0 010 1.06z" clipRule="evenodd" />
+    <path
+      fillRule="evenodd"
+      d="M7.78 12.53a.75.75 0 01-1.06 0L2.47 8.28a.75.75 0 010-1.06l4.25-4.25a.75.75 0 011.06 1.06L4.81 7h7.44a.75.75 0 010 1.5H4.81l2.97 2.97a.75.75 0 010 1.06z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
 const ChevronRightIcon = () => (
   <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-    <path fillRule="evenodd" d="M6.22 3.22a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 010-1.06z" clipRule="evenodd" />
+    <path
+      fillRule="evenodd"
+      d="M6.22 3.22a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 010-1.06z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
 const PersonIcon = () => (
-  <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-text-secondary-light dark:text-text-secondary-dark flex-shrink-0">
+  <svg
+    viewBox="0 0 16 16"
+    fill="currentColor"
+    className="w-4 h-4 text-text-secondary-light dark:text-text-secondary-dark flex-shrink-0"
+  >
     <path d="M8 8a3 3 0 100-6 3 3 0 000 6zm2-3a2 2 0 11-4 0 2 2 0 014 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.029 10 8 10c-2.029 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z" />
   </svg>
 );
 
 const KeyIcon = () => (
-  <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-text-secondary-light dark:text-text-secondary-dark flex-shrink-0">
-    <path fillRule="evenodd" d="M6.5 0a6.5 6.5 0 105.478 9.984l.544.544a1.5 1.5 0 001.06.44h.418a1.5 1.5 0 001.5-1.5v-.418a1.5 1.5 0 00-.44-1.06l-.544-.544A6.5 6.5 0 006.5 0zm-5 6.5a5 5 0 1110 0 5 5 0 01-10 0zm4.5 0a.5.5 0 11-1 0 .5.5 0 011 0z" clipRule="evenodd" />
+  <svg
+    viewBox="0 0 16 16"
+    fill="currentColor"
+    className="w-4 h-4 text-text-secondary-light dark:text-text-secondary-dark flex-shrink-0"
+  >
+    <path
+      fillRule="evenodd"
+      d="M6.5 0a6.5 6.5 0 105.478 9.984l.544.544a1.5 1.5 0 001.06.44h.418a1.5 1.5 0 001.5-1.5v-.418a1.5 1.5 0 00-.44-1.06l-.544-.544A6.5 6.5 0 006.5 0zm-5 6.5a5 5 0 1110 0 5 5 0 01-10 0zm4.5 0a.5.5 0 11-1 0 .5.5 0 011 0z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
 const ChecklistIcon = () => (
   <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
     <path d="M2.5 3.5a.5.5 0 000 1h11a.5.5 0 000-1h-11zm0 4a.5.5 0 000 1h11a.5.5 0 000-1h-11zm0 4a.5.5 0 000 1h11a.5.5 0 000-1h-11z" />
-    <path fillRule="evenodd" d="M1.5 3.5A1.5 1.5 0 013 2h10a1.5 1.5 0 011.5 1.5v9A1.5 1.5 0 0113 14H3a1.5 1.5 0 01-1.5-1.5v-9zm1.5 0v9a.5.5 0 00.5.5h10a.5.5 0 00.5-.5v-9a.5.5 0 00-.5-.5H3a.5.5 0 00-.5.5z" clipRule="evenodd" />
+    <path
+      fillRule="evenodd"
+      d="M1.5 3.5A1.5 1.5 0 013 2h10a1.5 1.5 0 011.5 1.5v9A1.5 1.5 0 0113 14H3a1.5 1.5 0 01-1.5-1.5v-9zm1.5 0v9a.5.5 0 00.5.5h10a.5.5 0 00.5-.5v-9a.5.5 0 00-.5-.5H3a.5.5 0 00-.5.5z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
@@ -93,19 +133,28 @@ const SaveIcon = () => (
 
 const VerifiedIcon = () => (
   <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-    <path fillRule="evenodd" d="M16.403 12.652a3 3 0 000-5.304 3 3 0 00-3.75-3.751 3 3 0 00-5.305 0 3 3 0 00-3.751 3.75 3 3 0 000 5.305 3 3 0 003.75 3.751 3 3 0 005.305 0 3 3 0 003.751-3.75zm-2.546-4.46a.75.75 0 00-1.214-.883l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+    <path
+      fillRule="evenodd"
+      d="M16.403 12.652a3 3 0 000-5.304 3 3 0 00-3.75-3.751 3 3 0 00-5.305 0 3 3 0 00-3.751 3.75 3 3 0 000 5.305 3 3 0 003.75 3.751 3 3 0 005.305 0 3 3 0 003.751-3.75zm-2.546-4.46a.75.75 0 00-1.214-.883l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
 const ErrorIcon = () => (
-  <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 flex-shrink-0">
-    <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm0-11a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 018 4zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+  <svg
+    viewBox="0 0 16 16"
+    fill="currentColor"
+    className="w-4 h-4 flex-shrink-0"
+  >
+    <path
+      fillRule="evenodd"
+      d="M8 15A7 7 0 108 1a7 7 0 000 14zm0-11a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 018 4zm0 9a1 1 0 100-2 1 1 0 000 2z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
-// ============================
-// Shared Input class (MASTER.md input spec)
-// ============================
 const inputCls =
   "w-full px-4 py-2.5 text-sm rounded-xl border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-text-primary-light dark:text-text-primary-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors";
 
@@ -213,7 +262,9 @@ const CredentialsModal: React.FC<CredentialsModalProps> = ({
             </span>
           </div>
           <div>
-            <h2 className="text-base font-bold text-white">Employee Created!</h2>
+            <h2 className="text-base font-bold text-white">
+              Employee Created!
+            </h2>
             <p className="text-emerald-100 text-xs mt-0.5">
               {credentials.fullName} has been successfully onboarded.
             </p>
@@ -323,7 +374,11 @@ const steps = [
     description: "Department and position",
     icon: (
       <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-        <path fillRule="evenodd" d="M1 2.5A1.5 1.5 0 012.5 1h8A1.5 1.5 0 0112 2.5v3.563a3.5 3.5 0 00-1.5-.063V2.5h-8v11h4.5v-1.5a1.5 1.5 0 011.5-1.5h2a1.5 1.5 0 011.5 1.5v1.5h.5a.5.5 0 010 1H2.5A1.5 1.5 0 011 13.5v-11z" clipRule="evenodd" />
+        <path
+          fillRule="evenodd"
+          d="M1 2.5A1.5 1.5 0 012.5 1h8A1.5 1.5 0 0112 2.5v3.563a3.5 3.5 0 00-1.5-.063V2.5h-8v11h4.5v-1.5a1.5 1.5 0 011.5-1.5h2a1.5 1.5 0 011.5 1.5v1.5h.5a.5.5 0 010 1H2.5A1.5 1.5 0 011 13.5v-11z"
+          clipRule="evenodd"
+        />
       </svg>
     ),
   },
@@ -333,7 +388,11 @@ const steps = [
     description: "Required for background check",
     icon: (
       <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-        <path fillRule="evenodd" d="M2.5 3A1.5 1.5 0 001 4.5v.793c.026.009.051.02.076.032L7.674 8.51c.206.1.446.1.652 0l6.598-3.185A.755.755 0 0115 5.293V4.5A1.5 1.5 0 0013.5 3h-11z" clipRule="evenodd" />
+        <path
+          fillRule="evenodd"
+          d="M2.5 3A1.5 1.5 0 001 4.5v.793c.026.009.051.02.076.032L7.674 8.51c.206.1.446.1.652 0l6.598-3.185A.755.755 0 0115 5.293V4.5A1.5 1.5 0 0013.5 3h-11z"
+          clipRule="evenodd"
+        />
         <path d="M15 6.954L8.978 9.86a2.25 2.25 0 01-1.956 0L1 6.954V11.5A1.5 1.5 0 002.5 13h11a1.5 1.5 0 001.5-1.5V6.954z" />
       </svg>
     ),
@@ -390,7 +449,9 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         <input
           type="text"
           value={formData.fullName}
-          onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, fullName: e.target.value })
+          }
           placeholder="e.g. Nguyen Van A"
           className={inputCls}
         />
@@ -536,7 +597,9 @@ const CitizenIdForm: React.FC<CitizenIdFormProps> = ({
       <input
         type="text"
         value={formData.citizenId}
-        onChange={(e) => setFormData({ ...formData, citizenId: e.target.value })}
+        onChange={(e) =>
+          setFormData({ ...formData, citizenId: e.target.value })
+        }
         placeholder="e.g. 001234567890"
         className={`${inputCls} font-mono`}
       />
@@ -674,7 +737,7 @@ const CandidateProfileCompletion: React.FC = () => {
       setSubmitting(true);
       setSubmitError(null);
 
-      const response = await axios.post(API_URL, formData);
+      const response = await apiClient.post(API_URL, formData);
       const data = response.data;
 
       setToast({ message: "Employee created successfully", type: "success" });
@@ -683,11 +746,12 @@ const CandidateProfileCompletion: React.FC = () => {
         rawPassword: data.rawPassword ?? "",
         fullName: data.fullName ?? formData.fullName,
       });
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
+    } catch (err: unknown) {
+      if (err instanceof Error && 'response' in err) {
+        const axErr = err as { response?: { status: number; statusText: string; data?: { message?: string } } };
         const message =
-          err.response?.data?.message ??
-          `Error ${err.response?.status}: ${err.response?.statusText}`;
+          axErr.response?.data?.message ??
+          `Error ${axErr.response?.status}: ${axErr.response?.statusText}`;
         setSubmitError(message);
         setToast({ message, type: "error" });
       } else {
@@ -714,10 +778,15 @@ const CandidateProfileCompletion: React.FC = () => {
   const renderContent = () => {
     switch (currentStep) {
       case 0:
-        return <PersonalInfoForm formData={formData} setFormData={setFormData} />;
+        return (
+          <PersonalInfoForm formData={formData} setFormData={setFormData} />
+        );
       case 1:
         return (
-          <EmploymentDetailsForm formData={formData} setFormData={setFormData} />
+          <EmploymentDetailsForm
+            formData={formData}
+            setFormData={setFormData}
+          />
         );
       case 2:
         return <CitizenIdForm formData={formData} setFormData={setFormData} />;
@@ -725,10 +794,15 @@ const CandidateProfileCompletion: React.FC = () => {
         return <TaxCodeForm formData={formData} setFormData={setFormData} />;
       case 4:
         return (
-          <AddressVerificationForm formData={formData} setFormData={setFormData} />
+          <AddressVerificationForm
+            formData={formData}
+            setFormData={setFormData}
+          />
         );
       default:
-        return <PersonalInfoForm formData={formData} setFormData={setFormData} />;
+        return (
+          <PersonalInfoForm formData={formData} setFormData={setFormData} />
+        );
     }
   };
 
@@ -765,7 +839,10 @@ const CandidateProfileCompletion: React.FC = () => {
 
       {/* Credentials Modal */}
       {credentials && (
-        <CredentialsModal credentials={credentials} onClose={handleModalClose} />
+        <CredentialsModal
+          credentials={credentials}
+          onClose={handleModalClose}
+        />
       )}
 
       <div className="space-y-6">
@@ -816,7 +893,9 @@ const CandidateProfileCompletion: React.FC = () => {
                       <span className="font-medium text-text-secondary-light dark:text-text-secondary-dark">
                         Profile Completion
                       </span>
-                      <span className="font-bold text-primary">{progressPct}%</span>
+                      <span className="font-bold text-primary">
+                        {progressPct}%
+                      </span>
                     </div>
                     <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
                       <div
@@ -833,7 +912,10 @@ const CandidateProfileCompletion: React.FC = () => {
                         { label: "Email", value: formData.email },
                         { label: "Phone", value: formData.phone },
                       ].map(({ label, value }) => (
-                        <div key={label} className="flex justify-between items-center">
+                        <div
+                          key={label}
+                          className="flex justify-between items-center"
+                        >
                           <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark">
                             {label}
                           </span>

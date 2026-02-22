@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Archivo:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Archivo:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -40,6 +40,7 @@
   /* === Typography === */
   --font-sans: "Inter", sans-serif;
   --font-heading: "Archivo", sans-serif;
+  --font-body: "Space Grotesk", "Inter", sans-serif;
 
   /* === Shadows === */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);

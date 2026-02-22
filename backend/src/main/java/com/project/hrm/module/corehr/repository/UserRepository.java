@@ -8,10 +8,6 @@ import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
 
-    /**
-     * Tìm user theo username — dùng cho đăng nhập.
-     * Spring Data JPA tự generate SQL từ tên method.
-     */
     Optional<User> findByUsername(String username);
 
     boolean existsByUsername(String username);

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-
-
+import { getToken, removeToken } from "../services/authService";
+import { decodeJwt } from "../utils/jwtDecode";
 // ─── Breadcrumb config ────────────────────────────────────────────────────────
 const breadcrumbMap: Record<
   string,
@@ -13,16 +13,17 @@ const breadcrumbMap: Record<
   "/offboarding": { label: "Offboarding", parent: "Employees" },
 };
 
-// ─── Hardcoded "logged-in" user ───────────────────────────────────────────────
-// Replace with real auth context / JWT decode when available.
-const CURRENT_USER = {
-  name: "Admin",
-  role: "HR Manager",
-  avatarUrl: "https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg",
-  // Set to a real employee UUID to enable the profile drawer fetch.
-  // If null, the drawer shows a "no profile linked" state.
-  employeeId: null as string | null,
-};
+// ─── Current user derived from JWT ──────────────────────────────────────────
+function useCurrentUser() {
+  const payload = decodeJwt(getToken());
+  return {
+    name:       payload?.fullName ?? payload?.sub ?? "User",
+    role:       payload?.role     ?? "—",
+    avatarUrl:  payload?.avatarUrl ?? "",
+    employeeId: payload?.employeeId ?? null as string | null,
+  };
+}
+
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 const ChevronDownIcon = ({ open }: { open: boolean }) => (
@@ -115,6 +116,7 @@ const MenuItem: React.FC<MenuItemProps> = ({
 const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const currentUser = useCurrentUser();  // ← real JWT data
 
   const [darkMode, setDarkMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -165,14 +167,9 @@ const Header: React.FC = () => {
   const openProfile = useCallback(() => {
     setDropdownOpen(false);
     setDrawerOpen(true);
+    navigate(`/profile`);
   }, []);
 
-  const handleViewFull = useCallback(
-    (id: string) => {
-      navigate(`/employee/${id}`);
-    },
-    [navigate],
-  );
 
   // Deterministic avatar color (fallback when no image)
   const avatarColors = [
@@ -181,8 +178,8 @@ const Header: React.FC = () => {
     "bg-purple-100 text-purple-600",
   ];
   const avatarColor =
-    avatarColors[(CURRENT_USER.name.charCodeAt(0) ?? 0) % avatarColors.length];
-  const avatarInitials = CURRENT_USER.name.slice(0, 2).toUpperCase();
+    avatarColors[(currentUser.name.charCodeAt(0) ?? 0) % avatarColors.length];
+  const avatarInitials = currentUser.name.slice(0, 2).toUpperCase();
 
   return (
     <>
@@ -294,11 +291,11 @@ const Header: React.FC = () => {
               }`}
             >
               {/* Avatar */}
-              {CURRENT_USER.avatarUrl ? (
+              {currentUser.avatarUrl ? (
                 <img
-                  alt={CURRENT_USER.name}
+                  alt={currentUser.name}
                   className="w-7 h-7 rounded-full object-cover ring-2 ring-primary/20"
-                  src={CURRENT_USER.avatarUrl}
+                  src={currentUser.avatarUrl}
                 />
               ) : (
                 <div
@@ -311,10 +308,10 @@ const Header: React.FC = () => {
               {/* Name + role */}
               <div className="hidden sm:block text-left">
                 <div className="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark leading-none">
-                  {CURRENT_USER.name}
+                  {currentUser.name}
                 </div>
                 <div className="text-[10px] text-text-secondary-light dark:text-text-secondary-dark leading-none mt-0.5">
-                  {CURRENT_USER.role}
+                  {currentUser.role}
                 </div>
               </div>
 
@@ -336,10 +333,10 @@ const Header: React.FC = () => {
               {/* User identity header */}
               <div className="px-4 py-3.5 border-b border-border-light dark:border-border-dark">
                 <div className="flex items-center gap-3">
-                  {CURRENT_USER.avatarUrl ? (
+                  {currentUser.avatarUrl ? (
                     <img
-                      src={CURRENT_USER.avatarUrl}
-                      alt={CURRENT_USER.name}
+                      src={currentUser.avatarUrl}
+                      alt={currentUser.name}
                       className="w-9 h-9 rounded-full object-cover ring-2 ring-primary/20 flex-shrink-0"
                     />
                   ) : (
@@ -351,10 +348,10 @@ const Header: React.FC = () => {
                   )}
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark truncate">
-                      {CURRENT_USER.name}
+                      {currentUser.name}
                     </p>
                     <p className="text-[11px] text-text-secondary-light dark:text-text-secondary-dark truncate">
-                      {CURRENT_USER.role}
+                      {currentUser.role}
                     </p>
                   </div>
                 </div>
@@ -383,7 +380,8 @@ const Header: React.FC = () => {
                   label="Sign Out"
                   onClick={() => {
                     setDropdownOpen(false);
-                    // TODO: clear auth tokens and redirect to login
+                    removeToken();
+                    navigate("/login", { replace: true });
                   }}
                   variant="danger"
                 />

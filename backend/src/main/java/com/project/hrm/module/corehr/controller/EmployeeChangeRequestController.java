@@ -1,7 +1,7 @@
 package com.project.hrm.module.corehr.controller;
 
 import com.project.hrm.module.corehr.dto.ChangeRequestCreateDTO;
-import com.project.hrm.module.corehr.dto.ChangeRequestResponseDTO;
+import com.project.hrm.module.corehr.ResponseDTO.ChangeRequestResponseDTO;
 import com.project.hrm.module.corehr.service.EmployeeChangeRequestService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

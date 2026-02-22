@@ -1,5 +1,6 @@
 package com.project.hrm.module.corehr.service;
 
+import com.project.hrm.module.corehr.ResponseDTO.InactiveEmployeeResponseDTO;
 import com.project.hrm.module.corehr.dto.*;
 import com.project.hrm.module.corehr.entity.Department;
 import com.project.hrm.module.corehr.entity.Employee;
@@ -13,7 +14,7 @@ import com.project.hrm.module.corehr.repository.DepartmentRepository;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.corehr.repository.PositionRepository;
 import com.project.hrm.module.corehr.repository.UserRepository;
-import com.project.hrm.module.recruitment.repository.ApplicationRepository;
+import com.project.hrm.module.corehr.repository.OnboardingRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,11 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.text.Normalizer;
+import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
 @Service
-public class EmployeeService {
+public class EmployeeService implements IEmployeeService {
 
     private static final String PASSWORD_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$!";
     private static final int PASSWORD_LENGTH = 12;
@@ -37,7 +39,7 @@ public class EmployeeService {
     private final DepartmentRepository departmentRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final ApplicationRepository applicationRepository;
+    private final OnboardingRepository applicationRepository;
 
     public EmployeeService(
             EmployeeRepository employeeRepository,
@@ -45,7 +47,7 @@ public class EmployeeService {
             DepartmentRepository departmentRepository,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            ApplicationRepository applicationRepository) {
+            OnboardingRepository applicationRepository) {
         this.employeeRepository = employeeRepository;
         this.positionRepository = positionRepository;
         this.departmentRepository = departmentRepository;
@@ -54,63 +56,54 @@ public class EmployeeService {
         this.applicationRepository = applicationRepository;
     }
 
-    // -------------------------------------------------------------------------
-    // Helper methods
-    // -------------------------------------------------------------------------
-
     protected Employee getEmployeeById(UUID id) {
         return employeeRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new RuntimeException("Employee not found with id: " + id));
     }
 
-    protected Department getDepartmentById(UUID id) {
-        return departmentRepository.findById(id).get();
-    }
+    private static final Pattern DIACRITICS_PATTERN = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
 
-    protected Position getPositionById(UUID id) {
-        return positionRepository.findById(id).get();
-    }
+    public String toShortSlug(String fullName) {
+        if (fullName == null || fullName.isBlank()) {
+            return "user";
+        }
 
-    /**
-     * Converts a Vietnamese full name to a clean ASCII slug.
-     * E.g. "Nguyễn Văn An" -> "nguyenVanAn"
-     */
-    private String toAsciiSlug(String fullName) {
-        if (fullName == null || fullName.isBlank())
+        // 1. Loại bỏ dấu và chuẩn hóa chuỗi
+        String ascii = removeAccent(fullName.trim());
+
+        // 2. Tách các từ
+        String[] parts = ascii.split("\\s+");
+        if (parts.length == 0)
             return "user";
 
-        // Normalize unicode (NFD) then strip combining diacritical marks
-        String normalized = Normalizer.normalize(fullName.trim(), Normalizer.Form.NFD);
-        Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
-        String ascii = pattern.matcher(normalized).replaceAll("");
-
-        // Replace đ/Đ which is not decomposed by NFD
-        ascii = ascii.replace("đ", "d").replace("Đ", "D");
-
-        // Split into words, capitalize each word except the first, join
-        String[] parts = ascii.trim().split("\\s+");
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < parts.length; i++) {
+
+        // 3. Lấy từ cuối cùng (Tên chính) và viết hoa chữ cái đầu
+        String firstName = parts[parts.length - 1].replaceAll("[^a-zA-Z0-9]", "");
+        if (!firstName.isEmpty()) {
+            sb.append(Character.toUpperCase(firstName.charAt(0)));
+            sb.append(firstName.substring(1).toLowerCase());
+        }
+
+        // 4. Lấy các chữ cái đầu của Họ và Tên lót, viết hoa hết
+        for (int i = 0; i < parts.length - 1; i++) {
             String word = parts[i].replaceAll("[^a-zA-Z0-9]", "");
-            if (word.isEmpty())
-                continue;
-            if (i == 0) {
-                sb.append(word.toLowerCase());
-            } else {
+            if (!word.isEmpty()) {
                 sb.append(Character.toUpperCase(word.charAt(0)));
-                sb.append(word.substring(1).toLowerCase());
             }
         }
-        return sb.length() > 0 ? sb.toString() : "user";
+
+        return sb.toString();
     }
 
-    /**
-     * Generates a unique username based on the employee's full name.
-     * Appends a numeric suffix if the base username is already taken.
-     * E.g. "nguyenVanAn", "nguyenVanAn2", "nguyenVanAn3", ...
-     */
+    private String removeAccent(String str) {
+        String normalized = Normalizer.normalize(str, Normalizer.Form.NFD);
+        String ascii = DIACRITICS_PATTERN.matcher(normalized).replaceAll("");
+        return ascii.replace("đ", "d").replace("Đ", "D");
+    }
+
     private String generateUniqueUsername(String fullName) {
-        String base = toAsciiSlug(fullName);
+        String base = toShortSlug(fullName);
         String candidate = base;
         int suffix = 2;
         while (userRepository.existsByUsername(candidate)) {
@@ -120,12 +113,6 @@ public class EmployeeService {
         return candidate;
     }
 
-    /**
-     * Generates a cryptographically secure random password of
-     * {@value PASSWORD_LENGTH} characters,
-     * guaranteed to contain at least one uppercase, one lowercase, one digit, and
-     * one special char.
-     */
     private String generateSecurePassword() {
         StringBuilder sb = new StringBuilder(PASSWORD_LENGTH);
 
@@ -151,10 +138,6 @@ public class EmployeeService {
         return new String(chars);
     }
 
-    // -------------------------------------------------------------------------
-    // Public API
-    // -------------------------------------------------------------------------
-
     public Page<EmployeeDTO> getAllEmployees(Pageable pageable) {
         return employeeRepository.findAllWithDetails(pageable)
                 .map(EmployeeMapper::toDTO);
@@ -168,7 +151,6 @@ public class EmployeeService {
     public EmployeeDetailDTO updateEmployee(UUID id, EmployeeChangeDTO req) {
         Employee e = getEmployeeById(id);
 
-        // === Personal Information ===
         if (req.getFullName() != null)
             e.setFullName(req.getFullName());
         if (req.getEmail() != null)
@@ -220,22 +202,6 @@ public class EmployeeService {
         return EmployeeDetailMapper.toDTO(saved);
     }
 
-    /**
-     * Creates a new employee with auto-generated login credentials.
-     *
-     * <p>
-     * Business rules applied:
-     * <ul>
-     * <li>User role is set to {@link UserRole#EMPLOYEE}.</li>
-     * <li>User account status is set to {@link UserStatus#ACTIVE}.</li>
-     * <li>Employee status is set to {@link EmployeeStatus#ONBOARDING}.</li>
-     * <li>A unique username is derived from the employee's full name.</li>
-     * <li>A secure random password is generated and hashed with BCrypt before
-     * persisting.</li>
-     * <li>The raw (plain-text) password is returned once in the response for the
-     * admin to share.</li>
-     * </ul>
-     */
     @Transactional
     public NewHireResponseDTO createNewHire(CreateNewHireDTO request) {
 
@@ -255,15 +221,15 @@ public class EmployeeService {
         // 3. Build the User account
         User user = new User();
         user.setUsername(username);
-        user.setPasswordHash(passwordEncoder.encode(rawPassword)); // BCrypt hash
+        user.setPassword(passwordEncoder.encode(rawPassword));
         user.setEmail(request.getEmail());
         user.setRole(UserRole.EMPLOYEE); // Default role
-        user.setStatus(UserStatus.ACTIVE); // Default status
+        user.setStatus(UserStatus.INACTIVE); // Default status
 
         // 4. Build the Employee and link the User
         Employee employee = NewHireMapper.toEntity(request, department, position);
         employee.setUser(user);
-        employee.setStatusPos(EmployeeStatus.ONBOARDING); // Default employee status
+        employee.setStatusPos(EmployeeStatus.OFFICIAL); // Default employee status
 
         // 5. Persist (CascadeType.ALL on Employee.user saves the User automatically)
         Employee saved = employeeRepository.save(employee);
@@ -276,4 +242,17 @@ public class EmployeeService {
         // 7. Return response including the raw password (shown once)
         return NewHireMapper.toResponseDTO(saved, rawPassword);
     }
+
+    @Override
+    public List<InactiveEmployeeResponseDTO> getInactiveEmployees() {
+        List<EmployeeStatus> inactiveStatuses = List.of(
+                EmployeeStatus.TERMINATED,
+                EmployeeStatus.RESIGNED);
+
+        return employeeRepository.findByStatusPosIn(inactiveStatuses)
+                .stream()
+                .map(InactiveEmployeeMapper::toDTO)
+                .toList();
+    }
+
 }

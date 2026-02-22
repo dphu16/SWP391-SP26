@@ -2,63 +2,57 @@ package com.project.hrm.common;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
+import com.project.hrm.module.auth.service.customUserDetailsService;
 import java.util.List;
 
-/**
- * Cấu hình Spring Security cho ứng dụng HRM.
- *
- * Thiết kế:
- * - Stateless session (không dùng cookie/session) → phù hợp REST API
- * - BCrypt cho mã hóa mật khẩu (strength = 10, chuẩn industry)
- * - CSRF disabled để dùng REST API stateless
- */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
-    /**
-     * Cấu hình Security Filter Chain.
-     *
-     * - Các endpoint → tạm thời cho phép tất cả (sẽ bổ sung authorization sau)
-     * - Session = STATELESS → server không lưu session
-     */
+    private final customUserDetailsService customUserDetailsService;
+    private final JwtAuthFilter jwtAuthFilter;
+
+    public SecurityConfig(customUserDetailsService customUserDetailsService,
+            JwtAuthFilter jwtAuthFilter) {
+        this.customUserDetailsService = customUserDetailsService;
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll() // TODO: đổi thành .authenticated() khi đã implement đầy đủ
-                );
+                .authorizeHttpRequests(requests -> requests
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .anyRequest().authenticated())
+                // Đưa JWT filter vào TRƯỚC filter xác thực mặc định của Spring
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    /**
-     * Bean mã hóa mật khẩu bằng BCrypt.
-     * BCrypt tự động tạo salt → cùng password cho ra hash khác nhau.
-     * Strength = 10 (default) → cân bằng giữa bảo mật và performance.
-     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Cấu hình CORS — cho phép frontend gọi API từ khác origin.
-     * Trong môi trường dev, frontend chạy trên localhost:5173 (Vite).
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
@@ -71,6 +65,19 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
         return source;
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(customUserDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
     }
 
 }

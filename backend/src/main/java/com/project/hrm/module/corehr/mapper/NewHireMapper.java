@@ -1,7 +1,7 @@
 package com.project.hrm.module.corehr.mapper;
 
 import com.project.hrm.module.corehr.dto.CreateNewHireDTO;
-import com.project.hrm.module.corehr.dto.NewHireResponseDTO;
+import com.project.hrm.module.corehr.service.NewHireResponseDTO;
 import com.project.hrm.module.corehr.entity.Department;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.entity.Position;

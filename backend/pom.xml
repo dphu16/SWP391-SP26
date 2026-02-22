@@ -6,7 +6,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.5.10</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/>
 	</parent>
 	<groupId>com.project</groupId>
 	<artifactId>hrm</artifactId>
@@ -91,7 +91,6 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
-		<!-- JWT (JSON Web Token) dependencies -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-api</artifactId>
@@ -111,8 +110,6 @@
 		</dependency>
 
 	</dependencies>
-
-
 
 	<build>
 		<plugins>

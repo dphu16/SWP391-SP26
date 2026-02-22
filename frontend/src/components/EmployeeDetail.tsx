@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import apiClient from "../services/apiClient";
+import { getToken } from "../services/authService";
+import { decodeJwt } from "../utils/jwtDecode";
 
 // DTO interface matching GET /api/employee/{id}/view-detail
 interface EmployeeDetailDTO {
@@ -26,7 +28,6 @@ interface EmployeeDetailDTO {
 
 const API_BASE = "/api/employee";
 
-// ─── Status config (MASTER.md: #22C55E CTA/Accent, #0891B2 Primary) ──────────
 const STATUS_CONFIG: Record<string, { dot: string; text: string; bg: string }> =
   {
     ACTIVE: {
@@ -216,8 +217,13 @@ const CheckIcon = () => (
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const EmployeeDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id: paramId } = useParams<{ id: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
+
+  const isProfile = location.pathname === "/profile";
+  const token = getToken();
+  const id = isProfile ? decodeJwt(token)?.employeeId : paramId;
 
   const [detail, setDetail] = useState<EmployeeDetailDTO | null>(null);
   const [loading, setLoading] = useState(true);
@@ -245,16 +251,17 @@ const EmployeeDetail: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        const res = await axios.get<EmployeeDetailDTO>(
+        const res = await apiClient.get<EmployeeDetailDTO>(
           `${API_BASE}/${id}/view-detail`,
         );
         setDetail(res.data);
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
+      } catch (err: unknown) {
+        if (err instanceof Error && 'response' in err) {
+          const axErr = err as { response?: { status: number; statusText: string } };
           setError(
-            err.response?.status === 404
+            axErr.response?.status === 404
               ? "Không tìm thấy nhân viên."
-              : `Lỗi ${err.response?.status}: ${err.response?.statusText}`,
+              : `Lỗi ${axErr.response?.status}: ${axErr.response?.statusText}`,
           );
         } else {
           setError("Đã xảy ra lỗi không xác định.");
@@ -295,7 +302,7 @@ const EmployeeDetail: React.FC = () => {
       setSaving(true);
       setEditError(null);
 
-      const res = await axios.put<EmployeeDetailDTO>(
+      const res = await apiClient.put<EmployeeDetailDTO>(
         `/api/employees/${id}/edit`,
         editForm,
       );
@@ -305,11 +312,12 @@ const EmployeeDetail: React.FC = () => {
       setIsEditing(false);
 
       setTimeout(() => setEditSuccess(false), 3000);
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
+    } catch (err: unknown) {
+      if (err instanceof Error && 'response' in err) {
+        const axErr = err as { response?: { status: number; data?: { message?: string }; statusText: string } };
         setEditError(
-          err.response?.data?.message ||
-            `Lỗi ${err.response?.status}: Không thể lưu thay đổi.`,
+          axErr.response?.data?.message ||
+            `Lỗi ${axErr.response?.status}: Không thể lưu thay đổi.`,
         );
       } else {
         setEditError("Đã xảy ra lỗi không xác định.");

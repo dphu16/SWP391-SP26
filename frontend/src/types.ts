@@ -66,3 +66,17 @@ export interface CreateNewHireDTO {
   dateOfBirth: string;
   avatarUrl?: string;
 }
+
+// Offboarding employee DTO (TERMINATED / RESIGNED employees)
+export interface OffboardingEmployee {
+  employeeId: string;
+  employeeCode: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  avatarUrl?: string;
+  departmentName: string;
+  positionTitle: string;
+  employeeStatus: "TERMINATED" | "RESIGNED" | string;
+  dateOfJoining: string;
+}

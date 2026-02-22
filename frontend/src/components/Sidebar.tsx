@@ -60,7 +60,6 @@ const Icons = {
   ),
 };
 
-// ─── Nav Item Component ────────────────────────────────────────────────────────
 interface NavItemProps {
   icon: React.ReactNode;
   label: string;
@@ -86,23 +85,18 @@ const NavItem: React.FC<NavItemProps> = ({
       ${isCollapsed ? "justify-center" : ""}
     `}
   >
-    {/* Active indicator */}
     {isActive && !isCollapsed && (
       <span className="active-nav-indicator" />
     )}
 
-    {/* Icon */}
     <span className={`flex-shrink-0 ${isActive ? "text-primary" : ""}`}>
       {icon}
     </span>
-
-    {/* Label */}
     {!isCollapsed && (
       <span className="flex-1 text-left truncate">{label}</span>
     )}
 
-    {/* Badge */}
-    {!isCollapsed && badge !== undefined && badge > 0 && (
+  {!isCollapsed && badge !== undefined && badge > 0 && (
       <span className="ml-auto flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center">
         {badge}
       </span>
@@ -110,7 +104,6 @@ const NavItem: React.FC<NavItemProps> = ({
   </button>
 );
 
-// ─── Section Label ─────────────────────────────────────────────────────────────
 const SectionLabel: React.FC<{ label: string; isCollapsed: boolean }> = ({ label, isCollapsed }) =>
   isCollapsed ? (
     <div className="my-2 border-t border-border-light dark:border-border-dark mx-2" />
@@ -120,12 +113,12 @@ const SectionLabel: React.FC<{ label: string; isCollapsed: boolean }> = ({ label
     </div>
   );
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [employeesExpanded, setEmployeesExpanded] = useState(true);
+  const [requestExpanded, setRequestExpanded] = useState(true);
 
   const isPath = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
 
@@ -135,21 +128,18 @@ const Sidebar: React.FC = () => {
         ${isCollapsed ? "w-[72px]" : "w-64"}
       `}
     >
-      {/* ── Brand Header ── */}
       <div className={`h-16 flex items-center flex-shrink-0 border-b border-border-light dark:border-border-dark
         ${isCollapsed ? "justify-center px-4" : "justify-between px-5"}
       `}>
         {!isCollapsed && (
           <div className="flex items-center gap-2.5">
-            {/* Logo mark */}
             <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
               <svg viewBox="0 0 20 20" fill="white" className="w-4 h-4">
                 <path d="M7 8a3 3 0 100-6 3 3 0 000 6zM14.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM1.615 16.428a1.224 1.224 0 01-.569-1.175 6.002 6.002 0 0111.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 017 17a9.953 9.953 0 01-5.385-1.572zM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 00-1.588-3.755 4.502 4.502 0 015.874 2.636.818.818 0 01-.36.98A7.465 7.465 0 0114.5 16z" />
               </svg>
             </div>
             <span className="text-[15px] font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark font-heading">
-              HRM<span className="text-primary">Pro</span>
-            </span>
+              HRM</span>
           </div>
         )}
 
@@ -211,7 +201,7 @@ const Sidebar: React.FC = () => {
             title={isCollapsed ? "Employees" : undefined}
             className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
               ${isCollapsed ? "justify-center" : ""}
-              ${isPath("/employees") || isPath("/onboarding")
+              ${isPath("/employees") || isPath("/onboarding") || isPath("/offboarding")
                 ? "text-primary bg-primary/10"
                 : "text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-text-primary-light dark:hover:text-text-primary-dark"
               }
@@ -250,11 +240,57 @@ const Sidebar: React.FC = () => {
           )}
         </div>
 
-        <NavItem
-          icon={Icons.checklist}
-          label="Checklist"
-          isCollapsed={isCollapsed}
-        />
+        {/* Request with submenu */}
+        <div>
+          <button
+            onClick={() => {
+              if (isCollapsed) {
+                setIsCollapsed(false);
+                setRequestExpanded(true);
+              } else {
+                setRequestExpanded(!requestExpanded);
+              }
+            }}
+            title={isCollapsed ? "Request" : undefined}
+            className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
+              ${isCollapsed ? "justify-center" : ""}
+              ${isPath("/requests")
+                ? "text-primary bg-primary/10"
+                : "text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-text-primary-light dark:hover:text-text-primary-dark"
+              }
+            `}
+          >
+            <span className="flex-shrink-0">{Icons.checklist}</span>
+            {!isCollapsed && (
+              <>
+                <span className="flex-1 text-left">Request</span>
+                <span className={`transition-transform duration-200 ${requestExpanded ? "rotate-180" : ""}`}>
+                  {Icons.chevronDown}
+                </span>
+              </>
+            )}
+          </button>
+
+          {/* Submenu */}
+          {!isCollapsed && requestExpanded && (
+            <div className="mt-0.5 space-y-0.5 animate-slide-up">
+              {[
+                { label: "Personal Info", path: "/requests/new" },
+                { label: "My Requests", path: "/requests/my-requests" },
+              ].map((item) => (
+                <NavItem
+                  key={item.path}
+                  icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />}
+                  label={item.label}
+                  isActive={location.pathname === item.path}
+                  isCollapsed={false}
+                  indent
+                  onClick={() => navigate(item.path)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Management */}
         <SectionLabel label="Management" isCollapsed={isCollapsed} />

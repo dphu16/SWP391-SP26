@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import apiClient from "../services/apiClient";
 import type { Employee, PageResponse } from "../types";
 import { useToast } from "./ui/Toast";
 
@@ -192,7 +192,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await axios.get<PageResponse<Employee>>(API_URL, {
+      const res = await apiClient.get<PageResponse<Employee>>(API_URL, {
         params: { page: pageNum, size: 10 },
       });
       setEmployees(res.data.content);
@@ -201,10 +201,11 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
         totalPages: res.data.totalPages || 1,
         size: res.data.size || 10,
       });
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const msg = err.response
-          ? `Error ${err.response.status}: ${err.response.statusText}`
+    } catch (err: unknown) {
+      if (err instanceof Error && 'response' in err) {
+        const axErr = err as { response?: { status: number; statusText: string } };
+        const msg = axErr.response
+          ? `Error ${axErr.response.status}: ${axErr.response.statusText}`
           : "Cannot connect to server. Please check the backend.";
         setError(msg);
         toastError("Failed to load employees", msg);
