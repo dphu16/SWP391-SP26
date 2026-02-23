@@ -7,6 +7,7 @@ import com.project.hrm.attendance.entity.Shift;
 import com.project.hrm.attendance.entity.WorkSchedule;
 import com.project.hrm.attendance.repository.ShiftRepository;
 import com.project.hrm.attendance.repository.WorkScheduleRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +15,9 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class WorkScheduleService {
