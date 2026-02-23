@@ -9,6 +9,7 @@ import EmployeeOffboarding from "./components/EmployeeOffboarding";
 import CandidateProfileCompletion from "./components/CandidateProfileCompletion";
 import CreateChangeRequest from "./components/CreateChangeRequest";
 import FilterBar from "./components/FilterBar";
+import PerformanceModule from "./components/PerformanceModule";
 import { ToastProvider } from "./components/ui/Toast";
 
 
@@ -110,6 +111,7 @@ const AppShell: React.FC = () => {
 
               <Route path="/employee/:id" element={<EmployeeDetail />} />
               <Route path="/profile" element={<EmployeeDetail />} />
+              <Route path="/performance" element={<PerformanceModule />} />
             </Routes>
           </div>
         </div>
