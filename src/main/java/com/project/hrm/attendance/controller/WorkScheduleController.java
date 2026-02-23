@@ -1,5 +1,6 @@
 package com.project.hrm.attendance.controller;
 
+import com.project.hrm.attendance.dto.BulkScheduleRequest;
 import com.project.hrm.attendance.dto.WorkScheduleRequest;
 import com.project.hrm.attendance.dto.WorkScheduleResponse;
 import com.project.hrm.attendance.service.WorkScheduleService;
@@ -41,5 +42,42 @@ public class WorkScheduleController {
             @RequestParam(required = false) Integer year
     ) {
         return ResponseEntity.ok(workScheduleService.getMySchedules(employeeId, month, year));
+    }
+
+    // =========================================================
+    // 1. TẠO LỊCH HÀNG LOẠT (BULK INSERT)
+    // =========================================================
+    @PostMapping("/bulk")
+    public ResponseEntity<List<WorkScheduleResponse>> createBulkSchedules(@RequestBody BulkScheduleRequest request) {
+        List<WorkScheduleResponse> result = workScheduleService.createBulkSchedules(
+                request.getEmployeeId(),
+                request.getStartDate(),
+                request.getEndDate(),
+                request.getShiftId()
+        );
+        return ResponseEntity.ok(result);
+    }
+
+    // =========================================================
+    // 2. SỬA LỊCH (ĐỔI CA CHO 1 NGÀY CỤ THỂ)
+    // =========================================================
+    @PutMapping("/{scheduleId}")
+    public ResponseEntity<WorkScheduleResponse> updateSchedule(
+            @PathVariable UUID scheduleId,
+            @RequestParam UUID newShiftId) {
+        WorkScheduleResponse result = workScheduleService.updateSchedule(scheduleId, newShiftId);
+        return ResponseEntity.ok(result);
+    }
+
+    // =========================================================
+    // 3. COPY LỊCH TỪ THÁNG TRƯỚC
+    // =========================================================
+    @PostMapping("/clone")
+    public ResponseEntity<List<WorkScheduleResponse>> cloneSchedule(
+            @RequestParam UUID employeeId,
+            @RequestParam int targetMonth,
+            @RequestParam int targetYear) {
+        List<WorkScheduleResponse> result =workScheduleService.copyFromPreviousMonth(employeeId, targetMonth, targetYear);
+        return ResponseEntity.ok(result);
     }
 }
