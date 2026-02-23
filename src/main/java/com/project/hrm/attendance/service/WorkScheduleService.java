@@ -10,6 +10,7 @@ import com.project.hrm.attendance.repository.WorkScheduleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -73,8 +74,23 @@ public class WorkScheduleService {
     }
 
     // THÊM: Cho nhân viên chỉ xem lịch của mình
-    public List<WorkScheduleResponse> getMySchedules(UUID employeeId) {
-        List<WorkSchedule> entities = workScheduleRepository.findByEmployeeId(employeeId);
+    public List<WorkScheduleResponse> getMySchedules(UUID employeeId, Integer month, Integer year) {
+        LocalDate startDate;
+        LocalDate endDate;
+
+        // Nếu không truyền tháng/năm thì lấy tháng hiện tại
+        if (month == null || year == null) {
+            LocalDate now = LocalDate.now();
+            startDate = now.withDayOfMonth(1);
+            endDate = now.withDayOfMonth(now.lengthOfMonth());
+        } else {
+            // Lấy từ ngày mùng 1 đến ngày cuối cùng của tháng được chọn
+            startDate = LocalDate.of(year, month, 1);
+            endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+        }
+
+        List<WorkSchedule> entities = workScheduleRepository.findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId, startDate, endDate);
+
         List<WorkScheduleResponse> dtos = new ArrayList<>();
         for (WorkSchedule entity : entities) {
             dtos.add(mapToResponse(entity));

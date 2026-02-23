@@ -35,7 +35,11 @@ public class WorkScheduleController {
     }
     // GET http://localhost:8080/api/v1/attendance/work-schedules/my-schedule?employeeId=...
     @GetMapping("/work-schedules/my-schedule")
-    public ResponseEntity<List<WorkScheduleResponse>> getMySchedules(@RequestParam UUID employeeId) {
-        return ResponseEntity.ok(workScheduleService.getMySchedules(employeeId));
+    public ResponseEntity<List<WorkScheduleResponse>> getMySchedule(
+            @RequestParam UUID employeeId,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year
+    ) {
+        return ResponseEntity.ok(workScheduleService.getMySchedules(employeeId, month, year));
     }
 }
