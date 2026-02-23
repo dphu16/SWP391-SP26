@@ -3,7 +3,6 @@ package com.project.hrm.evaluation.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -16,9 +15,8 @@ public class TrainingCourse {
     @Column(name = "course_id")
     private UUID courseId;
 
-    @Column(name = "course_name", nullable = false)
+    @Column(name = "name", nullable = false)
     private String courseName;
 
-    @Column(name = "description")
     private String description;
 }

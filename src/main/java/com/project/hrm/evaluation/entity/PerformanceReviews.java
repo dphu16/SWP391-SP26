@@ -1,42 +1,46 @@
 package com.project.hrm.evaluation.entity;
+import com.project.hrm.evaluation.enums.ReviewStatus;
 import com.project.hrm.module.corehr.entity.Employee;
 import jakarta.persistence.*;
 import lombok.Data;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "performance_reviews")
 @Data
-public class PerformanceReviews {
+public class PerformanceRevieww {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "review_id")
-    private UUID id;
+    private UUID reviewId;
 
     @ManyToOne
-    @JoinColumn(name = "employee_id")
+    @JoinColumn(name = "cycle_id", nullable = false)
+    private PerformanceCycle cycle;
+
+    @ManyToOne
+    @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    @ManyToOne
-    @JoinColumn(name = "cycle_id")
-    private PerformanceCycles cycle;
+    @Column(name = "manager_id")
+    private UUID managerId;
 
-    @ManyToOne
-    @JoinColumn(name = "manager_id")
-    private Employee manager;
+    @Column(name = "kpi_score")
+    private Double kpiScore;
 
-    @Column(name = "final_score", precision = 5, scale = 2)
-    private BigDecimal finalScore;
+    @Column(name = "attitude_score")
+    private Double attitudeScore;
 
-    @Column(name = "rating")
-    private String rating;
+    @Column(name = "overall_score")
+    private Double overallScore;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private String status = "PENDING";
+    private ReviewStatus status;
 
-
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 }

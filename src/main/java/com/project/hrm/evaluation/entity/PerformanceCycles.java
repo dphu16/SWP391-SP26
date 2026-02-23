@@ -1,39 +1,36 @@
 package com.project.hrm.evaluation.entity;
 
+import com.project.hrm.evaluation.enums.CycleStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "performance_cycles")
 @Data
-public class PerformanceCycles {
+public class PerformanceCycless {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "cycle_id")
-    private UUID idCycle;
+    private UUID cycleId;
 
-    @Column(name = "cycle_name")
-    private String nameCycle;
+    @Column(name = "cycle_name", nullable = false)
+    private String cycleName;
 
-    @Column(name = "start_date")
-    private LocalDate dateStart;
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
 
-    @Column(name = "end_date")
-    private LocalDate dateEnd;
+    @Column(name = "end_date", nullable = false)
+    private LocalDate endDate;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private String status = "DRAFT";
+    private CycleStatus status;
 
-    @Column(name = "created_at", updatable = false)
-    private OffsetDateTime dateCreate;
-
-    @PrePersist
-    protected void onCreate(){
-        dateCreate = OffsetDateTime.now();
-    }
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 }
