@@ -1,6 +1,7 @@
 package com.project.hrm.evaluation.controller;
 
 import com.project.hrm.evaluation.dto.EmployeeGoalRequest;
+import com.project.hrm.evaluation.dto.GoalStatusRequest;
 import com.project.hrm.evaluation.entity.EmployeeGoal;
 import com.project.hrm.evaluation.service.EmployeeGoalService;
 import jakarta.validation.Valid;
@@ -13,49 +14,34 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/employee-goals")
+@RequestMapping("/api")
 public class EmployeeGoalController {
+
     private final EmployeeGoalService service;
 
     public EmployeeGoalController(EmployeeGoalService service) {
         this.service = service;
     }
 
-    @PostMapping
-    public ResponseEntity<EmployeeGoal> create(@Valid @RequestBody EmployeeGoalRequest req){
-        EmployeeGoal saved = service.create(req);
-        URI location = ServletUriComponentsBuilder
-                .fromCurrentRequest()
-                .path("/{goalId}")
-                .buildAndExpand(saved.getGoalId())
-                .toUri();
-        return ResponseEntity.created(location).body(saved);
+    // 9
+    @PostMapping("/employee-goals")
+    public ResponseEntity<EmployeeGoal> assign(
+            @RequestBody EmployeeGoalRequest request){
+        return ResponseEntity.ok(service.assign(request));
     }
 
-    @GetMapping
-    public ResponseEntity<List<EmployeeGoal>> getAll(){
-        return ResponseEntity.ok(service.getAll());
+    // 10
+    @GetMapping("/employees/{id}/goals")
+    public ResponseEntity<List<EmployeeGoal>> getByEmployee(
+            @PathVariable UUID id){
+        return ResponseEntity.ok(service.getByEmployee(id));
     }
 
-    @GetMapping("/{goalId}")
-    public ResponseEntity<EmployeeGoal> getById(@PathVariable UUID goalId){
-        return ResponseEntity.ok(service.getById(goalId));
-    }
-
-    @GetMapping("/employees/{employeeId}")
-    public ResponseEntity<List<EmployeeGoal>> getByEmployeeId(@PathVariable UUID employeeId){
-        return ResponseEntity.ok(service.getByEmployeeId(employeeId));
-    }
-
-    @PutMapping("/{goalId}")
-    public ResponseEntity<EmployeeGoal> update(@PathVariable UUID goalId, @RequestBody EmployeeGoalRequest req){
-        return ResponseEntity.ok(service.update(goalId, req));
-    }
-
-    @DeleteMapping("/{goalId}")
-    public ResponseEntity<Void> delete(@PathVariable UUID goalId){
-        service.delete(goalId);
-        return ResponseEntity.noContent().build();
+    // 11
+    @PatchMapping("/employee-goals/{id}")
+    public ResponseEntity<EmployeeGoal> updateStatus(
+            @PathVariable UUID id,
+            @RequestBody GoalStatusRequest request){
+        return ResponseEntity.ok(service.updateStatus(id, request));
     }
 }
-

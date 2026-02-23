@@ -1,9 +1,11 @@
 package com.project.hrm.evaluation.service;
 
 import com.project.hrm.evaluation.dto.EmployeeGoalRequest;
+import com.project.hrm.evaluation.dto.GoalStatusRequest;
 import com.project.hrm.evaluation.entity.EmployeeGoal;
 import com.project.hrm.evaluation.entity.PerformanceCycles;
 import com.project.hrm.evaluation.entity.KpiLibrary;
+import com.project.hrm.evaluation.enums.GoalStatus;
 import com.project.hrm.evaluation.repository.EmployeeGoalRepository;
 import com.project.hrm.evaluation.repository.PerformanceCyclesRepository;
 import com.project.hrm.evaluation.repository.KpiLibraryRepository;
@@ -12,74 +14,92 @@ import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 public class EmployeeGoalService {
+
     private final EmployeeGoalRepository repository;
     private final EmployeeRepository employeeRepository;
     private final PerformanceCyclesRepository cycleRepository;
-    private final KpiLibraryRepository kpiRepository;
+    private final KpiLibraryRepository kpiLibraryRepository;
 
-    public EmployeeGoalService(EmployeeGoalRepository repository,
-                             EmployeeRepository employeeRepository,
-                             PerformanceCyclesRepository cycleRepository,
-                             KpiLibraryRepository kpiRepository) {
+    public EmployeeGoalService(
+            EmployeeGoalRepository repository,
+            EmployeeRepository employeeRepository,
+            PerformanceCyclesRepository cycleRepository,
+            KpiLibraryRepository kpiLibraryRepository) {
         this.repository = repository;
         this.employeeRepository = employeeRepository;
         this.cycleRepository = cycleRepository;
-        this.kpiRepository = kpiRepository;
+        this.kpiLibraryRepository = kpiLibraryRepository;
     }
 
+    // API 9 - Assign KPI to employee
     @Transactional
-    public EmployeeGoal create(EmployeeGoalRequest req){
-        EmployeeGoal goal = new EmployeeGoal();
-        goal.setTitle(req.getTitle());
-        goal.setTargetValue(req.getTargetValue());
-        goal.setWeight(req.getWeight());
-        goal.setStatus(req.getStatus());
+    public EmployeeGoal assign(EmployeeGoalRequest req){
 
-        // Set relationships
         Employee employee = employeeRepository.findById(req.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
-        PerformanceCycles cycle = cycleRepository.findById(req.getCycleId())
-                .orElseThrow(() -> new RuntimeException("Performance cycle not found"));
-        KpiLibrary kpi = kpiRepository.findById(req.getKpiLibraryId())
-                .orElseThrow(() -> new RuntimeException("KPI library not found"));
 
+        PerformanceCycles cycle = cycleRepository.findById(req.getCycleId())
+                .orElseThrow(() -> new RuntimeException("Cycle not found"));
+
+        KpiLibrary kpi = kpiLibraryRepository.findById(req.getKpiLibraryId())
+                .orElseThrow(() -> new RuntimeException("KPI not found"));
+
+        EmployeeGoal goal = new EmployeeGoal();
         goal.setEmployee(employee);
         goal.setCycle(cycle);
         goal.setKpiLibrary(kpi);
 
+        goal.setTitle(req.getTitle());
+        goal.setTargetValue(req.getTargetValue());
+        goal.setCurrentValue(0.0);
+        goal.setWeight(req.getWeight());
+
+        goal.setAssignedBy(req.getAssignedBy());
+        goal.setStatus(GoalStatus.ASSIGNED);
+
         return repository.save(goal);
     }
 
-    public List<EmployeeGoal> getAll(){
-        return repository.findAll();
+    // API 10 - Get employee goals
+    public List<EmployeeGoal> getByEmployee(UUID employeeId){
+        return repository.findByEmployee_EmployeeId(employeeId);
     }
 
-    public EmployeeGoal getById(UUID goalId){
-        return repository.findById(goalId)
-                .orElseThrow(() -> new RuntimeException("Employee goal not found"));
-    }
-
-    public List<EmployeeGoal> getByEmployeeId(UUID employeeId){
-        return repository.findByEmployeeEmployeeId(employeeId);
-    }
-
+    // API 11 - Update status
     @Transactional
-    public EmployeeGoal update(UUID goalId, EmployeeGoalRequest req){
-        EmployeeGoal existing = getById(goalId);
-        existing.setTitle(req.getTitle());
-        existing.setTargetValue(req.getTargetValue());
-        existing.setWeight(req.getWeight());
-        existing.setStatus(req.getStatus());
-        return repository.save(existing);
-    }
+    public EmployeeGoal updateStatus(UUID id, GoalStatusRequest req){
 
-    public void delete(UUID goalId){
-        repository.deleteById(goalId);
+        EmployeeGoal goal = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Goal not found"));
+
+        GoalStatus current = goal.getStatus();
+        GoalStatus next = req.getStatus();
+
+        // Validate flow
+        if (current == GoalStatus.ASSIGNED && next != GoalStatus.CONFIRMED)
+            throw new RuntimeException("Must CONFIRM first");
+
+        if (current == GoalStatus.CONFIRMED && next != GoalStatus.IN_PROGRESS)
+            throw new RuntimeException("Must move to IN_PROGRESS");
+
+        if (current == GoalStatus.IN_PROGRESS && next != GoalStatus.SUBMITTED)
+            throw new RuntimeException("Must SUBMIT after progress");
+
+        if (current == GoalStatus.SUBMITTED && next != GoalStatus.APPROVED)
+            throw new RuntimeException("Must APPROVE after submission");
+
+        goal.setStatus(next);
+
+        if (next == GoalStatus.SUBMITTED) {
+            goal.setSubmittedAt(LocalDateTime.now());
+        }
+
+        return repository.save(goal);
     }
 }
-

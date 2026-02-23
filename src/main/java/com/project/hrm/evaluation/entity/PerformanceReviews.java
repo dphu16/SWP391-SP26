@@ -10,7 +10,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "performance_reviews")
 @Data
-public class PerformanceRevieww {
+public class PerformanceReviews {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -19,7 +19,7 @@ public class PerformanceRevieww {
 
     @ManyToOne
     @JoinColumn(name = "cycle_id", nullable = false)
-    private PerformanceCycle cycle;
+    private PerformanceCycles cycle;
 
     @ManyToOne
     @JoinColumn(name = "employee_id", nullable = false)

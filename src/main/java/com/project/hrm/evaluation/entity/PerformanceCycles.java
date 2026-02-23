@@ -11,7 +11,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "performance_cycles")
 @Data
-public class PerformanceCycless {
+public class PerformanceCycles {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

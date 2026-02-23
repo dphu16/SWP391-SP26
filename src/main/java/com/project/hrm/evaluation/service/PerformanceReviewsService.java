@@ -1,85 +1,104 @@
 package com.project.hrm.evaluation.service;
 
-import com.project.hrm.evaluation.dto.PerformanceReviewsRequest;
-import com.project.hrm.evaluation.entity.PerformanceReviews;
+import com.project.hrm.evaluation.dto.*;
 import com.project.hrm.evaluation.entity.PerformanceCycles;
-import com.project.hrm.evaluation.repository.PerformanceReviewsRepository;
+import com.project.hrm.evaluation.entity.PerformanceReviews;
+import com.project.hrm.evaluation.enums.ReviewStatus;
 import com.project.hrm.evaluation.repository.PerformanceCyclesRepository;
+import com.project.hrm.evaluation.repository.PerformanceReviewsRepository;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 public class PerformanceReviewsService {
+
     private final PerformanceReviewsRepository repository;
     private final EmployeeRepository employeeRepository;
     private final PerformanceCyclesRepository cycleRepository;
 
-    public PerformanceReviewsService(PerformanceReviewsRepository repository,
-                                   EmployeeRepository employeeRepository,
-                                   PerformanceCyclesRepository cycleRepository) {
+    public PerformanceReviewsService(
+            PerformanceReviewsRepository repository,
+            EmployeeRepository employeeRepository,
+            PerformanceCyclesRepository cycleRepository) {
         this.repository = repository;
         this.employeeRepository = employeeRepository;
         this.cycleRepository = cycleRepository;
     }
 
+    // API 13
     @Transactional
     public PerformanceReviews create(PerformanceReviewsRequest req){
+
         PerformanceReviews review = new PerformanceReviews();
-        review.setFinalScore(req.getOverallScore());
-        review.setStatus(req.getStatus());
 
         PerformanceCycles cycle = cycleRepository.findById(req.getCycleId())
-                .orElseThrow(() -> new RuntimeException("Performance cycle not found"));
+                .orElseThrow(() -> new RuntimeException("Cycle not found"));
+
         Employee employee = employeeRepository.findById(req.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
-        Employee manager = employeeRepository.findById(req.getManagerId())
-                .orElseThrow(() -> new RuntimeException("Manager not found"));
 
         review.setCycle(cycle);
         review.setEmployee(employee);
-        review.setManager(manager);
+        review.setManagerId(req.getManagerId());
+        review.setKpiScore(req.getKpiScore());
+        review.setAttitudeScore(req.getAttitudeScore());
+        review.setStatus(ReviewStatus.DRAFT);
+        review.setCreatedAt(LocalDateTime.now());
 
         return repository.save(review);
     }
 
-    public List<PerformanceReviews> getAll(){
-        return repository.findAll();
+    // API 14
+    public List<PerformanceReviews> getByEmployee(UUID employeeId){
+        return repository.findByEmployee_EmployeeId(employeeId);
     }
 
-    public PerformanceReviews getById(UUID id){
-        return repository.findById(id).orElseThrow(() -> new RuntimeException("Performance review not found"));
-    }
-
+    // API 15
     @Transactional
-    public PerformanceReviews update(UUID id, PerformanceReviewsRequest req){
-        PerformanceReviews existing = getById(id);
-        existing.setFinalScore(req.getOverallScore());
-        existing.setStatus(req.getStatus());
-        if (req.getManagerId() != null) {
-            Employee manager = employeeRepository.findById(req.getManagerId())
-                    .orElseThrow(() -> new RuntimeException("Manager not found"));
-            existing.setManager(manager);
-        }
-        if (req.getEmployeeId() != null) {
-            Employee employee = employeeRepository.findById(req.getEmployeeId())
-                    .orElseThrow(() -> new RuntimeException("Employee not found"));
-            existing.setEmployee(employee);
-        }
-        if (req.getCycleId() != null) {
-            PerformanceCycles cycle = cycleRepository.findById(req.getCycleId())
-                    .orElseThrow(() -> new RuntimeException("Performance cycle not found"));
-            existing.setCycle(cycle);
-        }
-        return repository.save(existing);
+    public PerformanceReviews updateScore(UUID id, ReviewScoreRequest req){
+        PerformanceReviews review = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Review not found"));
+
+        review.setKpiScore(req.getKpiScore());
+        review.setAttitudeScore(req.getAttitudeScore());
+
+        return repository.save(review);
     }
 
-    public void delete(UUID id){
-        repository.deleteById(id);
+    // API 16
+    @Transactional
+    public PerformanceReviews finalizeReview(UUID id){
+
+        PerformanceReviews review = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Review not found"));
+
+        double overall = (
+                review.getKpiScore() * 0.7 +
+                        review.getAttitudeScore() * 0.3
+        );
+
+        review.setOverallScore(overall);
+        review.setStatus(ReviewStatus.SUBMITTED);
+
+        return repository.save(review);
+    }
+
+    // API 17 (simple version)
+    @Transactional
+    public String createDecision(UUID reviewId, DecisionRequest req){
+
+        PerformanceReviews review = repository.findById(reviewId)
+                .orElseThrow(() -> new RuntimeException("Review not found"));
+
+        review.setStatus(ReviewStatus.APPROVED);
+        repository.save(review);
+
+        return "Decision created: " + req.getType();
     }
 }
-

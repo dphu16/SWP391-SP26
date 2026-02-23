@@ -14,7 +14,7 @@ public class KpiLibraryRequest {
     private String description;
 
     @NotBlank(message = "category is required")
-    private KpiCategory category;
+    private String category;
 
     public KpiLibrary toEntity() {
         KpiLibrary e = new KpiLibrary();

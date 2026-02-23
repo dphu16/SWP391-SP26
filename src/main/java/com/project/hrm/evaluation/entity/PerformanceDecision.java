@@ -10,7 +10,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "performance_decisions")
 @Data
-public class PerformanceDecisions {
+public class PerformanceDecision {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -19,7 +19,7 @@ public class PerformanceDecisions {
 
     @ManyToOne
     @JoinColumn(name = "review_id", nullable = false)
-    private PerformanceReview review;
+    private PerformanceReviews review;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "decision_type")

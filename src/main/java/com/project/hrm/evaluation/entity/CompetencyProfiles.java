@@ -24,10 +24,10 @@ public class CompetencyProfiles {
     @Column(name = "skill_name")
     private String skillName;
 
-    @Column(name = "level")
     private Integer level;
+
+    private String source;
 
     @Column(name = "last_assessed_date")
     private LocalDate lastAssessedDate;
 }
-

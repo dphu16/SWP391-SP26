@@ -27,7 +27,7 @@ public class PerformanceCyclesController {
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{cycleId}")
-                .buildAndExpand(saved.getIdCycle())
+                .buildAndExpand(saved.getCycleId())
                 .toUri();
         return ResponseEntity.created(location).body(saved);
     }

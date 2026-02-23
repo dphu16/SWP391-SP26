@@ -1,11 +1,11 @@
 package com.project.hrm.evaluation.dto;
 
 import com.project.hrm.evaluation.entity.EmployeeGoal;
+import com.project.hrm.evaluation.enums.GoalStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Data
@@ -22,17 +22,9 @@ public class EmployeeGoalRequest {
     @NotBlank(message = "title is required")
     private String title;
 
-    private BigDecimal targetValue;
-    private BigDecimal weight;
-    private String status = "DRAFT";
+    private Double targetValue;
+    private Double weight;
 
-    public EmployeeGoal toEntity(){
-        EmployeeGoal goal = new EmployeeGoal();
-        goal.setTitle(this.title);
-        goal.setTargetValue(this.targetValue);
-        goal.setWeight(this.weight);
-        goal.setStatus(this.status);
-        return goal;
-    }
+    private UUID assignedBy;
 }
 
