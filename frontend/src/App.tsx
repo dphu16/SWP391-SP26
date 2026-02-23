@@ -10,6 +10,7 @@ import CandidateProfileCompletion from "./components/CandidateProfileCompletion"
 import CreateChangeRequest from "./components/CreateChangeRequest";
 import FilterBar from "./components/FilterBar";
 import ViewSchedule from "./components/attendance/ViewSchedule";
+import CreateSchedule from "./components/attendance/CreateSchedule";
 import { ToastProvider } from "./components/ui/Toast";
 
 const AppShell: React.FC = () => {
@@ -106,6 +107,7 @@ const AppShell: React.FC = () => {
               } />
 
               <Route path="/attendance/schedule" element={<ViewSchedule />} />
+              <Route path="/attendance/create" element={<CreateSchedule />} />
 
               <Route path="/employee/:id" element={<EmployeeDetail />} />
               <Route path="/profile" element={<EmployeeDetail />} />

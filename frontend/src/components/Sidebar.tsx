@@ -345,6 +345,7 @@ const Sidebar: React.FC = () => {
             <div className="mt-0.5 space-y-0.5 animate-slide-up">
               {[
                 { label: "View Schedule", path: "/attendance/schedule" },
+                { label: "Create Schedule", path: "/attendance/create" },
                 { label: "My Requests", path: "/attendance/requests" },
                 { label: "Time Off History", path: "/attendance/timeoff" },
               ].map((item) => (
@@ -371,7 +372,6 @@ const Sidebar: React.FC = () => {
             icon={item.icon}
             label={item.label}
             isCollapsed={isCollapsed}
-            badge={item.badge}
           />
         ))}
 

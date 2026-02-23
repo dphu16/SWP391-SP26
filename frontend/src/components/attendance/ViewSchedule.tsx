@@ -41,13 +41,16 @@ const ViewSchedule: React.FC = () => {
                 const payload = token ? decodeJwt(token) : null;
                 const empId = payload?.employeeId;
 
+                // month+1 vì Java dùng 1-indexed (1=Jan), JS dùng 0-indexed (0=Jan)
+                const apiMonth = month + 1;
+                const apiYear = year;
+
                 let data: WorkScheduleResponse[];
                 if (empId) {
-                    // Logged in: fetch only this employee's schedule
-                    data = await getMySchedules(empId);
-                    setDebugInfo(`employeeId: ${empId} | ${data.length} lịch từ DB`);
+                    data = await getMySchedules(empId, apiMonth, apiYear);
+                    setDebugInfo(`employeeId: ${empId} | ${data.length} lịch tháng ${apiMonth}/${apiYear}`);
                 } else {
-                    // Demo mode: no login required, fetch all schedules
+                    // Demo mode: lấy tất cả (không lọc theo tháng vì getAllSchedules không hỗ trợ)
                     data = await getAllSchedules();
                     setDebugInfo(`Demo mode | ${data.length} lịch từ DB`);
                 }
@@ -63,12 +66,14 @@ const ViewSchedule: React.FC = () => {
             }
         };
         fetchSchedules();
-    }, []);
+    }, [year, month]); // refetch khi đổi tháng/năm
 
-    // Map dateKey -> schedule for O(1) lookup
-    const scheduleMap = new Map<string, WorkScheduleResponse>();
+    // Map dateKey -> list of schedules (hỗ trợ nhiều ca/ngày)
+    const scheduleMap = new Map<string, WorkScheduleResponse[]>();
     for (const s of schedules) {
-        scheduleMap.set(s.date, s);
+        const existing = scheduleMap.get(s.date) ?? [];
+        existing.push(s);
+        scheduleMap.set(s.date, existing);
     }
 
     const totalDays = getDaysInMonth(year, month);
@@ -168,19 +173,33 @@ const ViewSchedule: React.FC = () => {
 
                         {Array.from({ length: totalDays }, (_, i) => i + 1).map((day) => {
                             const dateKey = toDateKey(year, month, day);
-                            const schedule = scheduleMap.get(dateKey);
+                            const daySchedules = scheduleMap.get(dateKey) ?? [];
                             const isToday = dateKey === todayKey;
 
                             return (
-                                <div key={day} className={`min-h-[90px] p-2 flex flex-col transition-colors ${isToday ? "bg-[#f0fdf4]" : "hover:bg-[#fafafa]"}`}>
-                                    <span className={`text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full mb-1 ${isToday ? "bg-[#0d9488] text-white" : "text-[#1e293b]"}`}>
+                                <div key={day} className={`min-h-[100px] p-2 flex flex-col gap-1 transition-colors ${isToday ? "bg-[#f0fdf4]" : "hover:bg-[#fafafa]"}`}>
+                                    <span className={`text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full mb-0.5 flex-shrink-0 ${isToday ? "bg-[#0d9488] text-white" : "text-[#1e293b]"}`}>
                                         {day}
                                     </span>
-                                    {schedule && schedule.shift && (
-                                        <div className="bg-[#ccfbf1] text-[#0f766e] text-[10px] font-bold py-1 px-1.5 rounded-md flex items-center justify-center mt-auto mb-1 mx-0.5 text-center leading-tight">
-                                            {schedule.shift.startTime.slice(0, 5)} – {schedule.shift.endTime.slice(0, 5)}
-                                        </div>
-                                    )}
+                                    {daySchedules.map((sch) => {
+                                        if (!sch.shift) return null;
+                                        const startHour = parseInt(sch.shift.startTime.slice(0, 2), 10);
+                                        const isMorning = startHour < 12;
+                                        return (
+                                            <div
+                                                key={sch.id}
+                                                title={sch.shift.name}
+                                                className={`text-[10px] font-bold py-1 px-1.5 rounded-md flex flex-col items-center justify-center text-center leading-tight mx-0.5
+                                                    ${isMorning
+                                                        ? "bg-[#fef9c3] text-[#854d0e]"   /* sáng: vàng nhạt */
+                                                        : "bg-[#ccfbf1] text-[#0f766e]"   /* chiều: xanh lá */
+                                                    }`}
+                                            >
+                                                <span className="opacity-70 text-[9px] font-semibold">{isMorning ? "☀️ Sáng" : "🌙 Chiều"}</span>
+                                                <span>{sch.shift.startTime.slice(0, 5)} – {sch.shift.endTime.slice(0, 5)}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             );
                         })}
