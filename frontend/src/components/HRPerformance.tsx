@@ -67,6 +67,15 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     const [structureDetails, setStructureDetails] = useState<KpiDetailDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAddKpiModalOpen, setIsAddKpiModalOpen] = useState(false);
+    const [modalTab, setModalTab] = useState<'library' | 'new'>('library');
+
+    // New KPI Form State
+    const [newKpi, setNewKpi] = useState({
+        name: '',
+        category: '',
+        defaultWeight: 10,
+        description: ''
+    });
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -123,6 +132,11 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
         return departments.find(d => d.deptId === selectedDeptId);
     }, [departments, selectedDeptId]);
 
+    // Calculate Global Weight Total dynamically for current department
+    const currentTotalWeight = useMemo(() => {
+        return structureDetails.reduce((sum, item) => sum + (item.weight || 0), 0);
+    }, [structureDetails]);
+
     // Construct the displayed KPIs mapping from allKpis and structureDetails
     const displayKpis = useMemo(() => {
         if (!structureDetails || structureDetails.length === 0) return [];
@@ -143,6 +157,19 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
 
     const handleAddKpi = (kpi: KpiLibrary) => {
         setStructureDetails(prev => [...prev, { kpiLibraryId: kpi.libId, weight: kpi.defaultWeight }]);
+    };
+
+    const handleCreateAndAddKpi = async () => {
+        try {
+            const created = await kpiService.createKpiLibrary(newKpi);
+            setAllKpis(prev => [...prev, created]);
+            handleAddKpi(created);
+            setIsAddKpiModalOpen(false);
+            setNewKpi({ name: '', category: '', defaultWeight: 10, description: '' });
+            alert("New KPI created and added!");
+        } catch (e) {
+            alert("Failed to create new KPI");
+        }
     };
 
     return (
@@ -187,38 +214,44 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                         {/* Standardization Rate */}
                         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card">
                             <h3 className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-3">
-                                Standardization Rate
+                                Library Utilization
                             </h3>
                             <div className="flex items-baseline gap-2 mb-4">
-                                <span className="text-3xl font-bold font-heading">92%</span>
-                                <span className="text-sm font-medium text-primary">
-                                    +4%
+                                <span className="text-3xl font-bold font-heading">
+                                    {allKpis.length > 0 ? Math.round((structureDetails.length / allKpis.length) * 100) : 0}%
+                                </span>
+                                <span className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+                                    of global KPIs used here
                                 </span>
                             </div>
                             <div className="h-2 w-full bg-surface-2-light dark:bg-surface-2-dark rounded-full overflow-hidden">
-                                <div className="h-full bg-primary rounded-full transition-all duration-500 ease-out" style={{ width: "92%" }}></div>
+                                <div className="h-full bg-primary rounded-full transition-all duration-500 ease-out" style={{ width: `${allKpis.length > 0 ? (structureDetails.length / allKpis.length) * 100 : 0}%` }}></div>
                             </div>
                         </div>
 
-                        {/* Departments Pending Review */}
+                        {/* Departments Pendng Review */}
                         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card">
                             <h3 className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-3">
-                                Departments Pending Review
+                                Total Departments
                             </h3>
                             <div className="flex items-baseline gap-2">
-                                <span className="text-3xl font-bold font-heading">4 / 12</span>
-                                <span className="text-sm font-medium text-accent-amber ml-1">Urgent</span>
+                                <span className="text-3xl font-bold font-heading">{departments.length}</span>
+                                <span className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark ml-1">Listed in system</span>
                             </div>
                         </div>
 
                         {/* Global Weight Total */}
                         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card flex flex-col">
                             <h3 className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-3 whitespace-nowrap overflow-hidden text-ellipsis">
-                                Global Weight Total
+                                Total Weight Configured
                             </h3>
                             <div className="flex items-baseline gap-2 flex-wrap">
-                                <span className="text-3xl font-bold font-heading">100%</span>
-                                <span className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark ml-1">Balanced</span>
+                                <span className={`text-3xl font-bold font-heading ${currentTotalWeight === 100 ? 'text-primary' : currentTotalWeight > 100 ? 'text-red-500' : 'text-accent-amber'}`}>
+                                    {currentTotalWeight}%
+                                </span>
+                                <span className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark ml-1">
+                                    {currentTotalWeight === 100 ? "Perfectly balanced" : currentTotalWeight > 100 ? "Over 100%!" : "Needs more KPIs"}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -494,7 +527,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                     <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
                         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-surface-2-light/50 dark:bg-surface-2-dark/50">
                             <h2 className="text-lg font-bold text-text-primary-light dark:text-text-primary-dark font-heading">
-                                Add KPI from Library
+                                Add KPI to Department
                             </h2>
                             <button
                                 onClick={() => setIsAddKpiModalOpen(false)}
@@ -505,31 +538,101 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                 </svg>
                             </button>
                         </div>
+
+                        <div className="flex px-6 pt-4 space-x-4 border-b border-border-light dark:border-border-dark">
+                            <button
+                                onClick={() => setModalTab('library')}
+                                className={`pb-2 text-sm font-semibold transition-colors ${modalTab === 'library' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light'}`}
+                            >
+                                From Library
+                            </button>
+                            <button
+                                onClick={() => setModalTab('new')}
+                                className={`pb-2 text-sm font-semibold transition-colors ${modalTab === 'new' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light'}`}
+                            >
+                                Create New KPI
+                            </button>
+                        </div>
+
                         <div className="p-6 overflow-y-auto flex-1">
-                            {availableKpis.length === 0 ? (
-                                <div className="text-center text-text-muted-light dark:text-text-muted-dark py-10">
-                                    No available KPIs to add. All existing KPIs from the Library have been assigned to this department!
-                                </div>
+                            {modalTab === 'library' ? (
+                                availableKpis.length === 0 ? (
+                                    <div className="text-center text-text-muted-light dark:text-text-muted-dark py-10">
+                                        No available KPIs to add. All existing KPIs from the Library have been assigned to this department!
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {availableKpis.map(kpi => (
+                                            <div key={kpi.libId} className="flex justify-between items-center p-4 border border-border-light dark:border-border-dark rounded-lg hover:bg-surface-2-light dark:hover:bg-surface-2-dark transition-colors">
+                                                <div>
+                                                    <div className="font-bold text-text-primary-light dark:text-text-primary-dark">{kpi.name}</div>
+                                                    <div className="text-sm text-text-secondary-light dark:text-text-secondary-dark">{kpi.category}</div>
+                                                    {kpi.description && <div className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{kpi.description}</div>}
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        handleAddKpi(kpi);
+                                                        setIsAddKpiModalOpen(false);
+                                                    }}
+                                                    className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-sm font-semibold rounded-lg transition-colors border border-primary/20 shrink-0"
+                                                >
+                                                    Add (Weight {kpi.defaultWeight}%)
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )
                             ) : (
                                 <div className="space-y-4">
-                                    {availableKpis.map(kpi => (
-                                        <div key={kpi.libId} className="flex justify-between items-center p-4 border border-border-light dark:border-border-dark rounded-lg hover:bg-surface-2-light dark:hover:bg-surface-2-dark transition-colors">
-                                            <div>
-                                                <div className="font-bold text-text-primary-light dark:text-text-primary-dark">{kpi.name}</div>
-                                                <div className="text-sm text-text-secondary-light dark:text-text-secondary-dark">{kpi.category}</div>
-                                                {kpi.description && <div className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{kpi.description}</div>}
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    handleAddKpi(kpi);
-                                                    setIsAddKpiModalOpen(false);
-                                                }}
-                                                className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-sm font-semibold rounded-lg transition-colors border border-primary/20 shrink-0"
-                                            >
-                                                Add (Weight {kpi.defaultWeight}%)
-                                            </button>
+                                    <div>
+                                        <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1">KPI Name</label>
+                                        <input
+                                            type="text"
+                                            value={newKpi.name}
+                                            onChange={e => setNewKpi({ ...newKpi, name: e.target.value })}
+                                            className="w-full px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus-ring"
+                                            placeholder="e.g. Sales Target Completion"
+                                        />
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="flex-1">
+                                            <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1">Category</label>
+                                            <input
+                                                type="text"
+                                                value={newKpi.category}
+                                                onChange={e => setNewKpi({ ...newKpi, category: e.target.value })}
+                                                className="w-full px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus-ring"
+                                                placeholder="e.g. Revenue"
+                                            />
                                         </div>
-                                    ))}
+                                        <div className="w-32">
+                                            <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1">Default Weight</label>
+                                            <input
+                                                type="number"
+                                                value={newKpi.defaultWeight}
+                                                onChange={e => setNewKpi({ ...newKpi, defaultWeight: Number(e.target.value) })}
+                                                className="w-full px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus-ring"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1">Description (Optional)</label>
+                                        <textarea
+                                            value={newKpi.description}
+                                            onChange={e => setNewKpi({ ...newKpi, description: e.target.value })}
+                                            className="w-full px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus-ring"
+                                            rows={3}
+                                        />
+                                    </div>
+                                    <div className="pt-2 flex justify-end">
+                                        <button
+                                            onClick={handleCreateAndAddKpi}
+                                            disabled={!newKpi.name || !newKpi.category}
+                                            className="px-6 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary-hover disabled:opacity-50"
+                                        >
+                                            Create & Assign
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -538,7 +641,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                 onClick={() => setIsAddKpiModalOpen(false)}
                                 className="px-6 py-2 rounded-lg text-sm font-bold border border-border-light dark:border-border-dark hover:bg-surface-3-light dark:hover:bg-surface-3-dark transition-colors text-text-primary-light dark:text-text-primary-dark"
                             >
-                                Cancel
+                                Close
                             </button>
                         </div>
                     </div>

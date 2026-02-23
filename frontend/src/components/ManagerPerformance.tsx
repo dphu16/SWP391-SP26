@@ -254,10 +254,11 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4 px-2">
-                                                {/* Input styled element */}
-                                                <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark px-3 py-1.5 rounded-lg text-sm font-medium w-36 shadow-sm overflow-hidden text-text-primary-light dark:text-text-primary-dark">
-                                                    Set Target...
-                                                </div>
+                                                <input
+                                                    type="number"
+                                                    placeholder="Set Target..."
+                                                    className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark px-3 py-1.5 rounded-lg text-sm font-medium w-36 shadow-sm overflow-hidden text-text-primary-light dark:text-text-primary-dark focus-ring focus:outline-none"
+                                                />
                                             </td>
                                             <td className="px-5 py-4 text-right">
                                                 <span className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest cursor-pointer hover:text-primary transition-colors">
