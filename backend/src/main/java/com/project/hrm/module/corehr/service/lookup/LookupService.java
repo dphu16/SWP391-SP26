@@ -1,7 +1,7 @@
-package com.project.hrm.module.corehr.service;
+package com.project.hrm.module.corehr.service.lookup;
 
-import com.project.hrm.module.corehr.dto.DepartmentOptionDTO;
-import com.project.hrm.module.corehr.dto.PositionOptionDTO;
+import com.project.hrm.module.corehr.dto.request.DepartmentOptionDTO;
+import com.project.hrm.module.corehr.dto.request.PositionOptionDTO;
 import com.project.hrm.module.corehr.repository.DepartmentRepository;
 import com.project.hrm.module.corehr.repository.PositionRepository;
 import org.springframework.stereotype.Service;
@@ -9,10 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/**
- * Service cung cấp dữ liệu lookup (dropdown) cho frontend.
- * Tách biệt khỏi EmployeeService để đảm bảo Single Responsibility.
- */
 @Service
 public class LookupService {
 
@@ -25,10 +21,6 @@ public class LookupService {
         this.positionRepository = positionRepository;
     }
 
-    /**
-     * Trả về danh sách tất cả phòng ban (id + tên) để hiển thị dropdown.
-     * Sắp xếp theo tên phòng ban tăng dần.
-     */
     @Transactional(readOnly = true)
     public List<DepartmentOptionDTO> getAllDepartmentOptions() {
         return departmentRepository.findAll()
@@ -38,10 +30,6 @@ public class LookupService {
                 .toList();
     }
 
-    /**
-     * Trả về danh sách tất cả vị trí/chức danh (id + title) để hiển thị dropdown.
-     * Sắp xếp theo title tăng dần.
-     */
     @Transactional(readOnly = true)
     public List<PositionOptionDTO> getAllPositionOptions() {
         return positionRepository.findAll()

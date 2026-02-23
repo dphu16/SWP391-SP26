@@ -65,6 +65,8 @@ export interface CreateNewHireDTO {
   taxCode: string;
   dateOfBirth: string;
   avatarUrl?: string;
+  /** UUID của Application trong module tuyển dụng. Nếu có, backend sẽ xóa khỏi danh sách onboarding sau khi tạo nhân viên thành công. */
+  sourceApplicationId?: string;
 }
 
 // Offboarding employee DTO (TERMINATED / RESIGNED employees)

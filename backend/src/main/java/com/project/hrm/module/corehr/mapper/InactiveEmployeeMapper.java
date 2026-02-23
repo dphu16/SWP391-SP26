@@ -1,6 +1,6 @@
 package com.project.hrm.module.corehr.mapper;
 
-import com.project.hrm.module.corehr.ResponseDTO.InactiveEmployeeResponseDTO;
+import com.project.hrm.module.corehr.dto.response.InactiveEmployeeResponseDTO;
 import com.project.hrm.module.corehr.entity.Employee;
 
 public class InactiveEmployeeMapper {

@@ -49,10 +49,6 @@ public class Offboarding {
     @Column(name = "is_finance_cleared")
     private Boolean isFinanceCleared;
 
-    /**
-     * Gán giá trị mặc định trước khi persist vào DB.
-     * Dùng @PrePersist thay vì field initializer để tránh vấn đề khi dùng Builder.
-     */
     @PrePersist
     protected void onCreate() {
         if (this.requestDate == null) {

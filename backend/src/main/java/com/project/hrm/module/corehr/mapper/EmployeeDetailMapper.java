@@ -1,6 +1,6 @@
 package com.project.hrm.module.corehr.mapper;
 
-import com.project.hrm.module.corehr.dto.EmployeeDetailDTO;
+import com.project.hrm.module.corehr.dto.request.EmployeeDetailDTO;
 import com.project.hrm.module.corehr.entity.Department;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.entity.Position;

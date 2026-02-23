@@ -1,8 +1,6 @@
-package com.project.hrm.module.corehr.dto;
+package com.project.hrm.module.corehr.dto.request;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

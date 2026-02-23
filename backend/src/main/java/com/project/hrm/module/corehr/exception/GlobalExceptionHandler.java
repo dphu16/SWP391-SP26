@@ -12,23 +12,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Xử lý exception tập trung cho toàn bộ ứng dụng.
- *
- * Thay vì mỗi controller tự try-catch, Spring sẽ tự động gọi
- * handler tương ứng dựa trên loại exception được throw.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * Bắt BusinessRuleException (lỗi nghiệp vụ).
-     * Trả về HTTP status phù hợp dựa trên ErrorCode:
-     * - INVALID_CREDENTIALS → 401 Unauthorized
-     * - ACCOUNT_LOCKED → 403 Forbidden
-     * - ACCOUNT_INACTIVE → 403 Forbidden
-     * - Các lỗi khác → 400 Bad Request
-     */
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<Map<String, Object>> handleBusinessRuleException(BusinessRuleException ex) {
         Map<String, Object> body = new LinkedHashMap<>();
@@ -46,10 +32,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(body);
     }
 
-    /**
-     * Bắt lỗi validation (từ @Valid + @NotNull, @NotBlank, ...).
-     * Trả về danh sách các field bị lỗi.
-     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationException(
             MethodArgumentNotValidException ex) {

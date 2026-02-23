@@ -1,4 +1,4 @@
-package com.project.hrm.module.corehr.dto;
+package com.project.hrm.module.corehr.dto.request;
 
 import com.project.hrm.module.corehr.enums.UserRole;
 import com.project.hrm.module.corehr.enums.UserStatus;

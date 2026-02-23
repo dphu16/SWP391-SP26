@@ -1,7 +1,7 @@
 package com.project.hrm.module.corehr.mapper;
 
-import com.project.hrm.module.corehr.dto.ChangeRequestCreateDTO;
-import com.project.hrm.module.corehr.ResponseDTO.ChangeRequestResponseDTO;
+import com.project.hrm.module.corehr.dto.request.ChangeRequestCreateDTO;
+import com.project.hrm.module.corehr.dto.response.ChangeRequestResponseDTO;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.entity.EmployeeChangeRequest;
 
