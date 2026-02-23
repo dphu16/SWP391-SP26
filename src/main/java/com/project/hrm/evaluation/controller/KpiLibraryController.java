@@ -1,7 +1,7 @@
 package com.project.hrm.evaluation.controller;
 
 import com.project.hrm.evaluation.dto.KpiLibraryRequest;
-import com.project.hrm.evaluation.entity.KpiLibrary;
+import com.project.hrm.evaluation.dto.response.KpiLibraryResponse;
 import com.project.hrm.evaluation.service.KpiLibraryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,9 +22,8 @@ public class KpiLibraryController {
     }
 
     @PostMapping
-    public ResponseEntity<KpiLibrary> createKpiLibrary(@Valid @RequestBody KpiLibraryRequest kpiRequest){
-        KpiLibrary toSave = kpiRequest.toEntity();
-        KpiLibrary saved = service.create(toSave);
+    public ResponseEntity<KpiLibraryResponse> createKpiLibrary(@Valid @RequestBody KpiLibraryRequest kpiRequest){
+        KpiLibraryResponse saved = service.create(kpiRequest);
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -36,20 +35,19 @@ public class KpiLibraryController {
     }
 
     @GetMapping
-    public ResponseEntity<List<KpiLibrary>> getAll(){
+    public ResponseEntity<List<KpiLibraryResponse>> getAll(){
         return ResponseEntity.ok(service.getAll());
     }
 
     @GetMapping("/{kpiId}")
-    public ResponseEntity<KpiLibrary> getById(@PathVariable UUID kpiId){
+    public ResponseEntity<KpiLibraryResponse> getById(@PathVariable UUID kpiId){
         return ResponseEntity.ok(service.getById(kpiId));
     }
 
     @PutMapping("/{kpiId}")
-    public ResponseEntity<KpiLibrary> update(@PathVariable UUID kpiId, @RequestBody KpiLibraryRequest req){
-        return ResponseEntity.ok(service.updateKpi(kpiId, req.toEntity()));
+    public ResponseEntity<KpiLibraryResponse> update(@PathVariable UUID kpiId, @Valid @RequestBody KpiLibraryRequest req){
+        return ResponseEntity.ok(service.updateKpi(kpiId, req));
     }
-
 
     @DeleteMapping("/{kpiId}")
     public ResponseEntity<Void> delete(@PathVariable UUID kpiId){

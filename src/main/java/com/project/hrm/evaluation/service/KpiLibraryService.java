@@ -1,5 +1,7 @@
 package com.project.hrm.evaluation.service;
 
+import com.project.hrm.evaluation.dto.KpiLibraryRequest;
+import com.project.hrm.evaluation.dto.response.KpiLibraryResponse;
 import com.project.hrm.evaluation.entity.KpiLibrary;
 import com.project.hrm.evaluation.repository.KpiLibraryRepository;
 import org.springframework.stereotype.Service;
@@ -7,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class KpiLibraryService {
@@ -17,28 +20,53 @@ public class KpiLibraryService {
     }
 
     @Transactional
-    public KpiLibrary create(KpiLibrary kpi){
-        return repository.save(kpi);
+    public KpiLibraryResponse create(KpiLibraryRequest request){
+        KpiLibrary kpi = new KpiLibrary();
+        kpi.setName(request.getName());
+        kpi.setDescription(request.getDescription());
+        kpi.setCategory(request.getCategory());
+        kpi.setDefaultWeight(request.getDefaultWeight());
+        
+        KpiLibrary saved = repository.save(kpi);
+        return mapToResponse(saved);
     }
 
-    public List<KpiLibrary> getAll(){
-        return repository.findAll();
+    public List<KpiLibraryResponse> getAll(){
+        return repository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
-    public KpiLibrary getById(UUID kpiId){
-        return repository.findById(kpiId).orElseThrow(() -> new RuntimeException("KPI not found"));
+    public KpiLibraryResponse getById(UUID kpiId){
+        KpiLibrary kpi = repository.findById(kpiId)
+                .orElseThrow(() -> new RuntimeException("KPI not found"));
+        return mapToResponse(kpi);
     }
 
     @Transactional
-    public KpiLibrary updateKpi(UUID idKpi, KpiLibrary data){
-        KpiLibrary updateKpi = getById(idKpi);
-        updateKpi.setName(data.getName());
-        updateKpi.setCategory(data.getCategory());
-        updateKpi.setDescription(data.getDescription());
-        return repository.save(updateKpi);
+    public KpiLibraryResponse updateKpi(UUID idKpi, KpiLibraryRequest request){
+        KpiLibrary updateKpi = repository.findById(idKpi)
+                .orElseThrow(() -> new RuntimeException("KPI not found"));
+        updateKpi.setName(request.getName());
+        updateKpi.setCategory(request.getCategory());
+        updateKpi.setDescription(request.getDescription());
+        updateKpi.setDefaultWeight(request.getDefaultWeight());
+        
+        KpiLibrary saved = repository.save(updateKpi);
+        return mapToResponse(saved);
     }
 
     public void delete(UUID idKpi){
         repository.deleteById(idKpi);
+    }
+
+    private KpiLibraryResponse mapToResponse(KpiLibrary entity) {
+        return KpiLibraryResponse.builder()
+                .libId(entity.getLibId())
+                .name(entity.getName())
+                .description(entity.getDescription())
+                .category(entity.getCategory())
+                .defaultWeight(entity.getDefaultWeight())
+                .build();
     }
 }
