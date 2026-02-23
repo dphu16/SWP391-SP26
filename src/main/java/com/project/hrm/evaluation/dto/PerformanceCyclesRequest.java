@@ -18,15 +18,5 @@ public class PerformanceCyclesRequest {
     @NotNull(message = "endDate is required")
     private LocalDate endDate;
 
-    private String status = "DRAFT";
-
-    public PerformanceCycles toEntity(){
-        PerformanceCycles p = new PerformanceCycles();
-        p.setNameCycle(this.cycleName);
-        p.setDateStart(this.startDate);
-        p.setDateEnd(this.endDate);
-        p.setStatus(this.status);
-        return p;
-    }
 }
 
