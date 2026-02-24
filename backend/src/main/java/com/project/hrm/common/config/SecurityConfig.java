@@ -29,7 +29,7 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
 
     public SecurityConfig(CustomUserDetailsService customUserDetailsService,
-            JwtAuthFilter jwtAuthFilter) {
+                          JwtAuthFilter jwtAuthFilter) {
         this.customUserDetailsService = customUserDetailsService;
         this.jwtAuthFilter = jwtAuthFilter;
     }
