@@ -37,6 +37,9 @@ public class SalaryProfile {
     @Column(name = "tax_code")
     private String taxCode;
 
+    @Column(name = "insurance_code")
+    private String insuranceCode;
+
     @Column(name = "effective_from")
     private LocalDate effectiveFrom;
 

@@ -22,4 +22,9 @@ public class PayrollController {
         return ResponseEntity.ok("Payroll processed successfully");
     }
 
+    @PostMapping("/generate/{periodId}")
+    public ResponseEntity<String> generate(@PathVariable UUID periodId) {
+        payrollService.generatePayslips(periodId);
+        return ResponseEntity.ok("Generated successfully");
+    }
 }

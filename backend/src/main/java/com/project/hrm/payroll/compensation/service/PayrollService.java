@@ -1,28 +1,32 @@
 package com.project.hrm.payroll.compensation.service;
 
 
+import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.payroll.common.enums.PayslipStatus;
-import com.project.hrm.payroll.compensation.entity.Payslip;
-import com.project.hrm.payroll.compensation.repository.PayrollPeriodRepository;
-import com.project.hrm.payroll.compensation.repository.PayslipRepository;
-import com.project.hrm.payroll.compensation.repository.SalaryProfileRepository;
+import com.project.hrm.payroll.common.enums.PeriodStatus;
+import com.project.hrm.payroll.compensation.entity.*;
+import com.project.hrm.payroll.compensation.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class PayrollService {
+    private final PayrollCalculatorService calculator;
     private final PayslipRepository payslipRepository;
     private final SalaryProfileRepository salaryProfileRepository;
     private final PayrollPeriodRepository payrollPeriodRepository;
     private final EmployeeRepository employeeRepository;
+    private final TaxConfigRepository taxConfigRepository;
+    private final InsuranceConfigRepository insuranceConfigRepository;
 
     @Transactional
     public void runPayroll(UUID periodId){
@@ -87,6 +91,61 @@ public class PayrollService {
         }
         return total;
     }
+
+    @Transactional
+    public void generatePayslips(UUID periodId) {
+
+        PayrollPeriods period = payrollPeriodRepository.findById(periodId)
+                .orElseThrow(() -> new RuntimeException("Period not found"));
+
+        if (period.getStatus().equals(PeriodStatus.CLOSED)) {
+            throw new RuntimeException("Period is locked");
+        }
+
+        List<Employee> employees = employeeRepository.findAllActive();
+
+        for (Employee emp : employees) {
+
+            // tránh generate trùng
+            if (payslipRepository.existsByEmployeeIdAndPeriodId(emp.getEmployeeId(), periodId)) {
+                continue;
+            }
+
+            SalaryProfile profile = salaryProfileRepository.findActiveProfile(
+                    emp.getEmployeeId(),
+                    period.getStartDate(),
+                    period.getEndDate()
+            ).orElseThrow(() ->
+                    new RuntimeException("No salary profile for employee " + emp.getEmployeeId())
+            );
+
+            TaxConfig tax = taxConfigRepository.findActiveTax(
+                    profile.getTaxCode(),
+                    period.getStartDate(),
+                    period.getEndDate()
+            ).orElseThrow(() ->
+                    new RuntimeException("Tax config not found")
+            );
+
+            InsuranceConfig insurance = insuranceConfigRepository.findActiveInsurance(
+                    profile.getInsuranceCode(),
+                    period.getStartDate(),
+                    period.getEndDate()
+            ).orElseThrow(() ->
+                    new RuntimeException("Insurance config not found")
+            );
+
+            Payslip payslip = calculator.calculate(
+                    emp,
+                    profile,
+                    period,
+                    tax.getTaxPercentage(),
+                    insurance.getInsurancePercentage()
+            );
+
+            payslipRepository.save(payslip);
+        }
+    }
 }
 
-//4f956f30-1b08-4f77-ab1e-242c436f44b1
+

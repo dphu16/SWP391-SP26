@@ -33,4 +33,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
     @EntityGraph(attributePaths = { "user", "position", "department" })
     @Query(value = "SELECT e FROM Employee e WHERE e.statusPos IN :statuses", countQuery = "SELECT COUNT(e) FROM Employee e WHERE e.statusPos IN :statuses")
     Page<Employee> findByStatusPosInPageable(List<EmployeeStatus> statuses, Pageable pageable);
+
+    List<Employee> findAllActive();
 }
