@@ -1,42 +1,45 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useToast } from "./ui/Toast";
 import {
   createChangeRequest,
   type ChangeRequestCreateDTO,
 } from "../services/changeRequestService";
+import type { RequestType } from "../types";
+import apiClient from "../services/apiClient";
 
-type RequestType = "" | "TAX_CODE" |"CITIZEN_ID";
+type FormRequestType = "" | RequestType;
+
+interface LookupOption { id: string; name?: string; title?: string; }
 
 interface FormData {
-  requestType: RequestType;
-  title: string;
-  content: string;
+  requestType: FormRequestType;
+  reason: string;
   citizenId: string;
   taxCode: string;
-
+  newPositionId: string;
+  newDepartmentId: string;
 }
 
 interface FormErrors {
   requestType?: string;
-  title?: string;
-  content?: string;
+  reason?: string;
   citizenId?: string;
   taxCode?: string;
-
 }
 
 
 const INITIAL_FORM: FormData = {
   requestType: "",
-  title: "",
-  content: "",
+  reason: "",
   citizenId: "",
   taxCode: "",
+  newPositionId: "",
+  newDepartmentId: "",
 };
 
 const REQUEST_TYPES: { value: RequestType; label: string; description: string }[] = [
-  { value: "TAX_CODE", label: "Tax Code", description: "Update tax code" },
-  { value: "CITIZEN_ID",       label: "Citizen ID",      description: "Update citizen ID" },
+  { value: "CHANGE_OF_INFORMATION", label: "Change of Information", description: "Update citizen ID or tax code" },
+  { value: "CHANGE_OF_POSITION",    label: "Change of Position",   description: "Request a department/position change" },
 ];
 
 
@@ -120,10 +123,41 @@ const CreateChangeRequest: React.FC = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Lookup data for CHANGE_OF_POSITION
+  const [departments, setDepartments] = useState<LookupOption[]>([]);
+  const [positions, setPositions]     = useState<LookupOption[]>([]);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError]     = useState<string | null>(null);
+
+  // Fetch lookup data when user selects CHANGE_OF_POSITION
+  useEffect(() => {
+    if (form.requestType !== "CHANGE_OF_POSITION") return;
+    if (departments.length > 0 || positions.length > 0) return; // already fetched
+
+    let cancelled = false;
+    setLookupLoading(true);
+    setLookupError(null);
+
+    Promise.all([
+      apiClient.get<LookupOption[]>("/api/lookup/departments"),
+      apiClient.get<LookupOption[]>("/api/lookup/positions"),
+    ])
+      .then(([d, p]) => {
+        if (cancelled) return;
+        setDepartments(d.data);
+        setPositions(p.data);
+      })
+      .catch(() => { if (!cancelled) setLookupError("Failed to load positions/departments."); })
+      .finally(() => { if (!cancelled) setLookupLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [form.requestType]); // eslint-disable-line react-hooks/exhaustive-deps
+
   /* ── Field change handler ────────────────────────────────────────────── */
   const handleChange = (field: keyof FormData, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+    const errKey = field as keyof FormErrors;
+    if (errors[errKey]) setErrors((prev) => ({ ...prev, [errKey]: undefined }));
   };
 
   /* ── Validation ──────────────────────────────────────────────────────── */
@@ -135,25 +169,22 @@ const CreateChangeRequest: React.FC = () => {
       next.requestType = "Please select a request type.";
       valid = false;
     }
-    if (!form.title.trim()) {
-      next.title = "Title is required.";
-      valid = false;
-    }
-    if (!form.content.trim()) {
-      next.content = "Content is required.";
+    if (!form.reason.trim()) {
+      next.reason = "Reason is required.";
       valid = false;
     }
 
-    if (form.requestType === "TAX_CODE") {
+    if (form.requestType === "CHANGE_OF_INFORMATION") {
       if (form.taxCode && !/^\d{10}(-\d{3})?$/.test(form.taxCode)) {
-        next.taxCode = "Invalid tax code format.";
+        next.taxCode = "Invalid tax code format (10 digits, optionally -XXX).";
         valid = false;
       }
-    }
-
-    if (form.requestType === "CITIZEN_ID") {
       if (form.citizenId && !/^\d{9,12}$/.test(form.citizenId)) {
-        next.citizenId = "Citizen ID must be 9-12 digits.";
+        next.citizenId = "Citizen ID must be 9–12 digits.";
+        valid = false;
+      }
+      if (!form.citizenId && !form.taxCode) {
+        next.citizenId = "At least one of Citizen ID or Tax Code is required.";
         valid = false;
       }
     }
@@ -171,20 +202,24 @@ const CreateChangeRequest: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Build the DTO matching backend ChangeRequestCreateDTO
-      const dto: ChangeRequestCreateDTO = {};
-      if (form.citizenId)     dto.citizenId = form.citizenId;
-      if (form.taxCode)       dto.taxCode = form.taxCode;
+      const dto: ChangeRequestCreateDTO = {
+        type: form.requestType as RequestType,
+        reason: form.reason || undefined,
+      };
 
+      if (form.requestType === "CHANGE_OF_INFORMATION") {
+        if (form.citizenId) dto.citizenId = form.citizenId;
+        if (form.taxCode)   dto.taxCode   = form.taxCode;
+      }
 
-      // TODO: Replace with real employee ID from auth context/JWT
-      const employeeId = "00000000-0000-0000-0000-000000000000";
+      if (form.requestType === "CHANGE_OF_POSITION") {
+        if (form.newPositionId)   dto.newPositionId   = form.newPositionId;
+        if (form.newDepartmentId) dto.newDepartmentId = form.newDepartmentId;
+      }
 
-      await createChangeRequest(employeeId, dto);
+      await createChangeRequest(dto);
 
       success("Request Submitted", "Your change request has been created and is pending review.");
-
-      // Reset form
       setForm(INITIAL_FORM);
       setErrors({});
     } catch (err: unknown) {
@@ -200,40 +235,96 @@ const CreateChangeRequest: React.FC = () => {
     if (!form.requestType) return null;
 
     switch (form.requestType) {
-      case "TAX_CODE":
-        return (
-          <FieldWrapper id="cr-taxCode" label="Tax Code" error={errors.taxCode} hint="10 digits, optionally followed by -XXX">
-              <input
-                id="cr-taxCode"
-                type="text"
-                value={form.taxCode}
-                onChange={(e) => handleChange("taxCode", e.target.value)}
-                placeholder="e.g. 0123456789"
-                disabled={isSubmitting}
-                aria-invalid={!!errors.taxCode}
-                aria-describedby={errors.taxCode ? "cr-taxCode-error" : undefined}
-                className={`${inputBaseClass} ${errors.taxCode ? inputErrorBorder : inputNormalBorder}`}
-              />
-            </FieldWrapper>
-  )
-
-      case "CITIZEN_ID":
+      case "CHANGE_OF_INFORMATION":
         return (
           <>
-            <FieldWrapper id="cr-citizenId" label="Citizen ID" error={errors.citizenId} hint="9–12 digits">
+            <FieldWrapper id="cr-citizenId" label="New Citizen ID" error={errors.citizenId} hint="9–12 digits">
               <input
-                id="cr-citizenId"
-                type="text"
-                value={form.citizenId}
+                id="cr-citizenId" type="text" value={form.citizenId}
                 onChange={(e) => handleChange("citizenId", e.target.value)}
                 placeholder="e.g. 012345678901"
                 disabled={isSubmitting}
-                aria-invalid={!!errors.citizenId}
-                aria-describedby={errors.citizenId ? "cr-citizenId-error" : undefined}
                 className={`${inputBaseClass} ${errors.citizenId ? inputErrorBorder : inputNormalBorder}`}
               />
             </FieldWrapper>
-            
+            <FieldWrapper id="cr-taxCode" label="New Tax Code" error={errors.taxCode} hint="10 digits, optionally -XXX">
+              <input
+                id="cr-taxCode" type="text" value={form.taxCode}
+                onChange={(e) => handleChange("taxCode", e.target.value)}
+                placeholder="e.g. 0123456789"
+                disabled={isSubmitting}
+                className={`${inputBaseClass} ${errors.taxCode ? inputErrorBorder : inputNormalBorder}`}
+              />
+            </FieldWrapper>
+            <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+              Fill in only the fields you want to change.
+            </p>
+          </>
+        );
+
+      case "CHANGE_OF_POSITION":
+        return (
+          <>
+            {lookupError && (
+              <div className="flex items-center gap-2 text-xs font-medium text-rose-500">
+                <AlertCircleIcon /> {lookupError}
+              </div>
+            )}
+            {/* Department Select */}
+            <FieldWrapper id="cr-dept" label="Requested Department">
+              {lookupLoading ? (
+                <div className="h-10 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+              ) : (
+                <div className="relative">
+                  <select
+                    id="cr-dept"
+                    value={form.newDepartmentId}
+                    onChange={(e) => handleChange("newDepartmentId", e.target.value)}
+                    disabled={isSubmitting || lookupLoading}
+                    className={`${inputBaseClass} appearance-none pr-10 cursor-pointer ${inputNormalBorder}`}
+                  >
+                    <option value="">— Keep current department —</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark">
+                    <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                      <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 011.06 0L8 8.94l2.72-2.72a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0L4.22 7.28a.75.75 0 010-1.06z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                </div>
+              )}
+            </FieldWrapper>
+            {/* Position Select */}
+            <FieldWrapper id="cr-pos" label="Requested Position">
+              {lookupLoading ? (
+                <div className="h-10 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+              ) : (
+                <div className="relative">
+                  <select
+                    id="cr-pos"
+                    value={form.newPositionId}
+                    onChange={(e) => handleChange("newPositionId", e.target.value)}
+                    disabled={isSubmitting || lookupLoading}
+                    className={`${inputBaseClass} appearance-none pr-10 cursor-pointer ${inputNormalBorder}`}
+                  >
+                    <option value="">— Keep current position —</option>
+                    {positions.map((p) => (
+                      <option key={p.id} value={p.id}>{p.title}</option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark">
+                    <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                      <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 011.06 0L8 8.94l2.72-2.72a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0L4.22 7.28a.75.75 0 010-1.06z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                </div>
+              )}
+            </FieldWrapper>
+            <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+              Select only the fields you want to change. Leave as default to keep current.
+            </p>
           </>
         );
 
@@ -301,33 +392,18 @@ const CreateChangeRequest: React.FC = () => {
             </div>
           )}
 
-          {/* Title */}
-          <FieldWrapper id="cr-title" label="Title" required error={errors.title}>
-            <input
-              id="cr-title"
-              type="text"
-              value={form.title}
-              onChange={(e) => handleChange("title", e.target.value)}
-              placeholder="Brief summary of your request…"
-              disabled={isSubmitting}
-              aria-invalid={!!errors.title}
-              aria-describedby={errors.title ? "cr-title-error" : undefined}
-              className={`${inputBaseClass} ${errors.title ? inputErrorBorder : inputNormalBorder}`}
-            />
-          </FieldWrapper>
-
-          {/* Content */}
-          <FieldWrapper id="cr-content" label="Content" required error={errors.content}>
+          {/* Reason */}
+          <FieldWrapper id="cr-reason" label="Reason" required error={errors.reason}>
             <textarea
-              id="cr-content"
-              rows={5}
-              value={form.content}
-              onChange={(e) => handleChange("content", e.target.value)}
-              placeholder="Describe the changes you'd like to request…"
+              id="cr-reason"
+              rows={4}
+              value={form.reason}
+              onChange={(e) => handleChange("reason", e.target.value)}
+              placeholder="Explain why you are requesting this change…"
               disabled={isSubmitting}
-              aria-invalid={!!errors.content}
-              aria-describedby={errors.content ? "cr-content-error" : undefined}
-              className={`${inputBaseClass} ${errors.content ? inputErrorBorder : inputNormalBorder} resize-none`}
+              aria-invalid={!!errors.reason}
+              aria-describedby={errors.reason ? "cr-reason-error" : undefined}
+              className={`${inputBaseClass} ${errors.reason ? inputErrorBorder : inputNormalBorder} resize-none`}
             />
           </FieldWrapper>
         </div>

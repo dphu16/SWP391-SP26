@@ -25,7 +25,7 @@ public class GlobalExceptionHandler {
         // Xác định HTTP status dựa trên loại lỗi
         HttpStatus status = switch (ex.getErrorCode()) {
             case INVALID_CREDENTIALS -> HttpStatus.UNAUTHORIZED; // 401
-            case ACCOUNT_LOCKED, ACCOUNT_INACTIVE -> HttpStatus.FORBIDDEN; // 403
+            case ACCOUNT_LOCKED, ACCOUNT_INACTIVE, ACCESS_DENIED -> HttpStatus.FORBIDDEN; // 403
             default -> HttpStatus.BAD_REQUEST; // 400
         };
 

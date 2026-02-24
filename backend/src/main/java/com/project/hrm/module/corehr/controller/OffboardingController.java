@@ -23,7 +23,7 @@ public class OffboardingController {
     }
 
     @GetMapping("/employees/inactive")
-    @PreAuthorize("hasAuthority('HR')")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<InactiveEmployeeResponseDTO>> getInactiveEmployees() {
         List<InactiveEmployeeResponseDTO> inactiveList = offboardingService.getInactiveEmployees();
         return ResponseEntity.ok(inactiveList);

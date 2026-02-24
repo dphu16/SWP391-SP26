@@ -25,6 +25,7 @@ public class OnboardingController {
     }
 
     @GetMapping("/applications/hired")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<Page<OnboardingResponseDTO>> getHiredApplications(
             @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
         Page<OnboardingResponseDTO> result = onboardingService.getHiredApplications(pageable);
@@ -32,6 +33,7 @@ public class OnboardingController {
     }
 
     @PostMapping("/employees/new")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<NewHireResponseDTO> createEmployee(
             @Valid @RequestBody CreateNewHireDTO request) {
 

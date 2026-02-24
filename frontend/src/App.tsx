@@ -9,15 +9,22 @@ import EmployeeOffboarding from "./components/EmployeeOffboarding";
 import CandidateProfileCompletion from "./components/CandidateProfileCompletion";
 import CreateChangeRequest from "./components/CreateChangeRequest";
 import FilterBar from "./components/FilterBar";
+import HRDashboard from "./components/HRDashboard";
 import LoginPage from "./components/auth/LoginPage";
 import { ToastProvider } from "./components/ui/Toast";
 import { isAuthenticated } from "./services/authService";
+import { useAuth, type UserRole } from "./hooks/useAuth";
 
 const PrivateRoute: React.FC<{ element: React.ReactElement }> = ({ element }) =>
   isAuthenticated() ? element : <Navigate to="/login" replace />;
 
 const PublicRoute: React.FC<{ element: React.ReactElement }> = ({ element }) =>
   isAuthenticated() ? <Navigate to="/dashboard" replace /> : element;
+
+const RoleRoute: React.FC<{ element: React.ReactElement; allowed: UserRole[] }> = ({ element, allowed }) => {
+  const { hasRole } = useAuth();
+  return hasRole(...allowed) ? element : <Navigate to="/dashboard" replace />;
+};
 
 const AppShell: React.FC = () => {
   return (
@@ -31,44 +38,56 @@ const AppShell: React.FC = () => {
           <div className="max-w-7xl mx-auto px-6 py-6 space-y-5">
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<HRDashboard />} />
+
 
               <Route
                 path="/employees"
                 element={
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                          Employee Directory
-                        </h1>
-                        <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                          Manage and view all employees in your organization
-                        </p>
-                      </div>
-                    </div>
-                    <FilterBar />
-                    <EmployeeTable />
-                  </>
+                  <RoleRoute
+                    allowed={["HR", "MANAGER"]}
+                    element={
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
+                              Employee Directory
+                            </h1>
+                            <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                              Manage and view all employees in your organization
+                            </p>
+                          </div>
+                        </div>
+                        <FilterBar />
+                        <EmployeeTable />
+                      </>
+                    }
+                  />
                 }
               />
 
               <Route
                 path="/onboarding"
                 element={
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                          Onboarding
-                        </h1>
-                        <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                          Track new hire onboarding progress
-                        </p>
-                      </div>
-                    </div>
-                    <FilterBar />
-                    <EmployeeOnboarding />
-                  </>
+                  <RoleRoute
+                    allowed={["HR"]}
+                    element={
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
+                              Onboarding
+                            </h1>
+                            <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                              Track new hire onboarding progress
+                            </p>
+                          </div>
+                        </div>
+                        <FilterBar />
+                        <EmployeeOnboarding />
+                      </>
+                    }
+                  />
                 }
               />
 
@@ -80,19 +99,24 @@ const AppShell: React.FC = () => {
               <Route
                 path="/offboarding"
                 element={
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                          Offboarding
-                        </h1>
-                        <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                          Manage exits, resignations, and handover workflows
-                        </p>
-                      </div>
-                    </div>
-                    <EmployeeOffboarding />
-                  </>
+                  <RoleRoute
+                    allowed={["HR"]}
+                    element={
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
+                              Offboarding
+                            </h1>
+                            <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                              Manage exits, resignations, and handover workflows
+                            </p>
+                          </div>
+                        </div>
+                        <EmployeeOffboarding />
+                      </>
+                    }
+                  />
                 }
               />
 

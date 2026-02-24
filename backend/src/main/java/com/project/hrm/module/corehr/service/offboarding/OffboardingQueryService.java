@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-
 @Service
 public class OffboardingQueryService {
 
@@ -23,7 +22,7 @@ public class OffboardingQueryService {
                 EmployeeStatus.TERMINATED,
                 EmployeeStatus.RESIGNED);
 
-        return employeeRepository.findByStatusPosIn(inactiveStatuses)
+        return employeeRepository.findByEmpStatusIn(inactiveStatuses)
                 .stream()
                 .map(InactiveEmployeeMapper::toDTO)
                 .toList();

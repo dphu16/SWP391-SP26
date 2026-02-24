@@ -19,16 +19,16 @@ public class EmployeeCommandService {
     }
 
     private void applyPersonalInfo(Employee e, EmployeeChangeDTO req) {
-        if (req.getFullName() != null)    e.setFullName(req.getFullName());
+        if (req.getFullName() != null)    e.getPersonal().setFullName(req.getFullName());
         if (req.getEmail() != null)       e.setEmail(req.getEmail());
-        if (req.getPhone() != null)       e.setPhone(req.getPhone());
-        if (req.getAddress() != null)     e.setAddress(req.getAddress());
-        if (req.getGender() != null)      e.setGender(req.getGender());
-        if (req.getCitizenId() != null)   e.setCitizenId(req.getCitizenId());
-        if (req.getTaxCode() != null)     e.setTaxCode(req.getTaxCode());
-        if (req.getDateOfBirth() != null) e.setDateOfBirth(req.getDateOfBirth());
+        if (req.getPhone() != null)       e.getPersonal().setPhone(req.getPhone());
+        if (req.getAddress() != null)     e.getPersonal().setAddress(req.getAddress());
+        if (req.getGender() != null)      e.getPersonal().setGender(req.getGender());
+        if (req.getCitizenId() != null)   e.getPersonal().setCitizenId(req.getCitizenId());
+        if (req.getTaxCode() != null)     e.getPersonal().setTaxCode(req.getTaxCode());
+        if (req.getDateOfBirth() != null) e.getPersonal().setDateOfBirth(req.getDateOfBirth());
         if (req.getDateOfJoining() != null) e.setDateOfJoining(req.getDateOfJoining());
-        if (req.getAvatarUrl() != null)   e.setAvatarUrl(req.getAvatarUrl());
+        if (req.getAvatarUrl() != null)   e.getPersonal().setAvatar(req.getAvatarUrl());
     }
 
     private void applyJobInfo(Employee e, EmployeeChangeDTO req) {
@@ -38,14 +38,14 @@ public class EmployeeCommandService {
         if (req.getPositionId() != null) {
             e.setPosition(employeeHelper.findPositionOrThrow(req.getPositionId()));
         }
-        if (req.getStatusPos() != null) e.setStatusPos(req.getStatusPos());
+        if (req.getEmpStatus() != null) e.setEmpStatus(req.getEmpStatus());
     }
 
     private void applyUserAccount(Employee e, EmployeeChangeDTO req) {
         if (e.getUser() == null) return;
         if (req.getRole() != null)   e.getUser().setRole(req.getRole());
-        if (req.getStatus() != null) e.getUser().setStatus(req.getStatus());
-        if (req.getEmail() != null)  e.getUser().setEmail(req.getEmail());
+        if (req.getUserStatus() != null) e.getUser().setStatus(req.getUserStatus());
+        if (req.getEmail() != null)  e.setEmail(req.getEmail());
     }
 
     @Transactional

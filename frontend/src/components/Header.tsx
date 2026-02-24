@@ -167,7 +167,7 @@ const Header: React.FC = () => {
   const openProfile = useCallback(() => {
     setDropdownOpen(false);
     setDrawerOpen(true);
-    navigate(`/profile`);
+    navigate(`/employee/${currentUser.employeeId}`);
   }, []);
 
 
@@ -343,13 +343,11 @@ const Header: React.FC = () => {
                 <MenuItem
                   icon={<UserIcon />}
                   label="My Profile"
-                  description="View your employee record"
                   onClick={openProfile}
                 />
                 <MenuItem
                   icon={<SettingsIcon />}
                   label="Settings"
-                  description="Preferences & account"
                   onClick={() => setDropdownOpen(false)}
                 />
               </div>

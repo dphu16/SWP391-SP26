@@ -3,9 +3,10 @@ package com.project.hrm.module.corehr.service.request;
 import com.project.hrm.module.corehr.dto.request.ChangeRequestCreateDTO;
 import com.project.hrm.module.corehr.dto.response.ChangeRequestResponseDTO;
 import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.module.corehr.entity.EmployeeChangeRequest;
-import com.project.hrm.module.corehr.enums.ChangeRequestStatus;
+import com.project.hrm.module.corehr.entity.Request;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
+import com.project.hrm.module.corehr.enums.RequestStatus;
+import com.project.hrm.module.corehr.enums.RequestType;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.exception.ErrorCode;
 import com.project.hrm.module.corehr.mapper.ChangeRequestMapper;
@@ -14,6 +15,7 @@ import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -35,14 +37,18 @@ public class EmployeeRequestService {
         this.changeRequestRepository = changeRequestRepository;
     }
 
+    // ─── CREATE ───────────────────────────────────────────────────────────────
+
     @Transactional
-    public ChangeRequestResponseDTO createChangeRequest(UUID employeeId,
-            ChangeRequestCreateDTO dto,
-            UUID createdBy) {
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new BusinessRuleException(
-                        ErrorCode.EMPLOYEE_NOT_FOUND,
-                        "Employee not found with id: " + employeeId));
+    public ChangeRequestResponseDTO createChangeRequest(UUID employeeId, ChangeRequestCreateDTO dto) {
+        Employee employee = findActiveEmployee(employeeId);
+
+        // Only CHANGE_OF_INFOMATION and CHANGE_OF_POSITION are supported
+        Set<RequestType> supported = Set.of(RequestType.CHANGE_OF_INFORMATION, RequestType.CHANGE_OF_POSITION);
+        if (!supported.contains(dto.getType())) {
+            throw new BusinessRuleException(ErrorCode.ACCESS_DENIED,
+                    "Request type not supported via this endpoint: " + dto.getType());
+        }
 
         validateNoPendingRequest(employeeId);
 
@@ -51,22 +57,89 @@ public class EmployeeRequestService {
 
         validateDataChanged(oldData, newData);
 
-        EmployeeChangeRequest request = EmployeeChangeRequest.builder()
+        Request request = Request.builder()
                 .employee(employee)
-                .oldData(oldData)
-                .newData(newData)
-                .status(ChangeRequestStatus.PENDING)
-                .createdBy(createdBy)
+                .type(dto.getType())
+                .reason(dto.getReason())
+                .requestData(newData)
+                .status(RequestStatus.PENDING)
                 .build();
 
-        EmployeeChangeRequest saved = changeRequestRepository.saveAndFlush(request);
-
+        Request saved = changeRequestRepository.saveAndFlush(request);
         return ChangeRequestMapper.toResponseDTO(saved);
+    }
+
+    // ─── LIST (own requests) ──────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<ChangeRequestResponseDTO> getMyRequests(UUID employeeId) {
+        return changeRequestRepository
+                .findByEmployee_EmployeeIdOrderByCreatedAtDesc(employeeId)
+                .stream()
+                .map(ChangeRequestMapper::toResponseDTO)
+                .toList();
+    }
+
+    // ─── GET DETAIL ───────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public ChangeRequestResponseDTO getRequestDetail(UUID requestId, UUID employeeId) {
+        Request request = findRequest(requestId);
+        // Owner OR HR can view — ownership check done at controller level via
+        // PreAuthorize or here:
+        if (!request.getEmployee().getEmployeeId().equals(employeeId)) {
+            throw new BusinessRuleException(ErrorCode.ACCESS_DENIED,
+                    "You can only view your own requests");
+        }
+        return ChangeRequestMapper.toResponseDTO(request);
+    }
+
+    // ─── APPROVE ─────────────────────────────────────────────────────────────
+
+    @Transactional
+    public ChangeRequestResponseDTO approveRequest(UUID requestId) {
+        Request request = findRequest(requestId);
+        ensurePending(request);
+        request.setStatus(RequestStatus.APPROVED);
+        return ChangeRequestMapper.toResponseDTO(changeRequestRepository.save(request));
+    }
+
+    // ─── REJECT ──────────────────────────────────────────────────────────────
+
+    @Transactional
+    public ChangeRequestResponseDTO rejectRequest(UUID requestId) {
+        Request request = findRequest(requestId);
+        ensurePending(request);
+        request.setStatus(RequestStatus.REJECTED);
+        return ChangeRequestMapper.toResponseDTO(changeRequestRepository.save(request));
+    }
+
+    // ─── Private helpers ─────────────────────────────────────────────────────
+
+    private Employee findActiveEmployee(UUID employeeId) {
+        return employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new BusinessRuleException(
+                        ErrorCode.EMPLOYEE_NOT_FOUND,
+                        "Employee not found with id: " + employeeId));
+    }
+
+    private Request findRequest(UUID requestId) {
+        return changeRequestRepository.findById(requestId)
+                .orElseThrow(() -> new BusinessRuleException(
+                        ErrorCode.EMPLOYEE_NOT_FOUND,
+                        "Request not found with id: " + requestId));
+    }
+
+    private void ensurePending(Request request) {
+        if (request.getStatus() != RequestStatus.PENDING) {
+            throw new BusinessRuleException(ErrorCode.ACCESS_DENIED,
+                    "Only PENDING requests can be approved or rejected");
+        }
     }
 
     private void validateNoPendingRequest(UUID employeeId) {
         if (changeRequestRepository.existsByEmployee_EmployeeIdAndStatus(
-                employeeId, ChangeRequestStatus.PENDING)) {
+                employeeId, RequestStatus.PENDING)) {
             throw new BusinessRuleException(
                     ErrorCode.PENDING_REQUEST_EXISTS,
                     "Employee already has a pending change request");

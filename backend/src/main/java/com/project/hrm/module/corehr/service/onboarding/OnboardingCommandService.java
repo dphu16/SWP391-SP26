@@ -1,10 +1,7 @@
 package com.project.hrm.module.corehr.service.onboarding;
 
 import com.project.hrm.module.corehr.dto.request.CreateNewHireDTO;
-import com.project.hrm.module.corehr.entity.Department;
-import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.module.corehr.entity.Position;
-import com.project.hrm.module.corehr.entity.User;
+import com.project.hrm.module.corehr.entity.*;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.UserRole;
 import com.project.hrm.module.corehr.enums.UserStatus;
@@ -27,7 +24,9 @@ public class OnboardingCommandService {
     private final PasswordEncoder passwordEncoder;
     private final OnboardingRepository onboardingRepository;
 
-    public OnboardingCommandService(EmployeeHelper employeeHelper, UsernameGenerator usernameGenerator, PasswordGenerator passwordGenerator, PasswordEncoder passwordEncoder, OnboardingRepository onboardingRepository) {
+    public OnboardingCommandService(EmployeeHelper employeeHelper, UsernameGenerator usernameGenerator,
+            PasswordGenerator passwordGenerator, PasswordEncoder passwordEncoder,
+            OnboardingRepository onboardingRepository) {
         this.employeeHelper = employeeHelper;
         this.usernameGenerator = usernameGenerator;
         this.passwordGenerator = passwordGenerator;
@@ -40,14 +39,22 @@ public class OnboardingCommandService {
         Department department = employeeHelper.findDepartmentOrThrow(request.getDepartmentId());
         Position position = employeeHelper.findPositionOrThrow(request.getPositionId());
 
+        Dependent dependent = null;
+        if (request.getDependentName() != null && !request.getDependentName().isBlank()) {
+            dependent = new Dependent();
+            dependent.setFullName(request.getDependentName());
+            dependent.setRelationship(request.getRelationship());
+            dependent.setIsTaxDeductible(true);
+        }
+
         String rawPassword = passwordGenerator.generate();
         String username = usernameGenerator.generateUnique(request.getFullName());
 
         User user = buildUser(username, rawPassword, request.getEmail());
 
-        Employee employee = NewHireMapper.toEntity(request, department, position);
+        Employee employee = NewHireMapper.toEntity(request, department, position, dependent);
         employee.setUser(user);
-        employee.setStatusPos(EmployeeStatus.OFFICIAL);
+        employee.setEmpStatus(EmployeeStatus.OFFICIAL);
 
         Employee saved = employeeHelper.save(employee);
 
@@ -60,11 +67,12 @@ public class OnboardingCommandService {
 
     private User buildUser(String username, String rawPassword, String email) {
         User user = new User();
+        Employee employee = new Employee();
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(rawPassword));
-        user.setEmail(email);
+        employee.setEmail(email);
         user.setRole(UserRole.EMPLOYEE);
-        user.setStatus(UserStatus.INACTIVE);
+        user.setStatus(UserStatus.ACTIVE);
         return user;
     }
 

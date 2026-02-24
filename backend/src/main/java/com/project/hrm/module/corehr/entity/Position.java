@@ -17,6 +17,11 @@ public class Position {
     @Column(name = "position_id")
     private UUID positionId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    @ToString.Exclude
+    private Department department;
+
     @Column(nullable = false, length = 100)
     private String title;
 
@@ -26,6 +31,5 @@ public class Position {
     @Column(name = "base_salary_max", precision = 15, scale = 2)
     private BigDecimal baseSalaryMax;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
+
 }

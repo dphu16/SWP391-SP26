@@ -14,27 +14,23 @@ public class EmployeeDetailMapper {
         Position position = employee.getPosition();
 
         return EmployeeDetailDTO.builder()
-                // Basic
                 .employeeId(employee.getEmployeeId())
                 .employeeCode(employee.getEmployeeCode())
-                .avatarUrl(employee.getAvatarUrl())
-                // Personal
-                .fullName(employee.getFullName())
+                .avatarUrl(employee.getPersonal().getAvatar())
+                .fullName(employee.getPersonal().getFullName())
                 .username(user != null ? user.getUsername() : null)
                 .email(user != null ? user.getEmail() : employee.getEmail())
-                .phone(employee.getPhone())
-                .address(employee.getAddress())
-                .gender(employee.getGender())
-                .citizenId(employee.getCitizenId())
-                .taxCode(employee.getTaxCode())
-                .dateOfBirth(employee.getDateOfBirth())
+                .phone(employee.getPersonal().getPhone())
+                .address(employee.getPersonal().getAddress())
+                .gender(employee.getPersonal().getGender())
+                .citizenId(employee.getPersonal().getCitizenId())
+                .taxCode(employee.getPersonal().getTaxCode())
+                .dateOfBirth(employee.getPersonal().getDateOfBirth())
                 .dateOfJoining(employee.getDateOfJoining())
-                // Job
                 .role(user != null ? user.getRole() : null)
                 .positionTitle(position != null ? position.getTitle() : null)
                 .deptName(department != null ? department.getDeptName() : null)
-                .statusPos(employee.getStatusPos())
-                // Account status
+                .statusPos(employee.getEmpStatus())
                 .status(user != null ? user.getStatus() : null)
                 .build();
     }

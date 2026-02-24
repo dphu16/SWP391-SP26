@@ -5,6 +5,13 @@ export enum EmployeeStatus {
   OnLeave = "On Leave",
 }
 
+export type RequestType =
+  | "CHANGE_OF_INFORMATION"
+  | "CHANGE_OF_POSITION";
+
+
+
+
 export interface Employee {
   id: string;
   employeeCode: string;
@@ -67,7 +74,18 @@ export interface CreateNewHireDTO {
   avatarUrl?: string;
   /** UUID của Application trong module tuyển dụng. Nếu có, backend sẽ xóa khỏi danh sách onboarding sau khi tạo nhân viên thành công. */
   sourceApplicationId?: string;
+  /** UUID của manager trực tiếp */
+  managerId?: string;
+  /** Tên người thân */
+  dependentName?: string;
+  /** Quan hệ với người thân */
+  relationship?: string;
+  /** Mức lương tối thiểu */
+  baseSalaryMin: string;
+  /** Mức lương tối đa */
+  baseSalaryMax: string;
 }
+
 
 // Offboarding employee DTO (TERMINATED / RESIGNED employees)
 export interface OffboardingEmployee {
