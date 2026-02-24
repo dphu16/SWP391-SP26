@@ -119,7 +119,6 @@ const Sidebar: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [employeesExpanded, setEmployeesExpanded] = useState(true);
   const [requestExpanded, setRequestExpanded] = useState(true);
-  const [attendanceExpanded, setAttendanceExpanded] = useState(true);
 
   const isPath = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
 
@@ -278,7 +277,6 @@ const Sidebar: React.FC = () => {
               {[
                 { label: "Personal Info", path: "/requests/new" },
                 { label: "My Requests", path: "/requests/my-requests" },
-                { label: "Review Requests", path: "/requests/review" },
               ].map((item) => (
                 <NavItem
                   key={item.path}
@@ -297,7 +295,6 @@ const Sidebar: React.FC = () => {
         {/* Management */}
         <SectionLabel label="Management" isCollapsed={isCollapsed} />
 
-        {/* Time Off */}
         {[
           { label: "Time Off", icon: Icons.timeoff, badge: 3 },
         ].map((item) => (
@@ -307,71 +304,6 @@ const Sidebar: React.FC = () => {
             label={item.label}
             isCollapsed={isCollapsed}
             badge={item.badge}
-          />
-        ))}
-
-        {/* Attendance with submenu */}
-        <div>
-          <button
-            onClick={() => {
-              if (isCollapsed) {
-                setIsCollapsed(false);
-                setAttendanceExpanded(true);
-              } else {
-                setAttendanceExpanded(!attendanceExpanded);
-              }
-            }}
-            title={isCollapsed ? "Attendance" : undefined}
-            className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
-              ${isCollapsed ? "justify-center" : ""}
-              ${isPath("/attendance")
-                ? "text-primary bg-primary/10"
-                : "text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-text-primary-light dark:hover:text-text-primary-dark"
-              }
-            `}
-          >
-            <span className="flex-shrink-0">{Icons.attendance}</span>
-            {!isCollapsed && (
-              <>
-                <span className="flex-1 text-left">Attendance</span>
-                <span className={`transition-transform duration-200 ${attendanceExpanded ? "rotate-180" : ""}`}>
-                  {Icons.chevronDown}
-                </span>
-              </>
-            )}
-          </button>
-
-          {/* Submenu */}
-          {!isCollapsed && attendanceExpanded && (
-            <div className="mt-0.5 space-y-0.5 animate-slide-up">
-              {[
-                { label: "View Schedule", path: "/attendance/schedule" },
-                { label: "Create Schedule", path: "/attendance/create" },
-                { label: "Check-in / Check-out", path: "/attendance/checkin" },
-              ].map((item) => (
-                <NavItem
-                  key={item.path}
-                  icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />}
-                  label={item.label}
-                  isActive={location.pathname === item.path}
-                  isCollapsed={false}
-                  indent
-                  onClick={() => navigate(item.path)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {[
-          { label: "Payroll", icon: Icons.payroll },
-          { label: "Performance", icon: Icons.performance },
-        ].map((item) => (
-          <NavItem
-            key={item.label}
-            icon={item.icon}
-            label={item.label}
-            isCollapsed={isCollapsed}
           />
         ))}
 

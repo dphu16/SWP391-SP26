@@ -1,26 +1,25 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { getToken, removeToken } from "../services/authService";
+
 import { decodeJwt } from "../utils/jwtDecode";
 // ─── Breadcrumb config ────────────────────────────────────────────────────────
 const breadcrumbMap: Record<
   string,
   { label: string; parent?: string; parentPath?: string }
 > = {
-  "/dashboard":   { label: "Dashboard" },
-  "/employees":   { label: "Directory",   parent: "Employees" },
-  "/onboarding":  { label: "Onboarding",  parent: "Employees" },
+  "/dashboard": { label: "Dashboard" },
+  "/employees": { label: "Directory", parent: "Employees" },
+  "/onboarding": { label: "Onboarding", parent: "Employees" },
   "/offboarding": { label: "Offboarding", parent: "Employees" },
 };
 
 // ─── Current user derived from JWT ──────────────────────────────────────────
 function useCurrentUser() {
-  const payload = decodeJwt(getToken());
   return {
-    name:       payload?.fullName ?? payload?.sub ?? "User",
-    role:       payload?.role     ?? "—",
-    avatarUrl:  payload?.avatarUrl ?? "",
-    employeeId: payload?.employeeId ?? null as string | null,
+    name: "User",
+    role: "—",
+    avatarUrl: "",
+    employeeId: null as string | null,
   };
 }
 
@@ -30,9 +29,8 @@ const ChevronDownIcon = ({ open }: { open: boolean }) => (
   <svg
     viewBox="0 0 16 16"
     fill="currentColor"
-    className={`w-3.5 h-3.5 text-text-secondary-light dark:text-text-secondary-dark transition-transform duration-200 ${
-      open ? "rotate-180" : ""
-    }`}
+    className={`w-3.5 h-3.5 text-text-secondary-light dark:text-text-secondary-dark transition-transform duration-200 ${open ? "rotate-180" : ""
+      }`}
   >
     <path
       fillRule="evenodd"
@@ -86,18 +84,16 @@ const MenuItem: React.FC<MenuItemProps> = ({
 }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer group ${
-      variant === "danger"
+    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer group ${variant === "danger"
         ? "text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20"
         : "text-text-primary-light dark:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-800"
-    }`}
+      }`}
   >
     <span
-      className={`flex-shrink-0 ${
-        variant === "danger"
+      className={`flex-shrink-0 ${variant === "danger"
           ? "text-rose-500"
           : "text-text-secondary-light dark:text-text-secondary-dark group-hover:text-text-primary-light dark:group-hover:text-text-primary-dark"
-      } transition-colors`}
+        } transition-colors`}
     >
       {icon}
     </span>
@@ -267,11 +263,10 @@ const Header: React.FC = () => {
               aria-expanded={dropdownOpen}
               aria-controls="user-dropdown"
               onClick={() => setDropdownOpen((o) => !o)}
-              className={`flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-xl transition-colors cursor-pointer group ${
-                dropdownOpen
+              className={`flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-xl transition-colors cursor-pointer group ${dropdownOpen
                   ? "bg-gray-100 dark:bg-gray-800"
                   : "hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
+                }`}
             >
               {/* Avatar */}
               {currentUser.avatarUrl ? (
@@ -305,11 +300,10 @@ const Header: React.FC = () => {
               id="user-dropdown"
               role="menu"
               aria-labelledby="user-menu-button"
-              className={`absolute right-0 top-full mt-2 w-64 bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark shadow-dropdown overflow-hidden transition-all duration-200 origin-top-right z-50 ${
-                dropdownOpen
+              className={`absolute right-0 top-full mt-2 w-64 bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark shadow-dropdown overflow-hidden transition-all duration-200 origin-top-right z-50 ${dropdownOpen
                   ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
                   : "opacity-0 scale-95 -translate-y-1 pointer-events-none"
-              }`}
+                }`}
             >
               {/* User identity header */}
               <div className="px-4 py-3.5 border-b border-border-light dark:border-border-dark">
@@ -354,25 +348,18 @@ const Header: React.FC = () => {
                 />
               </div>
 
-              {/* Divider + logout */}
+              {/* Divider */}
               <div className="border-t border-border-light dark:border-border-dark p-2">
-                <MenuItem
-                  icon={<LogoutIcon />}
-                  label="Sign Out"
-                  onClick={() => {
-                    setDropdownOpen(false);
-                    removeToken();
-                    navigate("/login", { replace: true });
-                  }}
-                  variant="danger"
-                />
+                <span className="block px-3 py-2 text-xs text-text-muted-light dark:text-text-muted-dark italic">
+                  No auth system active
+                </span>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      
+
     </>
   );
 };
