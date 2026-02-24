@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { login, saveToken } from "../../services/authService";
 import GoogleLoginButton from "./GoogleLoginButton";
 
@@ -187,6 +187,8 @@ const Divider: React.FC<DividerProps> = ({ label = "Or" }) => (
 
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/dashboard";
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -232,7 +234,7 @@ const LoginForm: React.FC = () => {
     try {
       const data = await login({ username: username.trim(), password });
       saveToken(data.accessToken);
-      navigate("/dashboard", { replace: true });
+      navigate(from, { replace: true });
     } catch (err: unknown) {
       const message =
         err instanceof Error

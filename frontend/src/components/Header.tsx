@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-
+import { getToken, removeToken } from "../services/authService";
 import { decodeJwt } from "../utils/jwtDecode";
 // ─── Breadcrumb config ────────────────────────────────────────────────────────
 const breadcrumbMap: Record<
@@ -15,11 +15,20 @@ const breadcrumbMap: Record<
 
 // ─── Current user derived from JWT ──────────────────────────────────────────
 function useCurrentUser() {
+  const payload = decodeJwt(getToken());
+  if (!payload) {
+    return {
+      name: "User",
+      role: "—",
+      avatarUrl: "",
+      employeeId: null as string | null,
+    };
+  }
   return {
-    name: "User",
-    role: "—",
-    avatarUrl: "",
-    employeeId: null as string | null,
+    name: payload.fullName ?? payload.sub ?? "User",
+    role: payload.role ?? "—",
+    avatarUrl: payload.avatarUrl ?? "",
+    employeeId: payload.employeeId ?? null,
   };
 }
 
@@ -116,7 +125,6 @@ const Header: React.FC = () => {
 
   const [darkMode, setDarkMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -162,7 +170,6 @@ const Header: React.FC = () => {
 
   const openProfile = useCallback(() => {
     setDropdownOpen(false);
-    setDrawerOpen(true);
     navigate(`/profile`);
   }, []);
 
@@ -348,11 +355,19 @@ const Header: React.FC = () => {
                 />
               </div>
 
-              {/* Divider */}
+              {/* Logout */}
               <div className="border-t border-border-light dark:border-border-dark p-2">
-                <span className="block px-3 py-2 text-xs text-text-muted-light dark:text-text-muted-dark italic">
-                  No auth system active
-                </span>
+                <MenuItem
+                  icon={<LogoutIcon />}
+                  label="Logout"
+                  description="Sign out of your account"
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    removeToken();
+                    navigate("/login", { replace: true });
+                  }}
+                  variant="danger"
+                />
               </div>
             </div>
           </div>

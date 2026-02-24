@@ -11,6 +11,10 @@ import CreateChangeRequest from "./components/CreateChangeRequest";
 import FilterBar from "./components/FilterBar";
 import PerformanceModule from "./components/PerformanceModule";
 import { ToastProvider } from "./components/ui/Toast";
+import LoginPage from "./components/auth/LoginPage";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import { getToken } from "./services/authService";
+import { decodeJwt } from "./utils/jwtDecode";
 
 
 const AppShell: React.FC = () => {
@@ -124,10 +128,28 @@ const App: React.FC = () => {
   return (
     <ToastProvider>
       <Routes>
-        <Route path="/*" element={<AppShell />} />
+        <Route
+          path="/login"
+          element={
+            decodeJwt(getToken()) ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <LoginPage />
+            )
+          }
+        />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <AppShell />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </ToastProvider>
   );
 };
 
 export default App;
+

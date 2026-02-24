@@ -25,7 +25,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
     Optional<Employee> findById(UUID uuid);
 
     @EntityGraph(attributePaths = { "user", "position", "department" })
-    @Query(value = "SELECT e FROM Employee e", countQuery = "SELECT COUNT(e) FROM Employee e")
+    @Query(value = "SELECT e FROM Employee e LEFT JOIN e.personal p ORDER BY p.fullName ASC",
+            countQuery = "SELECT COUNT(e) FROM Employee e")
     Page<Employee> findAllWithDetails(Pageable pageable);
 
     @EntityGraph(attributePaths = { "user", "position", "department" })

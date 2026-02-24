@@ -40,7 +40,7 @@ public class EmployeeController {
     @GetMapping("/hr/employees")
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<Page<EmployeeDTO>> getAllEmployees(
-            @PageableDefault(size = 10, sort = "fullName") Pageable pageable) {
+            @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(employeeService.getAllEmployees(pageable));
     }
 
