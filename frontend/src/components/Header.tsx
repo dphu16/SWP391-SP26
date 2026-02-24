@@ -1,28 +1,27 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { getToken, removeToken } from "../services/authService";
-import { decodeJwt } from "../utils/jwtDecode";
+
 // ─── Breadcrumb config ────────────────────────────────────────────────────────
 const breadcrumbMap: Record<
   string,
   { label: string; parent?: string; parentPath?: string }
 > = {
-  "/dashboard":   { label: "Dashboard" },
-  "/employees":   { label: "Directory",   parent: "Employees" },
-  "/onboarding":  { label: "Onboarding",  parent: "Employees" },
+  "/dashboard": { label: "Dashboard" },
+  "/employees": { label: "Directory", parent: "Employees" },
+  "/onboarding": { label: "Onboarding", parent: "Employees" },
   "/offboarding": { label: "Offboarding", parent: "Employees" },
 };
 
-// ─── Current user derived from JWT ──────────────────────────────────────────
+// ─── Current user mocked (Auth removed) ──────────────────────────────────────
 function useCurrentUser() {
-  const payload = decodeJwt(getToken());
   return {
-    name:       payload?.fullName ?? payload?.sub ?? "User",
-    role:       payload?.role     ?? "—",
-    avatarUrl:  payload?.avatarUrl ?? "",
-    employeeId: payload?.employeeId ?? null as string | null,
+    name: "Admin",
+    role: "HR",
+    avatarUrl: "",
+    employeeId: "admin-001",
   };
 }
+
 
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
@@ -30,9 +29,8 @@ const ChevronDownIcon = ({ open }: { open: boolean }) => (
   <svg
     viewBox="0 0 16 16"
     fill="currentColor"
-    className={`w-3.5 h-3.5 text-text-secondary-light dark:text-text-secondary-dark transition-transform duration-200 ${
-      open ? "rotate-180" : ""
-    }`}
+    className={`w-3.5 h-3.5 text-text-secondary-light dark:text-text-secondary-dark transition-transform duration-200 ${open ? "rotate-180" : ""
+      }`}
   >
     <path
       fillRule="evenodd"
@@ -58,15 +56,6 @@ const SettingsIcon = () => (
   </svg>
 );
 
-const LogoutIcon = () => (
-  <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-    <path
-      fillRule="evenodd"
-      d="M2 2.75C2 1.784 2.784 1 3.75 1h5.5a.75.75 0 010 1.5h-5.5a.25.25 0 00-.25.25v10.5c0 .138.112.25.25.25h5.5a.75.75 0 010 1.5h-5.5A1.75 1.75 0 012 13.25V2.75zm10.44 4.5H6.75a.75.75 0 000 1.5h5.69l-1.97 1.97a.75.75 0 101.06 1.06l3.25-3.25a.75.75 0 000-1.06l-3.25-3.25a.75.75 0 10-1.06 1.06l1.97 1.97z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
 
 // ─── Dropdown Menu Item ───────────────────────────────────────────────────────
 interface MenuItemProps {
@@ -86,18 +75,16 @@ const MenuItem: React.FC<MenuItemProps> = ({
 }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer group ${
-      variant === "danger"
-        ? "text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20"
-        : "text-text-primary-light dark:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-800"
-    }`}
+    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer group ${variant === "danger"
+      ? "text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+      : "text-text-primary-light dark:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-800"
+      }`}
   >
     <span
-      className={`flex-shrink-0 ${
-        variant === "danger"
-          ? "text-rose-500"
-          : "text-text-secondary-light dark:text-text-secondary-dark group-hover:text-text-primary-light dark:group-hover:text-text-primary-dark"
-      } transition-colors`}
+      className={`flex-shrink-0 ${variant === "danger"
+        ? "text-rose-500"
+        : "text-text-secondary-light dark:text-text-secondary-dark group-hover:text-text-primary-light dark:group-hover:text-text-primary-dark"
+        } transition-colors`}
     >
       {icon}
     </span>
@@ -120,7 +107,6 @@ const Header: React.FC = () => {
 
   const [darkMode, setDarkMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -166,7 +152,6 @@ const Header: React.FC = () => {
 
   const openProfile = useCallback(() => {
     setDropdownOpen(false);
-    setDrawerOpen(true);
     navigate(`/employee/${currentUser.employeeId}`);
   }, []);
 
@@ -267,11 +252,10 @@ const Header: React.FC = () => {
               aria-expanded={dropdownOpen}
               aria-controls="user-dropdown"
               onClick={() => setDropdownOpen((o) => !o)}
-              className={`flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-xl transition-colors cursor-pointer group ${
-                dropdownOpen
-                  ? "bg-gray-100 dark:bg-gray-800"
-                  : "hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
+              className={`flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-xl transition-colors cursor-pointer group ${dropdownOpen
+                ? "bg-gray-100 dark:bg-gray-800"
+                : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
             >
               {/* Avatar */}
               {currentUser.avatarUrl ? (
@@ -305,11 +289,10 @@ const Header: React.FC = () => {
               id="user-dropdown"
               role="menu"
               aria-labelledby="user-menu-button"
-              className={`absolute right-0 top-full mt-2 w-64 bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark shadow-dropdown overflow-hidden transition-all duration-200 origin-top-right z-50 ${
-                dropdownOpen
-                  ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
-                  : "opacity-0 scale-95 -translate-y-1 pointer-events-none"
-              }`}
+              className={`absolute right-0 top-full mt-2 w-64 bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark shadow-dropdown overflow-hidden transition-all duration-200 origin-top-right z-50 ${dropdownOpen
+                ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
+                : "opacity-0 scale-95 -translate-y-1 pointer-events-none"
+                }`}
             >
               {/* User identity header */}
               <div className="px-4 py-3.5 border-b border-border-light dark:border-border-dark">
@@ -352,25 +335,13 @@ const Header: React.FC = () => {
                 />
               </div>
 
-              {/* Divider + logout */}
-              <div className="border-t border-border-light dark:border-border-dark p-2">
-                <MenuItem
-                  icon={<LogoutIcon />}
-                  label="Sign Out"
-                  onClick={() => {
-                    setDropdownOpen(false);
-                    removeToken();
-                    navigate("/login", { replace: true });
-                  }}
-                  variant="danger"
-                />
-              </div>
+
             </div>
           </div>
         </div>
       </header>
 
-      
+
     </>
   );
 };

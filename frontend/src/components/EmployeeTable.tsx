@@ -8,11 +8,11 @@ const API_URL = "/api/hr/employees";
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { dot: string; text: string; bg: string }> = {
-  ACTIVE:     { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
-  ONBOARDING: { dot: "bg-amber-500",   text: "text-amber-700 dark:text-amber-400",   bg: "bg-amber-50 dark:bg-amber-900/20" },
-  PROBATION:  { dot: "bg-purple-500",  text: "text-purple-700 dark:text-purple-400",  bg: "bg-purple-50 dark:bg-purple-900/20" },
-  ONLEAVE:    { dot: "bg-rose-500",    text: "text-rose-700 dark:text-rose-400",    bg: "bg-rose-50 dark:bg-rose-900/20" },
-  INACTIVE:   { dot: "bg-gray-400",    text: "text-gray-600 dark:text-gray-400",    bg: "bg-gray-100 dark:bg-gray-800" },
+  ACTIVE: { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
+  ONBOARDING: { dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-900/20" },
+  PROBATION: { dot: "bg-purple-500", text: "text-purple-700 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-900/20" },
+  ONLEAVE: { dot: "bg-rose-500", text: "text-rose-700 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-900/20" },
+  INACTIVE: { dot: "bg-gray-400", text: "text-gray-600 dark:text-gray-400", bg: "bg-gray-100 dark:bg-gray-800" },
 };
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -177,7 +177,7 @@ interface EmployeeTableProps {
 
 const EmployeeTable: React.FC<EmployeeTableProps> = () => {
   const navigate = useNavigate();
-  const { success, error: toastError } = useToast();
+  const { error: toastError } = useToast();
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -283,11 +283,11 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
   }
 
   const COLUMNS = [
-    { key: "fullName",      label: "Employee" },
+    { key: "fullName", label: "Employee" },
     { key: "positionTitle", label: "Position" },
-    { key: "role",          label: "Role" },
-    { key: "deptName",      label: "Department" },
-    { key: "statusRole",    label: "Status" },
+    { key: "role", label: "Role" },
+    { key: "deptName", label: "Department" },
+    { key: "statusRole", label: "Status" },
   ];
 
   return (
@@ -362,99 +362,99 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
             {loading
               ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
               : employees.map((emp) => {
-                  const isSelected = selectedIds.has(emp.id);
-                  return (
-                    <tr
-                      key={emp.id}
-                      className={`table-row-hover group
+                const isSelected = selectedIds.has(emp.id);
+                return (
+                  <tr
+                    key={emp.id}
+                    className={`table-row-hover group
                         ${isSelected
-                          ? "bg-primary/5 dark:bg-primary/10"
-                          : "hover:bg-gray-50/80 dark:hover:bg-gray-800/30"
-                        }
+                        ? "bg-primary/5 dark:bg-primary/10"
+                        : "hover:bg-gray-50/80 dark:hover:bg-gray-800/30"
+                      }
                       `}
-                    >
-                      {/* Checkbox */}
-                      <td className="pl-6 pr-4 py-3.5">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleOne(emp.id)}
-                          className="w-4 h-4 rounded border-2 border-gray-300 dark:border-gray-600 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
-                          aria-label={`Select ${emp.fullName}`}
-                        />
-                      </td>
+                  >
+                    {/* Checkbox */}
+                    <td className="pl-6 pr-4 py-3.5">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleOne(emp.id)}
+                        className="w-4 h-4 rounded border-2 border-gray-300 dark:border-gray-600 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
+                        aria-label={`Select ${emp.fullName}`}
+                      />
+                    </td>
 
-                      {/* Employee Name */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <Avatar name={emp.fullName} url={emp.avatarUrl} />
-                          <div>
-                            <div className="font-semibold text-text-primary-light dark:text-text-primary-dark leading-snug">
-                              {emp.fullName}
-                            </div>
-                            <div className="text-[11px] text-text-secondary-light dark:text-text-secondary-dark font-mono mt-0.5">
-                              {emp.employeeCode}
-                            </div>
+                    {/* Employee Name */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={emp.fullName} url={emp.avatarUrl} />
+                        <div>
+                          <div className="font-semibold text-text-primary-light dark:text-text-primary-dark leading-snug">
+                            {emp.fullName}
+                          </div>
+                          <div className="text-[11px] text-text-secondary-light dark:text-text-secondary-dark font-mono mt-0.5">
+                            {emp.employeeCode}
                           </div>
                         </div>
-                      </td>
+                      </div>
+                    </td>
 
-                      {/* Position */}
-                      <td className="px-4 py-3.5 text-text-primary-light dark:text-text-primary-dark">
-                        {emp.positionTitle || <span className="text-text-muted-light dark:text-text-muted-dark">—</span>}
-                      </td>
+                    {/* Position */}
+                    <td className="px-4 py-3.5 text-text-primary-light dark:text-text-primary-dark">
+                      {emp.positionTitle || <span className="text-text-muted-light dark:text-text-muted-dark">—</span>}
+                    </td>
 
-                      {/* Role */}
-                      <td className="px-4 py-3.5">
-                        <span className="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">
-                          {emp.role || "—"}
-                        </span>
-                      </td>
+                    {/* Role */}
+                    <td className="px-4 py-3.5">
+                      <span className="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">
+                        {emp.role || "—"}
+                      </span>
+                    </td>
 
-                      {/* Department */}
-                      <td className="px-4 py-3.5 text-text-primary-light dark:text-text-primary-dark">
-                        {emp.deptName || <span className="text-text-muted-light dark:text-text-muted-dark">—</span>}
-                      </td>
+                    {/* Department */}
+                    <td className="px-4 py-3.5 text-text-primary-light dark:text-text-primary-dark">
+                      {emp.deptName || <span className="text-text-muted-light dark:text-text-muted-dark">—</span>}
+                    </td>
 
-                      {/* Status */}
-                      <td className="px-4 py-3.5">
-                        <StatusBadge status={emp.statusRole} />
-                      </td>
+                    {/* Status */}
+                    <td className="px-4 py-3.5">
+                      <StatusBadge status={emp.statusRole} />
+                    </td>
 
-                      {/* Actions */}
-                      <td className="px-4 py-3.5 text-center sticky right-0 bg-surface-light dark:bg-surface-dark group-hover:bg-gray-50/80 dark:group-hover:bg-gray-800/30 transition-colors">
-                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                          <button
-                            onClick={() => navigate(`/employee/${emp.id}`)}
-                            title="View profile"
-                            className="p-1.5 rounded-lg text-text-secondary-light dark:text-text-secondary-dark hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
-                          >
-                            <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                              <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
-                              <path fillRule="evenodd" d="M1.38 8.28a1.2 1.2 0 010-.56 7.16 7.16 0 0113.24 0c.044.185.044.378 0 .56a7.16 7.16 0 01-13.24 0zM8 11a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                          <button
-                            title="Edit employee"
-                            className="p-1.5 rounded-lg text-text-secondary-light dark:text-text-secondary-dark hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
-                          >
-                            <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                              <path d="M11.013 2.513a1.75 1.75 0 012.475 2.474L6.226 12.25a2.751 2.751 0 01-.892.596l-2.047.848a.75.75 0 01-.98-.98l.848-2.047a2.75 2.75 0 01.596-.892l7.262-7.262z" />
-                            </svg>
-                          </button>
-                          <button
-                            title="More options"
-                            className="p-1.5 rounded-lg text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                          >
-                            <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                              <path d="M8 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM1.5 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm13 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                    {/* Actions */}
+                    <td className="px-4 py-3.5 text-center sticky right-0 bg-surface-light dark:bg-surface-dark group-hover:bg-gray-50/80 dark:group-hover:bg-gray-800/30 transition-colors">
+                      <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        <button
+                          onClick={() => navigate(`/employee/${emp.id}`)}
+                          title="View profile"
+                          className="p-1.5 rounded-lg text-text-secondary-light dark:text-text-secondary-dark hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                        >
+                          <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                            <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+                            <path fillRule="evenodd" d="M1.38 8.28a1.2 1.2 0 010-.56 7.16 7.16 0 0113.24 0c.044.185.044.378 0 .56a7.16 7.16 0 01-13.24 0zM8 11a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                        <button
+                          title="Edit employee"
+                          className="p-1.5 rounded-lg text-text-secondary-light dark:text-text-secondary-dark hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
+                        >
+                          <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                            <path d="M11.013 2.513a1.75 1.75 0 012.475 2.474L6.226 12.25a2.751 2.751 0 01-.892.596l-2.047.848a.75.75 0 01-.98-.98l.848-2.047a2.75 2.75 0 01.596-.892l7.262-7.262z" />
+                          </svg>
+                        </button>
+                        <button
+                          title="More options"
+                          className="p-1.5 rounded-lg text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                        >
+                          <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                            <path d="M8 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM1.5 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm13 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       </div>

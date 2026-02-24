@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import apiClient from "../services/apiClient";
-import { getToken } from "../services/authService";
-import { decodeJwt } from "../utils/jwtDecode";
 
 // DTO interface matching GET /api/employee/{id}/view-detail
 interface EmployeeDetailDTO {
@@ -29,18 +27,18 @@ interface EmployeeDetailDTO {
 const API_BASE = "/api/employee";
 
 const STATUS_CONFIG: Record<string, { dot: string; text: string; bg: string }> =
-  {
-    ACTIVE: {
-      dot: "bg-emerald-500",
-      text: "text-emerald-700 dark:text-emerald-400",
-      bg: "bg-emerald-50 dark:bg-emerald-900/20",
-    },
-    INACTIVE: {
-      dot: "bg-rose-500",
-      text: "text-rose-700 dark:text-rose-400",
-      bg: "bg-rose-50 dark:bg-rose-900/20",
-    },
-  };
+{
+  ACTIVE: {
+    dot: "bg-emerald-500",
+    text: "text-emerald-700 dark:text-emerald-400",
+    bg: "bg-emerald-50 dark:bg-emerald-900/20",
+  },
+  INACTIVE: {
+    dot: "bg-rose-500",
+    text: "text-rose-700 dark:text-rose-400",
+    bg: "bg-rose-50 dark:bg-rose-900/20",
+  },
+};
 
 const getStatusCfg = (status: string) => {
   const key = status?.toUpperCase() ?? "";
@@ -152,24 +150,24 @@ const IconButton: React.FC<{
   disabled,
   className = "",
 }) => {
-  const variantClass = {
-    default:
-      "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-800",
-    primary: "text-white bg-primary hover:bg-primary-hover",
-    danger: "text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-900/20",
-  }[variant];
+    const variantClass = {
+      default:
+        "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-800",
+      primary: "text-white bg-primary hover:bg-primary-hover",
+      danger: "text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-900/20",
+    }[variant];
 
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      disabled={disabled}
-      className={`p-2 rounded-xl transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${variantClass} ${className}`}
-    >
-      {children}
-    </button>
-  );
-};
+    return (
+      <button
+        onClick={onClick}
+        title={title}
+        disabled={disabled}
+        className={`p-2 rounded-xl transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${variantClass} ${className}`}
+      >
+        {children}
+      </button>
+    );
+  };
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 const EditIcon = () => (
@@ -222,8 +220,8 @@ const EmployeeDetail: React.FC = () => {
   const navigate = useNavigate();
 
   const isProfile = location.pathname === "/profile";
-  const token = getToken();
-  const id = isProfile ? decodeJwt(token)?.employeeId : paramId;
+  const id = isProfile ? "admin-001" : paramId; // Auth removed, using mock ID for profile
+
 
   const [detail, setDetail] = useState<EmployeeDetailDTO | null>(null);
   const [loading, setLoading] = useState(true);
@@ -317,7 +315,7 @@ const EmployeeDetail: React.FC = () => {
         const axErr = err as { response?: { status: number; data?: { message?: string }; statusText: string } };
         setEditError(
           axErr.response?.data?.message ||
-            `Lỗi ${axErr.response?.status}: Không thể lưu thay đổi.`,
+          `Lỗi ${axErr.response?.status}: Không thể lưu thay đổi.`,
         );
       } else {
         setEditError("Đã xảy ra lỗi không xác định.");
@@ -526,11 +524,10 @@ const EmployeeDetail: React.FC = () => {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`whitespace-nowrap py-4 px-4 border-b-2 text-sm font-semibold transition-colors cursor-pointer ${
-                    activeTab === tab
-                      ? "border-primary text-primary"
-                      : "border-transparent text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark hover:border-gray-300 dark:hover:border-gray-600"
-                  }`}
+                  className={`whitespace-nowrap py-4 px-4 border-b-2 text-sm font-semibold transition-colors cursor-pointer ${activeTab === tab
+                    ? "border-primary text-primary"
+                    : "border-transparent text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark hover:border-gray-300 dark:hover:border-gray-600"
+                    }`}
                 >
                   {tab}
                 </button>

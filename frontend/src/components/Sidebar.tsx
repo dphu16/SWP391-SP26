@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 const Icons = {
@@ -97,7 +96,7 @@ const NavItem: React.FC<NavItemProps> = ({
       <span className="flex-1 text-left truncate">{label}</span>
     )}
 
-  {!isCollapsed && badge !== undefined && badge > 0 && (
+    {!isCollapsed && badge !== undefined && badge > 0 && (
       <span className="ml-auto flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center">
         {badge}
       </span>
@@ -117,10 +116,11 @@ const SectionLabel: React.FC<{ label: string; isCollapsed: boolean }> = ({ label
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasRole } = useAuth();
+  const hasRole = (..._args: any[]) => true; // Auth removed
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [employeesExpanded, setEmployeesExpanded] = useState(true);
   const [requestExpanded, setRequestExpanded] = useState(true);
+
 
   const isPath = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
 
@@ -191,59 +191,59 @@ const Sidebar: React.FC = () => {
 
         {/* Employees with submenu — HR and MANAGER only */}
         {hasRole("HR", "MANAGER") && (
-        <div>
-          <button
-            onClick={() => {
-              if (isCollapsed) {
-                setIsCollapsed(false);
-                setEmployeesExpanded(true);
-              } else {
-                setEmployeesExpanded(!employeesExpanded);
-              }
-            }}
-            title={isCollapsed ? "Employees" : undefined}
-            className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
+          <div>
+            <button
+              onClick={() => {
+                if (isCollapsed) {
+                  setIsCollapsed(false);
+                  setEmployeesExpanded(true);
+                } else {
+                  setEmployeesExpanded(!employeesExpanded);
+                }
+              }}
+              title={isCollapsed ? "Employees" : undefined}
+              className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
               ${isCollapsed ? "justify-center" : ""}
               ${isPath("/employees") || isPath("/onboarding") || isPath("/offboarding")
-                ? "text-primary bg-primary/10"
-                : "text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-text-primary-light dark:hover:text-text-primary-dark"
-              }
+                  ? "text-primary bg-primary/10"
+                  : "text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-text-primary-light dark:hover:text-text-primary-dark"
+                }
             `}
-          >
-            <span className="flex-shrink-0">{Icons.people}</span>
-            {!isCollapsed && (
-              <>
-                <span className="flex-1 text-left">Employees</span>
-                <span className={`transition-transform duration-200 ${employeesExpanded ? "rotate-180" : ""}`}>
-                  {Icons.chevronDown}
-                </span>
-              </>
-            )}
-          </button>
+            >
+              <span className="flex-shrink-0">{Icons.people}</span>
+              {!isCollapsed && (
+                <>
+                  <span className="flex-1 text-left">Employees</span>
+                  <span className={`transition-transform duration-200 ${employeesExpanded ? "rotate-180" : ""}`}>
+                    {Icons.chevronDown}
+                  </span>
+                </>
+              )}
+            </button>
 
-          {/* Submenu */}
-          {!isCollapsed && employeesExpanded && (
-            <div className="mt-0.5 space-y-0.5 animate-slide-up">
-              {[
-                { label: "Directory", path: "/employees", roles: ["HR", "MANAGER"] as const },
-                { label: "Onboarding", path: "/onboarding", roles: ["HR"] as const },
-                { label: "Offboarding", path: "/offboarding", roles: ["HR"] as const },
-              ]
-                .filter((item) => hasRole(...item.roles))
-                .map((item) => (
-                <NavItem
-                  key={item.path}
-                  icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />}
-                  label={item.label}
-                  isActive={location.pathname === item.path}
-                  isCollapsed={false}
-                  indent
-                  onClick={() => navigate(item.path)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+            {/* Submenu */}
+            {!isCollapsed && employeesExpanded && (
+              <div className="mt-0.5 space-y-0.5 animate-slide-up">
+                {[
+                  { label: "Directory", path: "/employees", roles: ["HR", "MANAGER"] as const },
+                  { label: "Onboarding", path: "/onboarding", roles: ["HR"] as const },
+                  { label: "Offboarding", path: "/offboarding", roles: ["HR"] as const },
+                ]
+                  .filter((item) => hasRole(...item.roles))
+                  .map((item) => (
+                    <NavItem
+                      key={item.path}
+                      icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />}
+                      label={item.label}
+                      isActive={location.pathname === item.path}
+                      isCollapsed={false}
+                      indent
+                      onClick={() => navigate(item.path)}
+                    />
+                  ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Request with submenu */}
@@ -311,14 +311,14 @@ const Sidebar: React.FC = () => {
             ]
               .filter((item) => !item.roles || hasRole(...item.roles))
               .map((item) => (
-              <NavItem
-                key={item.label}
-                icon={item.icon}
-                label={item.label}
-                isCollapsed={isCollapsed}
-                badge={item.badge}
-              />
-            ))}
+                <NavItem
+                  key={item.label}
+                  icon={item.icon}
+                  label={item.label}
+                  isCollapsed={isCollapsed}
+                  badge={item.badge}
+                />
+              ))}
           </>
         )}
 
@@ -337,21 +337,21 @@ const Sidebar: React.FC = () => {
 
         {hasRole("EMPLOYEE") && (
           <>
-           <SectionLabel label="Management" isCollapsed={isCollapsed} />
+            <SectionLabel label="Management" isCollapsed={isCollapsed} />
 
-             {[
+            {[
               { label: "Time Off", icon: Icons.timeoff, badge: 3 },
               { label: "Attendance", icon: Icons.attendance }
             ]
               .map((item) => (
-              <NavItem
-                key={item.label}
-                icon={item.icon}
-                label={item.label}
-                isCollapsed={isCollapsed}
-                badge={item.badge}
-              />
-            ))}
+                <NavItem
+                  key={item.label}
+                  icon={item.icon}
+                  label={item.label}
+                  isCollapsed={isCollapsed}
+                  badge={item.badge}
+                />
+              ))}
           </>
         )}
       </nav>

@@ -1,6 +1,4 @@
 import apiClient from "./apiClient";
-import { getToken } from "./authService";
-import { decodeJwt } from "../utils/jwtDecode";
 import type { RequestType } from "../types";
 
 export interface ChangeRequestCreateDTO {
@@ -21,11 +19,11 @@ export interface ChangeRequestResponseDTO {
   createdAt: string;
 }
 
-/** Lấy employeeId từ JWT token hiện tại */
+/** Mock employee ID (Auth removed) */
 export function getCurrentEmployeeId(): string | null {
-  const payload = decodeJwt(getToken());
-  return payload?.employeeId ?? null;
+  return "admin-001";
 }
+
 
 /** POST /api/employee-requests — tạo request mới */
 export async function createChangeRequest(
