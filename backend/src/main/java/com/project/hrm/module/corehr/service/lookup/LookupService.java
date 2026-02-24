@@ -35,7 +35,13 @@ public class LookupService {
         return positionRepository.findAll()
                 .stream()
                 .sorted((a, b) -> a.getTitle().compareToIgnoreCase(b.getTitle()))
-                .map(p -> new PositionOptionDTO(p.getPositionId(), p.getTitle()))
+                .map(p -> new PositionOptionDTO(
+                        p.getPositionId(),
+                        p.getTitle(),
+                        p.getDepartment() != null ? p.getDepartment().getDeptId() : null,
+                        p.getDepartment() != null ? p.getDepartment().getDeptName() : null,
+                        p.getBaseSalaryMin(),
+                        p.getBaseSalaryMax()))
                 .toList();
     }
 }

@@ -34,10 +34,7 @@ public class User {
     private UserRole role;
 
     @Enumerated(EnumType.STRING)
-    private UserStatus status = UserStatus.ACTIVE;
-
-    @Column(name = "last_login_at")
-    private OffsetDateTime lastLoginAt;
+    private UserStatus status;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

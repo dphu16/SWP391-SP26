@@ -28,8 +28,7 @@ public class EmployeeChangeDTO {
     private UUID departmentId;
     private UUID positionId;
     private UserRole role;
-    private EmployeeStatus statusPos;
+    private EmployeeStatus empStatus;
 
-    // === Account Status ===
-    private UserStatus status;
+    private UserStatus userStatus;
 }

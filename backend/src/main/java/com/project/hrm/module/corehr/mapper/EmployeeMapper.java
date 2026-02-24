@@ -13,9 +13,9 @@ public class EmployeeMapper {
 
                 employee.getEmployeeId(),
                 employee.getEmployeeCode(),
-                employee.getAvatarUrl(),
-                employee.getFullName(),
-                employee.getPhone(),
+                employee.getPersonal().getAvatar(),
+                employee.getPersonal().getFullName(),
+                employee.getPersonal().getPhone(),
                 employee.getPosition() != null ? employee.getPosition().getTitle() : null,
                 employee.getUser() != null ? employee.getUser().getRole() : null,
                 employee.getDepartment() != null ? employee.getDepartment().getDeptName() : null,

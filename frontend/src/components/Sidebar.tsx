@@ -96,7 +96,7 @@ const NavItem: React.FC<NavItemProps> = ({
       <span className="flex-1 text-left truncate">{label}</span>
     )}
 
-  {!isCollapsed && badge !== undefined && badge > 0 && (
+    {!isCollapsed && badge !== undefined && badge > 0 && (
       <span className="ml-auto flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center">
         {badge}
       </span>
@@ -299,7 +299,7 @@ const Sidebar: React.FC = () => {
           { label: "Time Off", icon: Icons.timeoff, badge: 3 },
           { label: "Attendance", icon: Icons.attendance },
           { label: "Payroll", icon: Icons.payroll },
-          { label: "Performance", icon: Icons.performance },
+          { label: "Performance", icon: Icons.performance, path: "/performance" },
         ].map((item) => (
           <NavItem
             key={item.label}
@@ -307,6 +307,8 @@ const Sidebar: React.FC = () => {
             label={item.label}
             isCollapsed={isCollapsed}
             badge={item.badge}
+            isActive={item.path ? isPath(item.path) : false}
+            onClick={() => item.path && navigate(item.path)}
           />
         ))}
 

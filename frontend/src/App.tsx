@@ -9,15 +9,9 @@ import EmployeeOffboarding from "./components/EmployeeOffboarding";
 import CandidateProfileCompletion from "./components/CandidateProfileCompletion";
 import CreateChangeRequest from "./components/CreateChangeRequest";
 import FilterBar from "./components/FilterBar";
-import LoginPage from "./components/auth/LoginPage";
+import PerformanceModule from "./components/PerformanceModule";
 import { ToastProvider } from "./components/ui/Toast";
-import { isAuthenticated } from "./services/authService";
 
-const PrivateRoute: React.FC<{ element: React.ReactElement }> = ({ element }) =>
-  isAuthenticated() ? element : <Navigate to="/login" replace />;
-
-const PublicRoute: React.FC<{ element: React.ReactElement }> = ({ element }) =>
-  isAuthenticated() ? <Navigate to="/dashboard" replace /> : element;
 
 const AppShell: React.FC = () => {
   return (
@@ -117,6 +111,7 @@ const AppShell: React.FC = () => {
 
               <Route path="/employee/:id" element={<EmployeeDetail />} />
               <Route path="/profile" element={<EmployeeDetail />} />
+              <Route path="/performance" element={<PerformanceModule />} />
             </Routes>
           </div>
         </div>
@@ -129,9 +124,7 @@ const App: React.FC = () => {
   return (
     <ToastProvider>
       <Routes>
-        <Route path="/login" element={<PublicRoute element={<LoginPage />} />} />
-
-        <Route path="/*" element={<PrivateRoute element={<AppShell />} />} />
+        <Route path="/*" element={<AppShell />} />
       </Routes>
     </ToastProvider>
   );
