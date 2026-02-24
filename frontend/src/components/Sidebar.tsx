@@ -346,8 +346,7 @@ const Sidebar: React.FC = () => {
               {[
                 { label: "View Schedule", path: "/attendance/schedule" },
                 { label: "Create Schedule", path: "/attendance/create" },
-                { label: "My Requests", path: "/attendance/requests" },
-                { label: "Time Off History", path: "/attendance/timeoff" },
+                { label: "Check-in / Check-out", path: "/attendance/checkin" },
               ].map((item) => (
                 <NavItem
                   key={item.path}
