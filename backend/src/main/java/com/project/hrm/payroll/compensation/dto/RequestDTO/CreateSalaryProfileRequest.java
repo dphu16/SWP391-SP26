@@ -7,6 +7,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -18,7 +19,7 @@ public class CreateSalaryProfileRequest {
     @DecimalMin("0.0")
     private BigDecimal baseSalary;
 
-    private String allowances;
+    private Map<String, Object> allowances;
 
     private String taxCode;
 

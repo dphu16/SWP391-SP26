@@ -2,10 +2,13 @@ package com.project.hrm.payroll.compensation.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -27,8 +30,9 @@ public class SalaryProfile {
     @Column(name = "base_salary", nullable = false, precision = 15, scale = 2)
     private BigDecimal baseSalary;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "allowances", columnDefinition = "jsonb")
-    private String allowances;
+    private Map<String, Object> allowances;
 
     @Column(name = "tax_code")
     private String taxCode;

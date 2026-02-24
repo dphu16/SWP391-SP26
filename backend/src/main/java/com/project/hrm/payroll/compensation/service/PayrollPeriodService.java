@@ -19,7 +19,7 @@ public class PayrollPeriodService {
     private final PayrollPeriodRepository payrollPeriodRepository;
 
     public PeriodResponse create(CreatePeriodRequest periodRequest) {
-        if(payrollPeriodRepository.existByMonthAndYear(
+        if(payrollPeriodRepository.existsByMonthAndYear(
                 periodRequest.getMonth(),
                 periodRequest.getYear())){
 

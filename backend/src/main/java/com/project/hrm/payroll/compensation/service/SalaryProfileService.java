@@ -45,7 +45,8 @@ public class SalaryProfileService {
         }
 
         //close old profile
-        current.setEffectiveFrom(effectiveFrom.minusDays(1));
+        current.setEffectiveTo(effectiveFrom.minusDays(1));
+        repository.saveAndFlush(current);
 
         SalaryProfile newProfile = SalaryProfile.builder()
                 .employeeId(employeeId)

@@ -24,14 +24,12 @@ public class OnboardingCommandService {
     private final EmployeeHelper employeeHelper;
     private final UsernameGenerator usernameGenerator;
     private final PasswordGenerator passwordGenerator;
-    private final PasswordEncoder passwordEncoder;
     private final OnboardingRepository onboardingRepository;
 
-    public OnboardingCommandService(EmployeeHelper employeeHelper, UsernameGenerator usernameGenerator, PasswordGenerator passwordGenerator, PasswordEncoder passwordEncoder, OnboardingRepository onboardingRepository) {
+    public OnboardingCommandService(EmployeeHelper employeeHelper, UsernameGenerator usernameGenerator, PasswordGenerator passwordGenerator, OnboardingRepository onboardingRepository) {
         this.employeeHelper = employeeHelper;
         this.usernameGenerator = usernameGenerator;
         this.passwordGenerator = passwordGenerator;
-        this.passwordEncoder = passwordEncoder;
         this.onboardingRepository = onboardingRepository;
     }
 
@@ -61,7 +59,6 @@ public class OnboardingCommandService {
     private User buildUser(String username, String rawPassword, String email) {
         User user = new User();
         user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(rawPassword));
         user.setEmail(email);
         user.setRole(UserRole.EMPLOYEE);
         user.setStatus(UserStatus.INACTIVE);

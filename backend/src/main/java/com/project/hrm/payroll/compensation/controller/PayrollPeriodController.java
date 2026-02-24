@@ -15,7 +15,7 @@ import java.util.UUID;
 public class PayrollPeriodController {
     private final PayrollPeriodService service;
 
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<PeriodResponse> create(
             @RequestBody CreatePeriodRequest request) {
 

@@ -9,7 +9,7 @@ import java.util.UUID;
 
 @Repository
 public interface PayrollPeriodRepository extends JpaRepository<PayrollPeriods, UUID>  {
-    boolean existByMonthAndYear(Integer month, Integer year);
+    boolean existsByMonthAndYear(Integer month, Integer year);
 
     Optional<PayrollPeriods>  findByMonthAndYear(Integer month, Integer year);
 }
