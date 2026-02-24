@@ -1,4 +1,4 @@
-package com.project.hrm.evaluation.entity;
+package com.project.hrm.module.evaluation.entity;
 
 import com.project.hrm.module.corehr.entity.Employee;
 import jakarta.persistence.*;

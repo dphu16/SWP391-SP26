@@ -1,8 +1,5 @@
+package com.project.hrm.module.evaluation.dto;
 
-package com.project.hrm.evaluation.dto;
-
-import com.project.hrm.evaluation.entity.EmployeeGoal;
-import com.project.hrm.evaluation.enums.GoalStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;

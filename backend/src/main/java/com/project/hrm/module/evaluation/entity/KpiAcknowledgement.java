@@ -1,10 +1,8 @@
-package com.project.hrm.evaluation.entity;
+package com.project.hrm.module.evaluation.entity;
 
 import com.project.hrm.module.corehr.entity.Employee;
 import jakarta.persistence.*;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -19,7 +17,7 @@ public class KpiAcknowledgement {
 
     @ManyToOne
     @JoinColumn(name = "goal_id")
-    private EmployeeGoal  goalID;
+    private EmployeeGoal goalID;
 
     @ManyToOne
     @JoinColumn(name = "employee_id")

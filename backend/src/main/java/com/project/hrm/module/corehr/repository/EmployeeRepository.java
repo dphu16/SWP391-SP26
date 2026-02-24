@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
 
     @EntityGraph(attributePaths = { "user", "position", "department" })
     List<Employee> findByEmpStatusIn(List<EmployeeStatus> statuses);
+
+    @Query("SELECT p FROM Personal p WHERE LOWER(p.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.employee.email) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.phone) LIKE LOWER(CONCAT('%', :search, '%'))")
+    Page<Employee> searchEmployeesByKeyword(@Param("search") String keyword, Pageable pageable);
 
     @Query("SELECT u FROM User u WHERE u.status = ACTIVE")
     List<Employee> findAllActive();
