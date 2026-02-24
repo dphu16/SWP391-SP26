@@ -278,6 +278,7 @@ const Sidebar: React.FC = () => {
               {[
                 { label: "Personal Info", path: "/requests/new" },
                 { label: "My Requests", path: "/requests/my-requests" },
+                { label: "Review Requests", path: "/requests/review" },
               ].map((item) => (
                 <NavItem
                   key={item.path}

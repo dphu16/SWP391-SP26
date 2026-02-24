@@ -13,6 +13,7 @@ import ViewSchedule from "./components/attendance/ViewSchedule";
 import CreateSchedule from "./components/attendance/CreateSchedule";
 import CheckInOut from "./components/attendance/CheckInOut";
 import Applications from "./components/attendance/Applications";
+import ReviewRequests from "./components/attendance/ReviewRequests";
 import { ToastProvider } from "./components/ui/Toast";
 
 const AppShell: React.FC = () => {
@@ -112,6 +113,7 @@ const AppShell: React.FC = () => {
               <Route path="/attendance/create" element={<CreateSchedule />} />
               <Route path="/attendance/checkin" element={<CheckInOut />} />
               <Route path="/requests/my-requests" element={<Applications />} />
+              <Route path="/requests/review" element={<ReviewRequests />} />
 
               <Route path="/employee/:id" element={<EmployeeDetail />} />
               <Route path="/profile" element={<EmployeeDetail />} />
