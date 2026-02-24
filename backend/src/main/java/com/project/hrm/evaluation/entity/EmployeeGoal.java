@@ -1,9 +1,10 @@
 package com.project.hrm.evaluation.entity;
 
+import com.project.hrm.evaluation.enums.GoalStatus;
 import com.project.hrm.module.corehr.entity.Employee;
 import jakarta.persistence.*;
 import lombok.Data;
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -14,29 +15,37 @@ public class EmployeeGoal {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "goal_id")
-    private UUID id;
+    private UUID goalId;
 
     @ManyToOne
-    @JoinColumn(name = "employee_id")
+    @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
     @ManyToOne
-    @JoinColumn(name = "cycle_id")
+    @JoinColumn(name = "cycle_id", nullable = false)
     private PerformanceCycles cycle;
 
     @ManyToOne
-    @JoinColumn(name = "kpi_lib_id")
+    @JoinColumn(name = "kpi_lib_id", nullable = false)
     private KpiLibrary kpiLibrary;
 
     private String title;
 
     @Column(name = "target_value")
-    private BigDecimal targetValue;
+    private Double targetValue;
 
     @Column(name = "current_value")
-    private BigDecimal currentValue;
+    private Double currentValue;
 
-    private BigDecimal weight;
+    private Double weight;
 
-    private String status = "DRAFT";
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private GoalStatus status;
+
+    @Column(name = "assigned_by")
+    private UUID assignedBy;
+
+    @Column(name = "submitted_at")
+    private LocalDateTime submittedAt;
 }

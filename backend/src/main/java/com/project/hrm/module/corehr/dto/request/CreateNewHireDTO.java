@@ -1,3 +1,4 @@
+
 package com.project.hrm.module.corehr.dto.request;
 
 import com.project.hrm.module.corehr.enums.Gender;
@@ -8,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -15,7 +17,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CreateNewHireDTO {
-
     @NotBlank
     private String fullName;
 
@@ -43,4 +44,16 @@ public class CreateNewHireDTO {
     private String avatarUrl;
 
     private UUID sourceApplicationId;
+
+    private UUID managerId;
+
+    private String dependentName;
+
+    private String relationship;
+
+    @NotNull
+    private BigDecimal baseSalaryMin;
+
+    @NotNull
+    private BigDecimal baseSalaryMax;
 }

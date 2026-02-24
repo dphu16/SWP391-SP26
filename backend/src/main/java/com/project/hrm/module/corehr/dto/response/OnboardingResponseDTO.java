@@ -1,6 +1,6 @@
 package com.project.hrm.module.corehr.dto.response;
 
-import com.project.hrm.recruitment.enums.ApplicationStatus;
+import com.project.hrm.module.recruitment.enums.ApplicationStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

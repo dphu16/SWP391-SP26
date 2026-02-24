@@ -1,6 +1,8 @@
+
 package com.project.hrm.module.corehr.repository;
 
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.entity.User;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,7 +16,11 @@ import java.util.UUID;
 
 public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
 
-    Optional<Employee> findByUser(com.project.hrm.module.corehr.entity.User user);
+    Optional<Employee> findByUser(User user);
+
+    @EntityGraph(attributePaths = { "user", "position", "department" })
+    @Query("SELECT e FROM Employee e WHERE e.user.username = :username")
+    Optional<Employee> findByUser_Username(String username);
 
     @Override
     Optional<Employee> findById(UUID uuid);
@@ -28,12 +34,11 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
     Optional<Employee> findByIdWithDetails(UUID id);
 
     @EntityGraph(attributePaths = { "user", "position", "department" })
-    List<Employee> findByStatusPosIn(List<EmployeeStatus> statuses);
+    List<Employee> findByEmpStatusIn(List<EmployeeStatus> statuses);
 
     @EntityGraph(attributePaths = { "user", "position", "department" })
-    @Query(value = "SELECT e FROM Employee e WHERE e.statusPos IN :statuses", countQuery = "SELECT COUNT(e) FROM Employee e WHERE e.statusPos IN :statuses")
-    Page<Employee> findByStatusPosInPageable(List<EmployeeStatus> statuses, Pageable pageable);
-
+    @Query(value = "SELECT e FROM Employee e WHERE e.empStatus IN :statuses", countQuery = "SELECT COUNT(e) FROM Employee e WHERE e.empStatus IN :statuses")
+    Page<Employee> findByEmpStatusInPageable(List<EmployeeStatus> statuses, Pageable pageable);
     // --- THÊM HÀM NÀY ĐỂ ATTENDANCE DÙNG ---
     @EntityGraph(attributePaths = { "user", "position", "department" })
     @Query("SELECT e FROM Employee e WHERE " +
