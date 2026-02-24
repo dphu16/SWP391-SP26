@@ -1,11 +1,11 @@
 package com.project.hrm.payroll.compensation.entity;
 
+import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.payroll.common.enums.PayslipStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -22,8 +22,9 @@ public class Payslip {
     @Column(name = "payslip_id")
     private UUID payslipId;
 
-    @Column(name = "employee_id")
-    private UUID employeeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id", nullable = false)
+    private Employee employee;
 
     @Column(name = "period_id")
     private UUID periodId;
@@ -57,4 +58,10 @@ public class Payslip {
     private OffsetDateTime createdAt;
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
+
+    @Column(name = "Confirmed_at")
+    private OffsetDateTime confirmedAt;
+
+    @Column(name = "paid_at")
+    private OffsetDateTime paidAt;
 }

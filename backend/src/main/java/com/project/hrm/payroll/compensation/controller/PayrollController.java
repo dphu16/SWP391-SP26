@@ -1,13 +1,17 @@
 package com.project.hrm.payroll.compensation.controller;
 
+import com.project.hrm.payroll.compensation.dto.PayrollAggregateDTO;
+import com.project.hrm.payroll.compensation.dto.PayrollSummaryDTO;
 import com.project.hrm.payroll.compensation.service.PayrollService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.UUID;
 
 @RestController
@@ -26,5 +30,61 @@ public class PayrollController {
     public ResponseEntity<String> generate(@PathVariable UUID periodId) {
         payrollService.generatePayslips(periodId);
         return ResponseEntity.ok("Generated successfully");
+    }
+
+    @PutMapping("/periods/{periodId}/confirm")
+    public ResponseEntity<String> confirmAll(@PathVariable UUID periodId) {
+        payrollService.confirmAllPayslips(periodId);
+        return ResponseEntity.ok("All payslips confirmed");
+    }
+
+    @PutMapping("/periods/{periodId}/pay")
+    public ResponseEntity<String> payAll(@PathVariable UUID periodId) {
+        payrollService.payAllPayslips(periodId);
+        return ResponseEntity.ok("All payslips paid and period locked");
+    }
+
+    @GetMapping("/periods/{periodId}/summary")
+    public ResponseEntity<PayrollSummaryDTO> summary(@PathVariable UUID periodId) {
+        return ResponseEntity.ok(payrollService.getSummary(periodId));
+    }
+
+    @GetMapping("/reports/yearly")
+    public ResponseEntity<PayrollAggregateDTO> yearly(@RequestParam int year) {
+        return ResponseEntity.ok(payrollService.getYearlyReport(year));
+    }
+
+    @GetMapping("/reports/monthly")
+    public ResponseEntity<PayrollAggregateDTO> monthly(
+            @RequestParam int year,
+            @RequestParam int month) {
+        return ResponseEntity.ok(payrollService.getMonthlyReport(year, month));
+    }
+
+    // export excel file
+    @GetMapping("/periods/{periodId}/export")
+    public ResponseEntity<InputStreamResource> export(@PathVariable UUID periodId) throws IOException {
+
+        ByteArrayInputStream in = payrollService.exportPayslips(periodId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Disposition", "attachment; filename=payslips.xlsx");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(new InputStreamResource(in));
+    }
+
+    @PutMapping("/periods/{periodId}/rollback-confirm")
+    public ResponseEntity<String> rollbackConfirm(@PathVariable UUID periodId) {
+        payrollService.rollbackConfirmAll(periodId);
+        return ResponseEntity.ok("Rollback confirm successful");
+    }
+
+    @PutMapping("/periods/{periodId}/rollback-pay")
+    public ResponseEntity<String> rollbackPay(@PathVariable UUID periodId) {
+        payrollService.rollbackPayAll(periodId);
+        return ResponseEntity.ok("Rollback pay successful");
     }
 }
