@@ -15,13 +15,17 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Employee {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "employee_id")
     private UUID employeeId;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @Column(unique = true, nullable = false)
+    private String employeeCode;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "user_id", referencedColumnName = "user_id")
     private User user;
 
@@ -70,8 +74,8 @@ public class Employee {
     @Column(name = "phone", length = 20)
     private String phone;
 
-    @Column(name = "source_application_id")
-    private UUID sourceApplicationId;
+    @Column(name = "avatar_url", length = 255)
+    private String avatarUrl;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
