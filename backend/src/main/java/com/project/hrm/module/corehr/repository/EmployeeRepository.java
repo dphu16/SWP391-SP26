@@ -1,3 +1,4 @@
+
 package com.project.hrm.module.corehr.repository;
 
 import com.project.hrm.module.corehr.entity.Employee;
@@ -38,8 +39,16 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
     @EntityGraph(attributePaths = { "user", "position", "department" })
     @Query(value = "SELECT e FROM Employee e WHERE e.empStatus IN :statuses", countQuery = "SELECT COUNT(e) FROM Employee e WHERE e.empStatus IN :statuses")
     Page<Employee> findByEmpStatusInPageable(List<EmployeeStatus> statuses, Pageable pageable);
+    // --- THÊM HÀM NÀY ĐỂ ATTENDANCE DÙNG ---
+    @EntityGraph(attributePaths = { "user", "position", "department" })
+    @Query("SELECT e FROM Employee e WHERE " +
+            "LOWER(e.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(e.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(e.phone) LIKE LOWER(CONCAT('%', :search, '%'))")
+    Page<Employee> searchEmployeesByKeyword(@org.springframework.data.repository.query.Param("search") String search, Pageable pageable);
     @Query(value = "SELECT e FROM Employee e WHERE e.statusPos IN :statuses", countQuery = "SELECT COUNT(e) FROM Employee e WHERE e.statusPos IN :statuses")
     Page<Employee> findByStatusPosInPageable(List<EmployeeStatus> statuses, Pageable pageable);
 
+  @Query("SELECT u FROM User u WHERE u.status = ACTIVE")
     List<Employee> findAllActive();
 }

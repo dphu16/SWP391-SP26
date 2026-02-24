@@ -1,3 +1,4 @@
+
 package com.project.hrm.evaluation.dto;
 
 import com.project.hrm.evaluation.entity.EmployeeGoal;
@@ -27,4 +28,3 @@ public class EmployeeGoalRequest {
 
     private UUID assignedBy;
 }
-

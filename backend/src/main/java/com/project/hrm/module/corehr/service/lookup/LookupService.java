@@ -1,3 +1,4 @@
+
 package com.project.hrm.module.corehr.service.lookup;
 
 import com.project.hrm.module.corehr.dto.request.DepartmentOptionDTO;
@@ -16,7 +17,7 @@ public class LookupService {
     private final PositionRepository positionRepository;
 
     public LookupService(DepartmentRepository departmentRepository,
-            PositionRepository positionRepository) {
+                         PositionRepository positionRepository) {
         this.departmentRepository = departmentRepository;
         this.positionRepository = positionRepository;
     }

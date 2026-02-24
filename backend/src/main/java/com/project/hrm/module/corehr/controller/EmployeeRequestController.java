@@ -1,3 +1,4 @@
+
 package com.project.hrm.module.corehr.controller;
 
 import com.project.hrm.module.corehr.dto.request.ChangeRequestCreateDTO;
@@ -23,7 +24,7 @@ public class EmployeeRequestController {
     private final EmployeeRepository employeeRepository;
 
     public EmployeeRequestController(EmployeeRequestService requestService,
-            EmployeeRepository employeeRepository) {
+                                     EmployeeRepository employeeRepository) {
         this.requestService = requestService;
         this.employeeRepository = employeeRepository;
     }
