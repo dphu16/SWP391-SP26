@@ -85,14 +85,14 @@ const MenuItem: React.FC<MenuItemProps> = ({
   <button
     onClick={onClick}
     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer group ${variant === "danger"
-        ? "text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20"
-        : "text-text-primary-light dark:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-800"
+      ? "text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+      : "text-text-primary-light dark:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-800"
       }`}
   >
     <span
       className={`flex-shrink-0 ${variant === "danger"
-          ? "text-rose-500"
-          : "text-text-secondary-light dark:text-text-secondary-dark group-hover:text-text-primary-light dark:group-hover:text-text-primary-dark"
+        ? "text-rose-500"
+        : "text-text-secondary-light dark:text-text-secondary-dark group-hover:text-text-primary-light dark:group-hover:text-text-primary-dark"
         } transition-colors`}
     >
       {icon}
@@ -264,8 +264,8 @@ const Header: React.FC = () => {
               aria-controls="user-dropdown"
               onClick={() => setDropdownOpen((o) => !o)}
               className={`flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-xl transition-colors cursor-pointer group ${dropdownOpen
-                  ? "bg-gray-100 dark:bg-gray-800"
-                  : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                ? "bg-gray-100 dark:bg-gray-800"
+                : "hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}
             >
               {/* Avatar */}
@@ -301,8 +301,8 @@ const Header: React.FC = () => {
               role="menu"
               aria-labelledby="user-menu-button"
               className={`absolute right-0 top-full mt-2 w-64 bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark shadow-dropdown overflow-hidden transition-all duration-200 origin-top-right z-50 ${dropdownOpen
-                  ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
-                  : "opacity-0 scale-95 -translate-y-1 pointer-events-none"
+                ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
+                : "opacity-0 scale-95 -translate-y-1 pointer-events-none"
                 }`}
             >
               {/* User identity header */}
