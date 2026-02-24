@@ -118,7 +118,7 @@ public class WorkScheduleService {
     // ===================================================================
     @Transactional
     public List<WorkScheduleResponse> createBulkSchedules(UUID employeeId, LocalDate startDate, LocalDate endDate,
-            UUID shiftId) {
+                                                          UUID shiftId) {
         Shift shift = shiftRepository.findById(shiftId)
                 .orElseThrow(() -> new RuntimeException("Ca làm việc không tồn tại!"));
 
@@ -192,17 +192,35 @@ public class WorkScheduleService {
                 .map(WorkSchedule::getDate)
                 .collect(Collectors.toSet());
 
+        // Tạo map lưu ca làm việc theo thứ trong tuần của tháng trước
+        java.util.Map<DayOfWeek, Shift> shiftByDayOfWeek = new java.util.HashMap<>();
+        for (WorkSchedule ws : sourceSchedules) {
+            shiftByDayOfWeek.putIfAbsent(ws.getDate().getDayOfWeek(), ws.getShift());
+        }
+
         List<WorkSchedule> newSchedules = new ArrayList<>();
 
-        for (WorkSchedule oldWs : sourceSchedules) {
-            LocalDate newDate = oldWs.getDate().plusMonths(1);
-            if (newDate.getDayOfWeek() != DayOfWeek.SUNDAY && !existingDates.contains(newDate)) {
-                WorkSchedule newWs = new WorkSchedule();
-                newWs.setEmployeeId(employeeId);
-                newWs.setDate(newDate);
-                newWs.setShift(oldWs.getShift());
-                newSchedules.add(newWs);
+        // Duyệt từng ngày của tháng đích
+        for (int day = 1; day <= targetDate.lengthOfMonth(); day++) {
+            LocalDate currentDate = targetDate.withDayOfMonth(day);
+
+            // Bỏ qua Chủ Nhật và những ngày đã có lịch
+            if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY || existingDates.contains(currentDate)) {
+                continue;
             }
+
+            // Lấy ca làm từ thứ tương ứng của tháng trước
+            Shift shift = shiftByDayOfWeek.get(currentDate.getDayOfWeek());
+            if (shift == null) {
+                // Fallback: nếu tháng trước ko có lịch thứ này, lấy đại 1 ca bất kỳ
+                shift = sourceSchedules.get(0).getShift();
+            }
+
+            WorkSchedule newWs = new WorkSchedule();
+            newWs.setEmployeeId(employeeId);
+            newWs.setDate(currentDate);
+            newWs.setShift(shift);
+            newSchedules.add(newWs);
         }
 
         List<WorkSchedule> savedSchedules = workScheduleRepository.saveAll(newSchedules);
