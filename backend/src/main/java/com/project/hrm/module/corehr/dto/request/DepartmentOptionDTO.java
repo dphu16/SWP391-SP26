@@ -1,14 +1,10 @@
-package com.project.hrm.module.corehr.dto;
+package com.project.hrm.module.corehr.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.UUID;
 
-/**
- * DTO nhẹ dùng cho dropdown chọn phòng ban ở frontend.
- * Chỉ trả về id và tên — không lộ thông tin nhạy cảm.
- */
 @Data
 @AllArgsConstructor
 public class DepartmentOptionDTO {

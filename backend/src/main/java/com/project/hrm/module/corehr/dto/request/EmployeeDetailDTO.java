@@ -1,57 +1,46 @@
-package com.project.hrm.module.corehr.service;
+package com.project.hrm.module.corehr.dto.request;
 
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.Gender;
 import com.project.hrm.module.corehr.enums.UserRole;
+import com.project.hrm.module.corehr.enums.UserStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class NewHireResponseDTO {
+public class EmployeeDetailDTO {
 
+    // === Basic Information ===
     private UUID employeeId;
-
     private String employeeCode;
-
-    private String fullName;
-
-    private String phone;
-
-    private String email;
-
-    private Gender gender;
-
-    private String address;
-
-    private UserRole role;
-
-    private String departmentName;
-
-    private String positionTitle;
-
-    private String citizenId;
-
-    private String taxCode;
-
-    private LocalDate dateOfBirth;
-
     private String avatarUrl;
 
-    private EmployeeStatus status;
-
-    private OffsetDateTime createdAt;
-
-    // Auto-generated credentials — shown once to the admin
+    // === Personal Information ===
+    private String fullName;
     private String username;
+    private String email;
+    private String phone;
+    private String address;
+    private Gender gender;
+    private String citizenId;
+    private String taxCode;
+    private LocalDate dateOfBirth;
+    private LocalDate dateOfJoining;
 
-    private String rawPassword;
+    // === Job Information ===
+    private UserRole role;
+    private String positionTitle;
+    private String deptName;
+    private EmployeeStatus statusPos;
+
+    // === Account Status ===
+    private UserStatus status;
 }

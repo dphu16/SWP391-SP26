@@ -517,6 +517,16 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
 // ============================
 // Step 1: Employment Details
 // ============================
+interface DepartmentOption {
+  id: string;
+  name: string;
+}
+
+interface PositionOption {
+  id: string;
+  title: string;
+}
+
 interface EmploymentDetailsFormProps {
   formData: CreateNewHireDTO;
   setFormData: React.Dispatch<React.SetStateAction<CreateNewHireDTO>>;
@@ -525,50 +535,131 @@ interface EmploymentDetailsFormProps {
 const EmploymentDetailsForm: React.FC<EmploymentDetailsFormProps> = ({
   formData,
   setFormData,
-}) => (
-  <div className="space-y-6">
-    <div>
-      <h1 className="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
-        Employment Details
-      </h1>
-      <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
-        Assign department and position for the new employee.
-      </p>
-    </div>
+}) => {
+  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
+  const [positions, setPositions] = useState<PositionOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setFetchError(null);
+
+    Promise.all([
+      apiClient.get<DepartmentOption[]>("/api/lookup/departments"),
+      apiClient.get<PositionOption[]>("/api/lookup/positions"),
+    ])
+      .then(([deptRes, posRes]) => {
+        if (cancelled) return;
+        setDepartments(deptRes.data);
+        setPositions(posRes.data);
+      })
+      .catch(() => {
+        if (!cancelled) setFetchError("Failed to load lookup data. Please refresh.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  /* Skeleton row */
+  const SkeletonSelect = () => (
+    <div className="h-[42px] rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+  );
+
+  return (
+    <div className="space-y-6">
       <div>
-        <label className={labelCls}>
-          Department ID <span className="text-rose-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={formData.departmentId}
-          onChange={(e) =>
-            setFormData({ ...formData, departmentId: e.target.value })
-          }
-          placeholder="Department UUID"
-          className={inputCls}
-        />
+        <h1 className="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
+          Employment Details
+        </h1>
+        <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
+          Assign department and position for the new employee.
+        </p>
       </div>
 
-      <div>
-        <label className={labelCls}>
-          Position ID <span className="text-rose-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={formData.positionId}
-          onChange={(e) =>
-            setFormData({ ...formData, positionId: e.target.value })
-          }
-          placeholder="Position UUID"
-          className={inputCls}
-        />
+      {fetchError && (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700 text-rose-700 dark:text-rose-300 text-sm font-medium">
+          <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 flex-shrink-0">
+            <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm0-11a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 018 4zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+          </svg>
+          {fetchError}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Department */}
+        <div>
+          <label className={labelCls}>
+            Department <span className="text-rose-500">*</span>
+          </label>
+          {loading ? (
+            <SkeletonSelect />
+          ) : (
+            <div className="relative">
+              <select
+                value={formData.departmentId}
+                onChange={(e) =>
+                  setFormData({ ...formData, departmentId: e.target.value })
+                }
+                disabled={!!fetchError}
+                className={`${inputCls} appearance-none pr-9 cursor-pointer`}
+              >
+                <option value="" disabled>Select department…</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark">
+                <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4" aria-hidden="true">
+                  <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 011.06 0L8 8.94l2.72-2.72a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0L4.22 7.28a.75.75 0 010-1.06z" clipRule="evenodd" />
+                </svg>
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Position */}
+        <div>
+          <label className={labelCls}>
+            Position <span className="text-rose-500">*</span>
+          </label>
+          {loading ? (
+            <SkeletonSelect />
+          ) : (
+            <div className="relative">
+              <select
+                value={formData.positionId}
+                onChange={(e) =>
+                  setFormData({ ...formData, positionId: e.target.value })
+                }
+                disabled={!!fetchError}
+                className={`${inputCls} appearance-none pr-9 cursor-pointer`}
+              >
+                <option value="" disabled>Select position…</option>
+                {positions.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark">
+                <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4" aria-hidden="true">
+                  <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 011.06 0L8 8.94l2.72-2.72a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0L4.22 7.28a.75.75 0 010-1.06z" clipRule="evenodd" />
+                </svg>
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ============================
 // Step 2: Citizen ID
@@ -681,6 +772,7 @@ const makeDefaultFormData = (
   candidateName: string,
   candidatePhone: string,
   candidateEmail: string,
+  sourceApplicationId?: string,
 ): CreateNewHireDTO => ({
   fullName: candidateName,
   phone: candidatePhone,
@@ -692,6 +784,7 @@ const makeDefaultFormData = (
   citizenId: "",
   taxCode: "",
   dateOfBirth: "",
+  sourceApplicationId,
 });
 
 // ============================
@@ -721,7 +814,7 @@ const CandidateProfileCompletion: React.FC = () => {
   );
 
   const [formData, setFormData] = useState<CreateNewHireDTO>(
-    makeDefaultFormData(candidateName, candidatePhone, candidateEmail),
+    makeDefaultFormData(candidateName, candidatePhone, candidateEmail, applicationId),
   );
 
   const handleNext = () => {
@@ -767,11 +860,11 @@ const CandidateProfileCompletion: React.FC = () => {
   const handleModalClose = useCallback(() => {
     setCredentials(null);
     setFormData(
-      makeDefaultFormData(candidateName, candidatePhone, candidateEmail),
+      makeDefaultFormData(candidateName, candidatePhone, candidateEmail, applicationId),
     );
     setCurrentStep(0);
     navigate("/onboarding");
-  }, [navigate, candidateName, candidatePhone, candidateEmail]);
+  }, [navigate, candidateName, candidatePhone, candidateEmail, applicationId]);
 
   const handleGoBack = () => navigate("/onboarding");
 

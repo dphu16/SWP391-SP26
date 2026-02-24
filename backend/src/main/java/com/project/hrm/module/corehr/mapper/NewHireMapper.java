@@ -1,7 +1,7 @@
 package com.project.hrm.module.corehr.mapper;
 
-import com.project.hrm.module.corehr.dto.CreateNewHireDTO;
-import com.project.hrm.module.corehr.service.NewHireResponseDTO;
+import com.project.hrm.module.corehr.dto.request.CreateNewHireDTO;
+import com.project.hrm.module.corehr.dto.response.NewHireResponseDTO;
 import com.project.hrm.module.corehr.entity.Department;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.entity.Position;
@@ -22,7 +22,6 @@ public class NewHireMapper {
                 .taxCode(dto.getTaxCode())
                 .dateOfBirth(dto.getDateOfBirth())
                 .avatarUrl(dto.getAvatarUrl())
-                .sourceApplicationId(dto.getSourceApplicationId())
                 .department(department)
                 .position(position)
                 .build();

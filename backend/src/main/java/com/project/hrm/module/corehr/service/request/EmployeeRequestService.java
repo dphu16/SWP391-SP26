@@ -1,7 +1,7 @@
-package com.project.hrm.module.corehr.service;
+package com.project.hrm.module.corehr.service.request;
 
-import com.project.hrm.module.corehr.dto.ChangeRequestCreateDTO;
-import com.project.hrm.module.corehr.ResponseDTO.ChangeRequestResponseDTO;
+import com.project.hrm.module.corehr.dto.request.ChangeRequestCreateDTO;
+import com.project.hrm.module.corehr.dto.response.ChangeRequestResponseDTO;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.entity.EmployeeChangeRequest;
 import com.project.hrm.module.corehr.enums.ChangeRequestStatus;
@@ -19,7 +19,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
-public class EmployeeChangeRequestService {
+public class EmployeeRequestService {
 
     private static final Set<EmployeeStatus> ACTIVE_STATUSES = Set.of(
             EmployeeStatus.OFFICIAL,
@@ -28,7 +28,7 @@ public class EmployeeChangeRequestService {
     private final EmployeeRepository employeeRepository;
     private final EmployeeChangeRequestRepository changeRequestRepository;
 
-    public EmployeeChangeRequestService(
+    public EmployeeRequestService(
             EmployeeRepository employeeRepository,
             EmployeeChangeRequestRepository changeRequestRepository) {
         this.employeeRepository = employeeRepository;

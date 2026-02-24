@@ -1,4 +1,4 @@
-package com.project.hrm.module.corehr.ResponseDTO;
+package com.project.hrm.module.corehr.dto.response;
 
 import com.project.hrm.module.corehr.enums.ChangeRequestStatus;
 import lombok.AllArgsConstructor;

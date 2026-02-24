@@ -1,4 +1,4 @@
-package com.project.hrm.module.corehr.dto;
+package com.project.hrm.module.corehr.dto.request;
 
 import com.project.hrm.module.corehr.enums.Gender;
 import jakarta.validation.constraints.Email;
@@ -16,22 +16,22 @@ import java.util.UUID;
 @NoArgsConstructor
 public class CreateNewHireDTO {
 
-    @NotBlank(message = "Họ tên không được để trống")
+    @NotBlank
     private String fullName;
 
     private String phone;
 
-    @Email(message = "Email không hợp lệ")
+    @Email
     private String email;
 
     private Gender gender;
 
     private String address;
 
-    @NotNull(message = "Phòng ban không được để trống")
+    @NotNull
     private UUID departmentId;
 
-    @NotNull(message = "Vị trí không được để trống")
+    @NotNull
     private UUID positionId;
 
     private String citizenId;
@@ -42,9 +42,5 @@ public class CreateNewHireDTO {
 
     private String avatarUrl;
 
-    /**
-     * ID của hồ sơ ứng viên (application) trong module tuyển dụng.
-     * Nếu được cung cấp, hồ sơ này sẽ bị xóa sau khi tạo nhân viên thành công.
-     */
     private UUID sourceApplicationId;
 }

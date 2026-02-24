@@ -1,8 +1,8 @@
 package com.project.hrm.module.corehr.controller;
 
-import com.project.hrm.module.corehr.dto.ChangeRequestCreateDTO;
-import com.project.hrm.module.corehr.ResponseDTO.ChangeRequestResponseDTO;
-import com.project.hrm.module.corehr.service.EmployeeChangeRequestService;
+import com.project.hrm.module.corehr.dto.request.ChangeRequestCreateDTO;
+import com.project.hrm.module.corehr.dto.response.ChangeRequestResponseDTO;
+import com.project.hrm.module.corehr.service.request.EmployeeRequestService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,11 +13,11 @@ import java.util.UUID;
 @RestController
 @CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/api")
-public class EmployeeChangeRequestController {
+public class EmployeeRequestController {
 
-    private final EmployeeChangeRequestService changeRequestService;
+    private final EmployeeRequestService changeRequestService;
 
-    public EmployeeChangeRequestController(EmployeeChangeRequestService changeRequestService) {
+    public EmployeeRequestController(EmployeeRequestService changeRequestService) {
         this.changeRequestService = changeRequestService;
     }
 

@@ -1,6 +1,6 @@
 package com.project.hrm.module.corehr.mapper;
 
-import com.project.hrm.module.corehr.ResponseDTO.OnboardingResponseDTO;
+import com.project.hrm.module.corehr.dto.response.OnboardingResponseDTO;
 import com.project.hrm.module.recruitment.entity.Application;
 import com.project.hrm.module.recruitment.entity.Candidate;
 import com.project.hrm.module.recruitment.entity.Job;
