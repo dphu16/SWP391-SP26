@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 const Icons = {
@@ -97,7 +96,7 @@ const NavItem: React.FC<NavItemProps> = ({
       <span className="flex-1 text-left truncate">{label}</span>
     )}
 
-  {!isCollapsed && badge !== undefined && badge > 0 && (
+    {!isCollapsed && badge !== undefined && badge > 0 && (
       <span className="ml-auto flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center">
         {badge}
       </span>
@@ -117,7 +116,6 @@ const SectionLabel: React.FC<{ label: string; isCollapsed: boolean }> = ({ label
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [employeesExpanded, setEmployeesExpanded] = useState(true);
   const [requestExpanded, setRequestExpanded] = useState(true);
@@ -189,8 +187,7 @@ const Sidebar: React.FC = () => {
           onClick={() => navigate("/dashboard")}
         />
 
-        {/* Employees with submenu — HR and MANAGER only */}
-        {hasRole("HR", "MANAGER") && (
+        {/* Employees with submenu */}
         <div>
           <button
             onClick={() => {
@@ -225,12 +222,10 @@ const Sidebar: React.FC = () => {
           {!isCollapsed && employeesExpanded && (
             <div className="mt-0.5 space-y-0.5 animate-slide-up">
               {[
-                { label: "Directory", path: "/employees", roles: ["HR", "MANAGER"] as const },
-                { label: "Onboarding", path: "/onboarding", roles: ["HR"] as const },
-                { label: "Offboarding", path: "/offboarding", roles: ["HR"] as const },
-              ]
-                .filter((item) => hasRole(...item.roles))
-                .map((item) => (
+                { label: "Directory", path: "/employees" },
+                { label: "Onboarding", path: "/onboarding" },
+                { label: "Offboarding", path: "/offboarding" },
+              ].map((item) => (
                 <NavItem
                   key={item.path}
                   icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />}
@@ -244,7 +239,6 @@ const Sidebar: React.FC = () => {
             </div>
           )}
         </div>
-        )}
 
         {/* Request with submenu */}
         <div>
@@ -298,62 +292,34 @@ const Sidebar: React.FC = () => {
           )}
         </div>
 
-        {/* Management — HR, MANAGER, FINANCE */}
-        {hasRole("HR", "MANAGER", "FINANCE") && (
-          <>
-            <SectionLabel label="Management" isCollapsed={isCollapsed} />
+        {/* Management */}
+        <SectionLabel label="Management" isCollapsed={isCollapsed} />
 
-            {[
-              { label: "Time Off", icon: Icons.timeoff, badge: 3 },
-              { label: "Attendance", icon: Icons.attendance },
-              { label: "Payroll", icon: Icons.payroll, roles: ["HR", "FINANCE"] as const },
-              { label: "Performance", icon: Icons.performance },
-            ]
-              .filter((item) => !item.roles || hasRole(...item.roles))
-              .map((item) => (
-              <NavItem
-                key={item.label}
-                icon={item.icon}
-                label={item.label}
-                isCollapsed={isCollapsed}
-                badge={item.badge}
-              />
-            ))}
-          </>
-        )}
+        {[
+          { label: "Time Off", icon: Icons.timeoff, badge: 3 },
+          { label: "Attendance", icon: Icons.attendance },
+          { label: "Payroll", icon: Icons.payroll },
+          { label: "Performance", icon: Icons.performance, path: "/performance" },
+        ].map((item) => (
+          <NavItem
+            key={item.label}
+            icon={item.icon}
+            label={item.label}
+            isCollapsed={isCollapsed}
+            badge={item.badge}
+            isActive={item.path ? isPath(item.path) : false}
+            onClick={() => item.path && navigate(item.path)}
+          />
+        ))}
 
-        {/* Growth — HR only */}
-        {hasRole("HR") && (
-          <>
-            <SectionLabel label="Growth" isCollapsed={isCollapsed} />
+        {/* Growth */}
+        <SectionLabel label="Growth" isCollapsed={isCollapsed} />
 
-            <NavItem
-              icon={Icons.recruitment}
-              label="Recruitment"
-              isCollapsed={isCollapsed}
-            />
-          </>
-        )}
-
-        {hasRole("EMPLOYEE") && (
-          <>
-           <SectionLabel label="Management" isCollapsed={isCollapsed} />
-
-             {[
-              { label: "Time Off", icon: Icons.timeoff, badge: 3 },
-              { label: "Attendance", icon: Icons.attendance }
-            ]
-              .map((item) => (
-              <NavItem
-                key={item.label}
-                icon={item.icon}
-                label={item.label}
-                isCollapsed={isCollapsed}
-                badge={item.badge}
-              />
-            ))}
-          </>
-        )}
+        <NavItem
+          icon={Icons.recruitment}
+          label="Recruitment"
+          isCollapsed={isCollapsed}
+        />
       </nav>
     </aside>
   );
