@@ -58,7 +58,7 @@ export const createSchedule = async (req: WorkScheduleRequest): Promise<WorkSche
 };
 
 export const createBulkSchedules = async (req: BulkScheduleRequest): Promise<WorkScheduleResponse[]> => {
-    const response = await apiClient.post(`/api/v1/attendance/bulk`, req);
+    const response = await apiClient.post(`/api/v1/attendance/work-schedules/bulk`, req);
     return response.data;
 };
 
@@ -67,7 +67,7 @@ export const cloneScheduleFromPreviousMonth = async (
     targetMonth: number,
     targetYear: number
 ): Promise<WorkScheduleResponse[]> => {
-    const response = await apiClient.post(`/api/v1/attendance/clone`, null, {
+    const response = await apiClient.post(`/api/v1/attendance/work-schedules/clone`, null, {
         params: { employeeId, targetMonth, targetYear },
     });
     return response.data;

@@ -1,10 +1,12 @@
 package com.project.hrm.attendance.controller;
 
+import com.project.hrm.attendance.dto.AttendanceEmployeeResponse;
 import com.project.hrm.attendance.dto.BulkScheduleRequest;
 import com.project.hrm.attendance.dto.WorkScheduleRequest;
 import com.project.hrm.attendance.dto.WorkScheduleResponse;
 import com.project.hrm.attendance.service.WorkScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,44 +14,48 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/attendance")
+// Nhớ cho phép FE gọi sang nhé (CORS) - Đổi port nếu FE của bạn chạy port khác
+@CrossOrigin(origins = "http://localhost:5173")
+@RequestMapping("/api/v1/attendance/work-schedules")
 public class WorkScheduleController {
 
     @Autowired
-    private WorkScheduleService workScheduleService;
+    private WorkScheduleService service;
 
-    // 1. API Tạo lịch làm việc (POST)
-    // URL: http://localhost:8080/api/v1/attendance/work-schedules
-    @PostMapping("/work-schedules")
-    public ResponseEntity<WorkScheduleResponse> createSchedule(@RequestBody WorkScheduleRequest request) {
-        // Gọi hàm createSchedule mà mình vừa thêm vào Service
-        WorkScheduleResponse response = workScheduleService.createSchedule(request);
-        return ResponseEntity.ok(response);
-    }
-
-    // 2. API Lấy danh sách lịch (GET)
-    // URL: http://localhost:8080/api/v1/attendance/work-schedules
-    @GetMapping("/work-schedules")
+    // =========================================================
+    // 1. LẤY TẤT CẢ LỊCH (DÀNH CHO MANAGER)
+    // =========================================================
+    @GetMapping
     public ResponseEntity<List<WorkScheduleResponse>> getAllSchedules() {
-        // Gọi hàm getAllSchedules gốc của bạn
-        return ResponseEntity.ok(workScheduleService.getAllSchedules());
+        return ResponseEntity.ok(service.getAllSchedules());
     }
-    // GET http://localhost:8080/api/v1/attendance/work-schedules/my-schedule?employeeId=...
-    @GetMapping("/work-schedules/my-schedule")
+
+    // =========================================================
+    // 2. LẤY LỊCH CÁ NHÂN (DÀNH CHO EMPLOYEE)
+    // =========================================================
+    @GetMapping("/my-schedule")
     public ResponseEntity<List<WorkScheduleResponse>> getMySchedule(
             @RequestParam UUID employeeId,
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year
     ) {
-        return ResponseEntity.ok(workScheduleService.getMySchedules(employeeId, month, year));
+        return ResponseEntity.ok(service.getMySchedules(employeeId, month, year));
     }
 
     // =========================================================
-    // 1. TẠO LỊCH HÀNG LOẠT (BULK INSERT)
+    // 3. TẠO 1 LỊCH MỚI (THỦ CÔNG)
+    // =========================================================
+    @PostMapping
+    public ResponseEntity<WorkScheduleResponse> createSchedule(@RequestBody WorkScheduleRequest request) {
+        return ResponseEntity.ok(service.createSchedule(request));
+    }
+
+    // =========================================================
+    // 4. TẠO LỊCH HÀNG LOẠT (BULK INSERT)
     // =========================================================
     @PostMapping("/bulk")
     public ResponseEntity<List<WorkScheduleResponse>> createBulkSchedules(@RequestBody BulkScheduleRequest request) {
-        List<WorkScheduleResponse> result = workScheduleService.createBulkSchedules(
+        List<WorkScheduleResponse> result = service.createBulkSchedules(
                 request.getEmployeeId(),
                 request.getStartDate(),
                 request.getEndDate(),
@@ -59,25 +65,34 @@ public class WorkScheduleController {
     }
 
     // =========================================================
-    // 2. SỬA LỊCH (ĐỔI CA CHO 1 NGÀY CỤ THỂ)
+    // 5. SỬA LỊCH (ĐỔI CA LÀM VIỆC)
     // =========================================================
     @PutMapping("/{scheduleId}")
     public ResponseEntity<WorkScheduleResponse> updateSchedule(
             @PathVariable UUID scheduleId,
             @RequestParam UUID newShiftId) {
-        WorkScheduleResponse result = workScheduleService.updateSchedule(scheduleId, newShiftId);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(service.updateSchedule(scheduleId, newShiftId));
     }
 
     // =========================================================
-    // 3. COPY LỊCH TỪ THÁNG TRƯỚC
+    // 6. COPY LỊCH TỪ THÁNG TRƯỚC
     // =========================================================
     @PostMapping("/clone")
     public ResponseEntity<List<WorkScheduleResponse>> cloneSchedule(
             @RequestParam UUID employeeId,
             @RequestParam int targetMonth,
             @RequestParam int targetYear) {
-        List<WorkScheduleResponse> result =workScheduleService.copyFromPreviousMonth(employeeId, targetMonth, targetYear);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(service.copyFromPreviousMonth(employeeId, targetMonth, targetYear));
+    }
+
+    // =========================================================
+    // 7. LẤY DANH SÁCH NHÂN VIÊN (ĐỂ ĐỔ VÀO DROPDOWN FRONTEND)
+    // =========================================================
+    @GetMapping("/employees")
+    public ResponseEntity<Page<AttendanceEmployeeResponse>> getEmployeesForScheduling(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(service.getEmployeesForScheduling(search, page, size));
     }
 }
