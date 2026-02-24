@@ -87,6 +87,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
     const [employees, setEmployees] = useState<any[]>([]);
     const [activeEmployeeId, setActiveEmployeeId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [searchKpiQuery, setSearchKpiQuery] = useState("");
 
     useEffect(() => {
         const fetchTeamData = async () => {
@@ -172,6 +173,11 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
 
     const activeEmployee = employees.find(e => e.employeeId === activeEmployeeId);
 
+    const filteredKpis = kpis.filter(k =>
+        (k.name || "").toLowerCase().includes(searchKpiQuery.toLowerCase()) ||
+        (k.category || "").toLowerCase().includes(searchKpiQuery.toLowerCase())
+    );
+
     return (
         <div className="flex flex-col h-full space-y-5 animate-fade-in">
             {/* Header section matches image */}
@@ -184,6 +190,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                         Standardized KPI management and scoring workflow
                     </p>
                 </div>
+
                 <div className="flex items-center bg-surface-light dark:bg-surface-dark p-1 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
                     <button
                         onClick={() => setActiveTab("hr")}
@@ -257,9 +264,23 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                             <h2 className="text-lg font-bold font-heading text-text-primary-light dark:text-text-primary-dark">
                                 Team KPI Overview: <span className="text-primary">{activeEmployee?.fullName || "Select Employee"}</span>
                             </h2>
-                            <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-md tracking-wider">
-                                Q1 2024 PERIOD
-                            </span>
+                            <div className="flex items-center gap-3">
+                                <div className="relative">
+                                    <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
+                                    </svg>
+                                    <input
+                                        type="text"
+                                        placeholder="Search KPI..."
+                                        value={searchKpiQuery}
+                                        onChange={(e) => setSearchKpiQuery(e.target.value)}
+                                        className="pl-9 pr-4 py-1.5 w-64 text-sm bg-surface-2-light dark:bg-surface-2-dark border border-border-light dark:border-border-dark rounded-lg text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus-ring"
+                                    />
+                                </div>
+                                <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-md tracking-wider">
+                                    Q1 2024 PERIOD
+                                </span>
+                            </div>
                         </div>
 
                         <div className="overflow-x-auto">
@@ -287,13 +308,13 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                                                 Loading KPIs...
                                             </td>
                                         </tr>
-                                    ) : kpis.length === 0 ? (
+                                    ) : filteredKpis.length === 0 ? (
                                         <tr>
                                             <td colSpan={4} className="px-5 py-6 text-center text-text-muted-light dark:text-text-muted-dark">
-                                                No KPIs found. The HR must define the KPI structure for this department first.
+                                                {kpis.length === 0 ? "No KPIs found. The HR must define the KPI structure for this department first." : "No KPIs match your search."}
                                             </td>
                                         </tr>
-                                    ) : kpis.map((kpi) => (
+                                    ) : filteredKpis.map((kpi) => (
                                         <tr key={kpi.kpiLibraryId} className="table-row-hover hover:bg-surface-2-light/50 dark:hover:bg-surface-2-dark/50 p-2">
                                             <td className="px-5 py-4">
                                                 <div className="font-semibold text-[15px] text-text-primary-light dark:text-text-primary-dark">
