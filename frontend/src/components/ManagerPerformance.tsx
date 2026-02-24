@@ -84,40 +84,96 @@ const Icons = {
 
 const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) => {
     const [kpis, setKpis] = useState<any[]>([]);
+    const [employees, setEmployees] = useState<any[]>([]);
+    const [activeEmployeeId, setActiveEmployeeId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchTeamKpis = async () => {
+        const fetchTeamData = async () => {
             const deptsData = await kpiService.getAllDepartments();
             const allKpiLibs = await kpiService.getAllKpiLibraries();
+            const employeesData = await kpiService.getAllEmployees();
 
+            let activeDeptKpis: any[] = [];
             if (deptsData && deptsData.length > 0) {
-                // Mock context: fetch assigned KPIs for the first department as "Manager's department"
-                const activeDeptKpis = await kpiService.getKpisByDepartment(deptsData[0].deptId);
-
-                if (activeDeptKpis && activeDeptKpis.length > 0) {
-                    // map to full KPI info
-                    const formatted = activeDeptKpis.map(detail => {
-                        const def = allKpiLibs.find(k => k.libId === detail.kpiLibraryId);
-                        return {
-                            ...detail,
-                            name: def?.name || "Unknown",
-                            category: def?.category || "",
-                            description: def?.description || "",
-                        }
-                    });
-                    setKpis(formatted);
-                } else {
-                    setKpis([]); // Blank if none assigned
-                }
+                activeDeptKpis = await kpiService.getKpisByDepartment(deptsData[0].deptId);
             }
+            // Filter employees under the "mocked manager" (everyone for now)
+            setEmployees(employeesData);
+
+            if (employeesData && employeesData.length > 0) {
+                setActiveEmployeeId(employeesData[0].employeeId);
+            }
+
+            // Save global lookup context for subsequent loads
+            (window as any).__kpiContext = { deptsData, allKpiLibs, activeDeptKpis };
             setLoading(false);
         };
-        fetchTeamKpis();
+        fetchTeamData();
     }, []);
 
+    useEffect(() => {
+        const loadEmployeeGoals = async () => {
+            if (!activeEmployeeId) return;
+            const ctx = (window as any).__kpiContext;
+            if (!ctx) return;
+
+            // Fetch goals saved for this employee
+            const goals = await kpiService.getGoalsByEmployee(activeEmployeeId);
+
+            // Merge with assigned department structure
+            if (ctx.activeDeptKpis && ctx.activeDeptKpis.length > 0) {
+                const formatted = ctx.activeDeptKpis.map((detail: any) => {
+                    const def = ctx.allKpiLibs.find((k: any) => k.libId === detail.kpiLibraryId);
+                    const existingGoal = goals.find((g: any) => g.kpiLibrary.libId === detail.kpiLibraryId);
+
+                    return {
+                        ...detail,
+                        name: def?.name || "Unknown",
+                        category: def?.category || "",
+                        description: def?.description || "",
+                        _targetValue: existingGoal ? existingGoal.targetValue : '',
+                        _isAssigned: !!existingGoal
+                    }
+                });
+                setKpis(formatted);
+            } else {
+                setKpis([]); // Blank if none assigned
+            }
+        }
+        loadEmployeeGoals();
+    }, [activeEmployeeId]);
+
+    const handleAssignTarget = async (kpiLibraryId: string) => {
+        const kpiToAssign = kpis.find(k => k.kpiLibraryId === kpiLibraryId);
+        if (!kpiToAssign || !activeEmployeeId) return;
+
+        try {
+            await kpiService.assignEmployeeGoal({
+                employeeId: activeEmployeeId,
+                cycleId: "c2c5ec68-7c85-48ef-be8a-350e82c5f1fa", // mock UUID required by backend schema currently
+                kpiLibraryId: kpiLibraryId,
+                targetValue: Number(kpiToAssign._targetValue),
+                title: kpiToAssign.name,
+                weight: kpiToAssign.weight
+            });
+
+            // Update UI to show assigned
+            setKpis(prev => prev.map(k => k.kpiLibraryId === kpiLibraryId ? { ...k, _isAssigned: true } : k));
+        } catch (e) {
+            console.error("Failed to assign target", e);
+            alert("Failed to save target. Please try again.");
+        }
+    };
+
+    const handleTargetChange = (kpiLibraryId: string, value: string) => {
+        setKpis(prev => prev.map(k => k.kpiLibraryId === kpiLibraryId ? { ...k, _targetValue: value, _isAssigned: false } : k));
+    };
+
+    const activeEmployee = employees.find(e => e.employeeId === activeEmployeeId);
+
     return (
-        <div className="flex flex-col h-full space-y-5">
+        <div className="flex flex-col h-full space-y-5 animate-fade-in">
             {/* Header section matches image */}
             <div className="flex items-center justify-between">
                 <div>
@@ -141,7 +197,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                     <button
                         onClick={() => setActiveTab("manager")}
                         className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === "manager"
-                            ? "bg-surface-light dark:bg-surface-dark text-primary shadow-sm"
+                            ? "bg-primary text-white shadow-sm"
                             : "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light"
                             }`}
                     >
@@ -199,10 +255,10 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                     <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col">
                         <div className="px-5 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between bg-surface-light dark:bg-surface-dark">
                             <h2 className="text-lg font-bold font-heading text-text-primary-light dark:text-text-primary-dark">
-                                Team KPI Overview: <span className="text-primary">Alex Rivera</span>
+                                Team KPI Overview: <span className="text-primary">{activeEmployee?.fullName || "Select Employee"}</span>
                             </h2>
                             <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-md tracking-wider">
-                                Q3 2023 PERIOD
+                                Q1 2024 PERIOD
                             </span>
                         </div>
 
@@ -210,13 +266,13 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-border-light dark:border-border-dark bg-surface-2-light dark:bg-surface-2-dark">
-                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest w-2/5">
+                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest w-[35%]">
                                             Category
                                         </th>
-                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest">
+                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-center">
                                             Weighting (HR)
                                         </th>
-                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest">
+                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest w-[25%]">
                                             Target Value
                                         </th>
                                         <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-right">
@@ -227,43 +283,59 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                                 <tbody className="divide-y divide-border-light dark:divide-border-dark">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={4} className="px-5 py-4 text-center text-text-muted-light dark:text-text-muted-dark">
+                                            <td colSpan={4} className="px-5 py-6 text-center text-text-muted-light dark:text-text-muted-dark">
                                                 Loading KPIs...
                                             </td>
                                         </tr>
                                     ) : kpis.length === 0 ? (
                                         <tr>
-                                            <td colSpan={4} className="px-5 py-4 text-center text-text-muted-light dark:text-text-muted-dark">
-                                                No KPIs found. Start by assigning one.
+                                            <td colSpan={4} className="px-5 py-6 text-center text-text-muted-light dark:text-text-muted-dark">
+                                                No KPIs found. The HR must define the KPI structure for this department first.
                                             </td>
                                         </tr>
                                     ) : kpis.map((kpi) => (
-                                        <tr key={kpi.libId} className="table-row-hover hover:bg-surface-2-light/50 dark:hover:bg-surface-2-dark/50">
+                                        <tr key={kpi.kpiLibraryId} className="table-row-hover hover:bg-surface-2-light/50 dark:hover:bg-surface-2-dark/50 p-2">
                                             <td className="px-5 py-4">
-                                                <div className="font-medium text-sm text-text-primary-light dark:text-text-primary-dark">
+                                                <div className="font-semibold text-[15px] text-text-primary-light dark:text-text-primary-dark">
                                                     {kpi.name}
                                                 </div>
-                                                <div className="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
+                                                <div className="text-[13px] text-text-secondary-light dark:text-text-secondary-dark font-medium mt-1">
                                                     {kpi.category}
                                                 </div>
                                             </td>
-                                            <td className="px-5 py-4">
-                                                <div className="font-semibold text-text-secondary-light dark:text-text-secondary-dark flex items-center">
+                                            <td className="px-5 py-4 text-center">
+                                                <div className="inline-flex font-semibold text-text-secondary-light dark:text-text-secondary-dark items-center bg-surface-2-light dark:bg-surface-2-dark px-2.5 py-1 rounded-md text-sm border border-border-light dark:border-border-dark">
                                                     {kpi.weight}%
                                                     {Icons.lock}
                                                 </div>
                                             </td>
-                                            <td className="px-5 py-4 px-2">
-                                                <input
-                                                    type="number"
-                                                    placeholder="Set Target..."
-                                                    className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark px-3 py-1.5 rounded-lg text-sm font-medium w-36 shadow-sm overflow-hidden text-text-primary-light dark:text-text-primary-dark focus-ring focus:outline-none"
-                                                />
+                                            <td className="px-5 py-4">
+                                                <div className="relative">
+                                                    <input
+                                                        type="number"
+                                                        placeholder="e.g 1000..."
+                                                        value={kpi._targetValue}
+                                                        onChange={(e) => handleTargetChange(kpi.kpiLibraryId, e.target.value)}
+                                                        className={`w-full bg-surface-light dark:bg-surface-dark border px-3 py-2 rounded-lg text-sm font-semibold shadow-sm overflow-hidden text-text-primary-light dark:text-text-primary-dark focus-ring focus:outline-none transition-colors
+                                                            ${kpi._isAssigned ? 'border-primary bg-primary/5' : 'border-border-light dark:border-border-dark'}
+                                                        `}
+                                                    />
+                                                </div>
                                             </td>
                                             <td className="px-5 py-4 text-right">
-                                                <span className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest cursor-pointer hover:text-primary transition-colors">
-                                                    ASSIGNED
-                                                </span>
+                                                {kpi._isAssigned ? (
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-600 dark:text-green-400 rounded-lg text-xs font-bold uppercase tracking-widest border border-green-500/20">
+                                                        <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" /></svg>
+                                                        Assigned
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleAssignTarget(kpi.kpiLibraryId)}
+                                                        disabled={!kpi._targetValue}
+                                                        className="px-4 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white border border-primary/20 text-xs font-bold rounded-lg uppercase tracking-widest transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary/10 disabled:hover:text-primary">
+                                                        Save Target
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
@@ -373,59 +445,56 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                     <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col bento-card">
                         <div className="px-5 py-4 border-b border-border-light dark:border-border-dark">
                             <h2 className="text-sm font-bold font-heading text-text-primary-light dark:text-text-primary-dark">
-                                Team Members
+                                Department Members
                             </h2>
                         </div>
                         <div className="p-2 space-y-1">
-                            {TEAM_MEMBERS.map((member) => (
+                            {employees.map((member) => (
                                 <div
-                                    key={member.id}
+                                    key={member.employeeId}
+                                    onClick={() => setActiveEmployeeId(member.employeeId)}
                                     className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors relative overflow-hidden group
-                    ${member.statusType === 'current'
+                    ${member.employeeId === activeEmployeeId
                                             ? "bg-primary/5 border border-primary/20"
                                             : "border border-transparent hover:bg-surface-2-light dark:hover:bg-surface-2-dark"
                                         }
                   `}
                                 >
-                                    {member.statusType === 'current' && (
+                                    {member.employeeId === activeEmployeeId && (
                                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full"></div>
                                     )}
 
-                                    <img src={member.avatar} alt={member.name} className="w-10 h-10 rounded-full object-cover bg-surface-2-light dark:bg-surface-2-dark" />
+                                    <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(member.fullName)}&background=random`} alt={member.fullName} className="w-10 h-10 rounded-full object-cover bg-surface-2-light dark:bg-surface-2-dark" />
 
                                     <div className="flex-1 min-w-0">
                                         <div className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark truncate">
-                                            {member.name}
+                                            {member.fullName}
                                         </div>
                                         <div className="flex items-center gap-1 mt-0.5">
-                                            {member.score && (
-                                                <span className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-                                                    SCORE: {member.score} •
-                                                </span>
-                                            )}
                                             <span className={`text-[10px] font-bold tracking-wider uppercase
-                        ${member.statusType === 'current' ? 'text-primary' : ''}
-                        ${member.statusType === 'completed' ? 'text-text-secondary-light dark:text-text-secondary-dark' : ''}
-                        ${member.statusType === 'ready' ? 'text-accent-amber' : ''}
-                        ${member.statusType === 'none' ? 'text-text-muted-light dark:text-text-muted-dark' : ''}
+                        ${member.employeeId === activeEmployeeId ? 'text-primary' : 'text-text-muted-light dark:text-text-muted-dark'}
                       `}>
-                                                {member.status}
+                                                {member.employeeId === activeEmployeeId ? 'CURRENT SELECTION' : 'AVAILABLE'}
                                             </span>
                                         </div>
                                     </div>
-
-                                    <div className="flex-shrink-0">
-                                        {member.statusType === 'completed' && Icons.checkCircle}
-                                        {member.statusType === 'ready' && Icons.dotYellow}
-                                        {member.statusType === 'none' && Icons.dotGray}
-                                    </div>
+                                    {member.employeeId === activeEmployeeId && (
+                                        <div className="flex-shrink-0">
+                                            {Icons.dotYellow}
+                                        </div>
+                                    )}
                                 </div>
                             ))}
+                            {employees.length === 0 && !loading && (
+                                <div className="text-sm text-center text-text-muted-light py-5">
+                                    No employees found.
+                                </div>
+                            )}
                         </div>
 
                         <div className="p-4 border-t border-border-light dark:border-border-dark bg-surface-2-light/50 dark:bg-surface-2-dark/50 flex justify-center mt-1">
                             <button className="text-xs font-bold text-text-secondary-light dark:text-text-secondary-dark hover:text-primary tracking-widest uppercase transition-colors">
-                                VIEW ALL 12 REPORTS
+                                VIEW ALL {employees.length} REPORTS
                             </button>
                         </div>
                     </div>

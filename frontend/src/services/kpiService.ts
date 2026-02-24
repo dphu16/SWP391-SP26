@@ -65,5 +65,30 @@ export const kpiService = {
     assignKpisToDepartment: async (data: AssignKpiRequest): Promise<any> => {
         const response = await apiClient.post("/api/kpi-structures/assign", data);
         return response.data;
+    },
+
+    getAllEmployees: async (): Promise<any[]> => {
+        try {
+            const response = await apiClient.get<any[]>("/api/employees");
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching Employees", error);
+            return [];
+        }
+    },
+
+    getGoalsByEmployee: async (employeeId: string): Promise<any[]> => {
+        try {
+            const response = await apiClient.get<any[]>(`/api/employees/${employeeId}/goals`);
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching goals for employee", error);
+            return [];
+        }
+    },
+
+    assignEmployeeGoal: async (data: { employeeId: string, cycleId: string, kpiLibraryId: string, targetValue: number, title: string, weight: number }): Promise<any> => {
+        const response = await apiClient.post("/api/employee-goals", data);
+        return response.data;
     }
 };
