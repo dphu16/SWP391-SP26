@@ -25,8 +25,8 @@ public class OnboardingCommandService {
     private final OnboardingRepository onboardingRepository;
 
     public OnboardingCommandService(EmployeeHelper employeeHelper, UsernameGenerator usernameGenerator,
-            PasswordGenerator passwordGenerator, PasswordEncoder passwordEncoder,
-            OnboardingRepository onboardingRepository) {
+                                    PasswordGenerator passwordGenerator, PasswordEncoder passwordEncoder,
+                                    OnboardingRepository onboardingRepository) {
         this.employeeHelper = employeeHelper;
         this.usernameGenerator = usernameGenerator;
         this.passwordGenerator = passwordGenerator;
