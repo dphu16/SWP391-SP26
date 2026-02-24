@@ -13,7 +13,9 @@ function getDaysInMonth(year: number, month: number) {
 }
 
 function getFirstDayOfMonth(year: number, month: number) {
-    return new Date(year, month, 1).getDay(); // 0=Sun
+    const jsDay = new Date(year, month, 1).getDay(); // 0=Sun, 1=Mon...
+    // Chuyển sang Mon=0, Tue=1, ..., Sun=6
+    return (jsDay + 6) % 7;
 }
 
 function toDateKey(year: number, month: number, day: number): string {
@@ -161,7 +163,7 @@ const ViewSchedule: React.FC = () => {
                 {/* Grid */}
                 {!loading && (
                     <div className="grid grid-cols-7 border-t border-l border-[#e2e8f0] rounded-xl overflow-hidden [&>*]:border-b [&>*]:border-r [&>*]:border-[#e2e8f0]">
-                        {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((d) => (
+                        {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((d) => (
                             <div key={d} className="py-3 text-center text-xs font-bold text-[#94a3b8] bg-[#f8fafc]">{d}</div>
                         ))}
 
