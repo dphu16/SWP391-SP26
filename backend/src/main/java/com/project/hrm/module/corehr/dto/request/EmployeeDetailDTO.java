@@ -16,7 +16,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class EmployeeDetailDTO{
+public class EmployeeDetailDTO {
 
     // === Basic Information ===
     private UUID employeeId;

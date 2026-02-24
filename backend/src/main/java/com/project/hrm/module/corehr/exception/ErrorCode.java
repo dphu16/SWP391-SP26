@@ -1,0 +1,13 @@
+package com.project.hrm.module.corehr.exception;
+
+public enum ErrorCode {
+
+    EMPLOYEE_NOT_FOUND,
+    EMPLOYEE_NOT_ACTIVE,
+    PENDING_REQUEST_EXISTS,
+    NO_DATA_CHANGED,
+    OFFBOARDING_PENDING_EXISTS,
+    INVALID_CREDENTIALS,
+    ACCOUNT_LOCKED,
+    ACCOUNT_INACTIVE
+}
