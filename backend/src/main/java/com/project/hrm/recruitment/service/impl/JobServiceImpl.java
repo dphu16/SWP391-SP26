@@ -132,7 +132,9 @@ public class JobServiceImpl implements JobService {
     private JobResponse mapToResponse(Job entity){
         JobResponse response = new JobResponse();
         response.setId(entity.getId());
-        response.setReqId(entity.getRequest().getId());
+        if(entity.getRequest()!=null) {
+            response.setReqId(entity.getRequest().getId());
+        }
         response.setTitle(entity.getTitle());
         response.setQuantity(entity.getQuantity());
         response.setDescription(entity.getDescription());
@@ -140,6 +142,7 @@ public class JobServiceImpl implements JobService {
         response.setRequirement(entity.getRequirements());
         response.setBenefit(entity.getBenefits());
         response.setClosedTime(entity.getClosedAt());
+        response.setCreateAt(entity.getPostedAt());
         response.setStatus(JobStatus.valueOf(entity.getStatus()));
         response.setHrId(entity.getEmployee().getEmployeeId());
         return response;

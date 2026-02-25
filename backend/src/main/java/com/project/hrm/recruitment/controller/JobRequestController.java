@@ -15,6 +15,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/job-requests")
+@CrossOrigin(origins = "http://localhost:5173")
 @RequiredArgsConstructor
 public class JobRequestController {
     private final JobRequestService jobRequestService;
