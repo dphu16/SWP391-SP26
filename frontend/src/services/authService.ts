@@ -32,6 +32,7 @@ export async function login(payload: LoginRequest): Promise<LoginResponse> {
 
 export function saveToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token);
+  window.dispatchEvent(new Event("auth-change"));
 }
 
 export function getToken(): string | null {
@@ -44,6 +45,7 @@ export function getToken(): string | null {
 
 export function removeToken(): void {
   localStorage.removeItem(TOKEN_KEY);
+  window.dispatchEvent(new Event("auth-change"));
 }
 
 export function isAuthenticated(): boolean {
