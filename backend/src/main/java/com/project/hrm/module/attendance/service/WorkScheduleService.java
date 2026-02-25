@@ -54,21 +54,18 @@ public class WorkScheduleService {
             AttendanceEmployeeResponse dto = new AttendanceEmployeeResponse();
             dto.setId(emp.getEmployeeId());
 
-            // Lấy tên từ thực thể Personal (Khớp với DB đồng nghiệp)
-            if (emp.getPersonal() != null && emp.getPersonal().getFullName() != null) {
-                dto.setFullName(emp.getPersonal().getFullName());
+            if (emp.getPersonal() != null && emp.getFullName() != null) {
+                dto.setFullName(emp.getFullName());
             } else {
                 dto.setFullName("Chưa cập nhật tên");
             }
 
-            // Lấy mã nhân viên hoặc tạo mã tạm từ UUID
             if (emp.getEmployeeCode() != null) {
                 dto.setEmployeeCode(emp.getEmployeeCode());
             } else {
                 dto.setEmployeeCode("EMP-" + emp.getEmployeeId().toString().substring(0, 8).toUpperCase());
             }
 
-            // Lấy tên phòng ban
             if (emp.getDepartment() != null) {
                 dto.setDeptName(emp.getDepartment().getDeptName());
             } else {
@@ -79,9 +76,6 @@ public class WorkScheduleService {
         });
     }
 
-    // ===================================================================
-    // 2. TẠO LỊCH MỚI
-    // ===================================================================
     public WorkScheduleResponse createSchedule(WorkScheduleRequest request) {
         WorkSchedule entity = new WorkSchedule();
         entity.setDate(request.getDate());
@@ -96,18 +90,12 @@ public class WorkScheduleService {
         return mapToResponse(savedEntity);
     }
 
-    // ===================================================================
-    // 3. LẤY TẤT CẢ LỊCH
-    // ===================================================================
     public List<WorkScheduleResponse> getAllSchedules() {
         return workScheduleRepository.findAll().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
-    // ===================================================================
-    // 4. XEM LỊCH CÁ NHÂN (THEO THÁNG/NĂM)
-    // ===================================================================
     public List<WorkScheduleResponse> getMySchedules(UUID employeeId, Integer month, Integer year) {
         LocalDate startDate;
         LocalDate endDate;
@@ -127,11 +115,9 @@ public class WorkScheduleService {
                 .collect(Collectors.toList());
     }
 
-    // ===================================================================
-    // 5. XẾP LỊCH HÀNG LOẠT (BULK INSERT)
-    // ===================================================================
     @Transactional
-    public List<WorkScheduleResponse> createBulkSchedules(UUID employeeId, LocalDate startDate, LocalDate endDate, UUID shiftId) {
+    public List<WorkScheduleResponse> createBulkSchedules(UUID employeeId, LocalDate startDate, LocalDate endDate,
+            UUID shiftId) {
         Shift shift = shiftRepository.findById(shiftId)
                 .orElseThrow(() -> new RuntimeException("Ca làm việc không tồn tại!"));
 
@@ -162,9 +148,6 @@ public class WorkScheduleService {
                 .collect(Collectors.toList());
     }
 
-    // ===================================================================
-    // 6. SỬA LỊCH
-    // ===================================================================
     public WorkScheduleResponse updateSchedule(UUID scheduleId, UUID newShiftId) {
         WorkSchedule ws = workScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch làm việc này!"));
@@ -177,9 +160,6 @@ public class WorkScheduleService {
         return mapToResponse(updatedWs);
     }
 
-    // ===================================================================
-    // 7. COPY LỊCH TỪ THÁNG TRƯỚC
-    // ===================================================================
     @Transactional
     public List<WorkScheduleResponse> copyFromPreviousMonth(UUID employeeId, int targetMonth, int targetYear) {
         LocalDate targetDate = LocalDate.of(targetYear, targetMonth, 1);
@@ -211,10 +191,12 @@ public class WorkScheduleService {
         List<WorkSchedule> newSchedules = new ArrayList<>();
         for (int day = 1; day <= targetDate.lengthOfMonth(); day++) {
             LocalDate currentDate = targetDate.withDayOfMonth(day);
-            if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY || existingDates.contains(currentDate)) continue;
+            if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY || existingDates.contains(currentDate))
+                continue;
 
             Shift shift = shiftByDayOfWeek.get(currentDate.getDayOfWeek());
-            if (shift == null) shift = sourceSchedules.get(0).getShift();
+            if (shift == null)
+                shift = sourceSchedules.get(0).getShift();
 
             WorkSchedule newWs = new WorkSchedule();
             newWs.setEmployeeId(employeeId);
@@ -228,9 +210,6 @@ public class WorkScheduleService {
                 .collect(Collectors.toList());
     }
 
-    // ===================================================================
-    // HÀM MAPPING PHỤ
-    // ===================================================================
     private WorkScheduleResponse mapToResponse(WorkSchedule entity) {
         WorkScheduleResponse dto = new WorkScheduleResponse();
         dto.setId(entity.getScheduleId());

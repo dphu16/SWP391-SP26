@@ -19,16 +19,26 @@ public class EmployeeCommandService {
     }
 
     private void applyPersonalInfo(Employee e, EmployeeChangeDTO req) {
-        if (req.getFullName() != null)    e.getPersonal().setFullName(req.getFullName());
-        if (req.getEmail() != null)       e.setEmail(req.getEmail());
-        if (req.getPhone() != null)       e.getPersonal().setPhone(req.getPhone());
-        if (req.getAddress() != null)     e.getPersonal().setAddress(req.getAddress());
-        if (req.getGender() != null)      e.getPersonal().setGender(req.getGender());
-        if (req.getCitizenId() != null)   e.getPersonal().setCitizenId(req.getCitizenId());
-        if (req.getTaxCode() != null)     e.getPersonal().setTaxCode(req.getTaxCode());
-        if (req.getDateOfBirth() != null) e.getPersonal().setDateOfBirth(req.getDateOfBirth());
-        if (req.getDateOfJoining() != null) e.setDateOfJoining(req.getDateOfJoining());
-        if (req.getAvatarUrl() != null)   e.getPersonal().setAvatar(req.getAvatarUrl());
+        if (req.getFullName() != null)
+            e.setFullName(req.getFullName());
+        if (req.getEmail() != null)
+            e.getPersonal().setEmail(req.getEmail());
+        if (req.getPhone() != null)
+            e.getPersonal().setPhone(req.getPhone());
+        if (req.getAddress() != null)
+            e.getPersonal().setAddress(req.getAddress());
+        if (req.getGender() != null)
+            e.getPersonal().setGender(req.getGender());
+        if (req.getCitizenId() != null)
+            e.getPersonal().setCitizenId(req.getCitizenId());
+        if (req.getTaxCode() != null)
+            e.getPersonal().setTaxCode(req.getTaxCode());
+        if (req.getDateOfBirth() != null)
+            e.getPersonal().setDateOfBirth(req.getDateOfBirth());
+        if (req.getDateOfJoining() != null)
+            e.setDateOfJoining(req.getDateOfJoining());
+        if (req.getAvatarUrl() != null)
+            e.getPersonal().setAvatar(req.getAvatarUrl());
     }
 
     private void applyJobInfo(Employee e, EmployeeChangeDTO req) {
@@ -38,14 +48,19 @@ public class EmployeeCommandService {
         if (req.getPositionId() != null) {
             e.setPosition(employeeHelper.findPositionOrThrow(req.getPositionId()));
         }
-        if (req.getEmpStatus() != null) e.setEmpStatus(req.getEmpStatus());
+        if (req.getEmpStatus() != null)
+            e.setEmpStatus(req.getEmpStatus());
     }
 
     private void applyUserAccount(Employee e, EmployeeChangeDTO req) {
-        if (e.getUser() == null) return;
-        if (req.getRole() != null)   e.getUser().setRole(req.getRole());
-        if (req.getUserStatus() != null) e.getUser().setStatus(req.getUserStatus());
-        if (req.getEmail() != null)  e.setEmail(req.getEmail());
+        if (e.getUser() == null)
+            return;
+        if (req.getRole() != null)
+            e.getUser().setRole(req.getRole());
+        if (req.getUserStatus() != null)
+            e.getUser().setStatus(req.getUserStatus());
+        if (req.getEmail() != null)
+            e.getPersonal().setEmail(req.getEmail());
     }
 
     @Transactional

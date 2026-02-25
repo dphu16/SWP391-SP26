@@ -24,14 +24,15 @@ public class Personal {
     @JoinColumn(name = "employee_id", referencedColumnName = "employee_id", nullable = false)
     private Employee employee;
 
-    @Column(name = "full_name", nullable = false)
-    private String fullName;
-
     @Column(name= "avatar_url")
     private String avatar;
 
     @Column(name = "citizen_id", unique = true)
     private String citizenId;
+
+
+    @Column(name = "email", unique = true)
+    private String email;
 
     @Column(name = "tax_code", unique = true)
     private String taxCode;
