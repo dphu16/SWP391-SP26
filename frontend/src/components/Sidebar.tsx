@@ -127,16 +127,16 @@ const Sidebar: React.FC = () => {
 
           {/* 3. Submenu: Attendance (CHỈ CÒN XẾP LỊCH & CHECKIN) */}
           <div>
-            <button onClick={() => !isCollapsed && setAttendanceExpanded(!attendanceExpanded)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isPath("/attendance/schedule") || isPath("/attendance/create") ? "text-primary bg-primary/10" : "text-text-secondary-light hover:bg-gray-100"}`}>
+            <button onClick={() => !isCollapsed && setAttendanceExpanded(!attendanceExpanded)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isPath("/attendance/view-schedule") || isPath("/attendance/create-schedule") || isPath("/attendance/check-in-out") ? "text-primary bg-primary/10" : "text-text-secondary-light hover:bg-gray-100"}`}>
               <span>{Icons.attendance}</span>
               {!isCollapsed && <><span className="flex-1 text-left">Attendance</span><span className={`transition-transform ${attendanceExpanded ? "rotate-180" : ""}`}>{Icons.chevronDown}</span></>}
             </button>
             {!isCollapsed && attendanceExpanded && (
                 <div className="mt-0.5 space-y-0.5">
                   {[
-                    { label: "View Schedule", path: "/attendance/schedule" },
-                    { label: "Create Schedule", path: "/attendance/create" },
-                    { label: "Check-in / Out", path: "/attendance/checkin" },
+                    { label: "View Schedule", path: "/attendance/view-schedule" },
+                    { label: "Create Schedule", path: "/attendance/create-schedule" },
+                    { label: "Check-in / Out", path: "/attendance/check-in-out" },
                   ].map((item) => (
                       <NavItem key={item.path} icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />} label={item.label} isActive={location.pathname === item.path} isCollapsed={false} indent onClick={() => navigate(item.path)} />
                   ))}
