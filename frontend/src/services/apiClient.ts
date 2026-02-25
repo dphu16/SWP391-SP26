@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getToken } from "./authService";
 
 const apiClient = axios.create({
   baseURL: "/",
@@ -6,7 +7,13 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(
-  (config) => config,
+  (config) => {
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
   (error) => Promise.reject(error)
 );
 

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { decodeJwt } from "../utils/jwtDecode";
+import { removeToken } from "../services/authService";
 // ─── Breadcrumb config ────────────────────────────────────────────────────────
 const breadcrumbMap: Record<
   string,
@@ -165,6 +166,12 @@ const Header: React.FC = () => {
     setDrawerOpen(true);
     navigate(`/profile`);
   }, []);
+
+  const handleLogout = useCallback(() => {
+    setDropdownOpen(false);
+    removeToken();
+    navigate("/login");
+  }, [navigate]);
 
 
   // Deterministic avatar color (fallback when no image)
@@ -350,9 +357,13 @@ const Header: React.FC = () => {
 
               {/* Divider */}
               <div className="border-t border-border-light dark:border-border-dark p-2">
-                <span className="block px-3 py-2 text-xs text-text-muted-light dark:text-text-muted-dark italic">
-                  No auth system active
-                </span>
+                <MenuItem
+                  icon={<LogoutIcon />}
+                  label="Log Out"
+                  description="End your session"
+                  onClick={handleLogout}
+                  variant="danger"
+                />
               </div>
             </div>
           </div>

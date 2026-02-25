@@ -33,6 +33,14 @@ public class PerformanceCyclesController {
         return ResponseEntity.ok(service.getAll());
     }
 
+    // PUT /performance-cycles/{id}
+    @PutMapping("/{id}")
+    public ResponseEntity<PerformanceCycles> update(
+            @PathVariable UUID id,
+            @RequestBody PerformanceCyclesRequest request){
+        return ResponseEntity.ok(service.update(id, request));
+    }
+
     // PATCH /performance-cycles/{id}
     @PatchMapping("/{id}")
     public ResponseEntity<PerformanceCycles> updateStatus(

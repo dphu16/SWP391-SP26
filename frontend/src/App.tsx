@@ -11,6 +11,7 @@ import CreateChangeRequest from "./components/CreateChangeRequest";
 import FilterBar from "./components/FilterBar";
 import PerformanceModule from "./components/PerformanceModule";
 import { ToastProvider } from "./components/ui/Toast";
+import LoginPage from "./components/auth/LoginPage";
 
 
 const AppShell: React.FC = () => {
@@ -124,6 +125,7 @@ const App: React.FC = () => {
   return (
     <ToastProvider>
       <Routes>
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/*" element={<AppShell />} />
       </Routes>
     </ToastProvider>

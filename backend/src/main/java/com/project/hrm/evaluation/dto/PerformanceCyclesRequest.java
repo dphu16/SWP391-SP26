@@ -1,6 +1,5 @@
 package com.project.hrm.evaluation.dto;
 
-import com.project.hrm.evaluation.entity.PerformanceCycles;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -17,6 +16,4 @@ public class PerformanceCyclesRequest {
 
     @NotNull(message = "endDate is required")
     private LocalDate endDate;
-
 }
-

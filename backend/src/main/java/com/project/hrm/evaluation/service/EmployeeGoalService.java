@@ -50,18 +50,29 @@ public class EmployeeGoalService {
         KpiLibrary kpi = kpiLibraryRepository.findById(req.getKpiLibraryId())
                 .orElseThrow(() -> new RuntimeException("KPI not found"));
 
-        EmployeeGoal goal = new EmployeeGoal();
-        goal.setEmployee(employee);
-        goal.setCycle(cycle);
-        goal.setKpiLibrary(kpi);
+        java.util.Optional<EmployeeGoal> existing = repository.findByEmployee_EmployeeIdAndCycle_CycleIdAndKpiLibrary_LibId(
+                employee.getEmployeeId(), cycle.getCycleId(), kpi.getLibId());
+
+        EmployeeGoal goal;
+        if (existing.isPresent()) {
+            goal = existing.get();
+            if (goal.getStatus() != GoalStatus.ASSIGNED) {
+                throw new RuntimeException("Cannot update confirmed or in-progress goal.");
+            }
+        } else {
+            goal = new EmployeeGoal();
+            goal.setEmployee(employee);
+            goal.setCycle(cycle);
+            goal.setKpiLibrary(kpi);
+            goal.setCurrentValue(0.0);
+            goal.setStatus(GoalStatus.ASSIGNED);
+        }
 
         goal.setTitle(req.getTitle());
         goal.setTargetValue(req.getTargetValue());
-        goal.setCurrentValue(0.0);
         goal.setWeight(req.getWeight());
 
         goal.setAssignedBy(req.getAssignedBy());
-        goal.setStatus(GoalStatus.ASSIGNED);
 
         return repository.save(goal);
     }

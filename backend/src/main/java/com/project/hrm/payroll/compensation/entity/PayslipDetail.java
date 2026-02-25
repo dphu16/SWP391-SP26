@@ -31,7 +31,7 @@ public class PayslipDetail {
     private BigDecimal amount;
 
     @Column(name = "type")
-    private PayslipType type;
+    private String type;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

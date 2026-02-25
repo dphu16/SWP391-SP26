@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/api")
 public class PerformanceReviewsController {
 
@@ -31,6 +32,12 @@ public class PerformanceReviewsController {
     public ResponseEntity<List<PerformanceReviews>> getByEmployee(
             @PathVariable UUID id){
         return ResponseEntity.ok(service.getByEmployee(id));
+    }
+
+    // Get or create review for active cycle
+    @GetMapping("/employees/{id}/review-active")
+    public ResponseEntity<PerformanceReviews> getActiveReview(@PathVariable UUID id){
+        return ResponseEntity.ok(service.getOrCreateForActiveCycle(id));
     }
 
     // 15

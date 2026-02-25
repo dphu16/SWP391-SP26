@@ -3,6 +3,7 @@ package com.project.hrm.evaluation.service;
 import com.project.hrm.evaluation.dto.*;
 import com.project.hrm.evaluation.entity.PerformanceCycles;
 import com.project.hrm.evaluation.entity.PerformanceReviews;
+import com.project.hrm.evaluation.enums.CycleStatus;
 import com.project.hrm.evaluation.enums.ReviewStatus;
 import com.project.hrm.evaluation.repository.PerformanceCyclesRepository;
 import com.project.hrm.evaluation.repository.PerformanceReviewsRepository;
@@ -35,14 +36,13 @@ public class PerformanceReviewsService {
     @Transactional
     public PerformanceReviews create(PerformanceReviewsRequest req){
 
-        PerformanceReviews review = new PerformanceReviews();
-
         PerformanceCycles cycle = cycleRepository.findById(req.getCycleId())
                 .orElseThrow(() -> new RuntimeException("Cycle not found"));
 
         Employee employee = employeeRepository.findById(req.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
+        PerformanceReviews review = new PerformanceReviews();
         review.setCycle(cycle);
         review.setEmployee(employee);
         review.setManagerId(req.getManagerId());
@@ -52,6 +52,31 @@ public class PerformanceReviewsService {
         review.setCreatedAt(LocalDateTime.now());
 
         return repository.save(review);
+    }
+
+    // Get or create review for active cycle
+    @Transactional
+    public PerformanceReviews getOrCreateForActiveCycle(UUID employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+        // Try to find an ACTIVE cycle, else fall back to the most recently created cycle
+        PerformanceCycles targetCycle = cycleRepository.findAll().stream()
+                .filter(c -> c.getStatus() == CycleStatus.ACTIVE)
+                .findFirst()
+                .orElseGet(() -> cycleRepository.findAll().stream()
+                        .max(java.util.Comparator.comparing(PerformanceCycles::getCreatedAt))
+                        .orElseThrow(() -> new RuntimeException("No performance cycles configured")));
+
+        return repository.findByEmployee_EmployeeIdAndCycle_CycleId(employeeId, targetCycle.getCycleId())
+                .orElseGet(() -> {
+                    PerformanceReviews newReview = new PerformanceReviews();
+                    newReview.setEmployee(employee);
+                    newReview.setCycle(targetCycle);
+                    newReview.setStatus(ReviewStatus.DRAFT);
+                    newReview.setCreatedAt(LocalDateTime.now());
+                    return repository.save(newReview);
+                });
     }
 
     // API 14

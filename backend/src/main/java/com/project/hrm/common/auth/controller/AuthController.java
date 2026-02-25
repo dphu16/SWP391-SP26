@@ -4,6 +4,7 @@ import com.project.hrm.common.auth.dto.LoginRequest;
 import com.project.hrm.common.auth.dto.LoginResponse;
 import com.project.hrm.common.auth.security.JwtUtil;
 import com.project.hrm.common.auth.service.CustomUserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.exception.ErrorCode;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
@@ -72,11 +73,13 @@ public class AuthController {
 
         userRepository.findByUsername(request.getUsername())
                 .ifPresent(user -> employeeRepository.findByUser(user).ifPresent(employee -> {
-                    claims.put("fullName", employee.getPersonal().getFullName());
-                    claims.put("employeeId", employee.getEmployeeId().toString());
-                    if (employee.getPersonal().getAvatar() != null) {
-                        claims.put("avatarUrl", employee.getPersonal().getAvatar());
+                    if (employee.getPersonal() != null) {
+                        claims.put("fullName", employee.getPersonal().getFullName());
+                        if (employee.getPersonal().getAvatar() != null) {
+                            claims.put("avatarUrl", employee.getPersonal().getAvatar());
+                        }
                     }
+                    claims.put("employeeId", employee.getEmployeeId().toString());
                 }));
 
         String token = jwtUtil.generateToken(userDetails, claims);

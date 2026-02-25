@@ -1,5 +1,5 @@
 import { kpiService } from "../services/kpiService";
-import type { KpiLibrary, Department, KpiDetailDto } from "../services/kpiService";
+import type { KpiLibrary, Department, KpiDetailDto, PerformanceCycle, CreateCycleRequest } from "../services/kpiService";
 
 
 
@@ -68,7 +68,20 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     const [loading, setLoading] = useState(true);
     const [isAddKpiModalOpen, setIsAddKpiModalOpen] = useState(false);
     const [modalTab, setModalTab] = useState<'library' | 'new'>('library');
-    const [viewMode, setViewMode] = useState<"global" | "specific">("global");
+    const [viewMode, setViewMode] = useState<"global" | "specific" | "cycles">("global");
+
+    // Cycles state
+    const [cycles, setCycles] = useState<PerformanceCycle[]>([]);
+    const [cyclesLoading, setCyclesLoading] = useState(false);
+    const [showCycleModal, setShowCycleModal] = useState(false);
+    const [editingCycle, setEditingCycle] = useState<PerformanceCycle | null>(null);
+    const [cycleForm, setCycleForm] = useState<CreateCycleRequest>({
+        cycleName: '',
+        startDate: '',
+        endDate: ''
+    });
+    const [cycleSaving, setCycleSaving] = useState(false);
+    const [cycleError, setCycleError] = useState('');
 
     // New KPI Form State
     const [newKpi, setNewKpi] = useState({
@@ -89,12 +102,25 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
 
             if (deptsData && deptsData.length > 0) {
                 setDepartments(deptsData);
-                setSelectedDeptId(deptsData[0].deptId);
+                setSelectedDeptId(deptsData[0].id);
             }
             setLoading(false);
         };
         fetchInitialData();
     }, []);
+
+    // Fetch cycles when switching to cycles tab
+    useEffect(() => {
+        if (viewMode === 'cycles') {
+            const fetchCycles = async () => {
+                setCyclesLoading(true);
+                const data = await kpiService.getPerformanceCycles();
+                setCycles(data);
+                setCyclesLoading(false);
+            };
+            fetchCycles();
+        }
+    }, [viewMode]);
 
     useEffect(() => {
         if (selectedDeptId) {
@@ -129,8 +155,59 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
         }
     };
 
+    // Cycle Handlers
+    const openNewCycleModal = () => {
+        setEditingCycle(null);
+        setCycleForm({ cycleName: '', startDate: '', endDate: '' });
+        setCycleError('');
+        setShowCycleModal(true);
+    };
+
+    const openEditCycleModal = (cycle: PerformanceCycle) => {
+        setEditingCycle(cycle);
+        setCycleForm({
+            cycleName: cycle.cycleName,
+            startDate: cycle.startDate,
+            endDate: cycle.endDate
+        });
+        setCycleError('');
+        setShowCycleModal(true);
+    };
+
+    const handleSaveCycle = async () => {
+        if (!cycleForm.cycleName || !cycleForm.startDate || !cycleForm.endDate) {
+            setCycleError('Please fill in all required fields.');
+            return;
+        }
+        setCycleSaving(true);
+        setCycleError('');
+        try {
+            if (editingCycle) {
+                const updated = await kpiService.updatePerformanceCycle(editingCycle.cycleId, cycleForm);
+                setCycles(prev => prev.map(c => c.cycleId === updated.cycleId ? updated : c));
+            } else {
+                const created = await kpiService.createPerformanceCycle(cycleForm);
+                setCycles(prev => [created, ...prev]);
+            }
+            setShowCycleModal(false);
+        } catch (e: any) {
+            setCycleError(e?.response?.data?.error || 'Failed to save cycle.');
+        } finally {
+            setCycleSaving(false);
+        }
+    };
+
+    const handleCycleStatusChange = async (cycle: PerformanceCycle, newStatus: string) => {
+        try {
+            const updated = await kpiService.updateCycleStatus(cycle.cycleId, newStatus);
+            setCycles(prev => prev.map(c => c.cycleId === updated.cycleId ? updated : c));
+        } catch (e: any) {
+            alert(e?.response?.data?.error || 'Cannot update status.');
+        }
+    };
+
     const activeDepartment = useMemo(() => {
-        return departments.find(d => d.deptId === selectedDeptId);
+        return departments.find(d => d.id === selectedDeptId);
     }, [departments, selectedDeptId]);
 
     // Calculate Global Weight Total dynamically for current department
@@ -186,7 +263,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                     </p>
                 </div>
                 <div className="flex items-center gap-6">
-                    {/* View Switcher (Global vs Specific) */}
+                    {/* View Switcher */}
                     <div className="flex bg-surface-2-light dark:bg-surface-2-dark p-1 rounded-xl shadow-inner border border-border-light dark:border-border-dark">
                         <button
                             onClick={() => setViewMode("global")}
@@ -205,6 +282,15 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                 }`}
                         >
                             🎯 Specific
+                        </button>
+                        <button
+                            onClick={() => setViewMode("cycles")}
+                            className={`px-4 py-1.5 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${viewMode === "cycles"
+                                ? "bg-white dark:bg-surface-dark text-primary shadow-sm"
+                                : "text-text-muted-light dark:text-text-muted-dark hover:text-text-primary-light"
+                                }`}
+                        >
+                            🗓️ Cycles
                         </button>
                     </div>
 
@@ -384,7 +470,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                         KPI Structure Definition:
                                     </h2>
                                     <h2 className="text-lg font-bold font-heading text-primary">
-                                        {activeDepartment ? activeDepartment.deptName : "N/A"}
+                                        {activeDepartment ? activeDepartment.name : "N/A"}
                                     </h2>
                                 </div>
 
@@ -507,31 +593,31 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                     <div className="text-center text-xs text-text-muted-light dark:text-text-muted-dark py-4">No departments found.</div>
                                 ) : departments.map((dept) => (
                                     <div
-                                        key={dept.deptId}
-                                        onClick={() => setSelectedDeptId(dept.deptId)}
+                                        key={dept.id}
+                                        onClick={() => setSelectedDeptId(dept.id)}
                                         className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors relative overflow-hidden group
-                                            ${selectedDeptId === dept.deptId
+                                            ${selectedDeptId === dept.id
                                                 ? "bg-primary/5 border border-primary/20"
                                                 : "border border-transparent hover:bg-surface-2-light dark:hover:bg-surface-2-dark"
                                             }
                                         `}
                                     >
-                                        {selectedDeptId === dept.deptId && (
+                                        {selectedDeptId === dept.id && (
                                             <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full"></div>
                                         )}
 
                                         <div className="w-9 h-9 rounded-lg bg-surface-2-light dark:bg-surface-2-dark flex items-center justify-center text-text-secondary-light dark:text-text-secondary-dark flex-shrink-0">
-                                            {selectedDeptId === dept.deptId ? <span className="text-primary">{Icons.building}</span> : Icons.building}
+                                            {selectedDeptId === dept.id ? <span className="text-primary">{Icons.building}</span> : Icons.building}
                                         </div>
 
                                         <div className="flex-1 min-w-0">
                                             <div className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark truncate pr-2">
-                                                {dept.deptName}
+                                                {dept.name}
                                             </div>
                                         </div>
 
                                         <div className="flex-shrink-0 px-1">
-                                            {selectedDeptId === dept.deptId && Icons.dotGreen}
+                                            {selectedDeptId === dept.id && Icons.dotGreen}
                                         </div>
                                     </div>
                                 ))}
@@ -549,6 +635,114 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                 </div>
             )}
 
+            {/* ─── REVIEW CYCLE VIEW ──────────────────────────────────────────── */}
+            {viewMode === "cycles" && (
+                <div className="flex flex-col gap-6 animate-fade-in">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-lg font-bold font-heading text-text-primary-light dark:text-text-primary-dark">Review Cycle Configuration</h2>
+                            <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-0.5">Define evaluation periods, deadlines and criteria for structured performance reviews.</p>
+                        </div>
+                        <button
+                            onClick={openNewCycleModal}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-hover transition-colors shadow-sm"
+                        >
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
+                            New Cycle
+                        </button>
+                    </div>
+
+                    {/* Stats row */}
+                    <div className="grid grid-cols-3 gap-5">
+                        {[{
+                            label: 'Total Cycles', value: cycles.length, color: 'text-text-primary-light dark:text-text-primary-dark'
+                        }, {
+                            label: 'Active', value: cycles.filter(c => c.status === 'ACTIVE').length, color: 'text-primary'
+                        }, {
+                            label: 'Closed', value: cycles.filter(c => c.status === 'CLOSED').length, color: 'text-text-muted-light dark:text-text-muted-dark'
+                        }].map((s, i) => (
+                            <div key={i} className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm">
+                                <p className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-2">{s.label}</p>
+                                <p className={`text-4xl font-bold font-heading ${s.color}`}>{s.value}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Cycle Table */}
+                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="border-b border-border-light dark:border-border-dark bg-surface-2-light/60 dark:bg-surface-2-dark/60">
+                                    {['Cycle Name', 'Period', 'Status', 'Actions'].map(h => (
+                                        <th key={h} className="px-5 py-3.5 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest">{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                                {cyclesLoading ? (
+                                    <tr><td colSpan={4} className="px-5 py-8 text-center text-text-muted-light">Loading cycles...</td></tr>
+                                ) : cycles.length === 0 ? (
+                                    <tr><td colSpan={4} className="px-5 py-10 text-center">
+                                        <div className="text-text-muted-light dark:text-text-muted-dark">
+                                            <svg className="w-10 h-10 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                            <p className="text-sm font-semibold">No review cycles yet.</p>
+                                            <p className="text-xs mt-1">Click "New Cycle" to get started.</p>
+                                        </div>
+                                    </td></tr>
+                                ) : cycles.map(cycle => {
+                                    const statusColors: Record<string, string> = {
+                                        ACTIVE: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                                        CLOSED: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+                                    };
+                                    return (
+                                        <tr key={cycle.cycleId} className="hover:bg-surface-2-light/50 dark:hover:bg-surface-2-dark/50 transition-colors">
+                                            <td className="px-5 py-4">
+                                                <p className="font-bold text-sm text-text-primary-light dark:text-text-primary-dark">{cycle.cycleName}</p>
+                                                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">
+                                                    Created {cycle.createdAt ? new Date(cycle.createdAt).toLocaleDateString('vi-VN') : '—'}
+                                                </p>
+                                            </td>
+                                            <td className="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                                                <p className="font-semibold">{cycle.startDate} → {cycle.endDate}</p>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${statusColors[cycle.status] || ''}`}>
+                                                    {cycle.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    {cycle.status === 'ACTIVE' && (
+                                                        <button
+                                                            onClick={() => openEditCycleModal(cycle)}
+                                                            className="p-1.5 rounded-lg hover:bg-primary/10 text-text-muted-light dark:text-text-muted-dark hover:text-primary transition-colors"
+                                                            title="Edit"
+                                                        >
+                                                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" /></svg>
+                                                        </button>
+                                                    )}
+                                                    {cycle.status === 'ACTIVE' && (
+                                                        <button
+                                                            onClick={() => handleCycleStatusChange(cycle, 'CLOSED')}
+                                                            className="px-3 py-1.5 text-[11px] font-bold bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                                                        >
+                                                            Close
+                                                        </button>
+                                                    )}
+                                                    {cycle.status === 'CLOSED' && (
+                                                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark italic">Archived</span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
             {/* Add KPI Modal Overlay */}
             {isAddKpiModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -670,6 +864,82 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                 className="px-6 py-2 rounded-lg text-sm font-bold border border-border-light dark:border-border-dark hover:bg-surface-3-light dark:hover:bg-surface-3-dark transition-colors text-text-primary-light dark:text-text-primary-dark"
                             >
                                 Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── CREATE / EDIT CYCLE MODAL ─────────────────────────────────── */}
+            {showCycleModal && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-dark">
+                            <h3 className="text-lg font-bold font-heading text-text-primary-light dark:text-text-primary-dark">
+                                {editingCycle ? '✏️ Edit Review Cycle' : '🗓️ Create New Review Cycle'}
+                            </h3>
+                            <button onClick={() => setShowCycleModal(false)} className="text-text-muted-light hover:text-text-primary-light transition-colors">
+                                <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-5 overflow-y-auto">
+                            {cycleError && (
+                                <div className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400 font-medium">
+                                    {cycleError}
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1.5">Cycle Name <span className="text-red-500">*</span></label>
+                                <input
+                                    type="text"
+                                    value={cycleForm.cycleName}
+                                    onChange={e => setCycleForm(f => ({ ...f, cycleName: e.target.value }))}
+                                    placeholder="e.g. Q1 2026 Performance Review"
+                                    className="w-full px-4 py-2.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1.5">Start Date <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="date"
+                                        value={cycleForm.startDate}
+                                        onChange={e => setCycleForm(f => ({ ...f, startDate: e.target.value }))}
+                                        className="w-full px-4 py-2.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1.5">End Date <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="date"
+                                        value={cycleForm.endDate}
+                                        onChange={e => setCycleForm(f => ({ ...f, endDate: e.target.value }))}
+                                        className="w-full px-4 py-2.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex justify-end gap-3 px-6 py-4 border-t border-border-light dark:border-border-dark bg-surface-2-light/40 dark:bg-surface-2-dark/40">
+                            <button
+                                onClick={() => setShowCycleModal(false)}
+                                className="px-5 py-2 text-sm font-semibold border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark rounded-lg hover:bg-surface-2-light dark:hover:bg-surface-2-dark transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveCycle}
+                                disabled={cycleSaving}
+                                className="px-5 py-2 text-sm font-bold bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-60 flex items-center gap-2"
+                            >
+                                {cycleSaving && <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
+                                {cycleSaving ? 'Saving...' : editingCycle ? 'Save Changes' : 'Create Cycle'}
                             </button>
                         </div>
                     </div>

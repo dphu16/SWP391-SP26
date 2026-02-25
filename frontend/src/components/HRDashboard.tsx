@@ -131,11 +131,11 @@ const Avatar: React.FC<{ name: string; url?: string; size?: string }> = ({ name,
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { dot: string; text: string; bg: string }> = {
-  ACTIVE:     { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
-  ONBOARDING: { dot: "bg-amber-500",   text: "text-amber-700 dark:text-amber-400",     bg: "bg-amber-50 dark:bg-amber-900/20" },
-  PROBATION:  { dot: "bg-blue-500",    text: "text-blue-700 dark:text-blue-400",       bg: "bg-blue-50 dark:bg-blue-900/20" },
-  ONLEAVE:    { dot: "bg-rose-500",    text: "text-rose-700 dark:text-rose-400",       bg: "bg-rose-50 dark:bg-rose-900/20" },
-  INACTIVE:   { dot: "bg-gray-400",    text: "text-gray-600 dark:text-gray-400",       bg: "bg-gray-100 dark:bg-gray-800" },
+  ACTIVE: { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
+  ONBOARDING: { dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-900/20" },
+  PROBATION: { dot: "bg-blue-500", text: "text-blue-700 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-900/20" },
+  ONLEAVE: { dot: "bg-rose-500", text: "text-rose-700 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-900/20" },
+  INACTIVE: { dot: "bg-gray-400", text: "text-gray-600 dark:text-gray-400", bg: "bg-gray-100 dark:bg-gray-800" },
 };
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -285,7 +285,7 @@ const HRDashboard: React.FC = () => {
       setLoading(true);
       // First page for recent employees
       const firstPage = await apiClient.get<PageResponse<Employee>>("/api/hr/employees", {
-        params: { page: 0, size: 6, sort: "fullName" },
+        params: { page: 0, size: 6, sort: "personal.fullName" },
       });
       setEmployees(firstPage.data.content);
 
@@ -297,7 +297,7 @@ const HRDashboard: React.FC = () => {
         const rest = await Promise.all(
           Array.from({ length: totalPages - 1 }, (_, i) =>
             apiClient.get<PageResponse<Employee>>("/api/hr/employees", {
-              params: { page: i + 1, size: 10, sort: "fullName" },
+              params: { page: i + 1, size: 10, sort: "personal.fullName" },
             })
           )
         );
@@ -317,11 +317,11 @@ const HRDashboard: React.FC = () => {
 
   // Donut slices
   const donutSlices: DonutSlice[] = [
-    { value: stats.active,     color: "#10b981", label: "Active" },
+    { value: stats.active, color: "#10b981", label: "Active" },
     { value: stats.onboarding, color: "#f59e0b", label: "Onboarding" },
-    { value: stats.probation,  color: "#3b82f6", label: "Probation" },
-    { value: stats.onLeave,    color: "#f43f5e", label: "On Leave" },
-    { value: stats.inactive,   color: "#94a3b8", label: "Inactive" },
+    { value: stats.probation, color: "#3b82f6", label: "Probation" },
+    { value: stats.onLeave, color: "#f43f5e", label: "On Leave" },
+    { value: stats.inactive, color: "#94a3b8", label: "Inactive" },
   ].filter((s) => s.value > 0);
 
   const today = new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -428,11 +428,11 @@ const HRDashboard: React.FC = () => {
               {/* Legend */}
               <div className="space-y-2.5 flex-1">
                 {[
-                  { label: "Active",     value: stats.active,     color: "bg-emerald-500" },
+                  { label: "Active", value: stats.active, color: "bg-emerald-500" },
                   { label: "Onboarding", value: stats.onboarding, color: "bg-amber-500" },
-                  { label: "Probation",  value: stats.probation,  color: "bg-blue-500" },
-                  { label: "On Leave",   value: stats.onLeave,    color: "bg-rose-500" },
-                  { label: "Inactive",   value: stats.inactive,   color: "bg-gray-400" },
+                  { label: "Probation", value: stats.probation, color: "bg-blue-500" },
+                  { label: "On Leave", value: stats.onLeave, color: "bg-rose-500" },
+                  { label: "Inactive", value: stats.inactive, color: "bg-gray-400" },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -529,23 +529,23 @@ const HRDashboard: React.FC = () => {
             <tbody className="divide-y divide-gray-50 dark:divide-gray-800/40 text-sm">
               {loading
                 ? Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} className="border-b border-gray-100 dark:border-gray-800/60">
-                      {Array.from({ length: 6 }).map((__, j) => (
-                        <td key={j} className="px-6 py-4">
-                          <div className={`skeleton rounded h-4 ${j === 0 ? "w-36" : j === 5 ? "w-8" : "w-24"}`} />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                : employees.length === 0
-                ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-16 text-center">
-                      <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">No employees found.</p>
-                    </td>
+                  <tr key={i} className="border-b border-gray-100 dark:border-gray-800/60">
+                    {Array.from({ length: 6 }).map((__, j) => (
+                      <td key={j} className="px-6 py-4">
+                        <div className={`skeleton rounded h-4 ${j === 0 ? "w-36" : j === 5 ? "w-8" : "w-24"}`} />
+                      </td>
+                    ))}
                   </tr>
-                )
-                : employees.map((emp) => (
+                ))
+                : employees.length === 0
+                  ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-16 text-center">
+                        <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">No employees found.</p>
+                      </td>
+                    </tr>
+                  )
+                  : employees.map((emp) => (
                     <tr key={emp.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/30 table-row-hover">
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-3">
