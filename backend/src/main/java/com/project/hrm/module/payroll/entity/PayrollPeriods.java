@@ -1,7 +1,7 @@
-package com.project.hrm.payroll.compensation.entity;
+package com.project.hrm.module.payroll.entity;
 
 
-import com.project.hrm.payroll.common.enums.PeriodStatus;
+import com.project.hrm.module.payroll.enums.PeriodStatus;
 import jakarta.persistence.*;
 import lombok.*;
 

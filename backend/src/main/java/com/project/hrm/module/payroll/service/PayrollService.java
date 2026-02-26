@@ -1,12 +1,12 @@
-package com.project.hrm.payroll.compensation.service;
+package com.project.hrm.module.payroll.service;
 
 
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
-import com.project.hrm.payroll.common.enums.PayslipStatus;
-import com.project.hrm.payroll.common.enums.PeriodStatus;
-import com.project.hrm.payroll.compensation.entity.*;
-import com.project.hrm.payroll.compensation.repository.*;
+import com.project.hrm.module.payroll.entity.*;
+import com.project.hrm.module.payroll.enums.PayslipStatus;
+import com.project.hrm.module.payroll.enums.PeriodStatus;
+import com.project.hrm.module.payroll.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

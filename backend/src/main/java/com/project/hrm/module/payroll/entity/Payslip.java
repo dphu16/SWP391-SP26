@@ -1,11 +1,10 @@
-package com.project.hrm.payroll.compensation.entity;
+package com.project.hrm.module.payroll.entity;
 
-import com.project.hrm.payroll.common.enums.PayslipStatus;
+import com.project.hrm.module.payroll.enums.PayslipStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 

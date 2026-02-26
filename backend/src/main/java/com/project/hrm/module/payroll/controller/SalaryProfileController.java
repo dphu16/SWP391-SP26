@@ -1,9 +1,8 @@
-package com.project.hrm.payroll.compensation.controller;
+package com.project.hrm.module.payroll.controller;
 
-import com.project.hrm.payroll.compensation.dto.RequestDTO.CreateSalaryProfileRequest;
-import com.project.hrm.payroll.compensation.dto.ResponseDTO.SalaryProfileResponse;
-import com.project.hrm.payroll.compensation.entity.SalaryProfile;
-import com.project.hrm.payroll.compensation.service.SalaryProfileService;
+import com.project.hrm.module.payroll.dto.RequestDTO.CreateSalaryProfileRequest;
+import com.project.hrm.module.payroll.dto.ResponseDTO.SalaryProfileResponse;
+import com.project.hrm.module.payroll.service.SalaryProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;

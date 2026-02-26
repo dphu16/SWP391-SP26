@@ -1,6 +1,6 @@
-package com.project.hrm.payroll.compensation.repository;
+package com.project.hrm.module.payroll.repository;
 
-import com.project.hrm.payroll.compensation.entity.InsuranceConfig;
+import com.project.hrm.module.payroll.entity.InsuranceConfig;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 

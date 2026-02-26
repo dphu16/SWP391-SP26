@@ -1,4 +1,4 @@
-package com.project.hrm.payroll.compensation.dto.ResponseDTO;
+package com.project.hrm.module.payroll.dto.ResponseDTO;
 
 import lombok.Builder;
 import lombok.Data;

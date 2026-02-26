@@ -64,5 +64,5 @@ public class PerformanceCyclesService {
         cycle.setStatus(next);
 
         return repository.save(cycle);
-    }}
-
+    }
+}

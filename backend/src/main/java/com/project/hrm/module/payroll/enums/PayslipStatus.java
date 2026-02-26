@@ -1,4 +1,4 @@
-package com.project.hrm.payroll.common.enums;
+package com.project.hrm.module.payroll.enums;
 
 public enum PayslipStatus {
     DRAFT,

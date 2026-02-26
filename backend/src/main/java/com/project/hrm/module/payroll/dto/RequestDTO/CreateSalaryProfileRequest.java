@@ -1,4 +1,4 @@
-package com.project.hrm.payroll.compensation.dto.RequestDTO;
+package com.project.hrm.module.payroll.dto.RequestDTO;
 
 import lombok.Data;
 
