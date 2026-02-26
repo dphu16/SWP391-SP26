@@ -18,12 +18,12 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
 
     Optional<Employee> findByUser(User user);
 
+    @Override
+    Optional<Employee> findById(UUID uuid);
+
     @EntityGraph(attributePaths = { "user", "position", "department" })
     @Query("SELECT e FROM Employee e WHERE e.user.username = :username")
     Optional<Employee> findByUser_Username(String username);
-
-    @Override
-    Optional<Employee> findById(UUID uuid);
 
     @EntityGraph(attributePaths = { "user", "position", "department" })
     @Query(value = "SELECT e FROM Employee e ORDER BY e.fullName ASC", countQuery = "SELECT COUNT(e) FROM Employee e")
@@ -44,4 +44,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
 
     @Query("SELECT e FROM Employee e WHERE e.user.status = com.project.hrm.module.corehr.enums.UserStatus.ACTIVE")
     List<Employee> findAllActive();
+
+    public List<Employee> findActiveEmployeesForPayroll();
 }
