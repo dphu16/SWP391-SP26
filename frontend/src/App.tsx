@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
+import HRDashboard from "./components/HRDashboard";
 import EmployeeTable from "./components/EmployeeTable";
 import EmployeeDetail from "./components/EmployeeDetail";
 import EmployeeOnboarding from "./components/EmployeeOnboarding";
@@ -24,7 +25,6 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 // --- Import từ nhánh develop của nhóm ---
 import { ToastProvider } from "./components/ui/Toast";
-
 
 const AppShell: React.FC = () => {
     return (

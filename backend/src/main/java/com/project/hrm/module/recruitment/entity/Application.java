@@ -1,5 +1,6 @@
 package com.project.hrm.module.recruitment.entity;
 
+import com.project.hrm.module.recruitment.enums.ApplicationStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -38,7 +39,7 @@ public class Application {
     @Size(max = 30)
     @ColumnDefault("'APPLIED'")
     @Column(name = "status", length = 30)
-    private String status;
+    private ApplicationStatus status;
 
     @ColumnDefault("now()")
     @Column(name = "created_at")

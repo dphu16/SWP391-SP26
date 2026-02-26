@@ -35,7 +35,7 @@ public class PerformanceCyclesController {
         return ResponseEntity.ok(service.create(request));
     }
 
-    // 3. Cập nhật toàn bộ thông tin kỳ đánh giá (Giữ từ File 1)
+    // 3. Cập nhật toàn bộ thông tin kỳ đánh giá
     @PutMapping("/{id}")
     public ResponseEntity<PerformanceCycles> update(
             @PathVariable UUID id,
