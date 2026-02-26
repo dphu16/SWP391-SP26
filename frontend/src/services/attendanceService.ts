@@ -134,3 +134,50 @@ export const cloneScheduleFromPreviousMonth = async (
     });
     return response.data;
 };
+
+// ── Attendance Summary (BE endpoint: GET /api/v1/attendance/summary) ──
+
+export interface AttendanceSummaryDTO {
+    employeeId: string;
+    employeeCode: string;
+    fullName: string;
+    departmentName: string;
+    month: number;
+    year: number;
+    totalWorkingHours: number; // BigDecimal → number via JSON
+    totalLateDays: number;
+    totalEarlyLeaveDays: number;
+    totalMissingPunchDays: number;
+}
+
+export interface AttendanceSummaryParams {
+    month?: number;
+    year?: number;
+    departmentId?: string;
+    employeeId?: string;
+}
+
+export const getAttendanceSummary = async (
+    params: AttendanceSummaryParams
+): Promise<AttendanceSummaryDTO[]> => {
+    const response = await apiClient.get(`/api/v1/attendance/summary`, { params });
+    return response.data;
+};
+
+// ── Department list (from AttendanceLogController: GET /api/v1/attendance) ──
+
+export interface DepartmentOption {
+    deptId: string;
+    deptName: string;
+}
+
+export const getDepartments = async (): Promise<DepartmentOption[]> => {
+    try {
+        const response = await apiClient.get<DepartmentOption[]>(`/api/v1/attendance`);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching departments:", error);
+        return [];
+    }
+};
+
