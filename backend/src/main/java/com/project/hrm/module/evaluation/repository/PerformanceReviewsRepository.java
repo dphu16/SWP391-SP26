@@ -10,4 +10,5 @@ public interface PerformanceReviewsRepository extends JpaRepository<PerformanceR
 
     List<PerformanceReviews> findByEmployee_EmployeeId(UUID employeeId);
 
+    java.util.Optional<PerformanceReviews> findByEmployee_EmployeeIdAndCycle_CycleId(UUID employeeId, UUID cycleId);
 }

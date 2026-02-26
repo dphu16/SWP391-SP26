@@ -1,6 +1,6 @@
-package com.project.hrm.module.payroll.dto.ResponseDTO;
+package com.project.hrm.payroll.compensation.dto.ResponseDTO;
 
-import com.project.hrm.module.payroll.enums.PeriodStatus;
+import com.project.hrm.payroll.common.enums.PeriodStatus;
 import lombok.Builder;
 import lombok.Getter;
 

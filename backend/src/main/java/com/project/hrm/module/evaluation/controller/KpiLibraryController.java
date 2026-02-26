@@ -12,9 +12,12 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
+// Giữ lại @CrossOrigin từ file 1 để cho phép React/Vite (port 5173) gọi API
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/kpi-libraries")
 public class KpiLibraryController {
+
     private final KpiLibraryService service;
 
     public KpiLibraryController(KpiLibraryService service) {
@@ -25,6 +28,7 @@ public class KpiLibraryController {
     public ResponseEntity<KpiLibraryResponse> createKpiLibrary(@Valid @RequestBody KpiLibraryRequest kpiRequest){
         KpiLibraryResponse saved = service.create(kpiRequest);
 
+        // Tạo URI Location để trả về header 'Location' - chuẩn RESTful (HTTP 201)
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{kpiId}")
@@ -54,5 +58,4 @@ public class KpiLibraryController {
         service.delete(kpiId);
         return ResponseEntity.noContent().build();
     }
-
 }

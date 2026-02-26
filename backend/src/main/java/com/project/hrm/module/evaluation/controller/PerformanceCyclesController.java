@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+// Thêm CrossOrigin để đồng bộ với các Controller khác, giúp Frontend (5173) gọi được API
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/performance-cycles")
 public class PerformanceCyclesController {
@@ -20,20 +22,28 @@ public class PerformanceCyclesController {
         this.service = service;
     }
 
-    // POST /performance-cycles
+    // 1. Lấy tất cả các kỳ đánh giá
+    @GetMapping
+    public ResponseEntity<List<PerformanceCycles>> getAll(){
+        return ResponseEntity.ok(service.getAll());
+    }
+
+    // 2. Tạo mới một kỳ đánh giá
     @PostMapping
     public ResponseEntity<PerformanceCycles> create(
             @RequestBody PerformanceCyclesRequest request){
         return ResponseEntity.ok(service.create(request));
     }
 
-    // GET /performance-cycles
-    @GetMapping
-    public ResponseEntity<List<PerformanceCycles>> getAll(){
-        return ResponseEntity.ok(service.getAll());
+    // 3. Cập nhật toàn bộ thông tin kỳ đánh giá (Giữ từ File 1)
+    @PutMapping("/{id}")
+    public ResponseEntity<PerformanceCycles> update(
+            @PathVariable UUID id,
+            @RequestBody PerformanceCyclesRequest request){
+        return ResponseEntity.ok(service.update(id, request));
     }
 
-    // PATCH /performance-cycles/{id}
+    // 4. Cập nhật chỉ trạng thái (Active/Inactive)
     @PatchMapping("/{id}")
     public ResponseEntity<PerformanceCycles> updateStatus(
             @PathVariable UUID id,

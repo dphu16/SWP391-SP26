@@ -1,4 +1,4 @@
-package com.project.hrm.module.payroll.dto.RequestDTO;
+package com.project.hrm.payroll.compensation.dto.RequestDTO;
 
 import jakarta.validation.constraints.Max;
 import lombok.Getter;

@@ -1,10 +1,10 @@
-package com.project.hrm.module.payroll.service;
+package com.project.hrm.payroll.compensation.service;
 
-import com.project.hrm.module.payroll.enums.PeriodStatus;
-import com.project.hrm.module.payroll.dto.RequestDTO.CreatePeriodRequest;
-import com.project.hrm.module.payroll.dto.ResponseDTO.PeriodResponse;
-import com.project.hrm.module.payroll.entity.PayrollPeriods;
-import com.project.hrm.module.payroll.repository.PayrollPeriodRepository;
+import com.project.hrm.payroll.common.enums.PeriodStatus;
+import com.project.hrm.payroll.compensation.dto.RequestDTO.CreatePeriodRequest;
+import com.project.hrm.payroll.compensation.dto.ResponseDTO.PeriodResponse;
+import com.project.hrm.payroll.compensation.entity.PayrollPeriods;
+import com.project.hrm.payroll.compensation.repository.PayrollPeriodRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

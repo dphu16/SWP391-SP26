@@ -1,10 +1,10 @@
-package com.project.hrm.module.payroll.service;
+package com.project.hrm.payroll.compensation.service;
 
 import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.module.payroll.enums.PayslipStatus;
-import com.project.hrm.module.payroll.entity.PayrollPeriods;
-import com.project.hrm.module.payroll.entity.Payslip;
-import com.project.hrm.module.payroll.entity.SalaryProfile;
+import com.project.hrm.payroll.common.enums.PayslipStatus;
+import com.project.hrm.payroll.compensation.entity.PayrollPeriods;
+import com.project.hrm.payroll.compensation.entity.Payslip;
+import com.project.hrm.payroll.compensation.entity.SalaryProfile;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;

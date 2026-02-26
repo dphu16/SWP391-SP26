@@ -1,6 +1,6 @@
-package com.project.hrm.module.payroll.entity;
+package com.project.hrm.payroll.compensation.entity;
 
-import com.project.hrm.module.payroll.enums.PayslipType;
+import com.project.hrm.payroll.common.enums.PayslipType;
 import jakarta.persistence.*;
 import lombok.*;
 

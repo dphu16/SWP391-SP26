@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 @Service
 public class EmployeeGoalService {
@@ -37,7 +38,7 @@ public class EmployeeGoalService {
         this.kpiLibraryRepository = kpiLibraryRepository;
     }
 
-    // API 9 - Assign KPI to employee
+    // API 9 - Gán hoặc Cập nhật KPI cho nhân viên
     @Transactional
     public EmployeeGoal assign(EmployeeGoalRequest req){
 
@@ -50,28 +51,40 @@ public class EmployeeGoalService {
         KpiLibrary kpi = kpiLibraryRepository.findById(req.getKpiLibraryId())
                 .orElseThrow(() -> new RuntimeException("KPI not found"));
 
-        EmployeeGoal goal = new EmployeeGoal();
-        goal.setEmployee(employee);
-        goal.setCycle(cycle);
-        goal.setKpiLibrary(kpi);
+        // ƯU TIÊN FILE 1: Kiểm tra trùng lặp dựa trên Unique Constraint
+        Optional<EmployeeGoal> existing = repository.findByEmployee_EmployeeIdAndCycle_CycleIdAndKpiLibrary_LibId(
+                employee.getEmployeeId(), cycle.getCycleId(), kpi.getLibId());
+
+        EmployeeGoal goal;
+        if (existing.isPresent()) {
+            goal = existing.get();
+            // Chỉ cho phép cập nhật thông tin nếu mục tiêu chưa bắt đầu thực hiện
+            if (goal.getStatus() != GoalStatus.ASSIGNED) {
+                throw new RuntimeException("Cannot update confirmed or in-progress goal.");
+            }
+        } else {
+            goal = new EmployeeGoal();
+            goal.setEmployee(employee);
+            goal.setCycle(cycle);
+            goal.setKpiLibrary(kpi);
+            goal.setCurrentValue(0.0);
+            goal.setStatus(GoalStatus.ASSIGNED);
+        }
 
         goal.setTitle(req.getTitle());
         goal.setTargetValue(req.getTargetValue());
-        goal.setCurrentValue(0.0);
         goal.setWeight(req.getWeight());
-
         goal.setAssignedBy(req.getAssignedBy());
-        goal.setStatus(GoalStatus.ASSIGNED);
 
         return repository.save(goal);
     }
 
-    // API 10 - Get employee goals
+    // API 10 - Lấy danh sách mục tiêu
     public List<EmployeeGoal> getByEmployee(UUID employeeId){
         return repository.findByEmployee_EmployeeId(employeeId);
     }
 
-    // API 11 - Update status
+    // API 11 - Cập nhật trạng thái (Luồng phê duyệt)
     @Transactional
     public EmployeeGoal updateStatus(UUID id, GoalStatusRequest req){
 
@@ -81,7 +94,20 @@ public class EmployeeGoalService {
         GoalStatus current = goal.getStatus();
         GoalStatus next = req.getStatus();
 
-        // Validate flow
+        // Validate flow - Đảm bảo đi đúng quy trình
+        validateStatusTransition(current, next);
+
+        goal.setStatus(next);
+
+        if (next == GoalStatus.SUBMITTED) {
+            goal.setSubmittedAt(LocalDateTime.now());
+        }
+
+        return repository.save(goal);
+    }
+
+    // Tách logic kiểm tra quy trình ra hàm riêng cho sạch code
+    private void validateStatusTransition(GoalStatus current, GoalStatus next) {
         if (current == GoalStatus.ASSIGNED && next != GoalStatus.CONFIRMED)
             throw new RuntimeException("Must CONFIRM first");
 
@@ -93,13 +119,5 @@ public class EmployeeGoalService {
 
         if (current == GoalStatus.SUBMITTED && next != GoalStatus.APPROVED)
             throw new RuntimeException("Must APPROVE after submission");
-
-        goal.setStatus(next);
-
-        if (next == GoalStatus.SUBMITTED) {
-            goal.setSubmittedAt(LocalDateTime.now());
-        }
-
-        return repository.save(goal);
     }
 }
