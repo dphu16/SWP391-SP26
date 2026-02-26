@@ -59,6 +59,7 @@ const Icons = {
 };
 
 import { useState, useEffect, useMemo } from "react";
+import type { GlobalStats } from "../services/kpiService";
 
 const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) => {
     const [departments, setDepartments] = useState<Department[]>([]);
@@ -69,6 +70,10 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     const [isAddKpiModalOpen, setIsAddKpiModalOpen] = useState(false);
     const [modalTab, setModalTab] = useState<'library' | 'new'>('library');
     const [viewMode, setViewMode] = useState<"global" | "specific" | "cycles">("global");
+    const [globalStats, setGlobalStats] = useState<GlobalStats>({
+        orgAverageScore: 0,
+        totalKpiTargetValue: 0
+    });
 
     // Cycles state
     const [cycles, setCycles] = useState<PerformanceCycle[]>([]);
@@ -115,9 +120,15 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
         fetchInitialData();
     }, []);
 
-    // Fetch cycles when switching to cycles tab
+    // Fetch global stats or cycles when viewMode changes
     useEffect(() => {
-        if (viewMode === 'cycles') {
+        if (viewMode === 'global') {
+            const fetchGlobalStats = async () => {
+                const data = await kpiService.getGlobalStats();
+                setGlobalStats(data);
+            };
+            fetchGlobalStats();
+        } else if (viewMode === 'cycles') {
             const fetchCycles = async () => {
                 setCyclesLoading(true);
                 const data = await kpiService.getPerformanceCycles();
@@ -374,13 +385,13 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
             {viewMode === "global" && (
                 <div className="flex flex-col gap-6 animate-fade-in">
                     {/* Global KPI Metrics */}
-                    <div className="grid grid-cols-4 gap-5">
+                    <div className="grid grid-cols-2 gap-5">
                         <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-5 shadow-sm bento-card">
                             <h3 className="text-xs font-bold text-primary uppercase tracking-widest mb-2">
                                 Org Average Score
                             </h3>
                             <div className="flex items-end gap-2">
-                                <span className="text-4xl font-bold font-heading text-primary">84.5</span>
+                                <span className="text-4xl font-bold font-heading text-primary">{globalStats.orgAverageScore.toFixed(1)}</span>
                                 <span className="text-sm font-bold text-green-500 mb-1">+2.4%</span>
                             </div>
                         </div>
@@ -388,18 +399,8 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                             <h3 className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-2">
                                 Total KPIs Assigned
                             </h3>
-                            <span className="text-3xl font-bold font-heading">1,250</span>
+                            <span className="text-3xl font-bold font-heading">{globalStats.totalKpiTargetValue.toLocaleString()}</span>
                         </div>
-                        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card">
-                            <h3 className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-2">
-                                Employees Evaluated
-                            </h3>
-                            <div className="flex items-end gap-2">
-                                <span className="text-3xl font-bold font-heading">78%</span>
-                                <span className="text-sm font-medium text-text-secondary-light mb-1">(450/575)</span>
-                            </div>
-                        </div>
-
                     </div>
 
                     <div className="grid grid-cols-2 gap-6">

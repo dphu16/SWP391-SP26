@@ -61,7 +61,21 @@ export interface TeamStats {
     averageScore: number | null;
 }
 
+export interface GlobalStats {
+    orgAverageScore: number;
+    totalKpiTargetValue: number;
+}
+
 export const kpiService = {
+    getGlobalStats: async (): Promise<GlobalStats> => {
+        try {
+            const res = await apiClient.get<GlobalStats>("/api/manager/hr/stats");
+            return res.data;
+        } catch {
+            return { orgAverageScore: 0, totalKpiTargetValue: 0 };
+        }
+    },
+
     getTeamStats: async (): Promise<TeamStats> => {
         try {
             const res = await apiClient.get<TeamStats>("/api/manager/team-stats");
