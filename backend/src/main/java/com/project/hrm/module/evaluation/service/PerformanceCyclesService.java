@@ -22,7 +22,7 @@ public class PerformanceCyclesService {
     }
 
     @Transactional
-    public PerformanceCycles create(PerformanceCyclesRequest req){
+    public PerformanceCycles create(PerformanceCyclesRequest req) {
 
         PerformanceCycles cycle = new PerformanceCycles();
         cycle.setCycleName(req.getCycleName());
@@ -34,12 +34,12 @@ public class PerformanceCyclesService {
         return repository.save(cycle);
     }
 
-    public List<PerformanceCycles> getAll(){
+    public List<PerformanceCycles> getAll() {
         return repository.findAll();
     }
 
     @Transactional
-    public PerformanceCycles updateStatus(UUID id, CycleStatusRequest req){
+    public PerformanceCycles updateStatus(UUID id, CycleStatusRequest req) {
         PerformanceCycles cycle = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cycle not found"));
 
@@ -48,8 +48,9 @@ public class PerformanceCyclesService {
 
         if (current == CycleStatus.DRAFT && next != CycleStatus.ACTIVE)
 
-        if (current == CycleStatus.ACTIVE && next != CycleStatus.CLOSED)
+            if (current == CycleStatus.ACTIVE && next != CycleStatus.CLOSED)
 
-        cycle.setStatus(next);
+                cycle.setStatus(next);
         return repository.save(cycle);
     }
+}
