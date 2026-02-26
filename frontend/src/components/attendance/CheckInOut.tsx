@@ -14,10 +14,10 @@ type AttendanceStatus = "MISSING_PUNCH" | "LATE" | "EARLY_LEAVE" | "VALID" | nul
 
 // Map backend status → display config
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-    VALID: { label: "ĐÚNG GIỜ", color: "#15803d", bg: "#dcfce7", icon: "✓" },
-    LATE: { label: "ĐI MUỘN", color: "#dc2626", bg: "#fef2f2", icon: "⚠" },
-    EARLY_LEAVE: { label: "VỀ SỚM", color: "#b45309", bg: "#fef3c7", icon: "⚠" },
-    MISSING_PUNCH: { label: "CHỜ CHECK-OUT", color: "#0369a1", bg: "#e0f2fe", icon: "⏳" },
+    VALID: { label: "ON TIME", color: "#15803d", bg: "#dcfce7", icon: "✓" },
+    LATE: { label: "LATE", color: "#dc2626", bg: "#fef2f2", icon: "⚠" },
+    EARLY_LEAVE: { label: "EARLY LEAVE", color: "#b45309", bg: "#fef3c7", icon: "⚠" },
+    MISSING_PUNCH: { label: "AWAITING CHECK-OUT", color: "#0369a1", bg: "#e0f2fe", icon: "⏳" },
 };
 
 const CheckInOut: React.FC = () => {
@@ -140,14 +140,15 @@ const CheckInOut: React.FC = () => {
     }, [currentUser?.employeeId]);
 
     const formatTime = (date: Date) =>
-        date.toLocaleTimeString("vi-VN", {
+        date.toLocaleTimeString("en-US", {
             hour: "2-digit",
             minute: "2-digit",
             second: "2-digit",
+            hour12: false,
         });
 
     const formatDate = (date: Date) =>
-        date.toLocaleDateString("vi-VN", {
+        date.toLocaleDateString("en-US", {
             weekday: "long",
             year: "numeric",
             month: "long",
@@ -156,7 +157,7 @@ const CheckInOut: React.FC = () => {
 
     const handleCheckIn = async () => {
         if (!currentUser?.employeeId) {
-            setError("Không tìm thấy Employee ID. Vui lòng liên hệ quản trị viên.");
+            setError("Employee ID not found. Please contact your administrator.");
             return;
         }
         setLoading(true);
@@ -167,7 +168,7 @@ const CheckInOut: React.FC = () => {
         } catch (err: unknown) {
             const msg =
                 (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-                (err instanceof Error ? err.message : "Không thể Check-in. Vui lòng thử lại.");
+                (err instanceof Error ? err.message : "Unable to Check-in. Please try again.");
             setError(msg);
         } finally {
             setLoading(false);
@@ -176,7 +177,7 @@ const CheckInOut: React.FC = () => {
 
     const handleCheckOut = async () => {
         if (!currentUser?.employeeId) {
-            setError("Không tìm thấy Employee ID. Vui lòng liên hệ quản trị viên.");
+            setError("Employee ID not found. Please contact your administrator.");
             return;
         }
         setLoading(true);
@@ -187,7 +188,7 @@ const CheckInOut: React.FC = () => {
         } catch (err: unknown) {
             const msg =
                 (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-                (err instanceof Error ? err.message : "Không thể Check-out. Vui lòng thử lại.");
+                (err instanceof Error ? err.message : "Unable to Check-out. Please try again.");
             setError(msg);
         } finally {
             setLoading(false);
@@ -220,10 +221,10 @@ const CheckInOut: React.FC = () => {
 
         // FE-side: always compare check-in time vs shift start + 5 min grace
         if (isCheckInLate()) {
-            return { label: "ĐI MUỘN", color: "#dc2626", bg: "#fef2f2" };
+            return { label: "LATE", color: "#dc2626", bg: "#fef2f2" };
         }
 
-        return { label: "ĐÚNG GIỜ", color: "#15803d", bg: "#dcfce7" };
+        return { label: "ON TIME", color: "#15803d", bg: "#dcfce7" };
     };
 
     const getCheckOutBadge = () => {
@@ -231,10 +232,10 @@ const CheckInOut: React.FC = () => {
 
         // FE-side: always compare check-out time vs shift end
         if (isCheckOutEarly()) {
-            return { label: "VỀ SỚM", color: "#b45309", bg: "#fef3c7" };
+            return { label: "EARLY LEAVE", color: "#b45309", bg: "#fef3c7" };
         }
 
-        return { label: "ĐÚNG GIỜ", color: "#15803d", bg: "#dcfce7" };
+        return { label: "ON TIME", color: "#15803d", bg: "#dcfce7" };
     };
 
     // Overall status badge for the summary
@@ -249,7 +250,6 @@ const CheckInOut: React.FC = () => {
             <div className="flex flex-col pb-10 max-w-5xl mx-auto w-full">
                 <div className="mb-6">
                     <h1 className="text-[28px] font-bold text-[#1a1c21] tracking-tight">Time & Attendance</h1>
-                    <p className="text-[#64748b] text-[15px] mt-1">Ghi nhận giờ vào, giờ ra của bạn trong ngày.</p>
                 </div>
                 <div className="bg-white rounded-2xl border border-[#e2e8f0] p-12 shadow-sm text-center">
                     <div className="w-16 h-16 rounded-full bg-[#fef3c7] flex items-center justify-center mx-auto mb-4">
@@ -257,8 +257,8 @@ const CheckInOut: React.FC = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                         </svg>
                     </div>
-                    <h3 className="text-lg font-bold text-[#0f172a] mb-2">Chưa liên kết hồ sơ nhân viên</h3>
-                    <p className="text-[#64748b] text-sm">Tài khoản của bạn chưa được gán Employee ID. Vui lòng liên hệ quản trị viên.</p>
+                    <h3 className="text-lg font-bold text-[#0f172a] mb-2">Employee Profile Not Linked</h3>
+                    <p className="text-[#64748b] text-sm">Your account has not been assigned an Employee ID. Please contact your administrator.</p>
                 </div>
             </div>
         );
@@ -273,7 +273,6 @@ const CheckInOut: React.FC = () => {
             {/* Header */}
             <div className="mb-6">
                 <h1 className="text-[28px] font-bold text-[#1a1c21] tracking-tight">Time & Attendance</h1>
-                <p className="text-[#64748b] text-[15px] mt-1">Ghi nhận giờ vào, giờ ra của bạn trong ngày.</p>
             </div>
 
             {/* Error banner */}
@@ -301,7 +300,7 @@ const CheckInOut: React.FC = () => {
                     {initializing ? (
                         <div className="relative z-10 flex flex-col items-center gap-4 py-12">
                             <div className="w-12 h-12 border-4 border-[#e2e8f0] border-t-[#0d9488] rounded-full animate-spin"></div>
-                            <p className="text-[#64748b] font-medium">Đang tải dữ liệu chấm công...</p>
+                            <p className="text-[#64748b] font-medium">Loading attendance data...</p>
                         </div>
                     ) : (
                         <>
@@ -339,14 +338,14 @@ const CheckInOut: React.FC = () => {
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                                                     </svg>
                                                 )}
-                                                {loading ? "ĐANG XỬ LÝ..." : "CHECK-IN NOW"}
+                                                {loading ? "PROCESSING..." : "CHECK-IN NOW"}
                                             </div>
                                         </button>
                                         {/* Show shift time hint */}
                                         {todaySchedule && (
                                             <p className="text-center text-[#64748b] text-sm">
-                                                Ca làm bắt đầu lúc <span className="font-bold text-[#0d9488]">{todaySchedule.shift.startTime.substring(0, 5)}</span>
-                                                <span className="text-[#94a3b8]"> (du di 5 phút)</span>
+                                                Shift starts at <span className="font-bold text-[#0d9488]">{todaySchedule.shift.startTime.substring(0, 5)}</span>
+                                                <span className="text-[#94a3b8]"> (5-min grace period)</span>
                                             </p>
                                         )}
                                     </>
@@ -368,14 +367,14 @@ const CheckInOut: React.FC = () => {
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                                     </svg>
                                                 )}
-                                                {loading ? "ĐANG XỬ LÝ..." : "CHECK-OUT"}
+                                                {loading ? "PROCESSING..." : "CHECK-OUT"}
                                             </div>
                                         </button>
                                         {/* Show shift end time hint */}
                                         {todaySchedule && (
                                             <p className="text-center text-[#64748b] text-sm">
-                                                Ca kết thúc lúc <span className="font-bold text-[#f59e0b]">{todaySchedule.shift.endTime.substring(0, 5)}</span>
-                                                <span className="text-[#94a3b8]"> — check-out trước sẽ tính về sớm</span>
+                                                Shift ends at <span className="font-bold text-[#f59e0b]">{todaySchedule.shift.endTime.substring(0, 5)}</span>
+                                                <span className="text-[#94a3b8]"> — early check-out counts as early leave</span>
                                             </p>
                                         )}
                                     </>
@@ -386,7 +385,7 @@ const CheckInOut: React.FC = () => {
                                         <svg className="w-7 h-7 text-[#94a3b8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                                         </svg>
-                                        HOÀN THÀNH CA LÀM
+                                        SHIFT COMPLETED
                                     </div>
                                 )}
                             </div>
@@ -398,7 +397,7 @@ const CheckInOut: React.FC = () => {
                 <div className="bg-white rounded-2xl border border-[#e2e8f0] p-6 shadow-sm flex flex-col space-y-6">
                     {/* Shift info */}
                     <div>
-                        <h3 className="text-base font-bold text-[#0f172a] mb-5">Ca Làm Việc Hôm Nay</h3>
+                        <h3 className="text-base font-bold text-[#0f172a] mb-5">Today's Shift</h3>
                         {todaySchedule ? (
                             <div className="p-4 rounded-xl bg-[#ccfbf1] border border-[#99f6e4]">
                                 <div className="flex justify-between items-start mb-3">
@@ -409,15 +408,12 @@ const CheckInOut: React.FC = () => {
                                         {todaySchedule.shift.startTime.substring(0, 5)} - {todaySchedule.shift.endTime.substring(0, 5)}
                                     </span>
                                 </div>
-                                <div className="space-y-1 text-xs text-[#0f766e]">
-                                    <p>Vào ca: <span className="font-bold">{todaySchedule.shift.startTime.substring(0, 5)}</span> <span className="opacity-60">(trễ sau +5p)</span></p>
-                                    <p>Hết ca: <span className="font-bold">{todaySchedule.shift.endTime.substring(0, 5)}</span> <span className="opacity-60">(ra trước = về sớm)</span></p>
-                                </div>
+
                             </div>
                         ) : (
                             <div className="p-4 rounded-xl bg-[#f8fafc] border border-[#e2e8f0]">
                                 <p className="text-sm text-[#94a3b8] text-center">
-                                    {initializing ? "Đang tải..." : "Không có ca làm việc hôm nay"}
+                                    {initializing ? "Loading..." : "No shift scheduled for today"}
                                 </p>
                             </div>
                         )}
@@ -427,12 +423,12 @@ const CheckInOut: React.FC = () => {
 
                     {/* Status details */}
                     <div>
-                        <h3 className="text-base font-bold text-[#0f172a] mb-4">Trạng Thái</h3>
+                        <h3 className="text-base font-bold text-[#0f172a] mb-4">Status</h3>
                         <div className="space-y-4">
                             {/* Check In Stat */}
                             <div className="flex items-center gap-4">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${checkInBadge
-                                    ? checkInBadge.label === "ĐI MUỘN"
+                                    ? checkInBadge.label === "LATE"
                                         ? "bg-[#fef2f2] text-[#dc2626]"
                                         : "bg-[#dcfce7] text-[#15803d]"
                                     : "bg-[#f1f5f9] text-[#94a3b8]"
@@ -442,16 +438,12 @@ const CheckInOut: React.FC = () => {
                                     </svg>
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-sm text-[#64748b] font-medium">Giờ vào</p>
+                                    <p className="text-sm text-[#64748b] font-medium">Check-in</p>
                                     <div className="flex items-baseline gap-2">
                                         <p className={`text-lg font-bold ${checkInTime ? 'text-[#0f172a]' : 'text-[#cbd5e1]'}`}>
                                             {displayTime(checkInTime)}
                                         </p>
-                                        {checkInTime && todaySchedule && (
-                                            <span className="text-xs text-[#94a3b8]">
-                                                / ca {todaySchedule.shift.startTime.substring(0, 5)}
-                                            </span>
-                                        )}
+
                                     </div>
                                 </div>
                                 {checkInBadge && (
@@ -467,7 +459,7 @@ const CheckInOut: React.FC = () => {
                             {/* Check Out Stat */}
                             <div className="flex items-center gap-4">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${checkOutBadge
-                                    ? checkOutBadge.label === "VỀ SỚM"
+                                    ? checkOutBadge.label === "EARLY LEAVE"
                                         ? "bg-[#fef3c7] text-[#b45309]"
                                         : "bg-[#dcfce7] text-[#15803d]"
                                     : "bg-[#f1f5f9] text-[#94a3b8]"
@@ -477,16 +469,12 @@ const CheckInOut: React.FC = () => {
                                     </svg>
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-sm text-[#64748b] font-medium">Giờ ra</p>
+                                    <p className="text-sm text-[#64748b] font-medium">Check-out</p>
                                     <div className="flex items-baseline gap-2">
                                         <p className={`text-lg font-bold ${checkOutTime ? 'text-[#0f172a]' : 'text-[#cbd5e1]'}`}>
                                             {displayTime(checkOutTime)}
                                         </p>
-                                        {checkOutTime && todaySchedule && (
-                                            <span className="text-xs text-[#94a3b8]">
-                                                / ca {todaySchedule.shift.endTime.substring(0, 5)}
-                                            </span>
-                                        )}
+
                                     </div>
                                 </div>
                                 {checkOutBadge && (
@@ -507,7 +495,7 @@ const CheckInOut: React.FC = () => {
                                     </svg>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-[#64748b] font-medium">Tổng giờ làm</p>
+                                    <p className="text-sm text-[#64748b] font-medium">Total Hours</p>
                                     <p className="text-lg font-bold text-[#0f172a]">
                                         {displayWorkHours}
                                     </p>
@@ -518,7 +506,7 @@ const CheckInOut: React.FC = () => {
                 </div>
             </div>
 
-            {/* Tailwind Keyframes cho animation shimmer */}
+            {/* Tailwind Keyframes for shimmer animation */}
             <style>
                 {`
         @keyframes shimmer {
