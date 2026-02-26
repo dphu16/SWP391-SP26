@@ -7,7 +7,7 @@ public class EmployeeMapper {
         return new EmployeeDTO(
                 employee.getAvatarUrl(),
                 employee.getFullName(),
-                employee.getPhone(),
+                employee.getPersonal().getPhone(),
                 employee.getPosition().getTitle(),
                 employee.getUser().getRole(),
                 employee.getDepartment().getDeptName(),
