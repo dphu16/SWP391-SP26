@@ -2,6 +2,7 @@ package com.project.hrm.module.attendance.service;
 
 import com.project.hrm.module.attendance.dto.AttendanceRequest;
 import com.project.hrm.module.attendance.entity.AttendanceLog;
+import com.project.hrm.module.attendance.entity.Shift;
 import com.project.hrm.module.attendance.entity.WorkSchedule;
 import com.project.hrm.module.attendance.repository.AttendanceLogRepository;
 import com.project.hrm.module.attendance.repository.WorkScheduleRepository;
@@ -38,6 +39,9 @@ public class AttendanceLogService {
                 throw new RuntimeException("Lỗi: Bạn đã Check-in ngày hôm nay rồi!");
             }
 
+            // [FIX 3]: TỐI ƯU TRUY VẤN - Chọc DB 1 phát lấy đúng lịch hôm nay, không lôi mớ data rác lên RAM
+            WorkSchedule todaySchedule = workScheduleRepo.findByEmployeeIdAndDate(request.getEmployeeId(), today);
+
             AttendanceLog newLog = new AttendanceLog();
             newLog.setEmployeeId(request.getEmployeeId());
             newLog.setDate(today);
@@ -45,16 +49,7 @@ public class AttendanceLogService {
             newLog.setStatus("MISSING_PUNCH"); // Trạng thái chờ Check-out
             newLog.setWorkingHours(BigDecimal.ZERO);
             newLog.setOtHours(BigDecimal.ZERO);
-
-            // Tự động tìm Lịch làm việc hôm nay để link vào (Nếu có)
-            List<WorkSchedule> schedules = workScheduleRepo.findByEmployeeId(request.getEmployeeId());
-            // Lọc ra lịch trùng ngày hôm nay
-            WorkSchedule todaySchedule = schedules.stream()
-                    .filter(s -> s.getDate().equals(today))
-                    .findFirst()
-                    .orElse(null);
-
-            newLog.setWorkSchedule(todaySchedule); // Gán quan hệ
+            newLog.setWorkSchedule(todaySchedule); // Gán quan hệ ca làm
 
             return logRepo.save(newLog);
 
@@ -63,10 +58,9 @@ public class AttendanceLogService {
             AttendanceLog log = existingLog.orElseThrow(() -> new RuntimeException("Lỗi: Chưa Check-in nên không thể Check-out!"));
 
             log.setCheckOut(now);
-            log.setStatus("VALID"); // Tạm định nghĩa là hợp lệ
 
-            // Tính toán giờ làm việc (BigDecimal)
-            calculateWorkingHours(log);
+            // [FIX 1 & 2]: Gọi hàm xịn để đánh giá Trạng thái và Trừ giờ nghỉ trưa
+            evaluateAttendance(log);
 
             return logRepo.save(log);
         }
@@ -80,10 +74,13 @@ public class AttendanceLogService {
 
         if (req.getCheckInTime() != null) log.setCheckIn(req.getCheckInTime());
         if (req.getCheckOutTime() != null) log.setCheckOut(req.getCheckOutTime());
-        if (req.getStatus() != null) log.setStatus(req.getStatus());
 
-        // Tính lại giờ nếu có đủ thông tin
-        calculateWorkingHours(log);
+        // Nếu Manager chủ động set status thì dùng, không thì tự động tính lại
+        if (req.getStatus() != null) {
+            log.setStatus(req.getStatus());
+        } else {
+            evaluateAttendance(log);
+        }
 
         return logRepo.save(log);
     }
@@ -97,18 +94,50 @@ public class AttendanceLogService {
         return logRepo.findAllByOrderByDateDesc();
     }
 
-    // --- HÀM PHỤ: TÍNH GIỜ LÀM ---
-    private void calculateWorkingHours(AttendanceLog log) {
-        if (log.getCheckIn() != null && log.getCheckOut() != null) {
+    // --- HÀM NGHIỆP VỤ: ĐÁNH GIÁ TRẠNG THÁI & TÍNH GIỜ LÀM ---
+    private void evaluateAttendance(AttendanceLog log) {
+        if (log.getCheckIn() == null || log.getCheckOut() == null) return;
+
+        // Nếu hôm nay làm "chui" (không có ca được xếp sẵn) -> Tính công bình thường, không trừ trưa
+        if (log.getWorkSchedule() == null || log.getWorkSchedule().getShift() == null) {
             long minutes = Duration.between(log.getCheckIn(), log.getCheckOut()).toMinutes();
-
-            // Công thức: phút / 60 = giờ (Lấy 2 số thập phân)
-            BigDecimal hours = BigDecimal.valueOf(minutes)
-                    .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
-
-            log.setWorkingHours(hours);
-            // Tạm thời OT = 0 (Logic tính OT phức tạp hơn, để sau)
-            log.setOtHours(BigDecimal.ZERO);
+            log.setWorkingHours(BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP));
+            log.setStatus("VALID");
+            return;
         }
+
+        Shift shift = log.getWorkSchedule().getShift();
+        LocalTime checkIn = log.getCheckIn();
+        LocalTime checkOut = log.getCheckOut();
+
+        // [FIX 1]: Phán xét Đi muộn / Về sớm (Có cho phép du di 5 phút tắc đường)
+        if (checkIn.isAfter(shift.getStartTime().plusMinutes(5))) {
+            log.setStatus("LATE");
+        } else if (checkOut.isBefore(shift.getEndTime())) {
+            log.setStatus("EARLY_LEAVE");
+        } else {
+            log.setStatus("VALID");
+        }
+
+        // [FIX 2]: Tính giờ làm và TRỪ GIỜ NGHỈ TRƯA (Cứu công ty khỏi lỗ tiền)
+        long totalMinutes = Duration.between(checkIn, checkOut).toMinutes();
+
+        if (shift.getBreakStart() != null && shift.getBreakEnd() != null) {
+            // Chỉ trừ giờ trưa nếu Check-in trước giờ ăn VÀ Check-out sau giờ ăn
+            if (checkIn.isBefore(shift.getBreakStart()) && checkOut.isAfter(shift.getBreakEnd())) {
+                long breakMinutes = Duration.between(shift.getBreakStart(), shift.getBreakEnd()).toMinutes();
+                totalMinutes -= breakMinutes;
+            }
+        }
+
+        // Chống số âm nếu lỡ tay sửa bậy
+        if (totalMinutes < 0) totalMinutes = 0;
+
+        // Chuyển phút thành giờ (Ví dụ: 480 phút -> 8.00 giờ)
+        BigDecimal hours = BigDecimal.valueOf(totalMinutes)
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+
+        log.setWorkingHours(hours);
+        log.setOtHours(BigDecimal.ZERO); // Mặc định OT = 0, team lương tự tính sau
     }
 }
