@@ -46,8 +46,6 @@ public class WorkScheduleService {
 
         if (search != null && !search.trim().isEmpty()) {
             employeePage = employeeRepository.searchEmployeesByKeyword(search.trim(), pageable);
-            employeePage = employeeRepository.findByFullNameContainingIgnoreCase(search.trim(), pageable);
-            employeePage = employeeRepository.searchEmployeesByKeyword(search.trim(), pageable);
         } else {
             employeePage = employeeRepository.findAllWithDetails(pageable);
         }
@@ -56,11 +54,6 @@ public class WorkScheduleService {
             AttendanceEmployeeResponse dto = new AttendanceEmployeeResponse();
             dto.setId(emp.getEmployeeId());
 
-            // Lấy tên từ thực thể Personal (Khớp với DB đồng nghiệp)
-            if (emp.getPersonal() != null && emp.getPersonal() != null) {
-                dto.setFullName(emp.getFullName());
-            if (emp.getPersonal() != null && emp.getFullName() != null) {
-                dto.setFullName(emp.getFullName());
             if (emp.getPersonal() != null && emp.getFullName() != null) {
                 dto.setFullName(emp.getFullName());
             } else {
@@ -83,9 +76,6 @@ public class WorkScheduleService {
         });
     }
 
-    // ===================================================================
-    // 2. TẠO LỊCH MỚI
-    // ===================================================================
     public WorkScheduleResponse createSchedule(WorkScheduleRequest request) {
         WorkSchedule entity = new WorkSchedule();
         entity.setDate(request.getDate());
@@ -127,10 +117,7 @@ public class WorkScheduleService {
 
     @Transactional
     public List<WorkScheduleResponse> createBulkSchedules(UUID employeeId, LocalDate startDate, LocalDate endDate,
-            UUID shiftId) {
-    public List<WorkScheduleResponse> createBulkSchedules(UUID employeeId, LocalDate startDate, LocalDate endDate, UUID shiftId) {
-    public List<WorkScheduleResponse> createBulkSchedules(UUID employeeId, LocalDate startDate, LocalDate endDate,
-            UUID shiftId) {
+                                                          UUID shiftId) {
         Shift shift = shiftRepository.findById(shiftId)
                 .orElseThrow(() -> new RuntimeException("Ca làm việc không tồn tại!"));
 
@@ -204,16 +191,10 @@ public class WorkScheduleService {
         List<WorkSchedule> newSchedules = new ArrayList<>();
         for (int day = 1; day <= targetDate.lengthOfMonth(); day++) {
             LocalDate currentDate = targetDate.withDayOfMonth(day);
-            if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY || existingDates.contains(currentDate)) continue;
-            if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY || existingDates.contains(currentDate))
-                continue;
             if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY || existingDates.contains(currentDate))
                 continue;
 
             Shift shift = shiftByDayOfWeek.get(currentDate.getDayOfWeek());
-            if (shift == null) shift = sourceSchedules.get(0).getShift();
-            if (shift == null)
-                shift = sourceSchedules.get(0).getShift();
             if (shift == null)
                 shift = sourceSchedules.get(0).getShift();
 

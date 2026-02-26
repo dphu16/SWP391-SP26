@@ -1,45 +1,47 @@
-package com.project.hrm.payroll.compensation.entity;
+package com.project.hrm.module.payroll.entity;
+
+
 
 import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.payroll.common.enums.InquiryStatus;
+import com.project.hrm.module.payroll.enums.InquiryStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import jakarta.persistence.Id;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "salary_inquiries")
+@Table(name = "salary_inquiries", schema = "public")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class SalaryInquiry {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "payslip_id")
     private Payslip payslip;
 
     private String subject;
 
-    @Column(columnDefinition = "TEXT")
     private String message;
 
     @Enumerated(EnumType.STRING)
     private InquiryStatus status;
 
-    @Column(name = "hr_response", columnDefinition = "TEXT")
+    @Column(name = "hr_response")
     private String hrResponse;
 
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
 }

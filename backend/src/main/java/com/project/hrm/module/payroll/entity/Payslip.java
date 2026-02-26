@@ -1,30 +1,26 @@
 package com.project.hrm.module.payroll.entity;
 
-<<<<<<< HEAD:backend/src/main/java/com/project/hrm/module/payroll/compensation/entity/Payslip.java
-import com.project.hrm.module.payroll.common.enums.PayslipStatus;
+
+
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.payroll.enums.PayslipStatus;
-import com.project.hrm.payroll.common.enums.PayslipStatus;
-=======
-import com.project.hrm.module.payroll.enums.PayslipStatus;
->>>>>>> df05727451ef27a28699bbdee957247d77b96b1d:backend/src/main/java/com/project/hrm/module/payroll/entity/Payslip.java
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "payslips")
+@Table(name = "payslips", schema = "public")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Payslip {
+
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "payslip_id")
     private UUID payslipId;
 
@@ -32,22 +28,23 @@ public class Payslip {
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    @Column(name = "period_id")
-    private UUID periodId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "period_id", nullable = false)
+    private PayrollPeriod payrollPeriod;
 
-    @Column(name = "base_salary")
+    @Column(name = "base_salary", precision = 15, scale = 2)
     private BigDecimal baseSalary;
 
-    @Column(name = "total_allowances")
+    @Column(name = "total_allowances", precision = 15, scale = 2)
     private BigDecimal totalAllowances;
 
     @Column(name = "gross_salary", precision = 15, scale = 2)
     private BigDecimal grossSalary;
 
-    @Column(name = "tax_amount")
+    @Column(name = "tax_amount", precision = 15, scale = 2)
     private BigDecimal taxAmount;
 
-    @Column(name = "insurance_amount")
+    @Column(name = "insurance_amount", precision = 15, scale = 2)
     private BigDecimal insuranceAmount;
 
     @Column(name = "total_deductions", precision = 15, scale = 2)
@@ -57,17 +54,19 @@ public class Payslip {
     private BigDecimal netSalary;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @Column(columnDefinition = "payslip_status")
     private PayslipStatus status;
 
     @Column(name = "created_at")
-    private OffsetDateTime createdAt;
-    @Column(name = "updated_at")
-    private OffsetDateTime updatedAt;
+    private LocalDateTime createdAt;
 
-    @Column(name = "Confirmed_at")
-    private OffsetDateTime confirmedAt;
+    @Column(name = "confirmed_at")
+    private LocalDateTime confirmedAt;
 
     @Column(name = "paid_at")
-    private OffsetDateTime paidAt;
+    private LocalDateTime paidAt;
+
+    // Quan hệ 1-N với PayslipDetail
+    @OneToMany(mappedBy = "payslip", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PayslipDetail> details;
 }

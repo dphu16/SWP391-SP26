@@ -1,7 +1,10 @@
 package com.project.hrm.module.attendance.repository;
 
+import com.project.hrm.module.attendance.dto.AttendanceAggregationDTO;
 import com.project.hrm.module.attendance.entity.AttendanceLog;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
@@ -61,5 +64,20 @@ public interface AttendanceLogRepository extends JpaRepository<AttendanceLog, UU
             @Param("employeeId") UUID employeeId,
             @Param("start") LocalDate start,
             @Param("end") LocalDate end
+    );
+
+    // Query tổng hợp dữ liệu chấm công cho TOÀN BỘ nhân viên trong 1 khoảng thời gian
+    @Query("SELECT AttendanceAggregationDTO(" +
+            "  a.employeeId, " +
+            "  SUM(COALESCE(a.workingHours, 0)), " +
+            "  SUM(COALESCE(a.otHours, 0)), " +
+            "  COUNT(CASE WHEN a.status = 'ABSENT' THEN 1 ELSE NULL END) " +
+            ") " +
+            "FROM AttendanceLog a " +
+            "WHERE a.date BETWEEN :startDate AND :endDate " +
+            "GROUP BY a.employeeId")
+    List<AttendanceAggregationDTO> aggregateAttendanceByPeriod(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
     );
 }

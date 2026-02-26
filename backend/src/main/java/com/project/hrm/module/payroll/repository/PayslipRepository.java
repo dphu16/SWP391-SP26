@@ -1,69 +1,39 @@
 package com.project.hrm.module.payroll.repository;
 
-<<<<<<< HEAD:backend/src/main/java/com/project/hrm/module/payroll/compensation/repository/PayslipRepository.java
-import com.project.hrm.module.payroll.compensation.entity.Payslip;
-import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.payroll.compensation.dto.ResponseDTO.PayslipDetailResponse;
-import com.project.hrm.payroll.compensation.entity.Payslip;
-=======
+
+
 import com.project.hrm.module.payroll.entity.Payslip;
->>>>>>> df05727451ef27a28699bbdee957247d77b96b1d:backend/src/main/java/com/project/hrm/module/payroll/repository/PayslipRepository.java
-import com.project.hrm.module.payroll.entity.Payslip;
+import com.project.hrm.module.payroll.enums.PayslipStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 
+@Repository
 public interface PayslipRepository extends JpaRepository<Payslip, UUID> {
-    List<Payslip> findByEmployeeId(UUID employeeId);
 
-    List<Payslip> findByPeriodId(UUID periodId);
+    // 1. Lấy danh sách phiếu lương của nhân viên (Chỉ lấy trạng thái cho phép)
+    Page<Payslip> findByEmployee_EmployeeIdAndStatusIn(
+            UUID employeeId,
+            Collection<PayslipStatus> statuses,
+            Pageable pageable
+    );
 
-    Boolean existsByEmployeeIdAndPeriodId(UUID employeeId, UUID periodId);
-
-    //tim payslip
-    Optional<Payslip> findByPayslipIdAndEmployeeId(UUID payslipId, UUID employeeId);
-
-    //bao cao luong
-    @Query("""
-    SELECT 
-        COUNT(p),
-        SUM(CASE WHEN p.status = 'PAID' THEN 1 ELSE 0 END),
-        SUM(CASE WHEN p.status = 'CONFIRMED' THEN 1 ELSE 0 END),
-        SUM(p.grossSalary),
-        SUM(p.totalDeductions),
-        SUM(p.netSalary)
-    FROM Payslip p
-    WHERE p.periodId = :periodId
-      AND p.status IN ('CONFIRMED', 'PAID')
-""")
-    Object[] getPayrollSummary(UUID periodId);
-
-    // tong hop luong theo nam
-    @Query("""
-    SELECT 
-        SUM(p.grossSalary),
-        SUM(p.totalDeductions),
-        SUM(p.netSalary)
-    FROM Payslip p
-    JOIN PayrollPeriods pp ON p.payslipId = pp.periodId
-    WHERE p.status IN ('CONFIRMED', 'PAID')
-      AND YEAR(pp.startDate) = :year
-""")
-    Object[] getYearlySummary(int year);
-
-    //tong hop luong theo thang
-    @Query("""
-    SELECT 
-        SUM(p.grossSalary),
-        SUM(p.totalDeductions),
-        SUM(p.netSalary)
-    FROM Payslip p
-    JOIN PayrollPeriods pp ON p.payslipId = pp.periodId
-    WHERE p.status IN ('CONFIRMED', 'PAID')
-      AND YEAR(pp.startDate) = :year
-      AND MONTH(pp.startDate) = :month
-""")
-    Object[] getMonthlySummary(int year, int month);
+    // 2. Lấy chi tiết 1 phiếu lương
+    // Dùng JOIN FETCH để lấy luôn thông tin Period và Details trong 1 câu Query
+    @Query("SELECT p FROM Payslip p " +
+            "JOIN FETCH p.payrollPeriod " +
+            "LEFT JOIN FETCH p.details " +
+            "WHERE p.payslipId = :payslipId " +
+            "AND p.employee.employeeId = :employeeId")
+    Optional<Payslip> findByIdAndEmployeeId(
+            @Param("payslipId") UUID payslipId,
+            @Param("employeeId") UUID employeeId
+    );
 }
