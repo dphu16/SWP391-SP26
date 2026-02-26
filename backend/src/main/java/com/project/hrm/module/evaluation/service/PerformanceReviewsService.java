@@ -1,11 +1,11 @@
-package com.project.hrm.evaluation.service;
+package com.project.hrm.module.evaluation.service;
 
-import com.project.hrm.evaluation.dto.*;
-import com.project.hrm.evaluation.entity.PerformanceCycles;
-import com.project.hrm.evaluation.entity.PerformanceReviews;
-import com.project.hrm.evaluation.enums.ReviewStatus;
-import com.project.hrm.evaluation.repository.PerformanceCyclesRepository;
-import com.project.hrm.evaluation.repository.PerformanceReviewsRepository;
+import com.project.hrm.module.evaluation.dto.*;
+import com.project.hrm.module.evaluation.entity.PerformanceCycles;
+import com.project.hrm.module.evaluation.entity.PerformanceReviews;
+import com.project.hrm.module.evaluation.enums.ReviewStatus;
+import com.project.hrm.module.evaluation.repository.PerformanceCyclesRepository;
+import com.project.hrm.module.evaluation.repository.PerformanceReviewsRepository;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import org.springframework.stereotype.Service;
