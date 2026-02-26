@@ -1,43 +1,6 @@
 import { useState, useEffect } from "react";
 import { kpiService } from "../services/kpiService";
 
-const TEAM_MEMBERS = [
- {
- id: 1,
- name: "Alex Rivera",
- status: "CURRENT SELECTION",
- avatar: "https://i.pravatar.cc/150?u=alex",
- score: null,
- statusType: "current",
- },
- {
- id: 2,
- name: "Jordan Smith",
- status: "COMPLETED",
- avatar: "https://i.pravatar.cc/150?u=jordan",
- score: 92,
- statusType: "completed",
- },
- {
- id: 3,
- name: "Sarah Chen",
- status: "EVIDENCE READY",
- avatar: "https://i.pravatar.cc/150?u=sarah",
- score: null,
- statusType: "ready",
- },
- {
- id: 4,
- name: "Marcus Wong",
- status: "NO SUBMISSION",
- avatar: "https://i.pravatar.cc/150?u=marcus",
- score: null,
- statusType: "none",
- },
-];
-
-
-
 const Icons = {
  checkCircle: (
  <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-primary">

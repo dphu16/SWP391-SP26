@@ -27,4 +27,5 @@ public class OffboardingQueryService {
                 .map(InactiveEmployeeMapper::toDTO)
                 .toList();
     }
+
 }

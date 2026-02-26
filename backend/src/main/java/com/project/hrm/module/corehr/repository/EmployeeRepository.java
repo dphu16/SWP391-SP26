@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
+public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSpecificationExecutor<Employee> {
 
     Optional<Employee> findByUser(User user);
 
@@ -28,7 +29,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
     @Override
     Optional<Employee> findById(UUID uuid);
 
-    @EntityGraph(attributePaths = { "user", "pcdosition", "department" })
+    @EntityGraph(attributePaths = { "user", "position", "department" })
     @Query(value = "SELECT e FROM Employee e ORDER BY e.fullName ASC", countQuery = "SELECT COUNT(e) FROM Employee e")
     Page<Employee> findAllWithDetails(Pageable pageable);
 
@@ -44,9 +45,12 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
             "OR LOWER(p.email) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.phone) LIKE LOWER(CONCAT('%', :search, '%'))")
     Page<Employee> searchEmployeesByKeyword(@Param("search") String keyword, Pageable pageable);
+<<<<<<< HEAD
 
     @Query("SELECT e FROM Employee e WHERE e.user.status = com.project.hrm.module.corehr.enums.UserStatus.ACTIVE")
     List<Employee> findAllActive();
 
     public List<Employee> findActiveEmployeesForPayroll();
+=======
+>>>>>>> a9aa56b (update UI fix bug add feature)
 }

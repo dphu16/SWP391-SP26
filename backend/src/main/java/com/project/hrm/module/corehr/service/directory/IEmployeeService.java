@@ -17,4 +17,9 @@ public interface IEmployeeService {
     EmployeeDetailDTO getEmployeeDetail(UUID id);
 
     EmployeeDetailDTO updateEmployee(UUID id, EmployeeChangeDTO req);
+
+
+
+    Page<EmployeeDTO> searchEmployees(String fullName, String employeeCode, String phoneNumber, String department,
+            String position, String role, String status, Pageable pageable);
 }
