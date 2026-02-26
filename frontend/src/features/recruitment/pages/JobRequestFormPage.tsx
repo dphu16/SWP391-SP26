@@ -19,15 +19,15 @@ const JobRequestFormPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState<JobRequestInput>({
-        jobTitle: "",
+        title: "",
         deptId: "",
         quantity: 1,
         location: "Remote",
-        employmentType: "Full-time",
-        reportsTo: "",
+        type: "FULL_TIME",
+        reportTo: "",
         reason: "",
         status: "PENDING",
-        hrComment: "",
+        comment: "",
     });
 
     useEffect(() => {
@@ -35,18 +35,7 @@ const JobRequestFormPage: React.FC = () => {
             const fetchRequest = async () => {
                 try {
                     const res = await jobRequestService.getById(id);
-                    const data = res.data;
-                    setFormData({
-                        jobTitle: data.title,
-                        deptId: data.deptId,
-                        quantity: data.quantity,
-                        location: data.location,
-                        employmentType: data.type,
-                        reportsTo: data.reportTo || "",
-                        reason: data.reason,
-                        status: data.status,
-                        hrComment: data.comment || "",
-                    });
+                    setFormData(res.data);
                 } catch (err) {
                     setError("Failed to load job request details.");
                     toastError("Error", "Could not fetch details.");
@@ -117,8 +106,8 @@ const JobRequestFormPage: React.FC = () => {
                             <label className={labelCls}>Job Title / Role Name</label>
                             <input
                                 required
-                                name="jobTitle"
-                                value={formData.jobTitle}
+                                name="title"
+                                value={formData.title}
                                 onChange={handleChange}
                                 placeholder="e.g. Senior Product Designer"
                                 className={inputCls}
@@ -165,23 +154,23 @@ const JobRequestFormPage: React.FC = () => {
                         <div>
                             <label className={labelCls}>Employment Type</label>
                             <select
-                                name="employmentType"
-                                value={formData.employmentType}
+                                name="type"
+                                value={formData.type}
                                 onChange={handleChange}
                                 className={inputCls}
                             >
-                                <option value="Full-time">Full-time</option>
-                                <option value="Part-time">Part-time</option>
-                                <option value="Contract">Contract</option>
-                                <option value="Internship">Internship</option>
+                                <option value="FULL_TIME">Full-time</option>
+                                <option value="PART_TIME">Part-time</option>
+                                <option value="CONTRACT">Contract</option>
+                                <option value="INTERNSHIP">Internship</option>
                             </select>
                         </div>
 
                         <div>
                             <label className={labelCls}>Reports To (Manager ID)</label>
                             <input
-                                name="reportsTo"
-                                value={formData.reportsTo}
+                                name="reportTo"
+                                value={formData.reportTo}
                                 onChange={handleChange}
                                 placeholder="Optional ID"
                                 className={inputCls}
@@ -219,9 +208,9 @@ const JobRequestFormPage: React.FC = () => {
                         <div className="md:col-span-2">
                             <label className={labelCls}>HR Comments / Feedback</label>
                             <textarea
-                                name="hrComment"
+                                name="comment"
                                 rows={3}
-                                value={formData.hrComment}
+                                value={formData.comment}
                                 onChange={handleChange}
                                 placeholder="Internal notes or approval terms..."
                                 className={`${inputCls} resize-none`}

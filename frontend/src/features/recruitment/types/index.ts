@@ -1,4 +1,5 @@
-export type JobRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
+export type EmploymentType = "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERNSHIP" | "OTHER";
+export type RequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
 
 export interface JobRequest {
     id: string;
@@ -7,24 +8,24 @@ export interface JobRequest {
     deptName: string;
     quantity: number;
     location: string;
-    type: string; // EmploymentType enum
+    type: EmploymentType;
     reportTo: string;
     reviewer: string;
     reason: string;
-    status: JobRequestStatus;
+    status: RequestStatus;
     comment: string;
 }
 
 export interface JobRequestInput {
-    jobTitle: string;
+    title: string;
     deptId: string;
     quantity: number;
     location: string;
-    employmentType: string;
-    reportsTo: string;
+    type: EmploymentType;
+    reportTo: string;
     reason: string;
-    status?: string;
-    hrComment?: string;
+    status: RequestStatus;
+    comment: string;
 }
 
 export type JobStatus = "OPEN" | "CLOSED" | "DRAFT" | "FILLED";

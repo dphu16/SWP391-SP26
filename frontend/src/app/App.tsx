@@ -17,6 +17,7 @@ import JobFormPage from "../features/recruitment/pages/JobFormPage";
 import JobDetailPage from "../features/recruitment/pages/JobDetailPage";
 import JobRequestListPage from "../features/recruitment/pages/JobRequestListPage";
 import JobRequestFormPage from "../features/recruitment/pages/JobRequestFormPage";
+import JobRequestDetailPage from "../features/recruitment/pages/JobRequestDetailPage";
 
 import { ToastProvider } from "../shared/components/ui/Toast";
 
@@ -123,6 +124,7 @@ const AppShell: React.FC = () => {
               {/* Recruitment Module Routes */}
               <Route path="/recruitment/job-requests" element={<JobRequestListPage />} />
               <Route path="/recruitment/job-requests/new" element={<JobRequestFormPage />} />
+              <Route path="/recruitment/job-requests/:id" element={<JobRequestDetailPage />} />
               <Route path="/recruitment/job-requests/:id/edit" element={<JobRequestFormPage />} />
 
               <Route path="/recruitment/jobs" element={<JobListPage />} />
