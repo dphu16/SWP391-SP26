@@ -1,6 +1,0 @@
-package com.project.hrm.recruitment.enums;
-
-public enum ResultStatus {
-    PASSED,
-    FAILED
-}

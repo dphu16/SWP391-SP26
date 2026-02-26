@@ -2,6 +2,8 @@ package com.project.hrm.module.attendance.repository;
 
 import com.project.hrm.module.attendance.entity.AttendanceLog;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -23,4 +25,11 @@ public interface AttendanceLogRepository extends JpaRepository<AttendanceLog, UU
 
     // 4. Lấy tất cả cho Manager (Sắp xếp mới nhất)
     List<AttendanceLog> findAllByOrderByDateDesc();
+    // Thêm cái này vào trong interface AttendanceLogRepository
+    @Query("SELECT a FROM AttendanceLog a WHERE a.employeeId = :employeeId " +
+            "AND EXTRACT(MONTH FROM a.date) = :month " +
+            "AND EXTRACT(YEAR FROM a.date) = :year")
+    List<AttendanceLog> findLogsByMonthAndYear(@Param("employeeId") UUID employeeId,
+                                               @Param("month") int month,
+                                               @Param("year") int year);
 }

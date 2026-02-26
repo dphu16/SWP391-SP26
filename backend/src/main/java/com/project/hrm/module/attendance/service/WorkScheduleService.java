@@ -225,4 +225,15 @@ public class WorkScheduleService {
         }
         return dto;
     }
+
+    public List<ShiftResponse> getAllShifts() {
+        return shiftRepository.findAll().stream().map(s -> {
+            ShiftResponse dto = new ShiftResponse();
+            dto.setId(s.getShiftId());
+            dto.setName(s.getShiftName());
+            dto.setStartTime(s.getStartTime());
+            dto.setEndTime(s.getEndTime());
+            return dto;
+        }).collect(Collectors.toList());
+    }
 }

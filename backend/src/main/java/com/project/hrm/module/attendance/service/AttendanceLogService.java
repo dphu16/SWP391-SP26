@@ -1,11 +1,14 @@
 package com.project.hrm.module.attendance.service;
 
 import com.project.hrm.module.attendance.dto.AttendanceRequest;
+import com.project.hrm.module.attendance.dto.AttendanceSummaryDTO;
 import com.project.hrm.module.attendance.entity.AttendanceLog;
 import com.project.hrm.module.attendance.entity.Shift;
 import com.project.hrm.module.attendance.entity.WorkSchedule;
 import com.project.hrm.module.attendance.repository.AttendanceLogRepository;
 import com.project.hrm.module.attendance.repository.WorkScheduleRepository;
+import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,9 +17,11 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +29,7 @@ public class AttendanceLogService {
 
     private final AttendanceLogRepository logRepo;
     private final WorkScheduleRepository workScheduleRepo;
+    private final EmployeeRepository employeeRepo;
 
     // --- 1. CHECK-IN / CHECK-OUT ---
     public AttendanceLog checkInOrOut(AttendanceRequest request) {
@@ -139,5 +145,56 @@ public class AttendanceLogService {
 
         log.setWorkingHours(hours);
         log.setOtHours(BigDecimal.ZERO); // Mặc định OT = 0, team lương tự tính sau
+    }
+
+    public List<AttendanceSummaryDTO> getAttendanceSummaryReport(Integer month, Integer year, UUID deptId, UUID empId) {
+        // 1. Lấy tháng hiện tại nếu không truyền vào
+        int targetMonth = (month != null) ? month : LocalDate.now().getMonthValue();
+        int targetYear = (year != null) ? year : LocalDate.now().getYear();
+
+        // 2. Lấy danh sách nhân viên & Lọc theo yêu cầu
+        List<Employee> allEmployees = employeeRepo.findAll();
+        List<Employee> filteredEmployees = allEmployees.stream()
+                .filter(emp -> {
+                    boolean matchDept = (deptId == null) ||
+                            (emp.getDepartment() != null && emp.getDepartment().getDeptId().equals(deptId));
+                    boolean matchEmp = (empId == null) || emp.getEmployeeId().equals(empId);
+                    return matchDept && matchEmp;
+                })
+                .collect(Collectors.toList());
+
+        // 3. Tính toán cho từng người
+        List<AttendanceSummaryDTO> reportList = new ArrayList<>();
+
+        for (Employee emp : filteredEmployees) {
+            List<AttendanceLog> logs = logRepo.findLogsByMonthAndYear(emp.getEmployeeId(), targetMonth, targetYear);
+
+            BigDecimal totalHours = BigDecimal.ZERO;
+            int lateDays = 0, earlyLeaveDays = 0, missingPunchDays = 0;
+
+            for (AttendanceLog log : logs) {
+                if (log.getWorkingHours() != null) totalHours = totalHours.add(log.getWorkingHours());
+                if ("LATE".equals(log.getStatus())) lateDays++;
+                if ("EARLY_LEAVE".equals(log.getStatus())) earlyLeaveDays++;
+                if ("MISSING_PUNCH".equals(log.getStatus())) missingPunchDays++;
+            }
+
+            String deptName = (emp.getDepartment() != null) ? emp.getDepartment().getDeptName() : "Chưa có phòng ban";
+
+            reportList.add(AttendanceSummaryDTO.builder()
+                    .employeeId(emp.getEmployeeId())
+                    .employeeCode(emp.getEmployeeCode())
+                    .fullName(emp.getFullName())
+                    .departmentName(deptName)
+                    .month(targetMonth)
+                    .year(targetYear)
+                    .totalWorkingHours(totalHours)
+                    .totalLateDays(lateDays)
+                    .totalEarlyLeaveDays(earlyLeaveDays)
+                    .totalMissingPunchDays(missingPunchDays)
+                    .build());
+        }
+
+        return reportList;
     }
 }
