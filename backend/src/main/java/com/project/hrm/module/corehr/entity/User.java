@@ -24,7 +24,7 @@ public class User {
     private String username;
 
     @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
+    private String password;
 
     @Column(nullable = false, unique = true, length = 100)
     private String email;
@@ -34,10 +34,7 @@ public class User {
     private UserRole role;
 
     @Enumerated(EnumType.STRING)
-    private UserStatus status = UserStatus.ACTIVE;
-
-    @Column(name = "last_login_at")
-    private OffsetDateTime lastLoginAt;
+    private UserStatus status;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

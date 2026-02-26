@@ -1,13 +1,11 @@
 package com.project.hrm.module.corehr.entity;
 
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
-import com.project.hrm.module.corehr.enums.Gender;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -15,72 +13,47 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Setter
+@Getter
+@Builder
 public class Employee {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "employee_id")
+    @Column(name = "employee_id", updatable = false, nullable = false)
     private UUID employeeId;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "user_id", referencedColumnName = "user_id")
-    private User user;
+    @Column(name = "employee_code", unique = true)
+    private String employeeCode;
 
-    @Column(name = "full_name", nullable = false, length = 100)
+    @Column(name = "full_name", nullable = false)
     private String fullName;
 
-    @Column(name = "citizen_id", length = 20, unique = true)
-    private String citizenId;
-
-    @Column(name = "tax_code", length = 20, unique = true)
-    private String taxCode;
-
-    @Column(name = "date_of_birth")
-    private LocalDate dateOfBirth;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "gender", length = 10)
-    private Gender gender;
-
-    @Column(name = "address", columnDefinition = "TEXT")
-    private String address;
-
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dept_id")
     private Department department;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "position_id")
     private Position position;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "manager_id")
-    @ToString.Exclude
-    private Employee manager;
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private EmployeeStatus statusPos;
+    private EmployeeStatus empStatus;
 
     @Column(name = "date_of_joining")
     private LocalDate dateOfJoining;
 
-    @Column(name = "email", length = 100)
-    private String email;
+    @OneToOne(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Personal personal;
 
-    @Column(name = "phone", length = 20)
-    private String phone;
+    @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Contract> contracts = new ArrayList<>();
 
-    @Column(name = "source_application_id")
-    private UUID sourceApplicationId;
+    @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Dependent> dependents = new ArrayList<>();
 
-    @Column(name = "avatar_url", length = 255)
-    private String avatarUrl;
-
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private OffsetDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private OffsetDateTime updatedAt;
 }

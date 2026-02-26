@@ -1,0 +1,13 @@
+###
+POST http://localhost:8080/api/kpi-libraries
+Content-Type: application/json
+
+{
+  "name": "New KPI Library",
+  "description": "This is a description for the new KPI library.",
+  "category": "EVALUATION"
+}
+
+###
+GET http://localhost:8080/api/kpi-libraries
+Content-Type: application/json

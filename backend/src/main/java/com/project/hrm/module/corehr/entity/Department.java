@@ -28,10 +28,9 @@ public class Department {
     @JsonIgnore
     private Employee manager;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
-
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
+
+
 }
