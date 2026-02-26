@@ -1,6 +1,6 @@
 package com.project.hrm.module.evaluation.service;
 
-import com.project.hrm.evaluation.dto.*;
+import com.project.hrm.module.evaluation.dto.*;
 import com.project.hrm.module.evaluation.dto.DecisionRequest;
 import com.project.hrm.module.evaluation.dto.PerformanceReviewsRequest;
 import com.project.hrm.module.evaluation.dto.ReviewScoreRequest;

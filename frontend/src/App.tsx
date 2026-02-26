@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
+import HRDashboard from "./components/HRDashboard";
 import EmployeeTable from "./components/EmployeeTable";
 import EmployeeDetail from "./components/EmployeeDetail";
 import EmployeeOnboarding from "./components/EmployeeOnboarding";
@@ -10,9 +11,20 @@ import CandidateProfileCompletion from "./components/CandidateProfileCompletion"
 import CreateChangeRequest from "./components/CreateChangeRequest";
 import FilterBar from "./components/FilterBar";
 import PerformanceModule from "./components/PerformanceModule";
-import { ToastProvider } from "./components/ui/Toast";
-import LoginPage from "./components/auth/LoginPage";
 
+// --- Nhóm route Attendance ---
+import ViewSchedule from "./components/attendance/ViewSchedule";
+import CreateSchedule from "./components/attendance/CreateSchedule";
+import CheckInOut from "./components/attendance/CheckInOut";
+import Applications from "./components/attendance/Applications";
+import ReviewRequests from "./components/attendance/ReviewRequests";
+
+// --- Auth ---
+import LoginPage from "./components/auth/LoginPage";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+
+// --- UI ---
+import { ToastProvider } from "./components/ui/Toast";
 
 const AppShell: React.FC = () => {
   return (
@@ -26,18 +38,18 @@ const AppShell: React.FC = () => {
           <div className="max-w-7xl mx-auto px-6 py-6 space-y-5">
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<HRDashboard />} />
 
+              {/* Core HR Routes */}
               <Route
                 path="/employees"
                 element={
                   <>
                     <div className="flex items-center justify-between">
                       <div>
-                        <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                          Employee Directory
-                        </h1>
+                        <h1 className="text-2xl font-bold tracking-tight">Employee Directory</h1>
                         <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                          Manage and view all employees in your organization
+                          Manage and view all employees
                         </p>
                       </div>
                     </div>
@@ -47,69 +59,22 @@ const AppShell: React.FC = () => {
                 }
               />
 
-              <Route
-                path="/onboarding"
-                element={
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                          Onboarding
-                        </h1>
-                        <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                          Track new hire onboarding progress
-                        </p>
-                      </div>
-                    </div>
-                    <FilterBar />
-                    <EmployeeOnboarding />
-                  </>
-                }
-              />
+              <Route path="/onboarding" element={<EmployeeOnboarding />} />
+              <Route path="/onboarding/:applicationId/profile" element={<CandidateProfileCompletion />} />
+              <Route path="/offboarding" element={<EmployeeOffboarding />} />
 
-              <Route
-                path="/onboarding/:applicationId/profile"
-                element={<CandidateProfileCompletion />}
-              />
+              {/* Kết hợp cả 2 cách đặt tên route cho chắc chắn hoặc chọn 1 */}
+              <Route path="/change-request" element={<CreateChangeRequest />} />
+              <Route path="/requests/new" element={<CreateChangeRequest />} />
 
-              <Route
-                path="/offboarding"
-                element={
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                          Offboarding
-                        </h1>
-                        <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                          Manage exits, resignations, and handover workflows
-                        </p>
-                      </div>
-                    </div>
-                    <EmployeeOffboarding />
-                  </>
-                }
-              />
+              {/* --- Attendance Routes --- */}
+              <Route path="/attendance/view-schedule" element={<ViewSchedule />} />
+              <Route path="/attendance/create-schedule" element={<CreateSchedule />} />
+              <Route path="/attendance/check-in-out" element={<CheckInOut />} />
+              <Route path="/attendance/applications" element={<Applications />} />
+              <Route path="/attendance/review" element={<ReviewRequests />} />
 
-              <Route
-                path="/requests/new"
-                element={
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                          Create Change Personal Info Request
-                        </h1>
-                        <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                          Submit a change request for your personal information
-                        </p>
-                      </div>
-                    </div>
-                    <CreateChangeRequest />
-                  </>
-                }
-              />
-
+              {/* --- Performance & Profile --- */}
               <Route path="/employee/:id" element={<EmployeeDetail />} />
               <Route path="/profile" element={<EmployeeDetail />} />
               <Route path="/performance" element={<PerformanceModule />} />
@@ -126,7 +91,14 @@ const App: React.FC = () => {
     <ToastProvider>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/*" element={<AppShell />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <AppShell />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </ToastProvider>
   );

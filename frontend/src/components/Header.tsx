@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-
+import { getToken, removeToken } from "../services/authService";
 import { decodeJwt } from "../utils/jwtDecode";
-import { removeToken } from "../services/authService";
 // ─── Breadcrumb config ────────────────────────────────────────────────────────
 const breadcrumbMap: Record<
   string,
@@ -16,11 +15,20 @@ const breadcrumbMap: Record<
 
 // ─── Current user derived from JWT ──────────────────────────────────────────
 function useCurrentUser() {
+  const payload = decodeJwt(getToken());
+  if (!payload) {
+    return {
+      name: "User",
+      role: "—",
+      avatarUrl: "",
+      employeeId: null as string | null,
+    };
+  }
   return {
-    name: "User",
-    role: "—",
-    avatarUrl: "",
-    employeeId: null as string | null,
+    name: payload.fullName ?? payload.sub ?? "User",
+    role: payload.role ?? "—",
+    avatarUrl: payload.avatarUrl ?? "",
+    employeeId: payload.employeeId ?? null,
   };
 }
 
@@ -30,7 +38,7 @@ const ChevronDownIcon = ({ open }: { open: boolean }) => (
   <svg
     viewBox="0 0 16 16"
     fill="currentColor"
-    className={`w-3.5 h-3.5 text-text-secondary-light dark:text-text-secondary-dark transition-transform duration-200 ${open ? "rotate-180" : ""
+    className={`w-3.5 h-3.5 text-text-secondary-light transition-transform duration-200 ${open ? "rotate-180" : ""
       }`}
   >
     <path
@@ -86,14 +94,14 @@ const MenuItem: React.FC<MenuItemProps> = ({
   <button
     onClick={onClick}
     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer group ${variant === "danger"
-      ? "text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20"
-      : "text-text-primary-light dark:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-800"
+      ? "text-rose-600 hover:bg-rose-50 "
+      : "text-text-primary-light hover:bg-gray-100 "
       }`}
   >
     <span
       className={`flex-shrink-0 ${variant === "danger"
         ? "text-rose-500"
-        : "text-text-secondary-light dark:text-text-secondary-dark group-hover:text-text-primary-light dark:group-hover:text-text-primary-dark"
+        : "text-text-secondary-light group-hover:text-text-primary-light "
         } transition-colors`}
     >
       {icon}
@@ -101,7 +109,7 @@ const MenuItem: React.FC<MenuItemProps> = ({
     <div className="flex-1 min-w-0">
       <p className="text-sm font-medium leading-none">{label}</p>
       {description && (
-        <p className="text-[11px] text-text-secondary-light dark:text-text-secondary-dark mt-0.5 leading-none">
+        <p className="text-[11px] text-text-secondary-light mt-0.5 leading-none">
           {description}
         </p>
       )}
@@ -113,11 +121,9 @@ const MenuItem: React.FC<MenuItemProps> = ({
 const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const currentUser = useCurrentUser();  // ← real JWT data
+  const currentUser = useCurrentUser(); // ← real JWT data
 
-  const [darkMode, setDarkMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -127,14 +133,7 @@ const Header: React.FC = () => {
       ? { label: "Employee Detail", parent: "Employees" }
       : { label: "Page" });
 
-  // ── Dark mode ──
-  const toggleDark = () => {
-    setDarkMode((d) => {
-      const next = !d;
-      document.documentElement.classList.toggle("dark", next);
-      return next;
-    });
-  };
+
 
   // ── Close dropdown on outside click ──
   useEffect(() => {
@@ -163,15 +162,8 @@ const Header: React.FC = () => {
 
   const openProfile = useCallback(() => {
     setDropdownOpen(false);
-    setDrawerOpen(true);
     navigate(`/profile`);
   }, []);
-
-  const handleLogout = useCallback(() => {
-    setDropdownOpen(false);
-    removeToken();
-    navigate("/login");
-  }, [navigate]);
 
 
   // Deterministic avatar color (fallback when no image)
@@ -186,14 +178,14 @@ const Header: React.FC = () => {
 
   return (
     <>
-      <header className="h-16 flex-shrink-0 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark flex items-center justify-between px-6 z-30">
+      <header className="h-16 flex-shrink-0 bg-surface-light border-b border-border-light flex items-center justify-between px-6 z-30">
         {/* ── Left: Breadcrumb ── */}
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center gap-1.5 text-sm">
             {crumb.parent && (
               <>
                 <li>
-                  <span className="font-medium text-text-secondary-light dark:text-text-secondary-dark">
+                  <span className="font-medium text-text-secondary-light ">
                     {crumb.parent}
                   </span>
                 </li>
@@ -201,7 +193,7 @@ const Header: React.FC = () => {
                   <svg
                     viewBox="0 0 16 16"
                     fill="currentColor"
-                    className="w-3.5 h-3.5 text-text-muted-light dark:text-text-muted-dark"
+                    className="w-3.5 h-3.5 text-text-muted-light "
                   >
                     <path
                       fillRule="evenodd"
@@ -213,7 +205,7 @@ const Header: React.FC = () => {
               </>
             )}
             <li>
-              <span className="font-semibold text-text-primary-light dark:text-text-primary-dark">
+              <span className="font-semibold text-text-primary-light ">
                 {crumb.label}
               </span>
             </li>
@@ -223,30 +215,11 @@ const Header: React.FC = () => {
         {/* ── Right: Actions ── */}
         <div className="flex items-center gap-2">
 
-          {/* Dark mode toggle */}
-          <button
-            onClick={toggleDark}
-            className="p-2 rounded-lg text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-text-primary-light dark:hover:text-text-primary-dark transition-colors cursor-pointer"
-            aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {darkMode ? (
-              <svg viewBox="0 0 20 20" fill="currentColor" className="w-[18px] h-[18px]">
-                <path d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.06l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 001.06-1.06l-1.06-1.061a.75.75 0 10-1.06 1.06l1.06 1.06zM5.404 6.464a.75.75 0 001.06-1.06l-1.06-1.06a.75.75 0 10-1.061 1.06l1.06 1.06z" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 20 20" fill="currentColor" className="w-[18px] h-[18px]">
-                <path
-                  fillRule="evenodd"
-                  d="M7.455 2.004a.75.75 0 01.26.77 7 7 0 009.958 7.967.75.75 0 011.067.853A8.5 8.5 0 116.647 1.921a.75.75 0 01.808.083z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            )}
-          </button>
+
 
           {/* Notifications */}
           <button
-            className="relative p-2 rounded-lg text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-text-primary-light dark:hover:text-text-primary-dark transition-colors cursor-pointer"
+            className="relative p-2 rounded-lg text-text-secondary-light hover:bg-gray-100 hover:text-text-primary-light transition-colors cursor-pointer"
             aria-label="Notifications"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-[18px] h-[18px]">
@@ -256,11 +229,11 @@ const Header: React.FC = () => {
                 clipRule="evenodd"
               />
             </svg>
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-surface-light dark:border-surface-dark" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-surface-light " />
           </button>
 
           {/* Divider */}
-          <div className="w-px h-6 bg-border-light dark:bg-border-dark mx-1" />
+          <div className="w-px h-6 bg-border-light mx-1" />
 
           {/* ── Avatar + Dropdown trigger ── */}
           <div className="relative" ref={dropdownRef}>
@@ -271,8 +244,8 @@ const Header: React.FC = () => {
               aria-controls="user-dropdown"
               onClick={() => setDropdownOpen((o) => !o)}
               className={`flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-xl transition-colors cursor-pointer group ${dropdownOpen
-                ? "bg-gray-100 dark:bg-gray-800"
-                : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                ? "bg-gray-100 "
+                : "hover:bg-gray-100 "
                 }`}
             >
               {/* Avatar */}
@@ -292,10 +265,10 @@ const Header: React.FC = () => {
 
               {/* Name + role */}
               <div className="hidden sm:block text-left">
-                <div className="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark leading-none">
+                <div className="text-xs font-semibold text-text-primary-light leading-none">
                   {currentUser.name}
                 </div>
-                <div className="text-[10px] text-text-secondary-light dark:text-text-secondary-dark leading-none mt-0.5">
+                <div className="text-[10px] text-text-secondary-light leading-none mt-0.5">
                   {currentUser.role}
                 </div>
               </div>
@@ -307,13 +280,13 @@ const Header: React.FC = () => {
               id="user-dropdown"
               role="menu"
               aria-labelledby="user-menu-button"
-              className={`absolute right-0 top-full mt-2 w-64 bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark shadow-dropdown overflow-hidden transition-all duration-200 origin-top-right z-50 ${dropdownOpen
+              className={`absolute right-0 top-full mt-2 w-64 bg-surface-light rounded-2xl border border-border-light shadow-dropdown overflow-hidden transition-all duration-200 origin-top-right z-50 ${dropdownOpen
                 ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
                 : "opacity-0 scale-95 -translate-y-1 pointer-events-none"
                 }`}
             >
               {/* User identity header */}
-              <div className="px-4 py-3.5 border-b border-border-light dark:border-border-dark">
+              <div className="px-4 py-3.5 border-b border-border-light ">
                 <div className="flex items-center gap-3">
                   {currentUser.avatarUrl ? (
                     <img
@@ -329,10 +302,10 @@ const Header: React.FC = () => {
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark truncate">
+                    <p className="text-sm font-bold text-text-primary-light truncate">
                       {currentUser.name}
                     </p>
-                    <p className="text-[11px] text-text-secondary-light dark:text-text-secondary-dark truncate">
+                    <p className="text-[11px] text-text-secondary-light truncate">
                       {currentUser.role}
                     </p>
                   </div>
@@ -355,13 +328,17 @@ const Header: React.FC = () => {
                 />
               </div>
 
-              {/* Divider */}
-              <div className="border-t border-border-light dark:border-border-dark p-2">
+              {/* Logout */}
+              <div className="border-t border-border-light p-2">
                 <MenuItem
                   icon={<LogoutIcon />}
-                  label="Log Out"
-                  description="End your session"
-                  onClick={handleLogout}
+                  label="Logout"
+                  description="Sign out of your account"
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    removeToken();
+                    navigate("/login", { replace: true });
+                  }}
                   variant="danger"
                 />
               </div>

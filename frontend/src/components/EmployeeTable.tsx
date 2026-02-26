@@ -8,11 +8,11 @@ const API_URL = "/api/hr/employees";
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { dot: string; text: string; bg: string }> = {
-  ACTIVE: { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
-  ONBOARDING: { dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-900/20" },
-  PROBATION: { dot: "bg-purple-500", text: "text-purple-700 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-900/20" },
-  ONLEAVE: { dot: "bg-rose-500", text: "text-rose-700 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-900/20" },
-  INACTIVE: { dot: "bg-gray-400", text: "text-gray-600 dark:text-gray-400", bg: "bg-gray-100 dark:bg-gray-800" },
+  ACTIVE: { dot: "bg-emerald-500", text: "text-emerald-700 ", bg: "bg-emerald-50 " },
+  ONBOARDING: { dot: "bg-amber-500", text: "text-amber-700 ", bg: "bg-amber-50 " },
+  PROBATION: { dot: "bg-purple-500", text: "text-purple-700 ", bg: "bg-purple-50 " },
+  ONLEAVE: { dot: "bg-rose-500", text: "text-rose-700 ", bg: "bg-rose-50 " },
+  INACTIVE: { dot: "bg-gray-400", text: "text-gray-600 ", bg: "bg-gray-100 " },
 };
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -38,10 +38,10 @@ const Avatar: React.FC<{ name: string; url?: string }> = ({ name, url }) => {
   // Deterministic color from name
   const colors = [
     "bg-primary/15 text-primary",
-    "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
-    "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400",
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-    "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400",
+    "bg-blue-100 text-blue-600 ",
+    "bg-purple-100 text-purple-600 ",
+    "bg-amber-100 text-amber-700 ",
+    "bg-rose-100 text-rose-600 ",
   ];
   const colorIdx = (name?.charCodeAt(0) ?? 0) % colors.length;
 
@@ -50,7 +50,7 @@ const Avatar: React.FC<{ name: string; url?: string }> = ({ name, url }) => {
       <img
         src={url}
         alt={name}
-        className="w-9 h-9 rounded-full object-cover ring-2 ring-white dark:ring-gray-800 flex-shrink-0"
+        className="w-9 h-9 rounded-full object-cover ring-2 ring-white flex-shrink-0"
       />
     );
   }
@@ -63,7 +63,7 @@ const Avatar: React.FC<{ name: string; url?: string }> = ({ name, url }) => {
 
 // ─── Skeleton Row ─────────────────────────────────────────────────────────────
 const SkeletonRow: React.FC = () => (
-  <tr className="border-b border-gray-100 dark:border-gray-800/60">
+  <tr className="border-b border-gray-100 ">
     <td className="pl-6 pr-4 py-4 w-10">
       <div className="skeleton w-4 h-4 rounded" />
     </td>
@@ -116,17 +116,17 @@ const Pagination: React.FC<PaginationProps> = ({
   };
 
   return (
-    <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800/60 flex items-center justify-between gap-4 flex-wrap">
-      <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-        Showing <span className="font-semibold text-text-primary-light dark:text-text-primary-dark">{start}–{end}</span> of{" "}
-        <span className="font-semibold text-text-primary-light dark:text-text-primary-dark">{totalElements}</span> employees
+    <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-4 flex-wrap">
+      <p className="text-xs text-text-secondary-light ">
+        Showing <span className="font-semibold text-text-primary-light ">{start}–{end}</span> of{" "}
+        <span className="font-semibold text-text-primary-light ">{totalElements}</span> employees
       </p>
 
       <div className="flex items-center gap-1">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 0}
-          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-text-secondary-light dark:text-text-secondary-dark disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-text-secondary-light disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
           aria-label="Previous page"
         >
           <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
@@ -136,7 +136,7 @@ const Pagination: React.FC<PaginationProps> = ({
 
         {getPages().map((page, idx) =>
           page === "..." ? (
-            <span key={`ellipsis-${idx}`} className="w-8 text-center text-sm text-text-secondary-light dark:text-text-secondary-dark">
+            <span key={`ellipsis-${idx}`} className="w-8 text-center text-sm text-text-secondary-light ">
               …
             </span>
           ) : (
@@ -144,11 +144,11 @@ const Pagination: React.FC<PaginationProps> = ({
               key={page}
               onClick={() => onPageChange(page as number)}
               className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors cursor-pointer
-                ${currentPage === page
+ ${currentPage === page
                   ? "bg-primary text-white shadow-sm"
-                  : "text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-100 dark:hover:bg-gray-800"
+                  : "text-text-secondary-light hover:bg-gray-100 "
                 }
-              `}
+ `}
             >
               {(page as number) + 1}
             </button>
@@ -158,7 +158,7 @@ const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages - 1}
-          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-text-secondary-light dark:text-text-secondary-dark disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-text-secondary-light disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
           aria-label="Next page"
         >
           <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
@@ -177,7 +177,7 @@ interface EmployeeTableProps {
 
 const EmployeeTable: React.FC<EmployeeTableProps> = () => {
   const navigate = useNavigate();
-  const { success, error: toastError } = useToast();
+  const { error: toastError } = useToast();
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -250,7 +250,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
   };
 
   const SortIcon: React.FC<{ field: string }> = ({ field }) => (
-    <svg viewBox="0 0 16 16" fill="currentColor" className={`w-3.5 h-3.5 transition-colors ${sortField === field ? "text-primary" : "text-gray-300 dark:text-gray-600 group-hover:text-gray-400"}`}>
+    <svg viewBox="0 0 16 16" fill="currentColor" className={`w-3.5 h-3.5 transition-colors ${sortField === field ? "text-primary" : "text-gray-300 group-hover:text-gray-400"}`}>
       {sortField === field && sortDir === "asc" ? (
         <path fillRule="evenodd" d="M8 2a.75.75 0 01.75.75v8.69l3.22-3.22a.75.75 0 111.06 1.06l-4.5 4.5a.75.75 0 01-1.06 0l-4.5-4.5a.75.75 0 111.06-1.06l3.22 3.22V2.75A.75.75 0 018 2z" clipRule="evenodd" style={{ transform: "rotate(180deg)", transformOrigin: "center" }} />
       ) : (
@@ -262,15 +262,15 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
   // ── Error state ──
   if (error && !loading) {
     return (
-      <div className="rounded-2xl border border-rose-200 dark:border-rose-900/40 bg-surface-light dark:bg-surface-dark p-16 flex flex-col items-center gap-4 text-center animate-fade-in">
-        <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center">
+      <div className="rounded-2xl border border-rose-200 bg-surface-light p-16 flex flex-col items-center gap-4 text-center animate-fade-in">
+        <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center">
           <svg viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-rose-500">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
           </svg>
         </div>
         <div>
-          <p className="font-semibold text-text-primary-light dark:text-text-primary-dark">{error}</p>
-          <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">Check your backend connection and try again.</p>
+          <p className="font-semibold text-text-primary-light ">{error}</p>
+          <p className="text-sm text-text-secondary-light mt-1">Check your backend connection and try again.</p>
         </div>
         <button
           onClick={() => fetchEmployees(page)}
@@ -291,7 +291,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
   ];
 
   return (
-    <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-card animate-fade-in">
+    <div className="rounded-2xl border border-border-light bg-surface-light overflow-hidden shadow-card animate-fade-in">
       {/* Bulk action bar */}
       {selectedIds.size > 0 && (
         <div className="px-6 py-3 bg-primary/5 border-b border-primary/20 flex items-center gap-4 animate-slide-up">
@@ -299,16 +299,16 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
             {selectedIds.size} selected
           </span>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+            <button className="px-3 py-1.5 text-xs font-semibold text-text-secondary-light hover:text-text-primary-light border border-border-light rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
               Export
             </button>
-            <button className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 border border-rose-200 dark:border-rose-800 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors cursor-pointer">
+            <button className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer">
               Deactivate
             </button>
           </div>
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="ml-auto text-xs text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark transition-colors cursor-pointer"
+            className="ml-auto text-xs text-text-secondary-light hover:text-text-primary-light transition-colors cursor-pointer"
           >
             Clear
           </button>
@@ -319,15 +319,15 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           {/* Sticky Header */}
-          <thead className="sticky top-0 z-10 bg-surface-light dark:bg-surface-dark">
-            <tr className="border-b border-gray-100 dark:border-gray-800/60">
+          <thead className="sticky top-0 z-10 bg-surface-light ">
+            <tr className="border-b border-gray-100 ">
               {/* Checkbox */}
               <th className="pl-6 pr-4 py-4 w-10">
                 <input
                   type="checkbox"
                   checked={allSelected}
                   onChange={toggleAll}
-                  className="w-4 h-4 rounded border-2 border-gray-300 dark:border-gray-600 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
+                  className="w-4 h-4 rounded border-2 border-gray-300 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
                   aria-label="Select all"
                 />
               </th>
@@ -335,12 +335,12 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
               {COLUMNS.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark"
+                  className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light "
                 >
                   {col.key !== "statusRole" ? (
                     <button
                       onClick={() => handleSort(col.key)}
-                      className="flex items-center gap-1.5 hover:text-text-primary-light dark:hover:text-text-primary-dark transition-colors cursor-pointer group"
+                      className="flex items-center gap-1.5 hover:text-text-primary-light transition-colors cursor-pointer group"
                     >
                       {col.label}
                       <SortIcon field={col.key} />
@@ -352,13 +352,13 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
               ))}
 
               {/* Actions */}
-              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark text-center sticky right-0 bg-surface-light dark:bg-surface-dark">
+              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light text-center sticky right-0 bg-surface-light ">
                 Actions
               </th>
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-50 dark:divide-gray-800/40 text-sm">
+          <tbody className="divide-y divide-gray-50 text-sm">
             {loading
               ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
               : employees.map((emp) => {
@@ -367,11 +367,11 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
                   <tr
                     key={emp.id}
                     className={`table-row-hover group
-                        ${isSelected
-                        ? "bg-primary/5 dark:bg-primary/10"
-                        : "hover:bg-gray-50/80 dark:hover:bg-gray-800/30"
+ ${isSelected
+                        ? "bg-primary/5 "
+                        : "hover:bg-gray-50/80 "
                       }
-                      `}
+ `}
                   >
                     {/* Checkbox */}
                     <td className="pl-6 pr-4 py-3.5">
@@ -379,7 +379,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleOne(emp.id)}
-                        className="w-4 h-4 rounded border-2 border-gray-300 dark:border-gray-600 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
+                        className="w-4 h-4 rounded border-2 border-gray-300 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
                         aria-label={`Select ${emp.fullName}`}
                       />
                     </td>
@@ -389,10 +389,10 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
                       <div className="flex items-center gap-3">
                         <Avatar name={emp.fullName} url={emp.avatarUrl} />
                         <div>
-                          <div className="font-semibold text-text-primary-light dark:text-text-primary-dark leading-snug">
+                          <div className="font-semibold text-text-primary-light leading-snug">
                             {emp.fullName}
                           </div>
-                          <div className="text-[11px] text-text-secondary-light dark:text-text-secondary-dark font-mono mt-0.5">
+                          <div className="text-[11px] text-text-secondary-light font-mono mt-0.5">
                             {emp.employeeCode}
                           </div>
                         </div>
@@ -400,20 +400,20 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
                     </td>
 
                     {/* Position */}
-                    <td className="px-4 py-3.5 text-text-primary-light dark:text-text-primary-dark">
-                      {emp.positionTitle || <span className="text-text-muted-light dark:text-text-muted-dark">—</span>}
+                    <td className="px-4 py-3.5 text-text-primary-light ">
+                      {emp.positionTitle || <span className="text-text-muted-light ">—</span>}
                     </td>
 
                     {/* Role */}
                     <td className="px-4 py-3.5">
-                      <span className="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">
+                      <span className="text-xs font-medium text-text-secondary-light bg-gray-100 px-2 py-0.5 rounded-md">
                         {emp.role || "—"}
                       </span>
                     </td>
 
                     {/* Department */}
-                    <td className="px-4 py-3.5 text-text-primary-light dark:text-text-primary-dark">
-                      {emp.deptName || <span className="text-text-muted-light dark:text-text-muted-dark">—</span>}
+                    <td className="px-4 py-3.5 text-text-primary-light ">
+                      {emp.deptName || <span className="text-text-muted-light ">—</span>}
                     </td>
 
                     {/* Status */}
@@ -422,32 +422,16 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
                     </td>
 
                     {/* Actions */}
-                    <td className="px-4 py-3.5 text-center sticky right-0 bg-surface-light dark:bg-surface-dark group-hover:bg-gray-50/80 dark:group-hover:bg-gray-800/30 transition-colors">
-                      <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    <td className="px-4 py-3.5 text-center sticky right-0 bg-surface-light">
+                      <div className="flex items-center justify-center">
                         <button
                           onClick={() => navigate(`/employee/${emp.id}`)}
                           title="View profile"
-                          className="p-1.5 rounded-lg text-text-secondary-light dark:text-text-secondary-dark hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-text-secondary-light hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                         >
                           <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
                             <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
                             <path fillRule="evenodd" d="M1.38 8.28a1.2 1.2 0 010-.56 7.16 7.16 0 0113.24 0c.044.185.044.378 0 .56a7.16 7.16 0 01-13.24 0zM8 11a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                        <button
-                          title="Edit employee"
-                          className="p-1.5 rounded-lg text-text-secondary-light dark:text-text-secondary-dark hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
-                        >
-                          <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                            <path d="M11.013 2.513a1.75 1.75 0 012.475 2.474L6.226 12.25a2.751 2.751 0 01-.892.596l-2.047.848a.75.75 0 01-.98-.98l.848-2.047a2.75 2.75 0 01.596-.892l7.262-7.262z" />
-                          </svg>
-                        </button>
-                        <button
-                          title="More options"
-                          className="p-1.5 rounded-lg text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                        >
-                          <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                            <path d="M8 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM1.5 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm13 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
                           </svg>
                         </button>
                       </div>
@@ -462,13 +446,13 @@ const EmployeeTable: React.FC<EmployeeTableProps> = () => {
       {/* Empty state */}
       {!loading && employees.length === 0 && (
         <div className="py-20 flex flex-col items-center gap-3 text-center animate-fade-in">
-          <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-gray-400">
               <path d="M7 8a3 3 0 100-6 3 3 0 000 6zM14.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM1.615 16.428a1.224 1.224 0 01-.569-1.175 6.002 6.002 0 0111.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 017 17a9.953 9.953 0 01-5.385-1.572zM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 00-1.588-3.755 4.502 4.502 0 015.874 2.636.818.818 0 01-.36.98A7.465 7.465 0 0114.5 16z" />
             </svg>
           </div>
-          <p className="font-semibold text-text-primary-light dark:text-text-primary-dark">No employees found</p>
-          <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">Try adjusting your filters or add a new employee.</p>
+          <p className="font-semibold text-text-primary-light ">No employees found</p>
+          <p className="text-sm text-text-secondary-light ">Try adjusting your filters or add a new employee.</p>
         </div>
       )}
 

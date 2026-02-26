@@ -1,8 +1,40 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { kpiService } from "../services/kpiService";
-import type { PerformanceReview } from "../services/kpiService";
 
-
+const TEAM_MEMBERS = [
+    {
+        id: 1,
+        name: "Alex Rivera",
+        status: "CURRENT SELECTION",
+        avatar: "https://i.pravatar.cc/150?u=alex",
+        score: null,
+        statusType: "current",
+    },
+    {
+        id: 2,
+        name: "Jordan Smith",
+        status: "COMPLETED",
+        avatar: "https://i.pravatar.cc/150?u=jordan",
+        score: 92,
+        statusType: "completed",
+    },
+    {
+        id: 3,
+        name: "Sarah Chen",
+        status: "EVIDENCE READY",
+        avatar: "https://i.pravatar.cc/150?u=sarah",
+        score: null,
+        statusType: "ready",
+    },
+    {
+        id: 4,
+        name: "Marcus Wong",
+        status: "NO SUBMISSION",
+        avatar: "https://i.pravatar.cc/150?u=marcus",
+        score: null,
+        statusType: "none",
+    },
+];
 
 
 
@@ -18,12 +50,12 @@ const Icons = {
         </svg>
     ),
     dotGray: (
-        <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-text-muted-light dark:text-text-muted-dark">
+        <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-text-muted-light ">
             <circle cx="10" cy="10" r="3" />
         </svg>
     ),
     lock: (
-        <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-text-muted-light dark:text-text-muted-dark inline-block ml-1">
+        <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-text-muted-light inline-block ml-1">
             <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
         </svg>
     ),
@@ -38,7 +70,7 @@ const Icons = {
         </svg>
     ),
     eye: (
-        <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-text-muted-light dark:text-text-muted-dark hover:text-primary transition-colors cursor-pointer">
+        <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-text-muted-light hover:text-primary transition-colors cursor-pointer">
             <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
             <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
         </svg>
@@ -57,47 +89,26 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
     const [loading, setLoading] = useState(true);
     const [searchKpiQuery, setSearchKpiQuery] = useState("");
 
-    // Review state
-    const [activeReview, setActiveReview] = useState<PerformanceReview | null>(null);
-    const [reviewLoading, setReviewLoading] = useState(false);
-    const [kpiScoreInput, setKpiScoreInput] = useState('');
-    const [attitudeScoreInput, setAttitudeScoreInput] = useState('');
-    const [scoreSaving, setScoreSaving] = useState(false);
-
     useEffect(() => {
         const fetchTeamData = async () => {
-            try {
-                const deptsData = await kpiService.getAllDepartments();
-                const allKpiLibs = await kpiService.getAllKpiLibraries();
-                const employeesData = await kpiService.getAllEmployees();
-                const cyclesData = await kpiService.getPerformanceCycles();
+            const deptsData = await kpiService.getAllDepartments();
+            const allKpiLibs = await kpiService.getAllKpiLibraries();
+            const employeesData = await kpiService.getAllEmployees();
 
-                console.log("deptsData", deptsData);
-                console.log("allKpiLibs", allKpiLibs);
-                console.log("employeesData", employeesData);
-                console.log("cyclesData", cyclesData);
-
-                let activeDeptKpis: any[] = [];
-                if (deptsData && deptsData.length > 0) {
-                    activeDeptKpis = await kpiService.getKpisByDepartment(deptsData[0].id);
-                }
-
-                console.log("activeDeptKpis", activeDeptKpis);
-
-                // Filter employees under the "mocked manager" (everyone for now)
-                setEmployees(employeesData);
-
-                if (employeesData && employeesData.length > 0) {
-                    setActiveEmployeeId(employeesData[0].id);
-                }
-
-                // Save global lookup context for subsequent loads
-                (window as any).__kpiContext = { deptsData, allKpiLibs, activeDeptKpis, cyclesData };
-            } catch (error) {
-                console.error("fetchTeamData error:", error);
-            } finally {
-                setLoading(false);
+            let activeDeptKpis: any[] = [];
+            if (deptsData && deptsData.length > 0) {
+                activeDeptKpis = await kpiService.getKpisByDepartment(deptsData[0].deptId);
             }
+            // Filter employees under the "mocked manager" (everyone for now)
+            setEmployees(employeesData);
+
+            if (employeesData && employeesData.length > 0) {
+                setActiveEmployeeId(employeesData[0].employeeId);
+            }
+
+            // Save global lookup context for subsequent loads
+            (window as any).__kpiContext = { deptsData, allKpiLibs, activeDeptKpis };
+            setLoading(false);
         };
         fetchTeamData();
     }, []);
@@ -110,7 +121,6 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
 
             // Fetch goals saved for this employee
             const goals = await kpiService.getGoalsByEmployee(activeEmployeeId);
-            console.log("goals for employee", activeEmployeeId, goals);
 
             // Merge with assigned department structure
             if (ctx.activeDeptKpis && ctx.activeDeptKpis.length > 0) {
@@ -135,40 +145,14 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
         loadEmployeeGoals();
     }, [activeEmployeeId]);
 
-    // Fetch active review whenever employee changes
-    useEffect(() => {
-        if (!activeEmployeeId) return;
-        const fetchReview = async () => {
-            setReviewLoading(true);
-            const [review, mentorScore] = await Promise.all([
-                kpiService.getActiveReview(activeEmployeeId),
-                kpiService.getMentorAttitudeScore(activeEmployeeId)
-            ]);
-            setActiveReview(review);
-            if (review) {
-                setKpiScoreInput(review.kpiScore !== null && review.kpiScore !== undefined ? String(review.kpiScore) : '');
-                // Override with mentor score since it's now managed by Mentor
-                setAttitudeScoreInput(String(mentorScore));
-            } else {
-                setKpiScoreInput('');
-                setAttitudeScoreInput(String(mentorScore));
-            }
-            setReviewLoading(false);
-        };
-        fetchReview();
-    }, [activeEmployeeId]);
-
     const handleAssignTarget = async (kpiLibraryId: string) => {
         const kpiToAssign = kpis.find(k => k.kpiLibraryId === kpiLibraryId);
         if (!kpiToAssign || !activeEmployeeId) return;
 
-        const ctx = (window as any).__kpiContext;
-        const activeCycle = ctx?.cyclesData?.[0]?.cycleId || "c2c5ec68-7c85-48ef-be8a-350e82c5f1fa";
-
         try {
             await kpiService.assignEmployeeGoal({
                 employeeId: activeEmployeeId,
-                cycleId: activeCycle,
+                cycleId: "c2c5ec68-7c85-48ef-be8a-350e82c5f1fa", // mock UUID required by backend schema currently
                 kpiLibraryId: kpiLibraryId,
                 targetValue: Number(kpiToAssign._targetValue),
                 title: kpiToAssign.name,
@@ -187,54 +171,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
         setKpis(prev => prev.map(k => k.kpiLibraryId === kpiLibraryId ? { ...k, _targetValue: value, _isAssigned: false } : k));
     };
 
-    // Computed weighted KPI completion score from employee_goals
-    const computedKpiScore = useMemo(() => {
-        const assigned = kpis.filter(k => k._isAssigned && k._targetValue);
-        if (assigned.length === 0) return null;
-        const totalWeight = assigned.reduce((s: number, k: any) => s + k.weight, 0);
-        if (totalWeight === 0) return null;
-        // Weighted achievement: each KPI contributes (weight/totalWeight)*100 when target set
-        // We assume achievement = 100% if assigned (no current value without progress logs)
-        return Math.round(assigned.reduce((s: number, k: any) => s + k.weight, 0) / totalWeight * 100);
-    }, [kpis]);
-
-    const handleSaveDraft = async () => {
-        if (!activeReview) return;
-        const kpi = parseFloat(kpiScoreInput);
-        const att = parseFloat(attitudeScoreInput);
-        if (isNaN(kpi) || isNaN(att)) { alert('Please enter valid scores.'); return; }
-        if (kpi < 0 || kpi > 100 || att < 0 || att > 100) { alert('Scores must be between 0 and 100.'); return; }
-        setScoreSaving(true);
-        try {
-            const updated = await kpiService.updateReviewScore(activeReview.reviewId, { kpiScore: kpi, attitudeScore: att });
-            setActiveReview(updated);
-        } catch (e) {
-            alert('Failed to save score.');
-        } finally {
-            setScoreSaving(false);
-        }
-    };
-
-    const handleFinalize = async () => {
-        if (!activeReview) return;
-        // Save scores first if changed, then finalize
-        const kpi = parseFloat(kpiScoreInput);
-        const att = parseFloat(attitudeScoreInput);
-        if (isNaN(kpi) || isNaN(att)) { alert('Please enter KPI Score and Attitude Score first.'); return; }
-        setScoreSaving(true);
-        try {
-            await kpiService.updateReviewScore(activeReview.reviewId, { kpiScore: kpi, attitudeScore: att });
-            const finalized = await kpiService.finalizeReview(activeReview.reviewId);
-            setActiveReview(finalized);
-            alert('Review finalized successfully!');
-        } catch (e: any) {
-            alert(e?.response?.data?.error || 'Failed to finalize review.');
-        } finally {
-            setScoreSaving(false);
-        }
-    };
-
-    const activeEmployee = employees.find(e => e.id === activeEmployeeId);
+    const activeEmployee = employees.find(e => e.employeeId === activeEmployeeId);
 
     const filteredKpis = kpis.filter(k =>
         (k.name || "").toLowerCase().includes(searchKpiQuery.toLowerCase()) ||
@@ -246,20 +183,20 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
             {/* Header section matches image */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
+                    <h1 className="text-2xl font-bold font-heading text-text-primary-light tracking-tight">
                         Performance Module
                     </h1>
-                    <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                    <p className="mt-0.5 text-sm text-text-secondary-light ">
                         Standardized KPI management and scoring workflow
                     </p>
                 </div>
 
-                <div className="flex items-center bg-surface-light dark:bg-surface-dark p-1 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
+                <div className="flex items-center bg-surface-light p-1 rounded-xl shadow-sm border border-border-light ">
                     <button
                         onClick={() => setActiveTab("hr")}
                         className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === "hr"
-                            ? "bg-surface-2-light dark:bg-surface-2-dark text-text-primary-light dark:text-text-primary-dark shadow-sm"
-                            : "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light"
+                            ? "bg-surface-2-light text-text-primary-light shadow-sm"
+                            : "text-text-secondary-light hover:text-text-primary-light"
                             }`}
                     >
                         HR Config
@@ -268,7 +205,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                         onClick={() => setActiveTab("manager")}
                         className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === "manager"
                             ? "bg-primary text-white shadow-sm"
-                            : "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light"
+                            : "text-text-secondary-light hover:text-text-primary-light"
                             }`}
                     >
                         Manager Console
@@ -282,23 +219,23 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                     {/* Top Stats Row */}
                     <div className="grid grid-cols-3 gap-5">
                         {/* Team Progress */}
-                        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card">
-                            <h3 className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-3">
+                        <div className="bg-surface-light border border-border-light rounded-xl p-5 shadow-sm bento-card">
+                            <h3 className="text-xs font-bold text-text-muted-light uppercase tracking-widest mb-3">
                                 Team Progress
                             </h3>
                             <div className="flex items-baseline gap-2 mb-4">
                                 <span className="text-3xl font-bold font-heading">8</span>
-                                <span className="text-xl font-medium text-text-secondary-light dark:text-text-secondary-dark">/ 12</span>
-                                <span className="text-sm text-text-secondary-light dark:text-text-secondary-dark ml-1">submitted</span>
+                                <span className="text-xl font-medium text-text-secondary-light ">/ 12</span>
+                                <span className="text-sm text-text-secondary-light ml-1">submitted</span>
                             </div>
-                            <div className="h-2 w-full bg-surface-2-light dark:bg-surface-2-dark rounded-full overflow-hidden">
+                            <div className="h-2 w-full bg-surface-2-light rounded-full overflow-hidden">
                                 <div className="h-full bg-primary rounded-full transition-all duration-500 ease-out" style={{ width: "66%" }}></div>
                             </div>
                         </div>
 
                         {/* Average Score */}
-                        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card">
-                            <h3 className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-3">
+                        <div className="bg-surface-light border border-border-light rounded-xl p-5 shadow-sm bento-card">
+                            <h3 className="text-xs font-bold text-text-muted-light uppercase tracking-widest mb-3">
                                 Average Score
                             </h3>
                             <div className="flex items-baseline gap-2">
@@ -310,8 +247,8 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                         </div>
 
                         {/* Pending Review */}
-                        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card">
-                            <h3 className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-3">
+                        <div className="bg-surface-light border border-border-light rounded-xl p-5 shadow-sm bento-card">
+                            <h3 className="text-xs font-bold text-text-muted-light uppercase tracking-widest mb-3">
                                 Pending Review
                             </h3>
                             <div className="flex items-baseline gap-2">
@@ -322,14 +259,14 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                     </div>
 
                     {/* Team KPI Overview Table */}
-                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col">
-                        <div className="px-5 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between bg-surface-light dark:bg-surface-dark">
-                            <h2 className="text-lg font-bold font-heading text-text-primary-light dark:text-text-primary-dark">
+                    <div className="bg-surface-light border border-border-light rounded-xl shadow-sm overflow-hidden flex flex-col">
+                        <div className="px-5 py-4 border-b border-border-light flex items-center justify-between bg-surface-light ">
+                            <h2 className="text-lg font-bold font-heading text-text-primary-light ">
                                 Team KPI Overview: <span className="text-primary">{activeEmployee?.fullName || "Select Employee"}</span>
                             </h2>
                             <div className="flex items-center gap-3">
                                 <div className="relative">
-                                    <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark" viewBox="0 0 20 20" fill="currentColor">
+                                    <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light " viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
                                     </svg>
                                     <input
@@ -337,7 +274,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                                         placeholder="Search KPI..."
                                         value={searchKpiQuery}
                                         onChange={(e) => setSearchKpiQuery(e.target.value)}
-                                        className="pl-9 pr-4 py-1.5 w-64 text-sm bg-surface-2-light dark:bg-surface-2-dark border border-border-light dark:border-border-dark rounded-lg text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus-ring"
+                                        className="pl-9 pr-4 py-1.5 w-64 text-sm bg-surface-2-light border border-border-light rounded-lg text-text-primary-light placeholder-text-muted-light focus-ring"
                                     />
                                 </div>
                                 <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-md tracking-wider">
@@ -349,46 +286,46 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="border-b border-border-light dark:border-border-dark bg-surface-2-light dark:bg-surface-2-dark">
-                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest w-[35%]">
+                                    <tr className="border-b border-border-light bg-surface-2-light ">
+                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light uppercase tracking-widest w-[35%]">
                                             Category
                                         </th>
-                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-center">
+                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light uppercase tracking-widest text-center">
                                             Weighting (HR)
                                         </th>
-                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest w-[25%]">
+                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light uppercase tracking-widest w-[25%]">
                                             Target Value
                                         </th>
-                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-right">
+                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light uppercase tracking-widest text-right">
                                             Action
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                                <tbody className="divide-y divide-border-light ">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={4} className="px-5 py-6 text-center text-text-muted-light dark:text-text-muted-dark">
+                                            <td colSpan={4} className="px-5 py-6 text-center text-text-muted-light ">
                                                 Loading KPIs...
                                             </td>
                                         </tr>
                                     ) : filteredKpis.length === 0 ? (
                                         <tr>
-                                            <td colSpan={4} className="px-5 py-6 text-center text-text-muted-light dark:text-text-muted-dark">
+                                            <td colSpan={4} className="px-5 py-6 text-center text-text-muted-light ">
                                                 {kpis.length === 0 ? "No KPIs found. The HR must define the KPI structure for this department first." : "No KPIs match your search."}
                                             </td>
                                         </tr>
                                     ) : filteredKpis.map((kpi) => (
-                                        <tr key={kpi.kpiLibraryId} className="table-row-hover hover:bg-surface-2-light/50 dark:hover:bg-surface-2-dark/50 p-2">
+                                        <tr key={kpi.kpiLibraryId} className="table-row-hover hover:bg-surface-2-light/50 p-2">
                                             <td className="px-5 py-4">
-                                                <div className="font-semibold text-[15px] text-text-primary-light dark:text-text-primary-dark">
+                                                <div className="font-semibold text-[15px] text-text-primary-light ">
                                                     {kpi.name}
                                                 </div>
-                                                <div className="text-[13px] text-text-secondary-light dark:text-text-secondary-dark font-medium mt-1">
+                                                <div className="text-[13px] text-text-secondary-light font-medium mt-1">
                                                     {kpi.category}
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4 text-center">
-                                                <div className="inline-flex font-semibold text-text-secondary-light dark:text-text-secondary-dark items-center bg-surface-2-light dark:bg-surface-2-dark px-2.5 py-1 rounded-md text-sm border border-border-light dark:border-border-dark">
+                                                <div className="inline-flex font-semibold text-text-secondary-light items-center bg-surface-2-light px-2.5 py-1 rounded-md text-sm border border-border-light ">
                                                     {kpi.weight}%
                                                     {Icons.lock}
                                                 </div>
@@ -400,15 +337,15 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                                                         placeholder="e.g 1000..."
                                                         value={kpi._targetValue}
                                                         onChange={(e) => handleTargetChange(kpi.kpiLibraryId, e.target.value)}
-                                                        className={`w-full bg-surface-light dark:bg-surface-dark border px-3 py-2 rounded-lg text-sm font-semibold shadow-sm overflow-hidden text-text-primary-light dark:text-text-primary-dark focus-ring focus:outline-none transition-colors
-                                                            ${kpi._isAssigned ? 'border-primary bg-primary/5' : 'border-border-light dark:border-border-dark'}
-                                                        `}
+                                                        className={`w-full bg-surface-light border px-3 py-2 rounded-lg text-sm font-semibold shadow-sm overflow-hidden text-text-primary-light focus-ring focus:outline-none transition-colors
+ ${kpi._isAssigned ? 'border-primary bg-primary/5' : 'border-border-light '}
+ `}
                                                     />
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4 text-right">
                                                 {kpi._isAssigned ? (
-                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-600 dark:text-green-400 rounded-lg text-xs font-bold uppercase tracking-widest border border-green-500/20">
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-600 rounded-lg text-xs font-bold uppercase tracking-widest border border-green-500/20">
                                                         <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" /></svg>
                                                         Assigned
                                                     </div>
@@ -429,206 +366,140 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                     </div>
 
                     {/* Employee Evidence & Final Scoring */}
-                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col">
-                        <div className="px-5 py-4 border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark flex items-center justify-between">
-                            <h2 className="text-lg font-bold font-heading text-text-primary-light dark:text-text-primary-dark">
-                                Employee Evidence &amp; Final Scoring
+                    <div className="bg-surface-light border border-border-light rounded-xl shadow-sm overflow-hidden flex flex-col">
+                        <div className="px-5 py-4 border-b border-border-light bg-surface-light ">
+                            <h2 className="text-lg font-bold font-heading text-text-primary-light ">
+                                Employee Evidence & Final Scoring
                             </h2>
-                            {activeReview && (
-                                <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${activeReview.status === 'SUBMITTED' || activeReview.status === 'APPROVED'
-                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                    }`}>
-                                    {activeReview.status}
-                                </span>
-                            )}
                         </div>
 
-                        {reviewLoading ? (
-                            <div className="p-8 text-center text-text-muted-light dark:text-text-muted-dark text-sm">Loading review data...</div>
-                        ) : (
-                            <div className="flex divide-x divide-border-light dark:divide-border-dark">
-                                {/* Left Side: Evidence — assigned KPI goals */}
-                                <div className="flex-1 p-5 space-y-3">
-                                    <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-3">
-                                        Assigned KPI Targets (Evidence)
-                                    </h3>
+                        <div className="flex divide-x divide-border-light ">
+                            {/* Left Side: Evidence */}
+                            <div className="flex-1 p-5 space-y-4">
+                                <h3 className="text-sm font-bold text-text-primary-light mb-4">
+                                    Submitted Evidence
+                                </h3>
 
-                                    {kpis.filter(k => k._isAssigned).length === 0 ? (
-                                        <div className="text-center py-6 text-text-muted-light dark:text-text-muted-dark">
-                                            <svg className="w-8 h-8 mx-auto mb-2 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                            <p className="text-xs">No KPI targets assigned yet.</p>
+                                {/* Evidence Item 1 */}
+                                <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded bg-white flex items-center justify-center shadow-sm">
+                                            {Icons.documentText}
                                         </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {kpis.filter(k => k._isAssigned).map(kpi => (
-                                                <div key={kpi.kpiLibraryId} className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-lg bg-white dark:bg-surface-2-dark flex items-center justify-center shadow-sm border border-primary/20 text-primary font-bold text-xs">
-                                                            {kpi.weight}%
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark">{kpi.name}</div>
-                                                            <div className="text-xs text-text-secondary-light dark:text-text-secondary-dark">Target: <span className="font-semibold text-primary">{kpi._targetValue}</span></div>
-                                                        </div>
-                                                    </div>
-                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                                                        <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
-                                                        SET
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* KPI Completion summary */}
-                                    {computedKpiScore !== null && (
-                                        <div className="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
-                                            <p className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-1">KPI Assignment Coverage</p>
-                                            <div className="flex items-baseline gap-2">
-                                                <span className="text-2xl font-bold font-heading text-primary">{computedKpiScore}%</span>
-                                                <span className="text-xs text-text-secondary-light dark:text-text-secondary-dark">of total weight assigned</span>
+                                        <div>
+                                            <div className="text-sm font-bold text-text-primary-light ">
+                                                Q3_Sales_Performance_Report.pdf
                                             </div>
-                                            <div className="h-1.5 w-full bg-surface-2-light dark:bg-surface-2-dark rounded-full mt-2 overflow-hidden">
-                                                <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${computedKpiScore}%` }} />
+                                            <div className="text-xs text-text-secondary-light mt-0.5">
+                                                2.4 MB • 2 days ago
                                             </div>
                                         </div>
-                                    )}
+                                    </div>
+                                    {Icons.eye}
                                 </div>
 
-                                {/* Right Side: Manager Scoring */}
-                                <div className="flex-1 p-5 flex flex-col">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark">Manager Final Score</h3>
-                                        {activeReview?.overallScore !== null && activeReview?.overallScore !== undefined && (
-                                            <div className="flex items-baseline gap-1">
-                                                <span className="text-2xl font-bold font-heading text-primary">{activeReview.overallScore.toFixed(1)}</span>
-                                                <span className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">/ 100</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Overall score bar */}
-                                    {activeReview?.overallScore !== null && activeReview?.overallScore !== undefined && (
-                                        <div className="mb-4">
-                                            <div className="relative h-2 w-full bg-surface-2-light dark:bg-surface-2-dark rounded-full mb-1">
-                                                <div className="absolute left-0 top-0 h-full bg-primary rounded-full transition-all duration-500 ease-out" style={{ width: `${Math.min(activeReview.overallScore, 100)}%` }} />
-                                            </div>
-                                            <div className="flex justify-between text-[10px] font-bold tracking-widest uppercase text-text-muted-light dark:text-text-muted-dark">
-                                                <span>UNSATISFACTORY</span><span>MEETS</span><span>EXCEEDS</span>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Score inputs */}
-                                    <div className="space-y-3 mb-4">
-                                        <div>
-                                            <label className="block text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-1">
-                                                KPI Score <span className="text-text-secondary-light normal-case font-normal">(0–100, weight 70%)</span>
-                                            </label>
-                                            <input
-                                                type="number"
-                                                min="0" max="100"
-                                                value={kpiScoreInput}
-                                                onChange={e => setKpiScoreInput(e.target.value)}
-                                                disabled={activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
-                                                placeholder="e.g. 85"
-                                                className="w-full px-3 py-2 text-sm bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed"
-                                            />
+                                {/* Evidence Item 2 */}
+                                <div className="flex items-center justify-between p-3 rounded-lg border border-border-light bg-surface-light hover:bg-surface-2-light transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded bg-white flex items-center justify-center shadow-sm border border-border-light ">
+                                            {Icons.image}
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-1">
-                                                Mentor's Attitude Rating <span className="text-text-secondary-light normal-case font-normal">(0–100, weight 30%)</span>
-                                            </label>
-                                            <div className="relative">
-                                                <input
-                                                    type="number"
-                                                    value={attitudeScoreInput}
-                                                    readOnly
-                                                    className="w-full pl-9 pr-3 py-2 text-sm bg-surface-2-light dark:bg-surface-2-dark border border-border-light dark:border-border-dark rounded-lg text-text-muted-light dark:text-text-muted-dark cursor-not-allowed opacity-80 shadow-inner"
-                                                />
-                                                <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                                </svg>
+                                            <div className="text-sm font-bold text-text-primary-light ">
+                                                Client_Feedback_Survey.png
                                             </div>
-                                            <p className="mt-1 text-[11px] text-primary font-medium flex items-center gap-1">
-                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                Auto-fetched from Mentor's evaluation
-                                            </p>
+                                            <div className="text-xs text-text-secondary-light mt-0.5">
+                                                1.1 MB • 2 days ago
+                                            </div>
                                         </div>
-                                        {kpiScoreInput && attitudeScoreInput && (
-                                            <div className="px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg">
-                                                <p className="text-xs text-text-muted-light dark:text-text-muted-dark">Preview Overall Score</p>
-                                                <p className="text-lg font-bold text-primary">
-                                                    {(parseFloat(kpiScoreInput || '0') * 0.7 + parseFloat(attitudeScoreInput || '0') * 0.3).toFixed(1)} / 100
-                                                </p>
-                                            </div>
-                                        )}
                                     </div>
-
-                                    {/* Action Buttons */}
-                                    <div className="flex justify-end gap-3 mt-auto">
-                                        <button
-                                            onClick={handleSaveDraft}
-                                            disabled={scoreSaving || activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
-                                            className="px-5 py-2.5 rounded-lg text-sm font-semibold border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark hover:bg-surface-2-light dark:hover:bg-surface-2-dark transition-colors shadow-sm focus-ring disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {scoreSaving ? 'Saving...' : 'Save Draft'}
-                                        </button>
-                                        <button
-                                            onClick={handleFinalize}
-                                            disabled={scoreSaving || activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
-                                            className="px-5 py-2.5 rounded-lg text-sm font-semibold bg-primary hover:bg-primary-hover text-white transition-colors shadow-sm focus-ring btn-primary-action disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {activeReview?.status === 'SUBMITTED' ? '✓ Finalized' : 'Finalize Score'}
-                                        </button>
-                                    </div>
+                                    {Icons.eye}
                                 </div>
                             </div>
-                        )}
+
+                            {/* Right Side: Scoring */}
+                            <div className="flex-1 p-5 flex flex-col">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-sm font-bold text-text-primary-light ">
+                                        Manager Final Score
+                                    </h3>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-2xl font-bold font-heading text-primary">85</span>
+                                        <span className="text-sm font-medium text-text-secondary-light ">/ 100</span>
+                                    </div>
+                                </div>
+
+                                {/* Slider bar mock */}
+                                <div className="relative h-2 w-full bg-surface-2-light rounded-full mb-2">
+                                    <div className="absolute left-0 top-0 h-full bg-primary rounded-full transition-all duration-500 ease-out" style={{ width: "85%" }}></div>
+                                    <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full border-2 border-white shadow-sm" style={{ left: "85%", transform: "translate(-50%, -50%)" }}></div>
+                                </div>
+                                <div className="flex justify-between text-[10px] font-bold tracking-widest uppercase text-text-muted-light mb-6">
+                                    <span>UNSATISFACTORY</span>
+                                    <span>MEETS</span>
+                                    <span>EXCEEDS</span>
+                                </div>
+
+                                {/* Input block */}
+                                <textarea
+                                    className="w-full flex-1 min-h-[100px] p-3 rounded-xl border border-border-light bg-surface-light text-sm text-text-primary-light placeholder-text-muted-light focus-ring mb-5 resize-none shadow-sm"
+                                    placeholder="Provide scoring comments..."
+                                ></textarea>
+
+                                {/* Action Buttons */}
+                                <div className="flex justify-end gap-3 mt-auto">
+                                    <button className="px-5 py-2.5 rounded-lg text-sm font-semibold border border-border-light text-text-primary-light hover:bg-surface-2-light transition-colors shadow-sm focus-ring">
+                                        Save Draft
+                                    </button>
+                                    <button className="px-5 py-2.5 rounded-lg text-sm font-semibold bg-primary hover:bg-primary-hover text-white transition-colors shadow-sm focus-ring btn-primary-action">
+                                        Finalize Score
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 {/* Right Sidebar */}
                 <div className="w-80 flex-shrink-0 space-y-6">
                     {/* Team Members List */}
-                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col bento-card">
-                        <div className="px-5 py-4 border-b border-border-light dark:border-border-dark">
-                            <h2 className="text-sm font-bold font-heading text-text-primary-light dark:text-text-primary-dark">
+                    <div className="bg-surface-light border border-border-light rounded-xl shadow-sm overflow-hidden flex flex-col bento-card">
+                        <div className="px-5 py-4 border-b border-border-light ">
+                            <h2 className="text-sm font-bold font-heading text-text-primary-light ">
                                 Department Members
                             </h2>
                         </div>
                         <div className="p-2 space-y-1">
                             {employees.map((member) => (
                                 <div
-                                    key={member.id}
-                                    onClick={() => setActiveEmployeeId(member.id)}
+                                    key={member.employeeId}
+                                    onClick={() => setActiveEmployeeId(member.employeeId)}
                                     className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors relative overflow-hidden group
-                    ${member.id === activeEmployeeId
+ ${member.employeeId === activeEmployeeId
                                             ? "bg-primary/5 border border-primary/20"
-                                            : "border border-transparent hover:bg-surface-2-light dark:hover:bg-surface-2-dark"
+                                            : "border border-transparent hover:bg-surface-2-light "
                                         }
-                  `}
+ `}
                                 >
-                                    {member.id === activeEmployeeId && (
+                                    {member.employeeId === activeEmployeeId && (
                                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full"></div>
                                     )}
 
-                                    <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(member.fullName || "User")}&background=random`} alt={member.fullName || "User"} className="w-10 h-10 rounded-full object-cover bg-surface-2-light dark:bg-surface-2-dark" />
+                                    <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(member.fullName)}&background=random`} alt={member.fullName} className="w-10 h-10 rounded-full object-cover bg-surface-2-light " />
 
                                     <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark truncate">
-                                            {member.fullName || "User"}
+                                        <div className="text-sm font-bold text-text-primary-light truncate">
+                                            {member.fullName}
                                         </div>
                                         <div className="flex items-center gap-1 mt-0.5">
                                             <span className={`text-[10px] font-bold tracking-wider uppercase
-                        ${member.id === activeEmployeeId ? 'text-primary' : 'text-text-muted-light dark:text-text-muted-dark'}
-                      `}>
-                                                {member.id === activeEmployeeId ? 'CURRENT SELECTION' : 'AVAILABLE'}
+ ${member.employeeId === activeEmployeeId ? 'text-primary' : 'text-text-muted-light '}
+ `}>
+                                                {member.employeeId === activeEmployeeId ? 'CURRENT SELECTION' : 'AVAILABLE'}
                                             </span>
                                         </div>
                                     </div>
-                                    {member.id === activeEmployeeId && (
+                                    {member.employeeId === activeEmployeeId && (
                                         <div className="flex-shrink-0">
                                             {Icons.dotYellow}
                                         </div>
@@ -642,8 +513,8 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                             )}
                         </div>
 
-                        <div className="p-4 border-t border-border-light dark:border-border-dark bg-surface-2-light/50 dark:bg-surface-2-dark/50 flex justify-center mt-1">
-                            <button className="text-xs font-bold text-text-secondary-light dark:text-text-secondary-dark hover:text-primary tracking-widest uppercase transition-colors">
+                        <div className="p-4 border-t border-border-light bg-surface-2-light/50 flex justify-center mt-1">
+                            <button className="text-xs font-bold text-text-secondary-light hover:text-primary tracking-widest uppercase transition-colors">
                                 VIEW ALL {employees.length} REPORTS
                             </button>
                         </div>

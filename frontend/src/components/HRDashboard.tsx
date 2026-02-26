@@ -83,7 +83,7 @@ const DonutChart: React.FC<{ slices: DonutSlice[]; total: number }> = ({ slices,
   return (
     <svg viewBox="0 0 128 128" className="w-36 h-36 -rotate-90">
       {/* Track */}
-      <circle cx={cx} cy={cy} r={R} fill="none" stroke="currentColor" strokeWidth="20" className="text-gray-100 dark:text-gray-800" />
+      <circle cx={cx} cy={cy} r={R} fill="none" stroke="currentColor" strokeWidth="20" className="text-gray-100 " />
       {total > 0 ? paths : null}
       {/* Center text */}
       <text
@@ -114,14 +114,14 @@ const Avatar: React.FC<{ name: string; url?: string; size?: string }> = ({ name,
   const initials = name?.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase() ?? "?";
   const colors = [
     "bg-primary/15 text-primary",
-    "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-    "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400",
-    "bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400",
+    "bg-blue-100 text-blue-600 ",
+    "bg-amber-100 text-amber-700 ",
+    "bg-rose-100 text-rose-600 ",
+    "bg-cyan-100 text-cyan-600 ",
   ];
   const color = colors[(name?.charCodeAt(0) ?? 0) % colors.length];
 
-  if (url) return <img src={url} alt={name} className={`${size} rounded-full object-cover ring-2 ring-white dark:ring-surface-dark flex-shrink-0`} />;
+  if (url) return <img src={url} alt={name} className={`${size} rounded-full object-cover ring-2 ring-white flex-shrink-0`} />;
   return (
     <div className={`${size} rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${color}`}>
       {initials}
@@ -131,11 +131,11 @@ const Avatar: React.FC<{ name: string; url?: string; size?: string }> = ({ name,
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { dot: string; text: string; bg: string }> = {
-  ACTIVE: { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
-  ONBOARDING: { dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-900/20" },
-  PROBATION: { dot: "bg-blue-500", text: "text-blue-700 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-900/20" },
-  ONLEAVE: { dot: "bg-rose-500", text: "text-rose-700 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-900/20" },
-  INACTIVE: { dot: "bg-gray-400", text: "text-gray-600 dark:text-gray-400", bg: "bg-gray-100 dark:bg-gray-800" },
+  ACTIVE: { dot: "bg-emerald-500", text: "text-emerald-700 ", bg: "bg-emerald-50 " },
+  ONBOARDING: { dot: "bg-amber-500", text: "text-amber-700 ", bg: "bg-amber-50 " },
+  PROBATION: { dot: "bg-blue-500", text: "text-blue-700 ", bg: "bg-blue-50 " },
+  ONLEAVE: { dot: "bg-rose-500", text: "text-rose-700 ", bg: "bg-rose-50 " },
+  INACTIVE: { dot: "bg-gray-400", text: "text-gray-600 ", bg: "bg-gray-100 " },
 };
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -156,7 +156,7 @@ interface KpiCardProps {
   value: number | string;
   sub?: string;
   icon: React.ReactNode;
-  accent: string;       // Tailwind bg + text classes for icon wrapper
+  accent: string; // Tailwind bg + text classes for icon wrapper
   trend?: { value: string; positive: boolean };
   onClick?: () => void;
 }
@@ -168,23 +168,23 @@ const KpiCard: React.FC<KpiCardProps> = ({ id, label, value, sub, icon, accent, 
     role={onClick ? "button" : undefined}
     tabIndex={onClick ? 0 : undefined}
     onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
-    className={`bento-card rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-card p-5 flex gap-4 items-start ${onClick ? "cursor-pointer" : ""}`}
+    className={`bento-card rounded-2xl border border-border-light bg-surface-light shadow-card p-5 flex gap-4 items-start ${onClick ? "cursor-pointer" : ""}`}
   >
     <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${accent}`}>
       {icon}
     </div>
     <div className="min-w-0 flex-1">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light ">
         {label}
       </p>
-      <p className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark mt-0.5 leading-none">
+      <p className="text-2xl font-bold font-heading text-text-primary-light mt-0.5 leading-none">
         {value}
       </p>
       {sub && (
-        <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1">{sub}</p>
+        <p className="text-xs text-text-secondary-light mt-1">{sub}</p>
       )}
       {trend && (
-        <p className={`text-xs font-medium mt-1 ${trend.positive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+        <p className={`text-xs font-medium mt-1 ${trend.positive ? "text-emerald-600 " : "text-rose-600 "}`}>
           {trend.positive ? "↑" : "↓"} {trend.value}
         </p>
       )}
@@ -204,16 +204,16 @@ const QuickAction: React.FC<{
   <button
     id={id}
     onClick={onClick}
-    className="bento-card w-full rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-card p-4 flex items-center gap-4 text-left cursor-pointer group hover:border-primary/30 transition-colors"
+    className="bento-card w-full rounded-2xl border border-border-light bg-surface-light shadow-card p-4 flex items-center gap-4 text-left cursor-pointer group hover:border-primary/30 transition-colors"
   >
     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${accent} group-hover:scale-110 transition-transform duration-200`}>
       {icon}
     </div>
     <div className="min-w-0">
-      <p className="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark leading-tight">{label}</p>
-      <p className="text-[11px] text-text-secondary-light dark:text-text-secondary-dark mt-0.5 leading-tight">{desc}</p>
+      <p className="text-sm font-semibold text-text-primary-light leading-tight">{label}</p>
+      <p className="text-[11px] text-text-secondary-light mt-0.5 leading-tight">{desc}</p>
     </div>
-    <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-text-muted-light dark:text-text-muted-dark ml-auto flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+    <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-text-muted-light ml-auto flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
       <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L9.94 8 6.22 5.28a.75.75 0 010-1.06z" clipRule="evenodd" />
     </svg>
   </button>
@@ -285,7 +285,7 @@ const HRDashboard: React.FC = () => {
       setLoading(true);
       // First page for recent employees
       const firstPage = await apiClient.get<PageResponse<Employee>>("/api/hr/employees", {
-        params: { page: 0, size: 6, sort: "personal.fullName" },
+        params: { page: 0, size: 6, sort: "fullName" },
       });
       setEmployees(firstPage.data.content);
 
@@ -297,7 +297,7 @@ const HRDashboard: React.FC = () => {
         const rest = await Promise.all(
           Array.from({ length: totalPages - 1 }, (_, i) =>
             apiClient.get<PageResponse<Employee>>("/api/hr/employees", {
-              params: { page: i + 1, size: 10, sort: "personal.fullName" },
+              params: { page: i + 1, size: 10, sort: "fullName" },
             })
           )
         );
@@ -330,7 +330,7 @@ const HRDashboard: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
 
       {/* ══ Welcome Hero ═══════════════════════════════════════════════════════ */}
-      <div className="relative rounded-2xl overflow-hidden border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-card">
+      <div className="relative rounded-2xl overflow-hidden border border-border-light bg-surface-light shadow-card">
         {/* Gradient banner */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-teal-500/10 to-cyan-400/5 pointer-events-none" />
         <div className="absolute -right-8 -top-8 w-56 h-56 rounded-full bg-primary/8 pointer-events-none" />
@@ -339,12 +339,12 @@ const HRDashboard: React.FC = () => {
         <div className="relative px-7 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">{today}</span>
+              <span className="text-xs font-medium text-text-secondary-light ">{today}</span>
             </div>
-            <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
+            <h1 className="text-2xl font-bold font-heading text-text-primary-light tracking-tight">
               {getGreeting()}, {currentUser.name.split(" ").at(-1)} 👋
             </h1>
-            <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
+            <p className="text-sm text-text-secondary-light mt-1">
               Here's what's happening across your organization today.
             </p>
           </div>
@@ -385,7 +385,7 @@ const HRDashboard: React.FC = () => {
               value={stats.active}
               sub={stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}% of workforce` : "—"}
               icon={<span className="text-emerald-600">{I.check}</span>}
-              accent="bg-emerald-50 dark:bg-emerald-900/20"
+              accent="bg-emerald-50 "
             />
             <KpiCard
               id="kpi-onboarding"
@@ -393,7 +393,7 @@ const HRDashboard: React.FC = () => {
               value={stats.onboarding}
               sub="New hires in progress"
               icon={<span className="text-amber-500">{I.arrow}</span>}
-              accent="bg-amber-50 dark:bg-amber-900/20"
+              accent="bg-amber-50 "
               onClick={() => navigate("/onboarding")}
             />
             <KpiCard
@@ -402,7 +402,7 @@ const HRDashboard: React.FC = () => {
               value={stats.onLeave}
               sub="Currently on leave"
               icon={<span className="text-rose-500">{I.clock}</span>}
-              accent="bg-rose-50 dark:bg-rose-900/20"
+              accent="bg-rose-50 "
             />
           </>
         )}
@@ -412,8 +412,8 @@ const HRDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Status Breakdown */}
-        <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-card p-6 animate-fade-in">
-          <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-5">
+        <div className="rounded-2xl border border-border-light bg-surface-light shadow-card p-6 animate-fade-in">
+          <h3 className="text-sm font-bold text-text-primary-light mb-5">
             Workforce Breakdown
           </h3>
 
@@ -437,13 +437,13 @@ const HRDashboard: React.FC = () => {
                   <div key={item.label} className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full flex-shrink-0 ${item.color}`} />
-                      <span className="text-xs text-text-secondary-light dark:text-text-secondary-dark">{item.label}</span>
+                      <span className="text-xs text-text-secondary-light ">{item.label}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark">
+                      <span className="text-xs font-semibold text-text-primary-light ">
                         {item.value}
                       </span>
-                      <span className="text-[10px] text-text-muted-light dark:text-text-muted-dark w-8 text-right">
+                      <span className="text-[10px] text-text-muted-light w-8 text-right">
                         {stats.total > 0 ? `${Math.round((item.value / stats.total) * 100)}%` : "—"}
                       </span>
                     </div>
@@ -455,8 +455,8 @@ const HRDashboard: React.FC = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="lg:col-span-2 rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-card p-6 animate-fade-in">
-          <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-5">
+        <div className="lg:col-span-2 rounded-2xl border border-border-light bg-surface-light shadow-card p-6 animate-fade-in">
+          <h3 className="text-sm font-bold text-text-primary-light mb-5">
             Quick Actions
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -473,7 +473,7 @@ const HRDashboard: React.FC = () => {
               label="Onboarding"
               desc="Track new hire progress"
               icon={<span className="text-amber-500">{I.arrow}</span>}
-              accent="bg-amber-50 dark:bg-amber-900/20"
+              accent="bg-amber-50 "
               onClick={() => navigate("/onboarding")}
             />
             <QuickAction
@@ -481,7 +481,7 @@ const HRDashboard: React.FC = () => {
               label="Offboarding"
               desc="Manage exits and resignations"
               icon={<span className="text-rose-500">{I.bolt}</span>}
-              accent="bg-rose-50 dark:bg-rose-900/20"
+              accent="bg-rose-50 "
               onClick={() => navigate("/offboarding")}
             />
             <QuickAction
@@ -489,7 +489,7 @@ const HRDashboard: React.FC = () => {
               label="Change Request"
               desc="Submit a personal info change"
               icon={<span className="text-blue-500">{I.document}</span>}
-              accent="bg-blue-50 dark:bg-blue-900/20"
+              accent="bg-blue-50 "
               onClick={() => navigate("/requests/new")}
             />
           </div>
@@ -497,10 +497,10 @@ const HRDashboard: React.FC = () => {
       </div>
 
       {/* ══ Recent Employees ════════════════════════════════════════════════════ */}
-      <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-card animate-fade-in">
+      <div className="rounded-2xl border border-border-light bg-surface-light shadow-card animate-fade-in">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
-          <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark">
+        <div className="px-6 py-4 border-b border-border-light flex items-center justify-between">
+          <h3 className="text-sm font-bold text-text-primary-light ">
             Employee Overview
           </h3>
           <button
@@ -518,18 +518,18 @@ const HRDashboard: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-gray-100 dark:border-gray-800/60">
+              <tr className="border-b border-gray-100 ">
                 {["Employee", "Position", "Department", "Role", "Status", ""].map((h) => (
-                  <th key={h} className="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark">
+                  <th key={h} className="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light ">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-gray-800/40 text-sm">
+            <tbody className="divide-y divide-gray-50 text-sm">
               {loading
                 ? Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="border-b border-gray-100 dark:border-gray-800/60">
+                  <tr key={i} className="border-b border-gray-100 ">
                     {Array.from({ length: 6 }).map((__, j) => (
                       <td key={j} className="px-6 py-4">
                         <div className={`skeleton rounded h-4 ${j === 0 ? "w-36" : j === 5 ? "w-8" : "w-24"}`} />
@@ -541,33 +541,33 @@ const HRDashboard: React.FC = () => {
                   ? (
                     <tr>
                       <td colSpan={6} className="px-6 py-16 text-center">
-                        <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">No employees found.</p>
+                        <p className="text-sm text-text-secondary-light ">No employees found.</p>
                       </td>
                     </tr>
                   )
                   : employees.map((emp) => (
-                    <tr key={emp.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/30 table-row-hover">
+                    <tr key={emp.id} className="group hover:bg-gray-50/80 table-row-hover">
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-3">
                           <Avatar name={emp.fullName} url={emp.avatarUrl} />
                           <div>
-                            <p className="font-semibold text-text-primary-light dark:text-text-primary-dark leading-tight">
+                            <p className="font-semibold text-text-primary-light leading-tight">
                               {emp.fullName}
                             </p>
-                            <p className="text-[11px] font-mono text-text-muted-light dark:text-text-muted-dark mt-0.5">
+                            <p className="text-[11px] font-mono text-text-muted-light mt-0.5">
                               {emp.employeeCode}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-3.5 text-text-primary-light dark:text-text-primary-dark">
-                        {emp.positionTitle || <span className="text-text-muted-light dark:text-text-muted-dark">—</span>}
+                      <td className="px-6 py-3.5 text-text-primary-light ">
+                        {emp.positionTitle || <span className="text-text-muted-light ">—</span>}
                       </td>
-                      <td className="px-6 py-3.5 text-text-primary-light dark:text-text-primary-dark">
-                        {emp.deptName || <span className="text-text-muted-light dark:text-text-muted-dark">—</span>}
+                      <td className="px-6 py-3.5 text-text-primary-light ">
+                        {emp.deptName || <span className="text-text-muted-light ">—</span>}
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">
+                        <span className="text-xs font-medium text-text-secondary-light bg-gray-100 px-2 py-0.5 rounded-md">
                           {emp.role || "—"}
                         </span>
                       </td>
@@ -578,7 +578,7 @@ const HRDashboard: React.FC = () => {
                         <button
                           onClick={() => navigate(`/employee/${emp.id}`)}
                           title="View profile"
-                          className="p-1.5 rounded-lg text-text-muted-light dark:text-text-muted-dark hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
+                          className="p-1.5 rounded-lg text-text-muted-light hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
                         >
                           {I.eye}
                         </button>
@@ -592,8 +592,8 @@ const HRDashboard: React.FC = () => {
 
         {/* Footer */}
         {!loading && allEmployees.length > 6 && (
-          <div className="px-6 py-3 border-t border-border-light dark:border-border-dark flex items-center justify-between">
-            <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+          <div className="px-6 py-3 border-t border-border-light flex items-center justify-between">
+            <p className="text-xs text-text-secondary-light ">
               Showing <span className="font-semibold">6</span> of{" "}
               <span className="font-semibold">{stats.total}</span> employees
             </p>
