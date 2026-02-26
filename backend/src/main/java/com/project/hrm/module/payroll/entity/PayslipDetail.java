@@ -1,39 +1,39 @@
-package com.project.hrm.payroll.compensation.entity;
+package com.project.hrm.module.payroll.entity;
 
-import com.project.hrm.payroll.common.enums.PayslipType;
+
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "payslip_details")
+@Table(name = "payslip_details", schema = "public")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class PayslipDetail {
+
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "detail_id")
     private UUID detailId;
 
-    @Column(name = "payslip_id")
-    private UUID payslipId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payslip_id")
+    private Payslip payslip;
 
     @Column(name = "item_name")
     private String itemName;
 
-    @Column(name = "amount", precision = 15, scale = 2)
+    @Column(precision = 15, scale = 2)
     private BigDecimal amount;
 
-    @Column(name = "type")
-    private PayslipType type;
+    // Type: 1 = Income, 2 = Deduction
+    @Column(nullable = false)
+    private Short type;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-
 }

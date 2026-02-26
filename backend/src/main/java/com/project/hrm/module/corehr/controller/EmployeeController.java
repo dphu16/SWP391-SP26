@@ -4,6 +4,7 @@ import com.project.hrm.module.corehr.dto.request.EmployeeChangeDTO;
 import com.project.hrm.module.corehr.dto.request.EmployeeDTO;
 import com.project.hrm.module.corehr.dto.request.EmployeeDetailDTO;
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.enums.UserRole;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.exception.ErrorCode;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
@@ -18,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -63,6 +65,11 @@ public class EmployeeController {
             @Valid @RequestBody EmployeeChangeDTO req) {
         EmployeeDetailDTO updated = employeeService.updateEmployee(id, req);
         return ResponseEntity.ok(updated);
+    }
+
+    @GetMapping("/employees/user/hr")
+    public ResponseEntity<List<EmployeeDTO>> getAllHr(){
+        return ResponseEntity.ok(employeeService.getEmployeesByRole(UserRole.HR));
     }
 
     private void enforceOwnershipOrPrivilege(UUID targetEmployeeId, Authentication auth) {

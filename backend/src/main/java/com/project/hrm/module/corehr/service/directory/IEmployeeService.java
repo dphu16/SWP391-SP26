@@ -4,6 +4,7 @@ import com.project.hrm.module.corehr.dto.request.EmployeeDTO;
 import com.project.hrm.module.corehr.dto.request.EmployeeDetailDTO;
 import com.project.hrm.module.corehr.dto.request.EmployeeChangeDTO;
 import com.project.hrm.module.corehr.dto.response.InactiveEmployeeResponseDTO;
+import com.project.hrm.module.corehr.enums.UserRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -17,4 +18,6 @@ public interface IEmployeeService {
     EmployeeDetailDTO getEmployeeDetail(UUID id);
 
     EmployeeDetailDTO updateEmployee(UUID id, EmployeeChangeDTO req);
+
+    List<EmployeeDTO> getEmployeesByRole(UserRole userRole);
 }

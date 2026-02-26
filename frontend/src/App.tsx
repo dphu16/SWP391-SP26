@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
+import HRDashboard from "./components/HRDashboard";
 import EmployeeTable from "./components/EmployeeTable";
 import EmployeeDetail from "./components/EmployeeDetail";
 import EmployeeOnboarding from "./components/EmployeeOnboarding";
@@ -9,125 +10,126 @@ import EmployeeOffboarding from "./components/EmployeeOffboarding";
 import CandidateProfileCompletion from "./components/CandidateProfileCompletion";
 import CreateChangeRequest from "./components/CreateChangeRequest";
 import FilterBar from "./components/FilterBar";
-import PerformanceModule from "./components/PerformanceModule";
+
+// --- Nhóm route Attendance của bạn ---
+import ViewSchedule from "./components/attendance/ViewSchedule";
+import CreateSchedule from "./components/attendance/CreateSchedule";
+import CheckInOut from "./components/attendance/CheckInOut";
+import Applications from "./components/attendance/Applications";
+import ReviewRequests from "./components/attendance/ReviewRequests";
+import AttendanceSummary from "./components/attendance/AttendanceSummary";
+
+// --- Auth ---
+import LoginPage from "./components/auth/LoginPage";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+
+// --- Recruitment Feature Pages ---
+import JobListPage from "./components/recruitment/JobListPage";
+import JobDetailPage from "./components/recruitment/JobDetailPage";
+import JobFormPage from "./components/recruitment/JobFormPage";
+import JobRequestListPage from "./components/recruitment/JobRequestListPage";
+import JobRequestDetailPage from "./components/recruitment/JobRequestDetailPage";
+import JobRequestFormPage from "./components/recruitment/JobRequestFormPage";
+import CVListPage from "./components/recruitment/CVListPage";
+
+// --- Import từ nhánh develop của nhóm ---
 import { ToastProvider } from "./components/ui/Toast";
 
-
 const AppShell: React.FC = () => {
-  return (
-    <div className="flex h-screen bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark font-sans overflow-hidden">
-      <Sidebar />
+    return (
+        <div className="flex h-screen bg-background-light text-text-primary-light font-sans overflow-hidden">
+            <Sidebar />
 
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
-        <Header />
+            <main className="flex-1 flex flex-col h-full overflow-hidden">
+                <Header />
 
-        <div className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark">
-          <div className="max-w-7xl mx-auto px-6 py-6 space-y-5">
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <div className="flex-1 overflow-y-auto bg-background-light ">
+                    <div className="max-w-7xl mx-auto px-6 py-6 space-y-5">
+                        <Routes>
+                            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                            <Route path="/dashboard" element={<HRDashboard />} />
 
-              <Route
-                path="/employees"
-                element={
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                          Employee Directory
-                        </h1>
-                        <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                          Manage and view all employees in your organization
-                        </p>
-                      </div>
+                            {/* Core HR Routes */}
+                            <Route
+                                path="/employees"
+                                element={
+                                    <>
+                                        <div className="flex items-center justify-between">
+                                            <h1 className="text-2xl font-bold tracking-tight">
+                                                Employee Directory
+                                            </h1>
+                                        </div>
+                                        <FilterBar />
+                                        <EmployeeTable />
+                                    </>
+                                }
+                            />
+
+                            <Route path="/onboarding" element={<EmployeeOnboarding />} />
+                            <Route
+                                path="/onboarding/:applicationId/profile"
+                                element={<CandidateProfileCompletion />}
+                            />
+                            <Route path="/offboarding" element={<EmployeeOffboarding />} />
+
+                            {/* Route Change Request đã được sửa lỗi cú pháp */}
+                            <Route path="/change-request" element={<CreateChangeRequest />} />
+
+                            {/* --- Các Route Attendance của bạn --- */}
+                            <Route
+                                path="/attendance/view-schedule"
+                                element={<ViewSchedule />}
+                            />
+                            <Route
+                                path="/attendance/create-schedule"
+                                element={<CreateSchedule />}
+                            />
+                            <Route path="/attendance/check-in-out" element={<CheckInOut />} />
+                            <Route
+                                path="/attendance/applications"
+                                element={<Applications />}
+                            />
+                            <Route path="/attendance/review" element={<ReviewRequests />} />
+                            <Route path="/attendance/summary" element={<AttendanceSummary />} />
+
+                            {/* Recruitment Routes */}
+                            <Route path="/recruitment/jobs" element={<JobListPage />} />
+                            <Route path="/recruitment/jobs/new" element={<JobFormPage />} />
+                            <Route path="/recruitment/jobs/:id" element={<JobDetailPage />} />
+                            <Route path="/recruitment/jobs/edit/:id" element={<JobFormPage />} />
+                            <Route path="/recruitment/cvs" element={<CVListPage />} />
+
+                            <Route path="/recruitment/job-requests" element={<JobRequestListPage />} />
+                            <Route path="/recruitment/job-requests/new" element={<JobRequestFormPage />} />
+                            <Route path="/recruitment/job-requests/:id" element={<JobRequestDetailPage />} />
+                            <Route path="/recruitment/job-requests/:id/edit" element={<JobRequestFormPage />} />
+
+                            <Route path="/employee/:id" element={<EmployeeDetail />} />
+                            <Route path="/profile" element={<EmployeeDetail />} />
+                        </Routes>
                     </div>
-                    <FilterBar />
-                    <EmployeeTable />
-                  </>
-                }
-              />
-
-              <Route
-                path="/onboarding"
-                element={
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                          Onboarding
-                        </h1>
-                        <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                          Track new hire onboarding progress
-                        </p>
-                      </div>
-                    </div>
-                    <FilterBar />
-                    <EmployeeOnboarding />
-                  </>
-                }
-              />
-
-              <Route
-                path="/onboarding/:applicationId/profile"
-                element={<CandidateProfileCompletion />}
-              />
-
-              <Route
-                path="/offboarding"
-                element={
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                          Offboarding
-                        </h1>
-                        <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                          Manage exits, resignations, and handover workflows
-                        </p>
-                      </div>
-                    </div>
-                    <EmployeeOffboarding />
-                  </>
-                }
-              />
-
-              <Route
-                path="/requests/new"
-                element={
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                          Create Change Personal Info Request
-                        </h1>
-                        <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                          Submit a change request for your personal information
-                        </p>
-                      </div>
-                    </div>
-                    <CreateChangeRequest />
-                  </>
-                }
-              />
-
-              <Route path="/employee/:id" element={<EmployeeDetail />} />
-              <Route path="/profile" element={<EmployeeDetail />} />
-              <Route path="/performance" element={<PerformanceModule />} />
-            </Routes>
-          </div>
+                </div>
+            </main>
         </div>
-      </main>
-    </div>
-  );
+    );
 };
 
 const App: React.FC = () => {
-  return (
-    <ToastProvider>
-      <Routes>
-        <Route path="/*" element={<AppShell />} />
-      </Routes>
-    </ToastProvider>
-  );
+    return (
+        <ToastProvider>
+            <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route
+                    path="/*"
+                    element={
+                        <ProtectedRoute>
+                            <AppShell />
+                        </ProtectedRoute>
+                    }
+                />
+            </Routes>
+        </ToastProvider>
+    );
 };
 
 export default App;

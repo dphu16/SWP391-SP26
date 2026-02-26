@@ -1,8 +1,10 @@
 package com.project.hrm.module.corehr.service.directory;
 
 import com.project.hrm.module.corehr.dto.request.EmployeeChangeDTO;
+import com.project.hrm.module.corehr.dto.request.EmployeeDTO;
 import com.project.hrm.module.corehr.dto.request.EmployeeDetailDTO;
 import com.project.hrm.module.corehr.dto.response.InactiveEmployeeResponseDTO;
+import com.project.hrm.module.corehr.enums.UserRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,5 +34,10 @@ public class EmployeeService implements IEmployeeService {
     @Override
     public EmployeeDetailDTO updateEmployee(UUID id, EmployeeChangeDTO req) {
         return commandService.updateEmployee(id, req);
+    }
+
+    @Override
+    public List<EmployeeDTO> getEmployeesByRole(UserRole userRole) {
+        return queryService.getEmployeesByRole(userRole);
     }
 }

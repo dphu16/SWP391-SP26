@@ -1,46 +1,50 @@
-package com.project.hrm.payroll.compensation.entity;
+package com.project.hrm.module.payroll.entity;
 
-import com.project.hrm.payroll.common.enums.PayslipStatus;
+
+
+import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.payroll.enums.PayslipStatus;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "payslips")
+@Table(name = "payslips", schema = "public")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Payslip {
+
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "payslip_id")
     private UUID payslipId;
 
-    @Column(name = "employee_id")
-    private UUID employeeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id", nullable = false)
+    private Employee employee;
 
-    @Column(name = "period_id")
-    private UUID periodId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "period_id", nullable = false)
+    private PayrollPeriod payrollPeriod;
 
-    @Column(name = "base_salary")
+    @Column(name = "base_salary", precision = 15, scale = 2)
     private BigDecimal baseSalary;
 
-    @Column(name = "total_allowances")
+    @Column(name = "total_allowances", precision = 15, scale = 2)
     private BigDecimal totalAllowances;
 
     @Column(name = "gross_salary", precision = 15, scale = 2)
     private BigDecimal grossSalary;
 
-    @Column(name = "tax_amount")
+    @Column(name = "tax_amount", precision = 15, scale = 2)
     private BigDecimal taxAmount;
 
-    @Column(name = "insurance_amount")
+    @Column(name = "insurance_amount", precision = 15, scale = 2)
     private BigDecimal insuranceAmount;
 
     @Column(name = "total_deductions", precision = 15, scale = 2)
@@ -50,11 +54,19 @@ public class Payslip {
     private BigDecimal netSalary;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @Column(columnDefinition = "payslip_status")
     private PayslipStatus status;
 
     @Column(name = "created_at")
-    private OffsetDateTime createdAt;
-    @Column(name = "updated_at")
-    private OffsetDateTime updatedAt;
+    private LocalDateTime createdAt;
+
+    @Column(name = "confirmed_at")
+    private LocalDateTime confirmedAt;
+
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
+
+    // Quan hệ 1-N với PayslipDetail
+    @OneToMany(mappedBy = "payslip", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PayslipDetail> details;
 }

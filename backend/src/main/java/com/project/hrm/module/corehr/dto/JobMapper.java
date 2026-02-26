@@ -9,7 +9,7 @@ public class JobMapper {
                 employee.getPosition().getTitle(),
                 employee.getDepartment().getDeptName(),
                 employee.getDepartment().getManager(),
-                employee.getStatusPos()
+                employee.getEmpStatus()
         );
     }
 }
