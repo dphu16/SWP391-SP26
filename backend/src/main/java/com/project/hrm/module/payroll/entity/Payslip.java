@@ -1,7 +1,13 @@
 package com.project.hrm.module.payroll.entity;
 
+<<<<<<< HEAD:backend/src/main/java/com/project/hrm/module/payroll/compensation/entity/Payslip.java
+import com.project.hrm.module.payroll.common.enums.PayslipStatus;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.payroll.enums.PayslipStatus;
+import com.project.hrm.payroll.common.enums.PayslipStatus;
+=======
+import com.project.hrm.module.payroll.enums.PayslipStatus;
+>>>>>>> df05727451ef27a28699bbdee957247d77b96b1d:backend/src/main/java/com/project/hrm/module/payroll/entity/Payslip.java
 import jakarta.persistence.*;
 import lombok.*;
 

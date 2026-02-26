@@ -1,9 +1,14 @@
 package com.project.hrm.module.payroll.controller;
 
 import com.project.hrm.module.payroll.service.PayrollService;
+<<<<<<< HEAD:backend/src/main/java/com/project/hrm/module/payroll/compensation/controller/PayrollController.java
+import com.project.hrm.module.payroll.compensation.service.PayrollService;
 import com.project.hrm.payroll.compensation.dto.PayrollAggregateDTO;
 import com.project.hrm.payroll.compensation.dto.PayrollSummaryDTO;
 import com.project.hrm.payroll.compensation.service.PayrollService;
+=======
+import com.project.hrm.module.payroll.service.PayrollService;
+>>>>>>> df05727451ef27a28699bbdee957247d77b96b1d:backend/src/main/java/com/project/hrm/module/payroll/controller/PayrollController.java
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;

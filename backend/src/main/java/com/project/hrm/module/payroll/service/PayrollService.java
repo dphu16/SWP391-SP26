@@ -3,6 +3,11 @@ package com.project.hrm.module.payroll.service;
 
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
+<<<<<<< HEAD:backend/src/main/java/com/project/hrm/module/payroll/compensation/service/PayrollService.java
+import com.project.hrm.module.payroll.common.enums.PayslipStatus;
+import com.project.hrm.module.payroll.common.enums.PeriodStatus;
+import com.project.hrm.module.payroll.compensation.entity.*;
+import com.project.hrm.module.payroll.compensation.repository.*;
 import com.project.hrm.payroll.common.enums.PayslipStatus;
 import com.project.hrm.payroll.common.enums.PayslipType;
 import com.project.hrm.payroll.common.enums.PeriodStatus;
@@ -16,6 +21,12 @@ import com.project.hrm.module.payroll.entity.*;
 import com.project.hrm.module.payroll.enums.PayslipStatus;
 import com.project.hrm.module.payroll.enums.PeriodStatus;
 import com.project.hrm.module.payroll.repository.*;
+=======
+import com.project.hrm.module.payroll.entity.*;
+import com.project.hrm.module.payroll.enums.PayslipStatus;
+import com.project.hrm.module.payroll.enums.PeriodStatus;
+import com.project.hrm.module.payroll.repository.*;
+>>>>>>> df05727451ef27a28699bbdee957247d77b96b1d:backend/src/main/java/com/project/hrm/module/payroll/service/PayrollService.java
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;

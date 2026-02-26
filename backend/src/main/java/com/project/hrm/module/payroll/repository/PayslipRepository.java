@@ -1,8 +1,13 @@
 package com.project.hrm.module.payroll.repository;
 
+<<<<<<< HEAD:backend/src/main/java/com/project/hrm/module/payroll/compensation/repository/PayslipRepository.java
+import com.project.hrm.module.payroll.compensation.entity.Payslip;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.payroll.compensation.dto.ResponseDTO.PayslipDetailResponse;
 import com.project.hrm.payroll.compensation.entity.Payslip;
+=======
+import com.project.hrm.module.payroll.entity.Payslip;
+>>>>>>> df05727451ef27a28699bbdee957247d77b96b1d:backend/src/main/java/com/project/hrm/module/payroll/repository/PayslipRepository.java
 import com.project.hrm.module.payroll.entity.Payslip;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
