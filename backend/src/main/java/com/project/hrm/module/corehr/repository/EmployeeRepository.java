@@ -19,19 +19,18 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
 
     Optional<Employee> findByUser(User user);
 
-    @Override
-    Optional<Employee> findById(UUID uuid);
-
     @EntityGraph(attributePaths = { "user", "position", "department" })
     @Query("SELECT e FROM Employee e WHERE e.user.username = :username")
     Optional<Employee> findByUser_Username(String username);
 
-    @Override
-    Optional<Employee> findById(UUID uuid);
-
     @EntityGraph(attributePaths = { "user", "position", "department" })
     @Query(value = "SELECT e FROM Employee e ORDER BY e.fullName ASC", countQuery = "SELECT COUNT(e) FROM Employee e")
     Page<Employee> findAllWithDetails(Pageable pageable);
+
+    @EntityGraph(attributePaths = { "user", "position", "position.department" })
+    List<Employee> findByPosition_Department_DeptId(UUID deptId);
+    @Override
+    Optional<Employee> findById(UUID uuid);
 
     @EntityGraph(attributePaths = { "user", "position", "department" })
     @Query("SELECT e FROM Employee e WHERE e.employeeId = :id")
@@ -45,12 +44,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
             "OR LOWER(p.email) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.phone) LIKE LOWER(CONCAT('%', :search, '%'))")
     Page<Employee> searchEmployeesByKeyword(@Param("search") String keyword, Pageable pageable);
-<<<<<<< HEAD
 
-    @Query("SELECT e FROM Employee e WHERE e.user.status = com.project.hrm.module.corehr.enums.UserStatus.ACTIVE")
-    List<Employee> findAllActive();
+    @EntityGraph(attributePaths = { "user", "position", "position.department" })
+    List<Employee> findByManager_EmployeeId(UUID managerId);
 
-    public List<Employee> findActiveEmployeesForPayroll();
-=======
->>>>>>> a9aa56b (update UI fix bug add feature)
 }
