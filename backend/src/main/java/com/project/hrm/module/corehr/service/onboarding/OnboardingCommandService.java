@@ -70,7 +70,7 @@ public class OnboardingCommandService {
         Employee employee = new Employee();
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(rawPassword));
-        employee.setEmail(email);
+        employee.getPersonal().setEmail(email);
         user.setRole(UserRole.EMPLOYEE);
         user.setStatus(UserStatus.ACTIVE);
         return user;

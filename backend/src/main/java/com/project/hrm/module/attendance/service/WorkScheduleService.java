@@ -46,6 +46,7 @@ public class WorkScheduleService {
 
         if (search != null && !search.trim().isEmpty()) {
             employeePage = employeeRepository.findByFullNameContainingIgnoreCase(search.trim(), pageable);
+            employeePage = employeeRepository.searchEmployeesByKeyword(search.trim(), pageable);
         } else {
             employeePage = employeeRepository.findAllWithDetails(pageable);
         }
@@ -57,6 +58,8 @@ public class WorkScheduleService {
             // Lấy tên từ thực thể Personal (Khớp với DB đồng nghiệp)
             if (emp.getPersonal() != null && emp.getPersonal().getFullName() != null) {
                 dto.setFullName(emp.getPersonal().getFullName());
+            if (emp.getPersonal() != null && emp.getFullName() != null) {
+                dto.setFullName(emp.getFullName());
             } else {
                 dto.setFullName("Chưa cập nhật tên");
             }
@@ -132,6 +135,8 @@ public class WorkScheduleService {
     // ===================================================================
     @Transactional
     public List<WorkScheduleResponse> createBulkSchedules(UUID employeeId, LocalDate startDate, LocalDate endDate, UUID shiftId) {
+    public List<WorkScheduleResponse> createBulkSchedules(UUID employeeId, LocalDate startDate, LocalDate endDate,
+            UUID shiftId) {
         Shift shift = shiftRepository.findById(shiftId)
                 .orElseThrow(() -> new RuntimeException("Ca làm việc không tồn tại!"));
 
@@ -212,9 +217,13 @@ public class WorkScheduleService {
         for (int day = 1; day <= targetDate.lengthOfMonth(); day++) {
             LocalDate currentDate = targetDate.withDayOfMonth(day);
             if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY || existingDates.contains(currentDate)) continue;
+            if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY || existingDates.contains(currentDate))
+                continue;
 
             Shift shift = shiftByDayOfWeek.get(currentDate.getDayOfWeek());
             if (shift == null) shift = sourceSchedules.get(0).getShift();
+            if (shift == null)
+                shift = sourceSchedules.get(0).getShift();
 
             WorkSchedule newWs = new WorkSchedule();
             newWs.setEmployeeId(employeeId);

@@ -10,7 +10,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,7 +24,6 @@ public class OnboardingController {
     }
 
     @GetMapping("/applications/hired")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<Page<OnboardingResponseDTO>> getHiredApplications(
             @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
         Page<OnboardingResponseDTO> result = onboardingService.getHiredApplications(pageable);
@@ -33,7 +31,6 @@ public class OnboardingController {
     }
 
     @PostMapping("/employees/new")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<NewHireResponseDTO> createEmployee(
             @Valid @RequestBody CreateNewHireDTO request) {
 

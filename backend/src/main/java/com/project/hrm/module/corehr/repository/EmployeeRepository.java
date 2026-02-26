@@ -35,6 +35,14 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
     @EntityGraph(attributePaths = { "user", "position", "department" })
     List<Employee> findByEmpStatusIn(List<EmployeeStatus> statuses);
 
+        @Query("SELECT e FROM Employee e LEFT JOIN e.personal p " +
+                        "WHERE LOWER(e.fullName) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                        "OR LOWER(p.email) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                        "OR LOWER(p.phone) LIKE LOWER(CONCAT('%', :search, '%'))")
+        Page<Employee> searchEmployeesByKeyword(@Param("search") String keyword, Pageable pageable);
+
+        @Query("SELECT e FROM Employee e WHERE e.user.status = com.project.hrm.module.corehr.enums.UserStatus.ACTIVE")
+        List<Employee> findAllActive();
     @Query("SELECT u FROM User u WHERE u.status = 'ACTIVE'")
     List<Employee> findAllActive();
 
