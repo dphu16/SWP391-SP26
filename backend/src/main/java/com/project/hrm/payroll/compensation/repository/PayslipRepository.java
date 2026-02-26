@@ -1,6 +1,7 @@
 package com.project.hrm.payroll.compensation.repository;
 
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.payroll.compensation.dto.ResponseDTO.PayslipDetailResponse;
 import com.project.hrm.payroll.compensation.entity.Payslip;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -15,6 +16,9 @@ public interface PayslipRepository extends JpaRepository<Payslip, UUID> {
     List<Payslip> findByPeriodId(UUID periodId);
 
     Boolean existsByEmployeeIdAndPeriodId(UUID employeeId, UUID periodId);
+
+    //tim payslip
+    Optional<Payslip> findByPayslipIdAndEmployeeId(UUID payslipId, UUID employeeId);
 
     //bao cao luong
     @Query("""
