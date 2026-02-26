@@ -1,7 +1,6 @@
 package com.project.hrm.module.payroll.entity;
 
 import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.payroll.common.enums.PayslipStatus;
 import com.project.hrm.module.payroll.enums.PayslipStatus;
 import jakarta.persistence.*;
 import lombok.*;

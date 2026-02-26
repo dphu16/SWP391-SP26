@@ -56,8 +56,8 @@ public class WorkScheduleService {
             dto.setId(emp.getEmployeeId());
 
             // Lấy tên từ thực thể Personal (Khớp với DB đồng nghiệp)
-            if (emp.getPersonal() != null && emp.getPersonal().getFullName() != null) {
-                dto.setFullName(emp.getPersonal().getFullName());
+            if (emp.getPersonal() != null && emp.getPersonal() != null) {
+                dto.setFullName(emp.getFullName());
             if (emp.getPersonal() != null && emp.getFullName() != null) {
                 dto.setFullName(emp.getFullName());
             } else {
