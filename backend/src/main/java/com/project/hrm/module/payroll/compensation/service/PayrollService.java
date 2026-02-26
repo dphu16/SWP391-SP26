@@ -7,10 +7,26 @@ import com.project.hrm.module.payroll.common.enums.PayslipStatus;
 import com.project.hrm.module.payroll.common.enums.PeriodStatus;
 import com.project.hrm.module.payroll.compensation.entity.*;
 import com.project.hrm.module.payroll.compensation.repository.*;
+import com.project.hrm.payroll.common.enums.PayslipStatus;
+import com.project.hrm.payroll.common.enums.PayslipType;
+import com.project.hrm.payroll.common.enums.PeriodStatus;
+import com.project.hrm.payroll.compensation.dto.PayrollAggregateDTO;
+import com.project.hrm.payroll.compensation.dto.PayrollSummaryDTO;
+import com.project.hrm.payroll.compensation.dto.PayslipItemDTO;
+import com.project.hrm.payroll.compensation.dto.ResponseDTO.PayslipDetailResponse;
+import com.project.hrm.payroll.compensation.entity.*;
+import com.project.hrm.payroll.compensation.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -27,6 +43,8 @@ public class PayrollService {
     private final EmployeeRepository employeeRepository;
     private final TaxConfigRepository taxConfigRepository;
     private final InsuranceConfigRepository insuranceConfigRepository;
+
+
 
     @Transactional
     public void runPayroll(UUID periodId){
@@ -62,7 +80,7 @@ public class PayrollService {
             BigDecimal netSalary = grossSalary.subtract(deductions);
 
             Payslip payslip = Payslip.builder()
-                    .employeeId(emp.getEmployeeId())
+                    .employee(emp)
                     .periodId(periodId)
                     .grossSalary(grossSalary)
                     .totalDeductions(deductions)
@@ -145,6 +163,211 @@ public class PayrollService {
 
             payslipRepository.save(payslip);
         }
+    }
+
+    @Transactional
+    public void confirmAllPayslips(UUID periodId) {
+
+        PayrollPeriods period = payrollPeriodRepository.findById(periodId)
+                .orElseThrow(() -> new RuntimeException("Period not found"));
+
+        if (period.getStatus().equals(PeriodStatus.CLOSED)) {
+            throw new RuntimeException("Period is locked");
+        }
+
+        List<Payslip> payslips = payslipRepository.findByPeriodId(periodId);
+
+        if (payslips.isEmpty()) {
+            throw new RuntimeException("No payslips found for this period");
+        }
+
+        // Kiểm tra tất cả phải là DRAFT
+        for (Payslip p : payslips) {
+            if (p.getStatus() != PayslipStatus.DRAFT) {
+                throw new RuntimeException("All payslips must be DRAFT to confirm");
+            }
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        for (Payslip p : payslips) {
+            p.setStatus(PayslipStatus.CONFIRMED);
+            p.setConfirmedAt(now);
+        }
+
+        payslipRepository.saveAll(payslips);
+    }
+    @Transactional
+    public void payAllPayslips(UUID periodId) {
+
+        PayrollPeriods period = payrollPeriodRepository.findById(periodId)
+                .orElseThrow(() -> new RuntimeException("Period not found"));
+
+        if (period.getStatus().equals(PeriodStatus.CLOSED)) {
+            throw new RuntimeException("Period is locked");
+        }
+
+        List<Payslip> payslips = payslipRepository.findByPeriodId(periodId);
+
+        if (payslips.isEmpty()) {
+            throw new RuntimeException("No payslips found for this period");
+        }
+
+        // Tất cả phải CONFIRMED
+        for (Payslip p : payslips) {
+            if (p.getStatus() != PayslipStatus.CONFIRMED) {
+                throw new RuntimeException("All payslips must be CONFIRMED to pay");
+            }
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        for (Payslip p : payslips) {
+            p.setStatus(PayslipStatus.PAID);
+            p.setPaidAt(now);
+        }
+
+        payslipRepository.saveAll(payslips);
+
+        // Lock period sau khi pay xong
+        period.setStatus(PeriodStatus.CLOSED);
+        payrollPeriodRepository.save(period);
+    }
+
+    public PayrollSummaryDTO getSummary(UUID periodId) {
+
+        Object[] result = payslipRepository.getPayrollSummary(periodId);
+
+        if (result == null || result[0] == null) {
+            return new PayrollSummaryDTO(
+                    0L, 0L, 0L,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO
+            );
+        }
+
+        return new PayrollSummaryDTO(
+                (Long) result[0],
+                result[1] == null ? 0L : ((Long) result[1]),
+                result[2] == null ? 0L : ((Long) result[2]),
+                result[3] == null ? BigDecimal.ZERO : (BigDecimal) result[3],
+                result[4] == null ? BigDecimal.ZERO : (BigDecimal) result[4],
+                result[5] == null ? BigDecimal.ZERO : (BigDecimal) result[5]
+        );
+    }
+
+    public PayrollAggregateDTO getYearlyReport(int year) {
+
+        Object[] result = payslipRepository.getYearlySummary(year);
+
+        return new PayrollAggregateDTO(
+                result[0] == null ? BigDecimal.ZERO : (BigDecimal) result[0],
+                result[1] == null ? BigDecimal.ZERO : (BigDecimal) result[1],
+                result[2] == null ? BigDecimal.ZERO : (BigDecimal) result[2]
+        );
+    }
+
+    public PayrollAggregateDTO getMonthlyReport(int year, int month) {
+
+        Object[] result = payslipRepository.getMonthlySummary(year, month);
+
+        return new PayrollAggregateDTO(
+                result[0] == null ? BigDecimal.ZERO : (BigDecimal) result[0],
+                result[1] == null ? BigDecimal.ZERO : (BigDecimal) result[1],
+                result[2] == null ? BigDecimal.ZERO : (BigDecimal) result[2]
+        );
+    }
+
+    public ByteArrayInputStream exportPayslips(UUID periodId) throws IOException {
+
+        List<Payslip> payslips = payslipRepository.findByPeriodId(periodId);
+
+        if (payslips.isEmpty()) {
+            throw new RuntimeException("No payslips found");
+        }
+
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("Payslips");
+
+            Row header = sheet.createRow(0);
+            header.createCell(0).setCellValue("Employee");
+            header.createCell(1).setCellValue("Gross");
+            header.createCell(2).setCellValue("Deductions");
+            header.createCell(3).setCellValue("Net");
+            header.createCell(4).setCellValue("Status");
+
+            int rowIdx = 1;
+
+            for (Payslip p : payslips) {
+                Row row = sheet.createRow(rowIdx++);
+
+                //row.createCell(0).setCellValue(p.getEmployee().getName);
+                row.createCell(1).setCellValue(p.getGrossSalary().doubleValue());
+                row.createCell(2).setCellValue(p.getTotalDeductions().doubleValue());
+                row.createCell(3).setCellValue(p.getNetSalary().doubleValue());
+                row.createCell(4).setCellValue(p.getStatus().name());
+            }
+
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
+        }
+    }
+    //roll back confirm to draft
+    @Transactional
+    public void rollbackConfirmAll(UUID periodId) {
+
+        PayrollPeriods period = payrollPeriodRepository.findById(periodId)
+                .orElseThrow(() -> new RuntimeException("Period not found"));
+
+        if (period.getStatus().equals(PeriodStatus.CLOSED)) {
+            throw new RuntimeException("Cannot rollback locked period");
+        }
+
+        List<Payslip> payslips = payslipRepository.findByPeriodId(periodId);
+
+        for (Payslip p : payslips) {
+            if (p.getStatus() == PayslipStatus.PAID) {
+                throw new RuntimeException("Cannot rollback. Some payslips already paid.");
+            }
+        }
+
+        for (Payslip p : payslips) {
+            if (p.getStatus() == PayslipStatus.CONFIRMED) {
+                p.setStatus(PayslipStatus.DRAFT);
+                p.setConfirmedAt(null);
+            }
+        }
+
+        payslipRepository.saveAll(payslips);
+    }
+
+
+    @Transactional
+    public void rollbackPayAll(UUID periodId) {
+
+        PayrollPeriods period = payrollPeriodRepository.findById(periodId)
+                .orElseThrow(() -> new RuntimeException("Period not found"));
+
+        List<Payslip> payslips = payslipRepository.findByPeriodId(periodId);
+
+        for (Payslip p : payslips) {
+            if (p.getStatus() != PayslipStatus.PAID) {
+                throw new RuntimeException("All payslips must be PAID to rollback payment");
+            }
+        }
+
+        for (Payslip p : payslips) {
+            p.setStatus(PayslipStatus.CONFIRMED);
+            p.setPaidAt(null);
+        }
+
+        payslipRepository.saveAll(payslips);
+
+        period.setStatus(PeriodStatus.OPEN);
+        payrollPeriodRepository.save(period);
     }
 }
 

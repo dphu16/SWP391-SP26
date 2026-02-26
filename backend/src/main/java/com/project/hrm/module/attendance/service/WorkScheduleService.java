@@ -46,6 +46,7 @@ public class WorkScheduleService {
 
         if (search != null && !search.trim().isEmpty()) {
             employeePage = employeeRepository.searchEmployeesByKeyword(search.trim(), pageable);
+            employeePage = employeeRepository.findByFullNameContainingIgnoreCase(search.trim(), pageable);
         } else {
             employeePage = employeeRepository.findAllWithDetails(pageable);
         }

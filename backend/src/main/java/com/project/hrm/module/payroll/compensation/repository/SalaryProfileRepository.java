@@ -37,4 +37,15 @@ public interface SalaryProfileRepository extends JpaRepository<SalaryProfile, UU
             @Param("periodStart") LocalDate periodStart,
             @Param("periodEnd") LocalDate periodEnd
     );
+
+    @Query("""
+        SELECT s FROM SalaryProfile s
+        WHERE s.employeeId = :employeeId
+        AND s.effectiveFrom <= :date
+        AND (s.effectiveTo IS NULL OR s.effectiveTo >= :date)
+    """)
+    Optional<SalaryProfile> findActiveProfile(
+            @Param("employeeId") UUID employeeId,
+            @Param("date") LocalDate date
+    );
 }

@@ -41,5 +41,16 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
     Page<Employee> searchEmployeesByKeyword(@Param("search") String keyword, Pageable pageable);
 
     @Query("SELECT u FROM User u WHERE u.status = ACTIVE")
+    @Query("SELECT u FROM User u WHERE u.status = 'ACTIVE'")
     List<Employee> findAllActive();
+
+    Optional<Employee> findByUserId(UUID userId);
+
+    Page<Employee> findByFullNameContainingIgnoreCase(String keyword, Pageable pageable);
+
+    @Query("""
+    SELECT e FROM Employee e
+    WHERE e.empStatus IN ('OFFICIAL','PROBATION')
+""")
+    List<Employee> findActiveEmployeesForPayroll();
 }
