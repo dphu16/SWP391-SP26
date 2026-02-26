@@ -7,46 +7,44 @@ import { useToast } from "./ui/Toast";
 const API_URL = "/api/employees/inactive";
 
 // ─── Handover Status Badge ─────────────────────────────────────────────────────
-// Colors sourced from MASTER.md:  Primary #0891B2 · CTA/Accent #22C55E
 const HANDOVER_STATUS_CONFIG: Record<
   string,
   { dot: string; text: string; bg: string; border: string }
 > = {
   PENDING: {
     dot: "bg-amber-500",
-    text: "text-amber-700 dark:text-amber-400",
-    bg: "bg-amber-50 dark:bg-amber-900/20",
-    border: "border border-amber-200 dark:border-amber-700/40",
+    text: "text-amber-700 ",
+    bg: "bg-amber-50 ",
+    border: "border border-amber-200 ",
   },
   IN_PROGRESS: {
     dot: "bg-primary",
-    text: "text-primary dark:text-primary",
-    bg: "bg-primary/5 dark:bg-primary/10",
-    border: "border border-primary/20 dark:border-primary/30",
+    text: "text-primary ",
+    bg: "bg-primary/5 ",
+    border: "border border-primary/20 ",
   },
   COMPLETED: {
     dot: "bg-emerald-500",
-    text: "text-emerald-700 dark:text-emerald-400",
-    bg: "bg-emerald-50 dark:bg-emerald-900/20",
-    border: "border border-emerald-200 dark:border-emerald-700/40",
+    text: "text-emerald-700 ",
+    bg: "bg-emerald-50 ",
+    border: "border border-emerald-200 ",
   },
 };
 
 // ─── Employee Status Badge ─────────────────────────────────────────────────────
-// TERMINATED → rose · RESIGNED → gray (neutral exit)
 const EMP_STATUS_CONFIG: Record<
   string,
   { dot: string; text: string; bg: string }
 > = {
   TERMINATED: {
     dot: "bg-rose-500",
-    text: "text-rose-700 dark:text-rose-400",
-    bg: "bg-rose-50 dark:bg-rose-900/20",
+    text: "text-rose-700 ",
+    bg: "bg-rose-50 ",
   },
   RESIGNED: {
     dot: "bg-gray-400",
-    text: "text-gray-600 dark:text-gray-400",
-    bg: "bg-gray-100 dark:bg-gray-800",
+    text: "text-gray-600 ",
+    bg: "bg-gray-100 ",
   },
 };
 
@@ -88,10 +86,10 @@ const Avatar: React.FC<{ name: string; url?: string }> = ({ name, url }) => {
 
   const colors = [
     "bg-primary/15 text-primary",
-    "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
-    "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400",
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-    "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400",
+    "bg-blue-100 text-blue-600 ",
+    "bg-purple-100 text-purple-600 ",
+    "bg-amber-100 text-amber-700 ",
+    "bg-rose-100 text-rose-600 ",
   ];
   const colorIdx = (name?.charCodeAt(0) ?? 0) % colors.length;
 
@@ -100,7 +98,7 @@ const Avatar: React.FC<{ name: string; url?: string }> = ({ name, url }) => {
       <img
         src={url}
         alt={name}
-        className="w-9 h-9 rounded-full object-cover ring-2 ring-white dark:ring-gray-800 flex-shrink-0"
+        className="w-9 h-9 rounded-full object-cover ring-2 ring-white flex-shrink-0"
       />
     );
   }
@@ -115,7 +113,7 @@ const Avatar: React.FC<{ name: string; url?: string }> = ({ name, url }) => {
 
 // ─── Skeleton Row ─────────────────────────────────────────────────────────────
 const SkeletonRow: React.FC = () => (
-  <tr className="border-b border-gray-100 dark:border-gray-800/60">
+  <tr className="border-b border-gray-100 ">
     <td className="pl-6 pr-4 py-4 w-10">
       <div className="skeleton w-4 h-4 rounded" />
     </td>
@@ -173,14 +171,14 @@ const Pagination: React.FC<PaginationProps> = ({
   };
 
   return (
-    <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800/60 flex items-center justify-between gap-4 flex-wrap">
-      <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+    <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-4 flex-wrap">
+      <p className="text-xs text-text-secondary-light ">
         Showing{" "}
-        <span className="font-semibold text-text-primary-light dark:text-text-primary-dark">
+        <span className="font-semibold text-text-primary-light ">
           {start}–{end}
         </span>{" "}
         of{" "}
-        <span className="font-semibold text-text-primary-light dark:text-text-primary-dark">
+        <span className="font-semibold text-text-primary-light ">
           {totalElements}
         </span>{" "}
         employees
@@ -190,7 +188,7 @@ const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 0}
-          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-text-secondary-light dark:text-text-secondary-dark disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-text-secondary-light disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
           aria-label="Previous page"
         >
           <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
@@ -202,7 +200,7 @@ const Pagination: React.FC<PaginationProps> = ({
           page === "..." ? (
             <span
               key={`ellipsis-${idx}`}
-              className="w-8 text-center text-sm text-text-secondary-light dark:text-text-secondary-dark"
+              className="w-8 text-center text-sm text-text-secondary-light "
             >
               …
             </span>
@@ -211,11 +209,11 @@ const Pagination: React.FC<PaginationProps> = ({
               key={page}
               onClick={() => onPageChange(page as number)}
               className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors cursor-pointer
-                ${
-                  currentPage === page
-                    ? "bg-primary text-white shadow-sm"
-                    : "text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-100 dark:hover:bg-gray-800"
-                }
+              ${
+                currentPage === page
+                ? "bg-primary text-white shadow-sm"
+                : "text-text-secondary-light hover:bg-gray-100 "
+              }
               `}
             >
               {(page as number) + 1}
@@ -226,7 +224,7 @@ const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages - 1}
-          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-text-secondary-light dark:text-text-secondary-dark disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-text-secondary-light disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
           aria-label="Next page"
         >
           <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
@@ -238,15 +236,10 @@ const Pagination: React.FC<PaginationProps> = ({
   );
 };
 
-// ─── Handover Status local state map ──────────────────────────────────────────
-// The backend doesn't return a handoverStatus yet, so we manage it client-side.
-// When the real API provides this field, just remove this map and read from data.
-type HandoverStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED";
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 const EmployeeOffboarding: React.FC = () => {
   const navigate = useNavigate();
-  const { success, error: toastError } = useToast();
+  const { error: toastError } = useToast();
 
   const [employees, setEmployees] = useState<OffboardingEmployee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -258,8 +251,6 @@ const EmployeeOffboarding: React.FC = () => {
     size: 10,
   });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  // Client-side handover statuses until backend supplies them
-  const [handoverMap, setHandoverMap] = useState<Record<string, HandoverStatus>>({});
 
   const fetchEmployees = useCallback(
     async (_pageNum: number) => {
@@ -267,9 +258,6 @@ const EmployeeOffboarding: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // The /api/employees/inactive endpoint returns a plain List<T>.
-        // If the URL is ever switched back to a paginated endpoint it will
-        // return a Page<T> with a `.content` array — we handle both shapes.
         const res = await apiClient.get<OffboardingEmployee[] | PageResponse<OffboardingEmployee>>(
           API_URL,
         );
@@ -277,7 +265,6 @@ const EmployeeOffboarding: React.FC = () => {
         const data = res.data;
 
         if (Array.isArray(data)) {
-          // Plain list response
           setEmployees(data);
           setPageInfo({
             totalElements: data.length,
@@ -285,7 +272,6 @@ const EmployeeOffboarding: React.FC = () => {
             size: data.length || 10,
           });
         } else {
-          // Paginated Page<T> response
           const content = data.content ?? [];
           setEmployees(content);
           setPageInfo({
@@ -313,7 +299,6 @@ const EmployeeOffboarding: React.FC = () => {
     [toastError],
   );
 
-
   useEffect(() => {
     fetchEmployees(page);
   }, [page, fetchEmployees]);
@@ -339,20 +324,6 @@ const EmployeeOffboarding: React.FC = () => {
     });
   };
 
-  // ── Handover action ────────────────────────────────────────────────────────
-  const handleProcessHandover = (emp: OffboardingEmployee) => {
-    const current = handoverMap[emp.employeeId] ?? "PENDING";
-    const next: HandoverStatus =
-      current === "PENDING" ? "IN_PROGRESS" : "COMPLETED";
-    setHandoverMap((prev) => ({ ...prev, [emp.employeeId]: next }));
-    success(
-      next === "IN_PROGRESS"
-        ? "Handover started"
-        : "Handover completed",
-      `${emp.fullName}'s handover is now ${next.replace("_", " ")}.`,
-    );
-  };
-
   // ── Sort ───────────────────────────────────────────────────────────────────
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -373,7 +344,7 @@ const EmployeeOffboarding: React.FC = () => {
       className={`w-3.5 h-3.5 transition-colors ${
         sortField === field
           ? "text-primary"
-          : "text-gray-300 dark:text-gray-600 group-hover:text-gray-400"
+          : "text-gray-300 group-hover:text-gray-400"
       }`}
     >
       {sortField === field && sortDir === "asc" ? (
@@ -395,26 +366,26 @@ const EmployeeOffboarding: React.FC = () => {
 
   // ── Column definitions ─────────────────────────────────────────────────────
   const COLUMNS = [
-    { key: "fullName",        label: "Employee",         sortable: true  },
-    { key: "departmentName",  label: "Department",       sortable: true  },
-    { key: "positionTitle",   label: "Position",         sortable: true  },
-    { key: "dateOfJoining",   label: "Date of Joining",  sortable: true  },
-    { key: "employeeStatus",  label: "Status",           sortable: false },
-    { key: "handoverStatus",  label: "Handover Status",  sortable: false },
+    { key: "fullName", label: "Employee", sortable: true },
+    { key: "departmentName", label: "Department", sortable: true },
+    { key: "positionTitle", label: "Position", sortable: true },
+    { key: "dateOfJoining", label: "Date of Joining", sortable: true },
+    { key: "employeeStatus", label: "Status", sortable: false },
+    { key: "handoverStatus", label: "Handover Status", sortable: false },
   ];
 
   // ── Error state ────────────────────────────────────────────────────────────
   if (error && !loading) {
     return (
-      <div className="rounded-2xl border border-rose-200 dark:border-rose-900/40 bg-surface-light dark:bg-surface-dark p-16 flex flex-col items-center gap-4 text-center animate-fade-in">
-        <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center">
+      <div className="rounded-2xl border border-rose-200 bg-surface-light p-16 flex flex-col items-center gap-4 text-center animate-fade-in">
+        <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center">
           <svg viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-rose-500">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
           </svg>
         </div>
         <div>
-          <p className="font-semibold text-text-primary-light dark:text-text-primary-dark">{error}</p>
-          <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
+          <p className="font-semibold text-text-primary-light ">{error}</p>
+          <p className="text-sm text-text-secondary-light mt-1">
             Check your backend connection and try again.
           </p>
         </div>
@@ -429,7 +400,7 @@ const EmployeeOffboarding: React.FC = () => {
   }
 
   return (
-    <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden shadow-card animate-fade-in">
+    <div className="rounded-2xl border border-border-light bg-surface-light overflow-hidden shadow-card animate-fade-in">
 
       {/* ── Bulk action bar ─────────────────────────────────────────────────── */}
       {selectedIds.size > 0 && (
@@ -438,16 +409,16 @@ const EmployeeOffboarding: React.FC = () => {
             {selectedIds.size} selected
           </span>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+            <button className="px-3 py-1.5 text-xs font-semibold text-text-secondary-light hover:text-text-primary-light border border-border-light rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
               Export
             </button>
-            <button className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 border border-rose-200 dark:border-rose-800 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors cursor-pointer">
+            <button className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer">
               Archive
             </button>
           </div>
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="ml-auto text-xs text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark transition-colors cursor-pointer"
+            className="ml-auto text-xs text-text-secondary-light hover:text-text-primary-light transition-colors cursor-pointer"
           >
             Clear
           </button>
@@ -458,15 +429,15 @@ const EmployeeOffboarding: React.FC = () => {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           {/* Sticky Header */}
-          <thead className="sticky top-0 z-10 bg-surface-light dark:bg-surface-dark">
-            <tr className="border-b border-gray-100 dark:border-gray-800/60">
+          <thead className="sticky top-0 z-10 bg-surface-light ">
+            <tr className="border-b border-gray-100 ">
               {/* Checkbox */}
               <th className="pl-6 pr-4 py-4 w-10">
                 <input
                   type="checkbox"
                   checked={allSelected}
                   onChange={toggleAll}
-                  className="w-4 h-4 rounded border-2 border-gray-300 dark:border-gray-600 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
+                  className="w-4 h-4 rounded border-2 border-gray-300 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
                   aria-label="Select all"
                 />
               </th>
@@ -474,12 +445,12 @@ const EmployeeOffboarding: React.FC = () => {
               {COLUMNS.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark"
+                  className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light "
                 >
                   {col.sortable ? (
                     <button
                       onClick={() => handleSort(col.key)}
-                      className="flex items-center gap-1.5 hover:text-text-primary-light dark:hover:text-text-primary-dark transition-colors cursor-pointer group"
+                      className="flex items-center gap-1.5 hover:text-text-primary-light transition-colors cursor-pointer group"
                     >
                       {col.label}
                       <SortIcon field={col.key} />
@@ -490,31 +461,27 @@ const EmployeeOffboarding: React.FC = () => {
                 </th>
               ))}
 
-              {/* Actions */}
-              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark text-center sticky right-0 bg-surface-light dark:bg-surface-dark">
+              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light text-center sticky right-0 bg-surface-light ">
                 Actions
               </th>
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-50 dark:divide-gray-800/40 text-sm">
+          <tbody className="divide-y divide-gray-50 text-sm">
             {loading
               ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
               : employees.map((emp) => {
                   const isSelected = selectedIds.has(emp.employeeId);
-                  const handoverStatus: HandoverStatus =
-                    handoverMap[emp.employeeId] ?? "PENDING";
-                  const isCompleted = handoverStatus === "COMPLETED";
 
                   return (
                     <tr
                       key={emp.employeeId}
                       className={`table-row-hover group
-                        ${
-                          isSelected
-                            ? "bg-primary/5 dark:bg-primary/10"
-                            : "hover:bg-gray-50/80 dark:hover:bg-gray-800/30"
-                        }
+                      ${
+                        isSelected
+                        ? "bg-primary/5 "
+                        : "hover:bg-gray-50/80 "
+                      }
                       `}
                     >
                       {/* Checkbox */}
@@ -523,7 +490,7 @@ const EmployeeOffboarding: React.FC = () => {
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleOne(emp.employeeId)}
-                          className="w-4 h-4 rounded border-2 border-gray-300 dark:border-gray-600 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
+                          className="w-4 h-4 rounded border-2 border-gray-300 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
                           aria-label={`Select ${emp.fullName}`}
                         />
                       </td>
@@ -534,12 +501,12 @@ const EmployeeOffboarding: React.FC = () => {
                           <Avatar name={emp.fullName} url={emp.avatarUrl} />
                           <div>
                             <div
-                              className="font-semibold text-text-primary-light dark:text-text-primary-dark leading-snug cursor-pointer hover:text-primary transition-colors"
+                              className="font-semibold text-text-primary-light leading-snug cursor-pointer hover:text-primary transition-colors"
                               onClick={() => navigate(`/employee/${emp.employeeId}`)}
                             >
                               {emp.fullName}
                             </div>
-                            <div className="text-[11px] text-text-secondary-light dark:text-text-secondary-dark font-mono mt-0.5">
+                            <div className="text-[11px] text-text-secondary-light font-mono mt-0.5">
                               {emp.employeeCode}
                             </div>
                           </div>
@@ -547,28 +514,28 @@ const EmployeeOffboarding: React.FC = () => {
                       </td>
 
                       {/* Department */}
-                      <td className="px-4 py-3.5 text-text-primary-light dark:text-text-primary-dark">
+                      <td className="px-4 py-3.5 text-text-primary-light ">
                         {emp.departmentName || (
-                          <span className="text-text-muted-light dark:text-text-muted-dark">—</span>
+                          <span className="text-text-muted-light ">—</span>
                         )}
                       </td>
 
                       {/* Position */}
                       <td className="px-4 py-3.5">
-                        <span className="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">
+                        <span className="text-xs font-medium text-text-secondary-light bg-gray-100 px-2 py-0.5 rounded-md">
                           {emp.positionTitle || "—"}
                         </span>
                       </td>
 
                       {/* Date of Joining */}
-                      <td className="px-4 py-3.5 text-text-secondary-light dark:text-text-secondary-dark tabular-nums">
+                      <td className="px-4 py-3.5 text-text-secondary-light tabular-nums">
                         {emp.dateOfJoining
                           ? new Date(emp.dateOfJoining).toLocaleDateString("en-GB", {
                               day: "2-digit",
                               month: "short",
                               year: "numeric",
                             })
-                          : <span className="text-text-muted-light dark:text-text-muted-dark">—</span>
+                          : <span className="text-text-muted-light ">—</span>
                         }
                       </td>
 
@@ -579,68 +546,20 @@ const EmployeeOffboarding: React.FC = () => {
 
                       {/* Handover Status Badge */}
                       <td className="px-4 py-3.5">
-                        <HandoverBadge status={handoverStatus} />
+                        <HandoverBadge status={"PENDING"} />
                       </td>
 
                       {/* Actions */}
-                      <td className="px-4 py-3.5 text-center sticky right-0 bg-surface-light dark:bg-surface-dark group-hover:bg-gray-50/80 dark:group-hover:bg-gray-800/30 transition-colors">
-                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                          {/* View profile */}
+                      <td className="px-4 py-3.5 text-center sticky right-0 bg-surface-light">
+                        <div className="flex items-center justify-center">
                           <button
                             onClick={() => navigate(`/employee/${emp.employeeId}`)}
                             title="View profile"
-                            className="p-1.5 rounded-lg text-text-secondary-light dark:text-text-secondary-dark hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-text-secondary-light hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                           >
                             <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
                               <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
                               <path fillRule="evenodd" d="M1.38 8.28a1.2 1.2 0 010-.56 7.16 7.16 0 0113.24 0c.044.185.044.378 0 .56a7.16 7.16 0 01-13.24 0zM8 11a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-
-                          {/* Process Handover — btn-primary (MASTER.md: #22C55E) when pending/in-progress */}
-                          {!isCompleted ? (
-                            <button
-                              onClick={() => handleProcessHandover(emp)}
-                              title="Process Handover"
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer btn-primary-action
-                                ${
-                                  handoverStatus === "PENDING"
-                                    ? "text-white bg-[#22C55E] hover:bg-[#16a34a] shadow-sm"
-                                    : "text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/40"
-                                }
-                              `}
-                            >
-                              {handoverStatus === "PENDING" ? (
-                                <>
-                                  <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                                    <path d="M3 3.732a1.5 1.5 0 012.305-1.265l6.706 4.267a1.5 1.5 0 010 2.531l-6.706 4.268A1.5 1.5 0 013 12.267V3.732z" />
-                                  </svg>
-                                  Process
-                                </>
-                              ) : (
-                                <>
-                                  <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                                    <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm3.844-8.791a.75.75 0 00-1.188-.918l-3.7 4.79-1.649-1.833a.75.75 0 10-1.114 1.004l2.25 2.5a.75.75 0 001.15-.086l4.25-5.5z" clipRule="evenodd" />
-                                  </svg>
-                                  Complete
-                                </>
-                              )}
-                            </button>
-                          ) : (
-                            /* Completed → read-only pill matching MASTER.md CTA color */
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                              Done
-                            </span>
-                          )}
-
-                          {/* More options */}
-                          <button
-                            title="More options"
-                            className="p-1.5 rounded-lg text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                          >
-                            <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                              <path d="M8 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM1.5 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm13 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
                             </svg>
                           </button>
                         </div>
@@ -652,24 +571,24 @@ const EmployeeOffboarding: React.FC = () => {
         </table>
       </div>
 
-      {/* ── Empty state ──────────────────────────────────────────────────────── */}
+      {/* Empty state */}
       {!loading && employees.length === 0 && (
         <div className="py-20 flex flex-col items-center gap-3 text-center animate-fade-in">
-          <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-gray-400">
               <path fillRule="evenodd" d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 14a6 6 0 110-12 6 6 0 010 12zm0-9a1 1 0 00-1 1v3a1 1 0 002 0V8a1 1 0 00-1-1zm0 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
             </svg>
           </div>
-          <p className="font-semibold text-text-primary-light dark:text-text-primary-dark">
+          <p className="font-semibold text-text-primary-light ">
             No offboarding employees
           </p>
-          <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+          <p className="text-sm text-text-secondary-light ">
             Employees with TERMINATED or RESIGNED status will appear here.
           </p>
         </div>
       )}
 
-      {/* ── Pagination ───────────────────────────────────────────────────────── */}
+      {/* Pagination */}
       {!loading && pageInfo.totalElements > 0 && (
         <Pagination
           currentPage={page}

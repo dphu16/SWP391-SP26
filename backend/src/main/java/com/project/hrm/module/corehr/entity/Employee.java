@@ -25,8 +25,8 @@ public class Employee {
     @Column(name = "employee_code", unique = true)
     private String employeeCode;
 
-    @Column(name = "work_email", unique = true)
-    private String email;
+    @Column(name = "full_name", nullable = false)
+    private String fullName;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dept_id")
@@ -41,7 +41,7 @@ public class Employee {
     private User user;
 
     @Enumerated(EnumType.STRING)
-    @Column(name= "status")
+    @Column(name = "status")
     private EmployeeStatus empStatus;
 
     @Column(name = "date_of_joining")
