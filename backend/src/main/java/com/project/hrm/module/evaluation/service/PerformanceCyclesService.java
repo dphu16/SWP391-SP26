@@ -39,6 +39,25 @@ public class PerformanceCyclesService {
     }
 
     @Transactional
+    public PerformanceCycles update(UUID id, PerformanceCyclesRequest req) {
+
+        PerformanceCycles cycle = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cycle not found"));
+
+        if (cycle.getStatus() == CycleStatus.CLOSED)
+            throw new RuntimeException("Cannot edit a closed cycle");
+
+        if (req.getEndDate().isBefore(req.getStartDate()))
+            throw new RuntimeException("End date must be after start date");
+
+        cycle.setCycleName(req.getCycleName());
+        cycle.setStartDate(req.getStartDate());
+        cycle.setEndDate(req.getEndDate());
+
+        return repository.save(cycle);
+    }
+
+    @Transactional
     public PerformanceCycles updateStatus(UUID id, CycleStatusRequest req) {
         PerformanceCycles cycle = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cycle not found"));

@@ -7,14 +7,14 @@ public class PersonalMapper {
         return new PersonalDTO(
                 employee.getUser().getUsername(),
                 employee.getUser().getEmail(),
-                employee.getPhone(),
-                employee.getAddress(),
+                employee.getPersonal().getPhone(),
+                employee.getPersonal().getAddress(),
                 employee.getUser().getStatus(),
                 employee.getFullName(),
-                employee.getGender(),
-                employee.getCitizenId(),
-                employee.getTaxCode(),
-                employee.getDateOfBirth(),
+                employee.getPersonal().getGender(),
+                employee.getPersonal().getCitizenId(),
+                employee.getPersonal().getTaxCode(),
+                employee.getPersonal().getDateOfBirth(),
                 employee.getDateOfJoining()
         );
     }
