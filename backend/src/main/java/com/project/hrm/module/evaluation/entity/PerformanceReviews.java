@@ -1,5 +1,5 @@
-package com.project.hrm.module.evaluation.entity;
-import com.project.hrm.module.evaluation.enums.ReviewStatus;
+package com.project.hrm.evaluation.entity;
+import com.project.hrm.evaluation.enums.ReviewStatus;
 import com.project.hrm.module.corehr.entity.Employee;
 import jakarta.persistence.*;
 import lombok.Data;

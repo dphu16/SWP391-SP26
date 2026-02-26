@@ -1,4 +1,4 @@
-package com.project.hrm.module.payroll.entity;
+package com.project.hrm.payroll.compensation.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

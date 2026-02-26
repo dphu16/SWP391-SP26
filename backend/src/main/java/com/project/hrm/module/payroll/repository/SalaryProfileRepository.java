@@ -1,6 +1,6 @@
-package com.project.hrm.module.payroll.repository;
+package com.project.hrm.payroll.compensation.repository;
 
-import com.project.hrm.module.payroll.entity.SalaryProfile;
+import com.project.hrm.payroll.compensation.entity.SalaryProfile;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

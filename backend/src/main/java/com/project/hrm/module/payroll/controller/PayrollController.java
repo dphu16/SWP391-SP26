@@ -1,6 +1,6 @@
-package com.project.hrm.module.payroll.controller;
+package com.project.hrm.payroll.compensation.controller;
 
-import com.project.hrm.module.payroll.service.PayrollService;
+import com.project.hrm.payroll.compensation.service.PayrollService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
