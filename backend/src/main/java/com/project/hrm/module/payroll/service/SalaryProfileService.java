@@ -1,9 +1,9 @@
-package com.project.hrm.module.payroll.service;
+package com.project.hrm.payroll.compensation.service;
 
-import com.project.hrm.module.payroll.dto.RequestDTO.CreateSalaryProfileRequest;
-import com.project.hrm.module.payroll.dto.ResponseDTO.SalaryProfileResponse;
-import com.project.hrm.module.payroll.entity.SalaryProfile;
-import com.project.hrm.module.payroll.repository.SalaryProfileRepository;
+import com.project.hrm.payroll.compensation.dto.RequestDTO.CreateSalaryProfileRequest;
+import com.project.hrm.payroll.compensation.dto.ResponseDTO.SalaryProfileResponse;
+import com.project.hrm.payroll.compensation.entity.SalaryProfile;
+import com.project.hrm.payroll.compensation.repository.SalaryProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

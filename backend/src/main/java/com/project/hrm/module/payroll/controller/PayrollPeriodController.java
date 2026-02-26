@@ -1,8 +1,8 @@
-package com.project.hrm.module.payroll.controller;
+package com.project.hrm.payroll.compensation.controller;
 
-import com.project.hrm.module.payroll.dto.RequestDTO.CreatePeriodRequest;
-import com.project.hrm.module.payroll.dto.ResponseDTO.PeriodResponse;
-import com.project.hrm.module.payroll.service.PayrollPeriodService;
+import com.project.hrm.payroll.compensation.dto.RequestDTO.CreatePeriodRequest;
+import com.project.hrm.payroll.compensation.dto.ResponseDTO.PeriodResponse;
+import com.project.hrm.payroll.compensation.service.PayrollPeriodService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
