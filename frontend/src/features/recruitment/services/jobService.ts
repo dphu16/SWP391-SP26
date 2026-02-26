@@ -1,0 +1,12 @@
+import apiClient from "../../../shared/api/apiClient";
+import type { Job, JobInput } from "../types";
+
+export const jobService = {
+    getAll: () => apiClient.get<Job[]>("/api/jobs"),
+
+    getById: (id: string) => apiClient.get<Job>(`/api/jobs/${id}`),
+
+    create: (data: JobInput) => apiClient.post<Job>("/api/jobs", data),
+    update: (id: string, data: Partial<JobInput>) => apiClient.put<Job>(`/api/jobs/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/api/jobs/${id}`),
+};
