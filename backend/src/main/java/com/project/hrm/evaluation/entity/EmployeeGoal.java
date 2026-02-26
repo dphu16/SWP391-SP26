@@ -25,7 +25,7 @@ public class EmployeeGoal {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personal", "contract", "dependent", "user", "department"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personal", "contract", "dependent", "user", "department", "position", "manager"})
     private Employee employee;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -57,4 +57,7 @@ public class EmployeeGoal {
 
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
+
+    @Column(name = "image_url")
+    private String imageUrl;
 }

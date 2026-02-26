@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { kpiService } from "../services/kpiService";
-import type { PerformanceReview } from "../services/kpiService";
+import type { PerformanceReview, TeamStats } from "../services/kpiService";
 
 
 
@@ -56,6 +56,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
     const [activeEmployeeId, setActiveEmployeeId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [searchKpiQuery, setSearchKpiQuery] = useState("");
+    const [teamStats, setTeamStats] = useState<TeamStats>({ totalMembers: 0, submittedMembers: 0, averageScore: null });
 
     // Review state
     const [activeReview, setActiveReview] = useState<PerformanceReview | null>(null);
@@ -69,12 +70,12 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
             try {
                 const deptsData = await kpiService.getAllDepartments();
                 const allKpiLibs = await kpiService.getAllKpiLibraries();
-                const employeesData = await kpiService.getAllEmployees();
+                const employeesData = await kpiService.getMyTeam();
                 const cyclesData = await kpiService.getPerformanceCycles();
 
                 console.log("deptsData", deptsData);
                 console.log("allKpiLibs", allKpiLibs);
-                console.log("employeesData", employeesData);
+                console.log("employeesData (team)", employeesData);
                 console.log("cyclesData", cyclesData);
 
                 let activeDeptKpis: any[] = [];
@@ -91,8 +92,11 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                     setActiveEmployeeId(employeesData[0].id);
                 }
 
-                // Save global lookup context for subsequent loads
                 (window as any).__kpiContext = { deptsData, allKpiLibs, activeDeptKpis, cyclesData };
+
+                // Fetch real team stats from DB
+                const stats = await kpiService.getTeamStats();
+                setTeamStats(stats);
             } catch (error) {
                 console.error("fetchTeamData error:", error);
             } finally {
@@ -105,33 +109,39 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
     useEffect(() => {
         const loadEmployeeGoals = async () => {
             if (!activeEmployeeId) return;
-            const ctx = (window as any).__kpiContext;
-            if (!ctx) return;
 
-            // Fetch goals saved for this employee
             const goals = await kpiService.getGoalsByEmployee(activeEmployeeId);
             console.log("goals for employee", activeEmployeeId, goals);
 
-            // Merge with assigned department structure
-            if (ctx.activeDeptKpis && ctx.activeDeptKpis.length > 0) {
-                const formatted = ctx.activeDeptKpis.map((detail: any) => {
-                    const def = ctx.allKpiLibs.find((k: any) => k.libId === detail.kpiLibraryId);
-                    const existingGoal = goals.find((g: any) => g.kpiLibrary.libId === detail.kpiLibraryId);
-
-                    return {
-                        ...detail,
-                        name: def?.name || "Unknown",
-                        category: def?.category || "",
-                        description: def?.description || "",
-                        _targetValue: existingGoal ? existingGoal.targetValue : '',
-                        _isAssigned: !!existingGoal
+            if (goals && goals.length > 0) {
+                // Dedup by kpiLibraryId — keep the goal with the highest targetValue
+                const dedupMap = new Map<string, any>();
+                for (const g of goals) {
+                    const libId = g.kpiLibrary?.libId || g.kpiLibraryId || '';
+                    const prev = dedupMap.get(libId);
+                    if (!prev || (g.targetValue ?? 0) > (prev.targetValue ?? 0)) {
+                        dedupMap.set(libId, g);
                     }
-                });
+                }
+                const dedupedGoals = Array.from(dedupMap.values());
+
+                const formatted = dedupedGoals.map((g: any) => ({
+                    goalId: g.goalId,
+                    cycleId: g.cycle?.cycleId,
+                    kpiLibraryId: g.kpiLibrary?.libId || '',
+                    name: g.title || g.kpiLibrary?.name || "Unknown",
+                    category: g.kpiLibrary?.category || "",
+                    description: g.kpiLibrary?.description || "",
+                    weight: g.weight || 0,
+                    imageUrl: g.imageUrl || "", // Evidence URL (image_url) from database
+                    _targetValue: g.targetValue && g.targetValue !== 0 ? String(g.targetValue) : '',
+                    _isAssigned: g.targetValue !== undefined && g.targetValue !== 0
+                }));
                 setKpis(formatted);
             } else {
-                setKpis([]); // Blank if none assigned
+                setKpis([]);
             }
-        }
+        };
         loadEmployeeGoals();
     }, [activeEmployeeId]);
 
@@ -162,8 +172,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
         const kpiToAssign = kpis.find(k => k.kpiLibraryId === kpiLibraryId);
         if (!kpiToAssign || !activeEmployeeId) return;
 
-        const ctx = (window as any).__kpiContext;
-        const activeCycle = ctx?.cyclesData?.[0]?.cycleId || "c2c5ec68-7c85-48ef-be8a-350e82c5f1fa";
+        const activeCycle = kpiToAssign.cycleId || "c2c5ec68-7c85-48ef-be8a-350e82c5f1fa";
 
         try {
             await kpiService.assignEmployeeGoal({
@@ -215,8 +224,21 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
         }
     };
 
+    const reloadStats = async () => {
+        const stats = await kpiService.getTeamStats();
+        setTeamStats(stats);
+    };
+
     const handleFinalize = async () => {
         if (!activeReview) return;
+
+        // Check for evidence requirement
+        const evidenceCount = kpis.filter(k => k.imageUrl).length;
+        if (evidenceCount === 0) {
+            alert('Cannot finalize: No evidence images were found for this employee. Please wait for the employee to upload supporting materials.');
+            return;
+        }
+
         // Save scores first if changed, then finalize
         const kpi = parseFloat(kpiScoreInput);
         const att = parseFloat(attitudeScoreInput);
@@ -226,6 +248,10 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
             await kpiService.updateReviewScore(activeReview.reviewId, { kpiScore: kpi, attitudeScore: att });
             const finalized = await kpiService.finalizeReview(activeReview.reviewId);
             setActiveReview(finalized);
+
+            // Re-fetch team stats after finalization to update Average Score and Progress
+            await reloadStats();
+
             alert('Review finalized successfully!');
         } catch (e: any) {
             alert(e?.response?.data?.error || 'Failed to finalize review.');
@@ -242,22 +268,22 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
     );
 
     return (
-        <div className="flex flex-col h-full space-y-5 animate-fade-in">
-            {/* Header section matches image */}
+        <div className="flex flex-col h-full space-y-5 animate-fade-in font-sans">
+            {/* Header section */}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
                         Performance Module
                     </h1>
-                    <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                    <p className="mt-0.5 text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
                         Standardized KPI management and scoring workflow
                     </p>
                 </div>
 
-                <div className="flex items-center bg-surface-light dark:bg-surface-dark p-1 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
+                <div className="flex items-center bg-surface-light dark:bg-surface-dark p-1.5 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
                     <button
                         onClick={() => setActiveTab("hr")}
-                        className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === "hr"
+                        className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-all duration-200 ${activeTab === "hr"
                             ? "bg-surface-2-light dark:bg-surface-2-dark text-text-primary-light dark:text-text-primary-dark shadow-sm"
                             : "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light"
                             }`}
@@ -266,7 +292,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                     </button>
                     <button
                         onClick={() => setActiveTab("manager")}
-                        className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === "manager"
+                        className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-all duration-200 ${activeTab === "manager"
                             ? "bg-primary text-white shadow-sm"
                             : "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light"
                             }`}
@@ -277,55 +303,45 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
             </div>
 
             <div className="flex gap-6 items-start">
-                {/* Left Column (Main Content) */}
                 <div className="flex-1 space-y-6">
-                    {/* Top Stats Row */}
-                    <div className="grid grid-cols-3 gap-5">
-                        {/* Team Progress */}
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-5">
                         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card">
-                            <h3 className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-3">
-                                Team Progress
+                            <h3 className="text-[10px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-3">
+                                Team Submission Progress
                             </h3>
                             <div className="flex items-baseline gap-2 mb-4">
-                                <span className="text-3xl font-bold font-heading">8</span>
-                                <span className="text-xl font-medium text-text-secondary-light dark:text-text-secondary-dark">/ 12</span>
-                                <span className="text-sm text-text-secondary-light dark:text-text-secondary-dark ml-1">submitted</span>
+                                <span className="text-3xl font-bold font-heading text-primary">{teamStats.submittedMembers}</span>
+                                <span className="text-xl font-medium text-text-secondary-light dark:text-text-secondary-dark">/ {teamStats.totalMembers}</span>
                             </div>
-                            <div className="h-2 w-full bg-surface-2-light dark:bg-surface-2-dark rounded-full overflow-hidden">
-                                <div className="h-full bg-primary rounded-full transition-all duration-500 ease-out" style={{ width: "66%" }}></div>
+                            <div className="h-2 w-full bg-surface-2-light dark:bg-surface-2-dark rounded-full overflow-hidden border border-border-light dark:border-border-dark shadow-inner">
+                                <div
+                                    className="h-full bg-primary rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(37,99,235,0.3)]"
+                                    style={{ width: teamStats.totalMembers > 0 ? `${(teamStats.submittedMembers / teamStats.totalMembers) * 100}%` : '0%' }}
+                                />
                             </div>
                         </div>
 
-                        {/* Average Score */}
-                        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card">
-                            <h3 className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-3">
-                                Average Score
+                        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card flex flex-col justify-center">
+                            <h3 className="text-[10px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-3">
+                                Team Average Score
                             </h3>
                             <div className="flex items-baseline gap-2">
-                                <span className="text-3xl font-bold font-heading">84.2</span>
-                                <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md">
-                                    +5.2%
+                                <span className="text-3xl font-bold font-heading text-emerald-500">
+                                    {teamStats.averageScore !== null ? teamStats.averageScore.toFixed(1) : '—'}
                                 </span>
-                            </div>
-                        </div>
-
-                        {/* Pending Review */}
-                        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card">
-                            <h3 className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-3">
-                                Pending Review
-                            </h3>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-3xl font-bold font-heading">4</span>
-                                <span className="text-sm font-medium text-accent-amber ml-1">High priority</span>
+                                <span className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase">
+                                    {teamStats.averageScore !== null ? '/ 100 Points' : 'No data yet'}
+                                </span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Team KPI Overview Table */}
-                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col">
-                        <div className="px-5 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between bg-surface-light dark:bg-surface-dark">
+                    {/* KPI Table */}
+                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col bento-card">
+                        <div className="px-5 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between bg-white dark:bg-surface-dark/40 backdrop-blur-sm">
                             <h2 className="text-lg font-bold font-heading text-text-primary-light dark:text-text-primary-dark">
-                                Team KPI Overview: <span className="text-primary">{activeEmployee?.fullName || "Select Employee"}</span>
+                                KPI Setup: <span className="text-primary">{activeEmployee?.fullName || "Select Employee"}</span>
                             </h2>
                             <div className="flex items-center gap-3">
                                 <div className="relative">
@@ -337,87 +353,61 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                                         placeholder="Search KPI..."
                                         value={searchKpiQuery}
                                         onChange={(e) => setSearchKpiQuery(e.target.value)}
-                                        className="pl-9 pr-4 py-1.5 w-64 text-sm bg-surface-2-light dark:bg-surface-2-dark border border-border-light dark:border-border-dark rounded-lg text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus-ring"
+                                        className="pl-9 pr-4 py-2 w-64 text-sm bg-surface-2-light dark:bg-surface-2-dark border border-border-light dark:border-border-dark rounded-xl text-text-primary-light dark:text-text-primary-dark focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                                     />
                                 </div>
-                                <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-md tracking-wider">
-                                    Q1 2024 PERIOD
-                                </span>
                             </div>
                         </div>
 
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="border-b border-border-light dark:border-border-dark bg-surface-2-light dark:bg-surface-2-dark">
-                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest w-[35%]">
-                                            Category
-                                        </th>
-                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-center">
-                                            Weighting (HR)
-                                        </th>
-                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest w-[25%]">
-                                            Target Value
-                                        </th>
-                                        <th className="px-5 py-3 text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-right">
-                                            Action
-                                        </th>
+                                    <tr className="border-b border-border-light dark:border-border-dark bg-surface-2-light/50 dark:bg-surface-2-dark/50">
+                                        <th className="px-6 py-4 text-[10px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-[0.15em]">Category & Title</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-[0.15em] text-center w-[120px]">Weight</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-[0.15em] w-[200px]">Target Value</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-[0.15em] text-right">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border-light dark:divide-border-dark">
                                     {loading ? (
-                                        <tr>
-                                            <td colSpan={4} className="px-5 py-6 text-center text-text-muted-light dark:text-text-muted-dark">
-                                                Loading KPIs...
-                                            </td>
-                                        </tr>
+                                        <tr><td colSpan={4} className="px-6 py-12 text-center italic text-text-muted-light">Loading KPIs...</td></tr>
                                     ) : filteredKpis.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={4} className="px-5 py-6 text-center text-text-muted-light dark:text-text-muted-dark">
-                                                {kpis.length === 0 ? "No KPIs found. The HR must define the KPI structure for this department first." : "No KPIs match your search."}
-                                            </td>
-                                        </tr>
+                                        <tr><td colSpan={4} className="px-6 py-12 text-center text-text-muted-light">No KPIs match your criteria.</td></tr>
                                     ) : filteredKpis.map((kpi) => (
-                                        <tr key={kpi.kpiLibraryId} className="table-row-hover hover:bg-surface-2-light/50 dark:hover:bg-surface-2-dark/50 p-2">
-                                            <td className="px-5 py-4">
-                                                <div className="font-semibold text-[15px] text-text-primary-light dark:text-text-primary-dark">
-                                                    {kpi.name}
-                                                </div>
-                                                <div className="text-[13px] text-text-secondary-light dark:text-text-secondary-dark font-medium mt-1">
-                                                    {kpi.category}
-                                                </div>
+                                        <tr key={kpi.kpiLibraryId} className="group hover:bg-surface-2-light/30 dark:hover:bg-surface-2-dark/30 transition-colors">
+                                            <td className="px-6 py-5">
+                                                <div className="font-bold text-[15px] text-text-primary-light dark:text-text-primary-dark group-hover:text-primary transition-colors">{kpi.name}</div>
+                                                <div className="text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider mt-1">{kpi.category}</div>
                                             </td>
-                                            <td className="px-5 py-4 text-center">
-                                                <div className="inline-flex font-semibold text-text-secondary-light dark:text-text-secondary-dark items-center bg-surface-2-light dark:bg-surface-2-dark px-2.5 py-1 rounded-md text-sm border border-border-light dark:border-border-dark">
-                                                    {kpi.weight}%
-                                                    {Icons.lock}
-                                                </div>
+                                            <td className="px-6 py-5 text-center">
+                                                <div className="inline-flex font-bold text-primary bg-primary/5 px-2 py-1 rounded-lg text-xs border border-primary/20">{kpi.weight}%</div>
                                             </td>
-                                            <td className="px-5 py-4">
-                                                <div className="relative">
-                                                    <input
-                                                        type="number"
-                                                        placeholder="e.g 1000..."
-                                                        value={kpi._targetValue}
-                                                        onChange={(e) => handleTargetChange(kpi.kpiLibraryId, e.target.value)}
-                                                        className={`w-full bg-surface-light dark:bg-surface-dark border px-3 py-2 rounded-lg text-sm font-semibold shadow-sm overflow-hidden text-text-primary-light dark:text-text-primary-dark focus-ring focus:outline-none transition-colors
-                                                            ${kpi._isAssigned ? 'border-primary bg-primary/5' : 'border-border-light dark:border-border-dark'}
-                                                        `}
-                                                    />
-                                                </div>
+                                            <td className="px-6 py-5">
+                                                <input
+                                                    type="number"
+                                                    value={kpi._targetValue}
+                                                    readOnly={kpi._isAssigned}
+                                                    onChange={kpi._isAssigned ? undefined : (e) => handleTargetChange(kpi.kpiLibraryId, e.target.value)}
+                                                    className={`w-full px-4 py-2 rounded-xl text-sm font-bold transition-all outline-none ${kpi._isAssigned
+                                                        ? 'bg-surface-2-light/50 dark:bg-surface-2-dark/50 text-text-muted-light/60 cursor-not-allowed border-dashed border-border-light/50'
+                                                        : 'bg-surface-2-light dark:bg-surface-2-dark border-border-light dark:border-border-dark focus:bg-white dark:focus:bg-surface-dark focus:border-primary focus:ring-4 focus:ring-primary/5'
+                                                        }`}
+                                                />
                                             </td>
-                                            <td className="px-5 py-4 text-right">
+                                            <td className="px-6 py-5 text-right">
                                                 {kpi._isAssigned ? (
-                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-600 dark:text-green-400 rounded-lg text-xs font-bold uppercase tracking-widest border border-green-500/20">
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-emerald-500/20">
                                                         <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" /></svg>
-                                                        Assigned
+                                                        Finalized
                                                     </div>
                                                 ) : (
                                                     <button
                                                         onClick={() => handleAssignTarget(kpi.kpiLibraryId)}
                                                         disabled={!kpi._targetValue}
-                                                        className="px-4 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white border border-primary/20 text-xs font-bold rounded-lg uppercase tracking-widest transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary/10 disabled:hover:text-primary">
-                                                        Save Target
+                                                        className="px-4 py-2 bg-primary text-white hover:bg-primary-hover text-[10px] font-bold rounded-lg uppercase tracking-widest transition-all disabled:opacity-30"
+                                                    >
+                                                        Assign Target
                                                     </button>
                                                 )}
                                             </td>
@@ -428,16 +418,12 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                         </div>
                     </div>
 
-                    {/* Employee Evidence & Final Scoring */}
-                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col">
-                        <div className="px-5 py-4 border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark flex items-center justify-between">
-                            <h2 className="text-lg font-bold font-heading text-text-primary-light dark:text-text-primary-dark">
-                                Employee Evidence &amp; Final Scoring
-                            </h2>
+                    {/* Evidence & Decision */}
+                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col bento-card">
+                        <div className="px-5 py-4 border-b border-border-light dark:border-border-dark bg-white dark:bg-surface-dark/40 flex items-center justify-between">
+                            <h2 className="text-lg font-bold font-heading text-text-primary-light">Evidence Review & Final Scoring</h2>
                             {activeReview && (
-                                <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${activeReview.status === 'SUBMITTED' || activeReview.status === 'APPROVED'
-                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                <span className={`px-3 py-1 text-[10px] font-black rounded-full uppercase border ${activeReview.status === 'SUBMITTED' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-amber-100 text-amber-700 border-amber-200'
                                     }`}>
                                     {activeReview.status}
                                 </span>
@@ -445,142 +431,97 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                         </div>
 
                         {reviewLoading ? (
-                            <div className="p-8 text-center text-text-muted-light dark:text-text-muted-dark text-sm">Loading review data...</div>
+                            <div className="p-12 text-center text-text-muted-light">Loading analysis...</div>
                         ) : (
                             <div className="flex divide-x divide-border-light dark:divide-border-dark">
-                                {/* Left Side: Evidence — assigned KPI goals */}
-                                <div className="flex-1 p-5 space-y-3">
-                                    <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-3">
-                                        Assigned KPI Targets (Evidence)
+                                {/* Left: Images */}
+                                <div className="flex-[1.2] p-6 flex flex-col min-h-[450px]">
+                                    <h3 className="text-xs font-bold uppercase tracking-widest text-text-primary-light mb-4 flex items-center justify-between">
+                                        Employee Evidence Summary
+                                        <span className="text-[10px] opacity-60">{kpis.filter(k => k.imageUrl).length} Files</span>
                                     </h3>
 
-                                    {kpis.filter(k => k._isAssigned).length === 0 ? (
-                                        <div className="text-center py-6 text-text-muted-light dark:text-text-muted-dark">
-                                            <svg className="w-8 h-8 mx-auto mb-2 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                            <p className="text-xs">No KPI targets assigned yet.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {kpis.filter(k => k._isAssigned).map(kpi => (
-                                                <div key={kpi.kpiLibraryId} className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-lg bg-white dark:bg-surface-2-dark flex items-center justify-center shadow-sm border border-primary/20 text-primary font-bold text-xs">
-                                                            {kpi.weight}%
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark">{kpi.name}</div>
-                                                            <div className="text-xs text-text-secondary-light dark:text-text-secondary-dark">Target: <span className="font-semibold text-primary">{kpi._targetValue}</span></div>
-                                                        </div>
-                                                    </div>
-                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                                                        <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
-                                                        SET
-                                                    </span>
+                                    <div className="flex-1 flex flex-col justify-center">
+                                        {kpis.filter(k => k.imageUrl).length === 0 ? (
+                                            <div className="p-12 border-2 border-dashed border-border-light rounded-2xl flex flex-col items-center opacity-40">
+                                                {Icons.image}
+                                                <p className="text-xs font-bold mt-2">No Evidence Uploaded</p>
+                                            </div>
+                                        ) : (
+                                            <div className="h-full flex flex-col gap-4">
+                                                <div className="flex-1 relative group rounded-2xl overflow-hidden shadow-2xl bg-black/5 flex items-center justify-center border border-border-light">
+                                                    <img
+                                                        src={kpis.find(k => k.imageUrl)?.imageUrl}
+                                                        className="max-w-full max-h-full object-contain cursor-zoom-in group-hover:scale-105 transition-transform duration-700"
+                                                        onClick={() => window.open(kpis.find(k => k.imageUrl)?.imageUrl, '_blank')}
+                                                    />
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* KPI Completion summary */}
-                                    {computedKpiScore !== null && (
-                                        <div className="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
-                                            <p className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-1">KPI Assignment Coverage</p>
-                                            <div className="flex items-baseline gap-2">
-                                                <span className="text-2xl font-bold font-heading text-primary">{computedKpiScore}%</span>
-                                                <span className="text-xs text-text-secondary-light dark:text-text-secondary-dark">of total weight assigned</span>
-                                            </div>
-                                            <div className="h-1.5 w-full bg-surface-2-light dark:bg-surface-2-dark rounded-full mt-2 overflow-hidden">
-                                                <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${computedKpiScore}%` }} />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Right Side: Manager Scoring */}
-                                <div className="flex-1 p-5 flex flex-col">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark">Manager Final Score</h3>
-                                        {activeReview?.overallScore !== null && activeReview?.overallScore !== undefined && (
-                                            <div className="flex items-baseline gap-1">
-                                                <span className="text-2xl font-bold font-heading text-primary">{activeReview.overallScore.toFixed(1)}</span>
-                                                <span className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">/ 100</span>
+                                                {kpis.filter(k => k.imageUrl).length > 1 && (
+                                                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                                                        {kpis.filter(k => k.imageUrl).map((kpi, idx) => (
+                                                            <div key={idx} className="w-16 h-16 rounded-lg overflow-hidden border-2 border-primary/20 flex-shrink-0 cursor-pointer hover:border-primary">
+                                                                <img src={kpi.imageUrl} className="w-full h-full object-cover" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Overall score bar */}
-                                    {activeReview?.overallScore !== null && activeReview?.overallScore !== undefined && (
-                                        <div className="mb-4">
-                                            <div className="relative h-2 w-full bg-surface-2-light dark:bg-surface-2-dark rounded-full mb-1">
-                                                <div className="absolute left-0 top-0 h-full bg-primary rounded-full transition-all duration-500 ease-out" style={{ width: `${Math.min(activeReview.overallScore, 100)}%` }} />
-                                            </div>
-                                            <div className="flex justify-between text-[10px] font-bold tracking-widest uppercase text-text-muted-light dark:text-text-muted-dark">
-                                                <span>UNSATISFACTORY</span><span>MEETS</span><span>EXCEEDS</span>
-                                            </div>
-                                        </div>
-                                    )}
 
-                                    {/* Score inputs */}
-                                    <div className="space-y-3 mb-4">
-                                        <div>
-                                            <label className="block text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-1">
-                                                KPI Score <span className="text-text-secondary-light normal-case font-normal">(0–100, weight 70%)</span>
-                                            </label>
+                                </div>
+
+                                {/* Right: SCORING */}
+                                <div className="flex-1 p-6 flex flex-col bg-surface-2-light/20">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h3 className="text-xs font-black uppercase tracking-widest text-text-primary-light">Final Decision</h3>
+                                        <div className="text-right">
+                                            <div className="text-3xl font-black text-primary leading-none">
+                                                {(parseFloat(kpiScoreInput || '0') * 0.7 + parseFloat(attitudeScoreInput || '0') * 0.3).toFixed(1)}
+                                            </div>
+                                            <span className="text-[10px] font-bold opacity-50">SCORE / 100</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-6 flex-1">
+                                        <div className="bg-white dark:bg-surface-dark p-4 rounded-xl border border-border-light shadow-sm">
+                                            <label className="block text-[10px] font-black uppercase mb-2 opacity-60 italic">KPI PERFORMANCE (70%)</label>
                                             <input
                                                 type="number"
-                                                min="0" max="100"
                                                 value={kpiScoreInput}
                                                 onChange={e => setKpiScoreInput(e.target.value)}
                                                 disabled={activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
-                                                placeholder="e.g. 85"
-                                                className="w-full px-3 py-2 text-sm bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                className="w-full px-4 py-2 text-xl font-black bg-surface-2-light border-none rounded-lg outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:italic"
+                                                placeholder="---"
                                             />
                                         </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-1">
-                                                Mentor's Attitude Rating <span className="text-text-secondary-light normal-case font-normal">(0–100, weight 30%)</span>
-                                            </label>
-                                            <div className="relative">
-                                                <input
-                                                    type="number"
-                                                    value={attitudeScoreInput}
-                                                    readOnly
-                                                    className="w-full pl-9 pr-3 py-2 text-sm bg-surface-2-light dark:bg-surface-2-dark border border-border-light dark:border-border-dark rounded-lg text-text-muted-light dark:text-text-muted-dark cursor-not-allowed opacity-80 shadow-inner"
-                                                />
-                                                <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                                </svg>
-                                            </div>
-                                            <p className="mt-1 text-[11px] text-primary font-medium flex items-center gap-1">
-                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                Auto-fetched from Mentor's evaluation
-                                            </p>
+                                        <div className="bg-white dark:bg-surface-dark p-4 rounded-xl border border-border-light shadow-sm opacity-90">
+                                            <label className="block text-[10px] font-black uppercase mb-2 opacity-60 italic">MENTOR ASSESSMENT (30%)</label>
+                                            <input
+                                                type="number"
+                                                value={attitudeScoreInput}
+                                                readOnly
+                                                className="w-full px-4 py-2 text-xl font-black bg-surface-2-light/50 border-none rounded-lg cursor-not-allowed outline-none"
+                                            />
                                         </div>
-                                        {kpiScoreInput && attitudeScoreInput && (
-                                            <div className="px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg">
-                                                <p className="text-xs text-text-muted-light dark:text-text-muted-dark">Preview Overall Score</p>
-                                                <p className="text-lg font-bold text-primary">
-                                                    {(parseFloat(kpiScoreInput || '0') * 0.7 + parseFloat(attitudeScoreInput || '0') * 0.3).toFixed(1)} / 100
-                                                </p>
-                                            </div>
-                                        )}
                                     </div>
 
-                                    {/* Action Buttons */}
-                                    <div className="flex justify-end gap-3 mt-auto">
+                                    <div className="grid grid-cols-1 gap-3 mt-8">
+                                        <button
+                                            onClick={handleFinalize}
+                                            disabled={scoreSaving || activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED' || kpis.filter(k => k.imageUrl).length === 0}
+                                            className="w-full py-3.5 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/30 transition-all active:scale-95 disabled:opacity-30"
+                                            title={kpis.filter(k => k.imageUrl).length === 0 ? "Evidence required to finalize" : ""}
+                                        >
+                                            {activeReview?.status === 'SUBMITTED' ? '✓ Data Locked' : 'Finalize Performance Record'}
+                                        </button>
                                         <button
                                             onClick={handleSaveDraft}
                                             disabled={scoreSaving || activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
-                                            className="px-5 py-2.5 rounded-lg text-sm font-semibold border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark hover:bg-surface-2-light dark:hover:bg-surface-2-dark transition-colors shadow-sm focus-ring disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="w-full py-2.5 text-[10px] font-black uppercase tracking-widest text-text-primary-light opacity-60 hover:opacity-100 transition-all"
                                         >
-                                            {scoreSaving ? 'Saving...' : 'Save Draft'}
-                                        </button>
-                                        <button
-                                            onClick={handleFinalize}
-                                            disabled={scoreSaving || activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
-                                            className="px-5 py-2.5 rounded-lg text-sm font-semibold bg-primary hover:bg-primary-hover text-white transition-colors shadow-sm focus-ring btn-primary-action disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {activeReview?.status === 'SUBMITTED' ? '✓ Finalized' : 'Finalize Score'}
+                                            {scoreSaving ? 'Processing...' : 'Save Draft Snapshot'}
                                         </button>
                                     </div>
                                 </div>
@@ -589,67 +530,31 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                     </div>
                 </div>
 
-                {/* Right Sidebar */}
+                {/* Sidebar */}
                 <div className="w-80 flex-shrink-0 space-y-6">
-                    {/* Team Members List */}
-                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col bento-card">
-                        <div className="px-5 py-4 border-b border-border-light dark:border-border-dark">
-                            <h2 className="text-sm font-bold font-heading text-text-primary-light dark:text-text-primary-dark">
-                                Department Members
-                            </h2>
+                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light rounded-2xl shadow-xl overflow-hidden flex flex-col bento-card border-t-4 border-t-primary">
+                        <div className="px-5 py-4 border-b border-border-light bg-white dark:bg-surface-dark/40">
+                            <h2 className="text-xs font-black uppercase tracking-widest text-text-primary-light">Team Roster</h2>
                         </div>
-                        <div className="p-2 space-y-1">
+                        <div className="p-2 space-y-1.5 max-h-[600px] overflow-y-auto scrollbar-none">
                             {employees.map((member) => (
                                 <div
                                     key={member.id}
                                     onClick={() => setActiveEmployeeId(member.id)}
-                                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors relative overflow-hidden group
-                    ${member.id === activeEmployeeId
-                                            ? "bg-primary/5 border border-primary/20"
-                                            : "border border-transparent hover:bg-surface-2-light dark:hover:bg-surface-2-dark"
-                                        }
-                  `}
+                                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${member.id === activeEmployeeId ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' : 'hover:bg-surface-2-light'
+                                        }`}
                                 >
-                                    {member.id === activeEmployeeId && (
-                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full"></div>
-                                    )}
-
-                                    <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(member.fullName || "User")}&background=random`} alt={member.fullName || "User"} className="w-10 h-10 rounded-full object-cover bg-surface-2-light dark:bg-surface-2-dark" />
-
+                                    <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(member.fullName || "User")}&background=random`} className="w-10 h-10 rounded-full border-2 border-white/20 shadow-sm" />
                                     <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark truncate">
-                                            {member.fullName || "User"}
-                                        </div>
-                                        <div className="flex items-center gap-1 mt-0.5">
-                                            <span className={`text-[10px] font-bold tracking-wider uppercase
-                        ${member.id === activeEmployeeId ? 'text-primary' : 'text-text-muted-light dark:text-text-muted-dark'}
-                      `}>
-                                                {member.id === activeEmployeeId ? 'CURRENT SELECTION' : 'AVAILABLE'}
-                                            </span>
+                                        <div className={`text-sm font-bold truncate ${member.id === activeEmployeeId ? 'text-white' : 'text-text-primary-light'}`}>{member.fullName}</div>
+                                        <div className={`text-[10px] uppercase font-black opacity-60 ${member.id === activeEmployeeId ? 'text-white' : 'text-text-muted-light'}`}>
+                                            {member.id === activeEmployeeId ? 'Selected Member' : 'Team Member'}
                                         </div>
                                     </div>
-                                    {member.id === activeEmployeeId && (
-                                        <div className="flex-shrink-0">
-                                            {Icons.dotYellow}
-                                        </div>
-                                    )}
                                 </div>
                             ))}
-                            {employees.length === 0 && !loading && (
-                                <div className="text-sm text-center text-text-muted-light py-5">
-                                    No employees found.
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="p-4 border-t border-border-light dark:border-border-dark bg-surface-2-light/50 dark:bg-surface-2-dark/50 flex justify-center mt-1">
-                            <button className="text-xs font-bold text-text-secondary-light dark:text-text-secondary-dark hover:text-primary tracking-widest uppercase transition-colors">
-                                VIEW ALL {employees.length} REPORTS
-                            </button>
                         </div>
                     </div>
-
-
                 </div>
             </div>
         </div>

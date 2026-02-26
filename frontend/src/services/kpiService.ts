@@ -55,7 +55,22 @@ export interface UpdateReviewScoreRequest {
     attitudeScore: number;
 }
 
+export interface TeamStats {
+    totalMembers: number;
+    submittedMembers: number;
+    averageScore: number | null;
+}
+
 export const kpiService = {
+    getTeamStats: async (): Promise<TeamStats> => {
+        try {
+            const res = await apiClient.get<TeamStats>("/api/manager/team-stats");
+            return res.data;
+        } catch {
+            return { totalMembers: 0, submittedMembers: 0, averageScore: null };
+        }
+    },
+
     getAllKpiLibraries: async (): Promise<KpiLibrary[]> => {
         try {
             // Use local default fallback in development if no backend running, or actually call API
@@ -100,14 +115,29 @@ export const kpiService = {
         return response.data;
     },
 
+    saveDraftKpiStructure: async (data: AssignKpiRequest): Promise<any> => {
+        const response = await apiClient.post("/api/kpi-structures/assign/draft", data);
+        return response.data;
+    },
+
     getAllEmployees: async (): Promise<any[]> => {
         try {
             const response = await apiClient.get<any>("/api/hr/employees", {
-                params: { page: 0, size: 50, sort: 'personal.fullName' }
+                params: { page: 0, size: 50, sort: 'fullName' }
             });
             return response.data.content || [];
         } catch (error) {
             console.error("Error fetching Employees", error);
+            return [];
+        }
+    },
+
+    getMyTeam: async (): Promise<any[]> => {
+        try {
+            const response = await apiClient.get<any[]>("/api/manager/my-team");
+            return response.data || [];
+        } catch (error) {
+            console.error("Error fetching My Team", error);
             return [];
         }
     },

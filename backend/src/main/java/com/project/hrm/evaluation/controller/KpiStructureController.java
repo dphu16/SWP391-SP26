@@ -24,6 +24,11 @@ public class KpiStructureController {
         return ResponseEntity.ok(kpiStructureService.assignKpisToDepartment(request));
     }
 
+    @PostMapping("/assign/draft")
+    public ResponseEntity<?> saveDraft(@RequestBody AssignKpiRequest request) {
+        return ResponseEntity.ok(kpiStructureService.saveStructureOnly(request));
+    }
+
     @GetMapping("/department/{departmentId}")
     public ResponseEntity<List<AssignKpiRequest.KpiDetailDto>> getKpisByDepartment(@PathVariable UUID departmentId) {
         return ResponseEntity.ok(kpiStructureService.getKpisByDepartment(departmentId));
