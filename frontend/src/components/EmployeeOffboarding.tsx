@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import apiClient from "../services/apiClient";
 import type { OffboardingEmployee, PageResponse } from "../types";
 import { useToast } from "./ui/Toast";
+import FilterBar from "./FilterBar";
 
 const API_URL = "/api/employees/inactive";
 
@@ -236,6 +237,137 @@ const Pagination: React.FC<PaginationProps> = ({
   );
 };
 
+// ─── Offboarding Tracker Modal ───────────────────────────────────────────────
+const OffboardingTrackerModal: React.FC<{
+  employee: OffboardingEmployee;
+  onClose: () => void;
+  onImmediateStatusChange: () => void;
+}> = ({ employee, onClose, onImmediateStatusChange }) => {
+  const [currentStep, setCurrentStep] = useState(1);
+
+  const steps = [
+    {
+      id: 1,
+      title: "Thông báo cho nhân viên",
+      description: "Gửi thông báo offboarding chính thức qua email và hệ thống.",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+      )
+    },
+    {
+      id: 2,
+      title: "Tính lương sau khi nghỉ việc",
+      description: "Quyết toán lương, phép năm và các khoản trợ cấp còn lại.",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line><line x1="6" y1="16" x2="6.01" y2="16"></line><line x1="10" y1="16" x2="10.01" y2="16"></line></svg>
+      )
+    },
+    {
+      id: 3,
+      title: "Chuyển trạng thái tài khoản",
+      description: "Thu hồi quyền truy cập và vô hiệu hóa tài khoản hệ thống.",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      )
+    }
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-md animate-fade-in">
+      <div className="bg-surface-light w-full max-w-2xl rounded-2xl shadow-xl border border-border-light overflow-hidden flex flex-col animate-slide-up">
+        {/* Header */}
+        <div className="relative px-8 py-6 border-b border-gray-100 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent pointer-events-none" />
+          <div className="flex items-center justify-between relative z-10">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-text-primary-light">
+                Theo dõi quá trình Offboarding
+              </h2>
+              <p className="text-sm font-medium text-text-secondary-light mt-1 flex items-center gap-2">
+                <span className="text-primary">{employee.fullName}</span> 
+                <span className="w-1 h-1 rounded-full bg-gray-300" /> 
+                <span className="font-mono text-xs">{employee.employeeCode}</span>
+              </p>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="p-8 pb-10">
+          <div className="relative pl-2">
+            {/* Connection Line */}
+            <div className="absolute left-[34px] top-10 bottom-10 w-0.5 bg-gray-100" />
+            
+            <div className="space-y-10 relative">
+              {steps.map((step) => {
+                const isCompleted = step.id < currentStep;
+                const isCurrent = step.id === currentStep;
+                
+                return (
+                  <div key={step.id} className="flex gap-6 relative group">
+                    {/* Step Indicator */}
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 z-10 transition-all duration-300 shadow-sm border-[3px]
+                      ${isCompleted ? "bg-primary text-white border-primary" : 
+                        isCurrent ? "bg-white text-primary border-primary shadow-md scale-110" : 
+                        "bg-white text-gray-300 border-gray-100"}`}>
+                      {isCompleted ? (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      ) : step.icon}
+                    </div>
+                    
+                    {/* Content */}
+                    <div className={`flex-1 pt-2 transition-opacity duration-300 ${!isCurrent && !isCompleted ? "opacity-50 group-hover:opacity-80" : ""}`}>
+                      <div className="flex items-center justify-between">
+                        <h3 className={`text-[15px] font-bold ${isCurrent ? "text-primary" : "text-text-primary-light"}`}>
+                          Giai đoạn {step.id}: {step.title}
+                        </h3>
+                        {/* Status Label */}
+                        <div className="text-[10px] uppercase font-bold tracking-wider">
+                          {isCompleted ? <span className="text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">Đã xong</span> : 
+                           isCurrent ? <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full">Đang xử lý</span> : 
+                           <span className="text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">Chờ xử lý</span>}
+                        </div>
+                      </div>
+                      <p className="text-sm text-text-secondary-light mt-1.5 leading-relaxed pr-8">
+                        {step.description}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-5 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-text-muted-light">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span className="text-xs font-medium">Quá trình này có thể mất vài ngày làm việc.</span>
+          </div>
+          <div className="flex gap-3">
+            <button 
+              onClick={onImmediateStatusChange}
+              className="px-5 py-2.5 bg-rose-50 text-rose-600 hover:text-white font-semibold text-sm rounded-xl hover:bg-rose-500 transition-all shadow-sm flex items-center gap-2 cursor-pointer group"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              Chuyển trạng thái ngay
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 const EmployeeOffboarding: React.FC = () => {
   const navigate = useNavigate();
@@ -251,6 +383,39 @@ const EmployeeOffboarding: React.FC = () => {
     size: 10,
   });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filter, setFilter] = useState({ category: "department", value: "All Departments" });
+
+  const [trackingEmployee, setTrackingEmployee] = useState<OffboardingEmployee | null>(null);
+
+  const handleImmediateStatusChange = () => {
+    if (window.confirm("Bạn có chắc chắn muốn chuyển trạng thái nhân viên này ngay lập tức không?")) {
+      // Logic call API here...
+      setTrackingEmployee(null);
+      fetchEmployees(page);
+    }
+  };
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  const handleFilterChange = (category: string, value: string) => {
+    setFilter({ category, value });
+  };
+
+  const filteredEmployees = employees.filter(emp => {
+    const nameStr = emp.fullName || "";
+    const codeStr = emp.employeeCode || "";
+    const matchesSearch = nameStr.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
+                         codeStr.toLowerCase().includes(debouncedSearch.toLowerCase());
+    return matchesSearch;
+  });
 
   const fetchEmployees = useCallback(
     async (_pageNum: number) => {
@@ -322,6 +487,27 @@ const EmployeeOffboarding: React.FC = () => {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  };
+
+  // ── Action ─────────────────────────────────────────────────────────────────
+  const handleReactivate = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Are you sure you want to reactivate ${selectedIds.size} selected employee(s)?`)) return;
+
+    try {
+      setLoading(true);
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          apiClient.put(`/api/employees/${id}/activate`)
+        )
+      );
+      setSelectedIds(new Set());
+      await fetchEmployees(page);
+    } catch (err: unknown) {
+      toastError("Reactivation Failed", "Could not reactivate some employees.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Sort ───────────────────────────────────────────────────────────────────
@@ -400,7 +586,22 @@ const EmployeeOffboarding: React.FC = () => {
   }
 
   return (
-    <div className="rounded-2xl border border-border-light bg-surface-light overflow-hidden shadow-card animate-fade-in">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold tracking-tight text-text-primary-light font-heading">
+          Employee Offboarding
+        </h1>
+        <p className="text-text-secondary-light text-sm">
+          Handle the offboarding process and handover tasks for departing employees.
+        </p>
+      </div>
+
+      <FilterBar 
+        onSearch={setSearchTerm} 
+        onFilterChange={handleFilterChange}
+      />
+
+      <div className="rounded-2xl border border-border-light bg-surface-light overflow-hidden shadow-card animate-fade-in">
 
       {/* ── Bulk action bar ─────────────────────────────────────────────────── */}
       {selectedIds.size > 0 && (
@@ -409,11 +610,11 @@ const EmployeeOffboarding: React.FC = () => {
             {selectedIds.size} selected
           </span>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 text-xs font-semibold text-text-secondary-light hover:text-text-primary-light border border-border-light rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-              Export
-            </button>
-            <button className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer">
-              Archive
+            <button 
+              onClick={handleReactivate}
+              className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+            >
+              Reactivate
             </button>
           </div>
           <button
@@ -470,7 +671,7 @@ const EmployeeOffboarding: React.FC = () => {
           <tbody className="divide-y divide-gray-50 text-sm">
             {loading
               ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
-              : employees.map((emp) => {
+              : filteredEmployees.map((emp) => {
                   const isSelected = selectedIds.has(emp.employeeId);
 
                   return (
@@ -500,10 +701,7 @@ const EmployeeOffboarding: React.FC = () => {
                         <div className="flex items-center gap-3">
                           <Avatar name={emp.fullName} url={emp.avatarUrl} />
                           <div>
-                            <div
-                              className="font-semibold text-text-primary-light leading-snug cursor-pointer hover:text-primary transition-colors"
-                              onClick={() => navigate(`/employee/${emp.employeeId}`)}
-                            >
+                            <div className="font-semibold text-text-primary-light leading-snug">
                               {emp.fullName}
                             </div>
                             <div className="text-[11px] text-text-secondary-light font-mono mt-0.5">
@@ -553,13 +751,13 @@ const EmployeeOffboarding: React.FC = () => {
                       <td className="px-4 py-3.5 text-center sticky right-0 bg-surface-light">
                         <div className="flex items-center justify-center">
                           <button
-                            onClick={() => navigate(`/employee/${emp.employeeId}`)}
-                            title="View profile"
-                            className="p-1.5 rounded-lg text-text-secondary-light hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                            onClick={() => setTrackingEmployee(emp)}
+                            title="Theo dõi quá trình Offboarding"
+                            className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary transition-colors cursor-pointer group"
                           >
-                            <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                              <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
-                              <path fillRule="evenodd" d="M1.38 8.28a1.2 1.2 0 010-.56 7.16 7.16 0 0113.24 0c.044.185.044.378 0 .56a7.16 7.16 0 01-13.24 0zM8 11a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                              <polyline points="22 4 12 14.01 9 11.01"></polyline>
                             </svg>
                           </button>
                         </div>
@@ -572,7 +770,7 @@ const EmployeeOffboarding: React.FC = () => {
       </div>
 
       {/* Empty state */}
-      {!loading && employees.length === 0 && (
+      {!loading && filteredEmployees.length === 0 && (
         <div className="py-20 flex flex-col items-center gap-3 text-center animate-fade-in">
           <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-gray-400">
@@ -598,7 +796,17 @@ const EmployeeOffboarding: React.FC = () => {
           onPageChange={setPage}
         />
       )}
+
+      {/* Tracking Modal */}
+      {trackingEmployee && (
+        <OffboardingTrackerModal
+          employee={trackingEmployee}
+          onClose={() => setTrackingEmployee(null)}
+          onImmediateStatusChange={handleImmediateStatusChange}
+        />
+      )}
     </div>
+  </div>
   );
 };
 

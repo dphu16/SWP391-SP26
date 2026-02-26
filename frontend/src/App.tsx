@@ -3,13 +3,12 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import HRDashboard from "./components/HRDashboard";
-import EmployeeTable from "./components/EmployeeTable";
 import EmployeeDetail from "./components/EmployeeDetail";
 import EmployeeOnboarding from "./components/EmployeeOnboarding";
 import EmployeeOffboarding from "./components/EmployeeOffboarding";
 import CandidateProfileCompletion from "./components/CandidateProfileCompletion";
 import CreateChangeRequest from "./components/CreateChangeRequest";
-import FilterBar from "./components/FilterBar";
+import EmployeeDirectory from "./components/EmployeeDirectory";
 
 // --- Nhóm route Attendance của bạn ---
 import ViewSchedule from "./components/attendance/ViewSchedule";
@@ -23,7 +22,6 @@ import AttendanceSummary from "./components/attendance/AttendanceSummary";
 import LoginPage from "./components/auth/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
-// --- Import từ nhánh develop của nhóm ---
 import { ToastProvider } from "./components/ui/Toast";
 
 const AppShell: React.FC = () => {
@@ -43,17 +41,7 @@ const AppShell: React.FC = () => {
                             {/* Core HR Routes */}
                             <Route
                                 path="/employees"
-                                element={
-                                    <>
-                                        <div className="flex items-center justify-between">
-                                            <h1 className="text-2xl font-bold tracking-tight">
-                                                Employee Directory
-                                            </h1>
-                                        </div>
-                                        <FilterBar />
-                                        <EmployeeTable />
-                                    </>
-                                }
+                                element={<EmployeeDirectory />}
                             />
 
                             <Route path="/onboarding" element={<EmployeeOnboarding />} />

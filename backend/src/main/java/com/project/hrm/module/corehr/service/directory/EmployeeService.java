@@ -33,4 +33,12 @@ public class EmployeeService implements IEmployeeService {
     public EmployeeDetailDTO updateEmployee(UUID id, EmployeeChangeDTO req) {
         return commandService.updateEmployee(id, req);
     }
+
+    @Override
+    public Page<com.project.hrm.module.corehr.dto.request.EmployeeDTO> searchEmployees(String fullName,
+            String employeeCode, String phoneNumber, String department, String position, String role, String status,
+            Pageable pageable) {
+        return queryService.searchEmployees(fullName, employeeCode, phoneNumber, department, position, role, status,
+                pageable);
+    }
 }
