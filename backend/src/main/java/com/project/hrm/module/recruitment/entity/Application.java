@@ -38,6 +38,7 @@ public class Application {
 
     @Size(max = 30)
     @ColumnDefault("'APPLIED'")
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 30)
     private ApplicationStatus status;
 
