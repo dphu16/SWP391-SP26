@@ -117,7 +117,7 @@ public class WorkScheduleService {
 
     @Transactional
     public List<WorkScheduleResponse> createBulkSchedules(UUID employeeId, LocalDate startDate, LocalDate endDate,
-                                                          UUID shiftId) {
+            UUID shiftId) {
         Shift shift = shiftRepository.findById(shiftId)
                 .orElseThrow(() -> new RuntimeException("Ca làm việc không tồn tại!"));
 
