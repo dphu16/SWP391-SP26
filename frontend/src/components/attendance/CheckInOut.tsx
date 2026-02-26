@@ -127,8 +127,9 @@ const CheckInOut: React.FC = () => {
                     now.getMonth() + 1,
                     now.getFullYear()
                 );
-                const todayStr = now.toISOString().split("T")[0];
-                const todaySched = schedules.find((s) => s.date === todayStr);
+                // Fix issue causing toISOString to return UTC yesterday instead of Local today
+                const localTodayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const todaySched = schedules.find((s) => s.date === localTodayStr);
                 setTodaySchedule(todaySched ?? null);
             } catch (err) {
                 console.error("Failed to initialize attendance:", err);

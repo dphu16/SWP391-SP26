@@ -1,6 +1,7 @@
 package com.project.hrm.module.request.controller;
 
 import com.project.hrm.module.request.dto.RequestDTO;
+import com.project.hrm.module.request.dto.RequestResponseDTO;
 import com.project.hrm.module.request.entity.Request;
 import com.project.hrm.module.request.service.RequestService;
 import lombok.RequiredArgsConstructor;
@@ -13,30 +14,19 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/requests")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*") // Đảm bảo React có thể gọi API nếu khác port
 public class RequestController {
 
     private final RequestService service;
 
-    // 1. Tạo đơn mới (Employee)
-    @PostMapping
-    public ResponseEntity<Request> createRequest(@RequestBody RequestDTO dto) {
-        // Service đã có @Transactional nên sẽ insert thật vào DB
-        return ResponseEntity.ok(service.createRequest(dto));
-    }
-
-    // 2. Xem đơn của tôi (Employee)
-    @GetMapping("/my-requests")
-    public ResponseEntity<List<Request>> getMyRequests(@RequestParam UUID employeeId) {
-        return ResponseEntity.ok(service.getMyRequests(employeeId));
-    }
-
-    // 3. Xem tất cả đơn (Manager)
+    // --- 1. LẤY TẤT CẢ ĐƠN (MANAGER) ---
+    // Endpoint này trả về RequestResponseDTO đã có sẵn employeeName và deptName
     @GetMapping("/all")
-    public ResponseEntity<List<Request>> getAllRequests() {
-        return ResponseEntity.ok(service.getAllRequests());
+    public ResponseEntity<List<RequestResponseDTO>> getAllRequests() {
+        return ResponseEntity.ok(service.getAllRequestsForReview());
     }
 
-    // 4. Duyệt đơn (Manager)
+    // --- 2. DUYỆT ĐƠN (APPROVE) ---
     @PutMapping("/{id}/approve")
     public ResponseEntity<Request> approveRequest(
             @PathVariable UUID id,
@@ -44,7 +34,7 @@ public class RequestController {
         return ResponseEntity.ok(service.approveRequest(id, dto));
     }
 
-    // 5. Từ chối đơn (Manager)
+    // --- 3. TỪ CHỐI ĐƠN (REJECT) ---
     @PutMapping("/{id}/reject")
     public ResponseEntity<Request> rejectRequest(
             @PathVariable UUID id,
@@ -52,18 +42,15 @@ public class RequestController {
         return ResponseEntity.ok(service.rejectRequest(id, dto));
     }
 
-    // 6. Cập nhật đơn (Employee)
-    @PutMapping("/{id}")
-    public ResponseEntity<Request> updateRequest(
-            @PathVariable UUID id,
-            @RequestBody RequestDTO dto) {
-        return ResponseEntity.ok(service.updateRequest(id, dto));
+    // --- 4. TẠO ĐƠN MỚI (EMPLOYEE) ---
+    @PostMapping
+    public ResponseEntity<Request> createRequest(@RequestBody RequestDTO dto) {
+        return ResponseEntity.ok(service.createRequest(dto));
     }
 
-    // 7. Xóa đơn (Employee)
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteRequest(@PathVariable UUID id) {
-        service.deleteRequest(id);
-        return ResponseEntity.noContent().build();
+    // --- 5. XEM ĐƠN CÁ NHÂN (EMPLOYEE) ---
+    @GetMapping("/my-requests")
+    public ResponseEntity<List<Request>> getMyRequests(@RequestParam UUID employeeId) {
+        return ResponseEntity.ok(service.getMyRequests(employeeId));
     }
 }
