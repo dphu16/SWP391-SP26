@@ -18,6 +18,7 @@ import CheckInOut from "./components/attendance/CheckInOut";
 import Applications from "./components/attendance/Applications";
 import ReviewRequests from "./components/attendance/ReviewRequests";
 import AttendanceSummary from "./components/attendance/AttendanceSummary";
+import PerformanceModule from "./components/PerformanceModule";
 
 // --- Auth ---
 import LoginPage from "./components/auth/LoginPage";
@@ -82,6 +83,9 @@ const AppShell: React.FC = () => {
                             />
                             <Route path="/attendance/review" element={<ReviewRequests />} />
                             <Route path="/attendance/summary" element={<AttendanceSummary />} />
+
+                            {/* Performance */}
+                            <Route path="/performance" element={<PerformanceModule />} />
 
                             <Route path="/employee/:id" element={<EmployeeDetail />} />
                             <Route path="/profile" element={<EmployeeDetail />} />

@@ -8,9 +8,9 @@ import {
 import apiClient from "../../services/apiClient";
 
 // ── Helpers ──
-const MONTHS_VI = [
-    "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
-    "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12",
+const MONTHS = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
 ];
 
 function formatHours(hours: number): string {
@@ -134,7 +134,7 @@ const AttendanceSummary: React.FC = () => {
             console.error("Failed to fetch attendance summary:", err);
             const msg =
                 (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-                (err instanceof Error ? err.message : "Không thể tải dữ liệu. Vui lòng thử lại.");
+                (err instanceof Error ? err.message : "Failed to load data. Please try again.");
             setError(msg);
         } finally {
             setLoading(false);
@@ -176,10 +176,7 @@ const AttendanceSummary: React.FC = () => {
         <div className="flex flex-col pb-10 max-w-7xl mx-auto w-full">
             {/* ── Header ── */}
             <div className="mb-6">
-                <h1 className="text-[28px] font-bold text-[#1a1c21] tracking-tight">Tổng Hợp Chấm Công</h1>
-                <p className="text-[#64748b] text-[15px] mt-1">
-                    Chọn bộ lọc bên dưới rồi bấm <strong>"Xem Tổng Hợp"</strong> để xem báo cáo.
-                </p>
+                <h1 className="text-[28px] font-bold text-[#1a1c21] tracking-tight">Attendance Summary</h1>
             </div>
 
             {/* ═══════════════ FILTER PANEL ═══════════════ */}
@@ -188,20 +185,20 @@ const AttendanceSummary: React.FC = () => {
                     <svg className="w-5 h-5 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                     </svg>
-                    Bộ Lọc
+                    Filters
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                     {/* Month */}
                     <div>
-                        <label className="block text-sm font-semibold text-[#374151] mb-2">Tháng</label>
+                        <label className="block text-sm font-semibold text-[#374151] mb-2">Month</label>
                         <select
                             value={filterMonth}
                             onChange={(e) => setFilterMonth(Number(e.target.value))}
                             className="w-full px-4 py-3 border border-[#e2e8f0] rounded-xl text-sm font-medium text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-[#10b981]/30 focus:border-[#10b981] transition-all appearance-none cursor-pointer"
                             style={selectStyle}
                         >
-                            {MONTHS_VI.map((label, idx) => (
+                            {MONTHS.map((label, idx) => (
                                 <option key={idx + 1} value={idx + 1}>{label}</option>
                             ))}
                         </select>
@@ -209,7 +206,7 @@ const AttendanceSummary: React.FC = () => {
 
                     {/* Year */}
                     <div>
-                        <label className="block text-sm font-semibold text-[#374151] mb-2">Năm</label>
+                        <label className="block text-sm font-semibold text-[#374151] mb-2">Year</label>
                         <select
                             value={filterYear}
                             onChange={(e) => setFilterYear(Number(e.target.value))}
@@ -224,14 +221,14 @@ const AttendanceSummary: React.FC = () => {
 
                     {/* Department */}
                     <div>
-                        <label className="block text-sm font-semibold text-[#374151] mb-2">Phòng ban</label>
+                        <label className="block text-sm font-semibold text-[#374151] mb-2">Department</label>
                         <select
                             value={filterDeptId}
                             onChange={(e) => setFilterDeptId(e.target.value)}
                             className="w-full px-4 py-3 border border-[#e2e8f0] rounded-xl text-sm font-medium text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-[#10b981]/30 focus:border-[#10b981] transition-all appearance-none cursor-pointer"
                             style={selectStyle}
                         >
-                            <option value="">Tất cả phòng ban</option>
+                            <option value="">All Departments</option>
                             {departments.map((dept) => (
                                 <option key={dept.deptId} value={dept.deptId}>{dept.deptName}</option>
                             ))}
@@ -241,7 +238,7 @@ const AttendanceSummary: React.FC = () => {
                     {/* Employee (searchable dropdown) */}
                     <div ref={empDropdownRef} className="relative">
                         <label className="block text-sm font-semibold text-[#374151] mb-2">
-                            Nhân viên <span className="font-normal text-[#94a3b8]">(tuỳ chọn)</span>
+                            Employee <span className="font-normal text-[#94a3b8]">(optional)</span>
                         </label>
                         <div
                             className={`w-full px-4 py-3 border rounded-xl text-sm font-medium bg-white flex items-center gap-2 cursor-pointer transition-all ${empDropdownOpen ? "border-[#10b981] ring-2 ring-[#10b981]/30" : "border-[#e2e8f0]"}`}
@@ -265,7 +262,7 @@ const AttendanceSummary: React.FC = () => {
                                     </button>
                                 </>
                             ) : (
-                                <span className="flex-1 text-[#94a3b8]">Tất cả nhân viên</span>
+                                <span className="flex-1 text-[#94a3b8]">All Employees</span>
                             )}
                             <svg className={`w-4 h-4 text-[#94a3b8] flex-shrink-0 transition-transform ${empDropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -278,7 +275,7 @@ const AttendanceSummary: React.FC = () => {
                                 <div className="p-2 border-b border-[#f1f5f9]">
                                     <input
                                         type="text"
-                                        placeholder="Tìm theo tên hoặc mã NV..."
+                                        placeholder="Search by name or employee code..."
                                         value={empSearch}
                                         onChange={(e) => setEmpSearch(e.target.value)}
                                         className="w-full px-3 py-2 text-sm border border-[#e2e8f0] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#10b981]/30 focus:border-[#10b981] placeholder:text-[#94a3b8]"
@@ -288,9 +285,9 @@ const AttendanceSummary: React.FC = () => {
                                 </div>
                                 <div className="max-h-48 overflow-y-auto">
                                     {empLoading ? (
-                                        <div className="py-4 text-center text-sm text-[#94a3b8]">Đang tìm...</div>
+                                        <div className="py-4 text-center text-sm text-[#94a3b8]">Searching...</div>
                                     ) : empOptions.length === 0 ? (
-                                        <div className="py-4 text-center text-sm text-[#94a3b8]">Không tìm thấy</div>
+                                        <div className="py-4 text-center text-sm text-[#94a3b8]">No results found</div>
                                     ) : (
                                         empOptions.map((emp) => (
                                             <button
@@ -347,7 +344,7 @@ const AttendanceSummary: React.FC = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         )}
-                        {loading ? "Đang tải..." : "Xem Tổng Hợp"}
+                        {loading ? "Loading..." : "View Summary"}
                     </div>
                 </button>
             </div>
@@ -357,12 +354,12 @@ const AttendanceSummary: React.FC = () => {
                 <div className="animate-fade-in">
                     {/* Applied filter summary bar */}
                     <div className="flex flex-wrap items-center gap-2 mb-4">
-                        <span className="text-sm text-[#64748b]">Kết quả cho:</span>
+                        <span className="text-sm text-[#64748b]">Results for:</span>
                         <span className="inline-flex items-center gap-1 text-sm font-bold text-[#10b981] bg-[#dcfce7] px-3 py-1 rounded-lg">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            {MONTHS_VI[appliedMonth - 1]} {appliedYear}
+                            {MONTHS[appliedMonth - 1]} {appliedYear}
                         </span>
                         {appliedDept && (
                             <span className="inline-flex items-center gap-1 text-sm font-bold text-[#7c3aed] bg-[#ede9fe] px-3 py-1 rounded-lg">
@@ -372,7 +369,7 @@ const AttendanceSummary: React.FC = () => {
                                 {getDeptName(appliedDept)}
                             </span>
                         )}
-                        <span className="text-sm text-[#94a3b8]">— {summaryData.length} nhân viên</span>
+                        <span className="text-sm text-[#94a3b8]">— {summaryData.length} employee(s)</span>
                         <button
                             onClick={() => setPhase("filter")}
                             className="ml-auto text-sm text-[#64748b] hover:text-[#0f172a] font-medium flex items-center gap-1 transition-colors"
@@ -380,7 +377,7 @@ const AttendanceSummary: React.FC = () => {
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
                             </svg>
-                            Lọc lại
+                            Filter Again
                         </button>
                     </div>
 
@@ -391,7 +388,7 @@ const AttendanceSummary: React.FC = () => {
                                 <svg className="w-5 h-5 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                                 </svg>
-                                Báo Cáo Chấm Công — {MONTHS_VI[appliedMonth - 1]} {appliedYear}
+                                Attendance Report — {MONTHS[appliedMonth - 1]} {appliedYear}
                             </h3>
                         </div>
 
@@ -402,34 +399,34 @@ const AttendanceSummary: React.FC = () => {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                                     </svg>
                                 </div>
-                                <p className="text-[#94a3b8] text-sm font-medium">Không tìm thấy dữ liệu chấm công cho bộ lọc đã chọn.</p>
+                                <p className="text-[#94a3b8] text-sm font-medium">No attendance data found for the selected filters.</p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="bg-[#f8fafc]">
-                                            <th className="text-left px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider">STT</th>
+                                            <th className="text-left px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider">#</th>
                                             <th className="text-left px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider cursor-pointer hover:text-[#0f172a] transition-colors" onClick={() => handleSort("employeeCode")}>
-                                                Mã NV<SortIcon field="employeeCode" />
+                                                Emp Code<SortIcon field="employeeCode" />
                                             </th>
                                             <th className="text-left px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider cursor-pointer hover:text-[#0f172a] transition-colors" onClick={() => handleSort("fullName")}>
-                                                Họ tên<SortIcon field="fullName" />
+                                                Full Name<SortIcon field="fullName" />
                                             </th>
                                             <th className="text-left px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider cursor-pointer hover:text-[#0f172a] transition-colors" onClick={() => handleSort("departmentName")}>
-                                                Phòng ban<SortIcon field="departmentName" />
+                                                Department<SortIcon field="departmentName" />
                                             </th>
                                             <th className="text-right px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider cursor-pointer hover:text-[#0f172a] transition-colors" onClick={() => handleSort("totalWorkingHours")}>
-                                                Tổng giờ làm<SortIcon field="totalWorkingHours" />
+                                                Total Hours<SortIcon field="totalWorkingHours" />
                                             </th>
                                             <th className="text-center px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider cursor-pointer hover:text-[#0f172a] transition-colors" onClick={() => handleSort("totalLateDays")}>
-                                                Đi muộn<SortIcon field="totalLateDays" />
+                                                Late<SortIcon field="totalLateDays" />
                                             </th>
                                             <th className="text-center px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider cursor-pointer hover:text-[#0f172a] transition-colors" onClick={() => handleSort("totalEarlyLeaveDays")}>
-                                                Về sớm<SortIcon field="totalEarlyLeaveDays" />
+                                                Early Leave<SortIcon field="totalEarlyLeaveDays" />
                                             </th>
                                             <th className="text-center px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider cursor-pointer hover:text-[#0f172a] transition-colors" onClick={() => handleSort("totalMissingPunchDays")}>
-                                                Thiếu chấm<SortIcon field="totalMissingPunchDays" />
+                                                Missing<SortIcon field="totalMissingPunchDays" />
                                             </th>
                                         </tr>
                                     </thead>
@@ -484,7 +481,7 @@ const AttendanceSummary: React.FC = () => {
                                     <tfoot>
                                         <tr className="border-t-2 border-[#e2e8f0] bg-[#f8fafc]">
                                             <td colSpan={4} className="px-5 py-3.5 text-sm font-bold text-[#0f172a]">
-                                                Tổng cộng ({summaryData.length} nhân viên)
+                                                Total ({summaryData.length} employees)
                                             </td>
                                             <td className="px-5 py-3.5 text-right font-bold text-[#0f172a]">
                                                 {formatHours(summaryData.reduce((sum, r) => sum + (r.totalWorkingHours ?? 0), 0))}
@@ -521,9 +518,9 @@ const AttendanceSummary: React.FC = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                     </div>
-                    <h3 className="text-lg font-bold text-[#0f172a] mb-2">Chọn bộ lọc để bắt đầu</h3>
+                    <h3 className="text-lg font-bold text-[#0f172a] mb-2">Select filters to get started</h3>
                     <p className="text-[#64748b] text-sm max-w-md mx-auto">
-                        Chọn tháng, năm, phòng ban phía trên, sau đó bấm <strong>"Xem Tổng Hợp"</strong> để xem báo cáo chấm công.
+                        Choose month, year, and department above, then click <strong>"View Summary"</strong> to see the attendance report.
                     </p>
                 </div>
             )}

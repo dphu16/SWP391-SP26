@@ -360,7 +360,7 @@ const Sidebar: React.FC = () => {
         {[
           { label: "Check-in/Out", icon: Icons.timeoff, path: "/attendance/check-in-out", badge: 3 },
           { label: "Payroll", icon: Icons.payroll, roles: ["HR", "FINANCE"] as const },
-          { label: "Performance", icon: Icons.performance, roles: ["HR", "MANAGER", "FINANCE"] as const },
+          { label: "Performance", icon: Icons.performance, path: "/performance", roles: ["HR", "MANAGER", "FINANCE"] as const },
         ]
           .filter((item) => !item.roles || hasRole(...item.roles))
           .map((item) => (
