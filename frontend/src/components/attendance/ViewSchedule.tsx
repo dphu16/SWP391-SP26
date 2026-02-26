@@ -165,7 +165,7 @@ const ViewSchedule: React.FC = () => {
                                                         : "bg-[#ccfbf1] text-[#0f766e]" /* chiều: xanh lá */
                                                     }`}
                                             >
-                                                <span className="opacity-70 text-[9px] font-semibold">{isMorning ? "☀️ Sáng" : "🌙 Chiều"}</span>
+                                                <span className="opacity-70 text-[9px] font-semibold">{isMorning ? "☀️" : "🌙"} {sch.shift.name}</span>
                                                 <span>{sch.shift.startTime.slice(0, 5)} – {sch.shift.endTime.slice(0, 5)}</span>
                                             </div>
                                         );

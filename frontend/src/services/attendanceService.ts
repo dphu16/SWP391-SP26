@@ -103,6 +103,16 @@ export const getAllSchedules = async (): Promise<WorkScheduleResponse[]> => {
     }
 };
 
+export const getAllShifts = async (): Promise<ShiftResponse[]> => {
+    try {
+        const response = await apiClient.get('/api/v1/attendance/work-schedules/shifts');
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching shifts:", error);
+        throw error;
+    }
+};
+
 export interface WorkScheduleRequest {
     employeeId: string;
     date: string; // "YYYY-MM-DD"

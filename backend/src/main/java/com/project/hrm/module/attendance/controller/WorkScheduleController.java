@@ -4,6 +4,7 @@ import com.project.hrm.module.attendance.dto.AttendanceEmployeeResponse;
 import com.project.hrm.module.attendance.dto.BulkScheduleRequest;
 import com.project.hrm.module.attendance.dto.WorkScheduleRequest;
 import com.project.hrm.module.attendance.dto.WorkScheduleResponse;
+import com.project.hrm.module.attendance.dto.ShiftResponse;
 import com.project.hrm.module.attendance.service.WorkScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -37,8 +38,7 @@ public class WorkScheduleController {
     public ResponseEntity<List<WorkScheduleResponse>> getMySchedule(
             @RequestParam UUID employeeId,
             @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer year
-    ) {
+            @RequestParam(required = false) Integer year) {
         return ResponseEntity.ok(service.getMySchedules(employeeId, month, year));
     }
 
@@ -59,8 +59,7 @@ public class WorkScheduleController {
                 request.getEmployeeId(),
                 request.getStartDate(),
                 request.getEndDate(),
-                request.getShiftId()
-        );
+                request.getShiftId());
         return ResponseEntity.ok(result);
     }
 
@@ -94,5 +93,13 @@ public class WorkScheduleController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String search) {
         return ResponseEntity.ok(service.getEmployeesForScheduling(search, page, size));
+    }
+
+    // =========================================================
+    // 8. LẤY TẤT CẢ CA LÀM (ĐỂ ĐỔ VÀO UI)
+    // =========================================================
+    @GetMapping("/shifts")
+    public ResponseEntity<List<ShiftResponse>> getAllShifts() {
+        return ResponseEntity.ok(service.getAllShifts());
     }
 }

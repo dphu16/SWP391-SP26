@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import apiClient from "../../services/apiClient";
 import {
-    getAllSchedules,
+    getAllShifts,
     createSchedule,
     createBulkSchedules,
     cloneScheduleFromPreviousMonth,
@@ -289,13 +289,12 @@ const CreateSchedule: React.FC = () => {
     const [successCount, setSuccessCount] = useState<number | null>(null);
 
     useEffect(() => {
-        getAllSchedules().then(all => {
-            const map = new Map<string, ShiftResponse>();
-            for (const s of all) {
-                if (s.shift && !map.has(s.shift.id)) map.set(s.shift.id, s.shift);
-            }
-            setShifts(Array.from(map.values()));
-        }).catch(() => { }).finally(() => setShiftsLoading(false));
+        getAllShifts()
+            .then(allShifts => {
+                setShifts(allShifts);
+            })
+            .catch(() => { })
+            .finally(() => setShiftsLoading(false));
     }, []);
 
     // Bulk employee toggle
