@@ -2,12 +2,17 @@ package com.project.hrm.module.request.service;
 
 import com.project.hrm.module.request.dto.RequestDTO;
 import com.project.hrm.module.request.entity.Request;
+import com.project.hrm.module.request.enums.RequestStatus;
 import com.project.hrm.module.request.repository.RequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+
+import java.time.format.DateTimeFormatter;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -15,39 +20,39 @@ public class RequestService {
 
     private final RequestRepository requestRepo;
 
-    // --- 1. TẠO YÊU CẦU MỚI (EMPLOYEE) ---
+    // --- 1. TẠO YÊU CẦU MỚI (Lưu thật vào DB) ---
+    @Transactional
     public Request createRequest(RequestDTO dto) {
         Request req = new Request();
         req.setEmployeeId(dto.getEmployeeId());
-        req.setRequestType(dto.getRequestType());
+        req.setRequestType(dto.getRequestType()); // Nhận Enum từ DTO
         req.setReason(dto.getReason());
         req.setStartDate(dto.getStartDate());
         req.setEndDate(dto.getEndDate());
-        // Status mặc định là PENDING do @PrePersist xử lý bên Entity
+        // Status mặc định PENDING được gán tự động tại Entity @PrePersist
         return requestRepo.save(req);
     }
 
-    // --- 2. XEM YÊU CẦU CÁ NHÂN (EMPLOYEE) ---
+    // --- 2. XEM YÊU CẦU CÁ NHÂN ---
+    @Transactional(readOnly = true)
     public List<Request> getMyRequests(UUID empId) {
         return requestRepo.findByEmployeeIdOrderByCreatedAtDesc(empId);
     }
 
-    // --- 3. XEM TẤT CẢ (MANAGER) ---
+    // --- 3. XEM TẤT CẢ (CHO MANAGER) ---
+    @Transactional(readOnly = true)
     public List<Request> getAllRequests() {
         return requestRepo.findAllByOrderByCreatedAtDesc();
     }
 
-    // ================= SỬA ĐOẠN DƯỚI NÀY =================
-
-    // --- 4. DUYỆT YÊU CẦU (APPROVE) ---
-    // Khớp với API: PUT .../{id}/approve
+    // --- 4. DUYỆT YÊU CẦU ---
+    @Transactional
     public Request approveRequest(UUID requestId, RequestDTO dto) {
         Request req = requestRepo.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu ID: " + requestId));
 
-        req.setStatus("APPROVED"); // Ép cứng trạng thái là Đã duyệt
+        req.setStatus(RequestStatus.APPROVED);
 
-        // Lưu lời nhắn của sếp (nếu có)
         if (dto != null && dto.getManagerComment() != null) {
             req.setManagerComment(dto.getManagerComment());
         }
@@ -55,19 +60,57 @@ public class RequestService {
         return requestRepo.save(req);
     }
 
-    // --- 5. TỪ CHỐI YÊU CẦU (REJECT) ---
-    // Khớp với API: PUT .../{id}/reject
+    // --- 5. TỪ CHỐI YÊU CẦU ---
+    @Transactional
     public Request rejectRequest(UUID requestId, RequestDTO dto) {
         Request req = requestRepo.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu ID: " + requestId));
 
-        req.setStatus("REJECTED"); // Ép cứng trạng thái là Từ chối
+        req.setStatus(RequestStatus.REJECTED);
 
-        // Lưu lý do từ chối (Bắt buộc hoặc tùy chọn tùy bạn)
         if (dto != null && dto.getManagerComment() != null) {
             req.setManagerComment(dto.getManagerComment());
         }
 
         return requestRepo.save(req);
+    }
+
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
+
+    @Transactional(readOnly = true)
+    public List<Request> getMyRequestsFormatted(UUID empId) {
+        List<Request> requests = requestRepo.findByEmployeeIdOrderByCreatedAtDesc(empId);
+        return requests;
+    }
+
+    // --- 6. CẬP NHẬT YÊU CẦU ---
+    @Transactional
+    public Request updateRequest(UUID requestId, RequestDTO dto) {
+        Request req = requestRepo.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu ID: " + requestId));
+
+        if (req.getStatus() != RequestStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể cập nhật đơn đang chờ duyệt (PENDING).");
+        }
+
+        req.setRequestType(dto.getRequestType());
+        req.setReason(dto.getReason());
+        req.setStartDate(dto.getStartDate());
+        req.setEndDate(dto.getEndDate());
+
+        return requestRepo.save(req);
+    }
+
+    // --- 7. XÓA YÊU CẦU ---
+    @Transactional
+    public void deleteRequest(UUID requestId) {
+        Request req = requestRepo.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu ID: " + requestId));
+
+        if (req.getStatus() != RequestStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể xóa đơn đang chờ duyệt (PENDING).");
+        }
+
+        requestRepo.delete(req);
     }
 }
