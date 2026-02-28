@@ -3,12 +3,13 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import HRDashboard from "./components/HRDashboard";
+import EmployeeTable from "./components/EmployeeTable";
 import EmployeeDetail from "./components/EmployeeDetail";
 import EmployeeOnboarding from "./components/EmployeeOnboarding";
 import EmployeeOffboarding from "./components/EmployeeOffboarding";
 import CandidateProfileCompletion from "./components/CandidateProfileCompletion";
 import CreateChangeRequest from "./components/CreateChangeRequest";
-import EmployeeDirectory from "./components/EmployeeDirectory";
+import FilterBar from "./components/FilterBar";
 
 // --- Nhóm route Attendance của bạn ---
 import ViewSchedule from "./components/attendance/ViewSchedule";
@@ -17,11 +18,20 @@ import CheckInOut from "./components/attendance/CheckInOut";
 import Applications from "./components/attendance/Applications";
 import ReviewRequests from "./components/attendance/ReviewRequests";
 import AttendanceSummary from "./components/attendance/AttendanceSummary";
-
+import PerformanceModule from "./components/PerformanceModule";
+import PayrollModule from "./components/payroll/PayrollModule";
+import JobListPage from "./components/recruitment/JobListPage";
+import JobDetailPage from "./components/recruitment/JobDetailPage";
+import JobFormPage from "./components/recruitment/JobFormPage";
+import JobRequestListPage from "./components/recruitment/JobRequestListPage";
+import JobRequestDetailPage from "./components/recruitment/JobRequestDetailPage";
+import JobRequestFormPage from "./components/recruitment/JobRequestFormPage";
+import CVListPage from "./components/recruitment/CVListPage";
 // --- Auth ---
 import LoginPage from "./components/auth/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
+// --- Import từ nhánh develop của nhóm ---
 import { ToastProvider } from "./components/ui/Toast";
 
 const AppShell: React.FC = () => {
@@ -41,7 +51,17 @@ const AppShell: React.FC = () => {
                             {/* Core HR Routes */}
                             <Route
                                 path="/employees"
-                                element={<EmployeeDirectory />}
+                                element={
+                                    <>
+                                        <div className="flex items-center justify-between">
+                                            <h1 className="text-2xl font-bold tracking-tight">
+                                                Employee Directory
+                                            </h1>
+                                        </div>
+                                        <FilterBar />
+                                        <EmployeeTable />
+                                    </>
+                                }
                             />
 
                             <Route path="/onboarding" element={<EmployeeOnboarding />} />
@@ -71,8 +91,24 @@ const AppShell: React.FC = () => {
                             <Route path="/attendance/review" element={<ReviewRequests />} />
                             <Route path="/attendance/summary" element={<AttendanceSummary />} />
 
+                            {/* Performance */}
+                            <Route path="/performance" element={<PerformanceModule />} />
+
+                            {/* Payroll Module */}
+                            <Route path="/payroll/*" element={<PayrollModule />} />
+
                             <Route path="/employee/:id" element={<EmployeeDetail />} />
                             <Route path="/profile" element={<EmployeeDetail />} />
+                            <Route path="/recruitment/jobs" element={<JobListPage />} />
+                            <Route path="/recruitment/jobs/new" element={<JobFormPage />} />
+                            <Route path="/recruitment/jobs/:id" element={<JobDetailPage />} />
+                            <Route path="/recruitment/jobs/edit/:id" element={<JobFormPage />} />
+                            <Route path="/recruitment/cvs" element={<CVListPage />} />
+
+                            <Route path="/recruitment/job-requests" element={<JobRequestListPage />} />
+                            <Route path="/recruitment/job-requests/new" element={<JobRequestFormPage />} />
+                            <Route path="/recruitment/job-requests/:id" element={<JobRequestDetailPage />} />
+                            <Route path="/recruitment/job-requests/:id/edit" element={<JobRequestFormPage />} />
                         </Routes>
                     </div>
                 </div>

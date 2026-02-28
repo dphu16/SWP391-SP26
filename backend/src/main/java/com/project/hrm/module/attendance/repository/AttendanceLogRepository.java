@@ -36,54 +36,46 @@ public interface AttendanceLogRepository extends JpaRepository<AttendanceLog, UU
                         @Param("month") int month,
                         @Param("year") int year);
 
-        @Query("""
-                            SELECT COALESCE(SUM(a.workingHours),0)
-                            FROM AttendanceLog a
-                            WHERE a.employeeId = :employeeId
-                            AND a.date BETWEEN :start AND :end
-                            AND a.status <> 'ABSENT'
-                        """)
+        @Query("SELECT COALESCE(SUM(a.workingHours),0) " +
+                        "FROM AttendanceLog a " +
+                        "WHERE a.employeeId = :employeeId " +
+                        "AND a.date BETWEEN :start AND :end " +
+                        "AND a.status <> 'ABSENT'")
         BigDecimal sumWorkingHours(
                         @Param("employeeId") UUID employeeId,
                         @Param("start") LocalDate start,
                         @Param("end") LocalDate end);
 
-        @Query("""
-                            SELECT COALESCE(SUM(a.otHours),0)
-                            FROM AttendanceLog a
-                            WHERE a.employeeId = :employeeId
-                            AND a.date BETWEEN :start AND :end
-                        """)
+        @Query("SELECT COALESCE(SUM(a.otHours),0) " +
+                        "FROM AttendanceLog a " +
+                        "WHERE a.employeeId = :employeeId " +
+                        "AND a.date BETWEEN :start AND :end")
         BigDecimal sumOtHours(
                         @Param("employeeId") UUID employeeId,
                         @Param("start") LocalDate start,
                         @Param("end") LocalDate end);
 
-        @Query("""
-                            SELECT COUNT(a)
-                            FROM AttendanceLog a
-                            WHERE a.employeeId = :employeeId
-                            AND a.date BETWEEN :start AND :end
-                            AND a.status = 'ABSENT'
-                        """)
-        BigDecimal countAbsentDays(
+        @Query("SELECT COUNT(a) " +
+                        "FROM AttendanceLog a " +
+                        "WHERE a.employeeId = :employeeId " +
+                        "AND a.date BETWEEN :start AND :end " +
+                        "AND a.status = 'ABSENT'")
+        Long countAbsentDays(
                         @Param("employeeId") UUID employeeId,
                         @Param("start") LocalDate start,
                         @Param("end") LocalDate end);
 
         // Query tổng hợp dữ liệu chấm công cho TOÀN BỘ nhân viên trong 1 khoảng thời
         // gian
-        @Query("""
-                        SELECT new com.project.hrm.module.attendance.dto.AttendanceAggregationDTO(
-                            a.employeeId,
-                            COALESCE(SUM(a.workingHours), 0),
-                            COALESCE(SUM(a.otHours), 0),
-                            COUNT(CASE WHEN a.status = 'ABSENT' THEN 1 ELSE NULL END)
-                        )
-                        FROM AttendanceLog a
-                        WHERE a.date BETWEEN :startDate AND :endDate
-                        GROUP BY a.employeeId
-                        """)
+        @Query("SELECT new com.project.hrm.module.attendance.dto.AttendanceAggregationDTO(\n" +
+                        "   a.employeeId,\n" +
+                        "   SUM(a.workingHours),\n" +
+                        "   SUM(a.otHours),\n" +
+                        "   COUNT(CASE WHEN a.status = 'ABSENT' THEN 1 ELSE NULL END)\n" +
+                        ")\n" +
+                        "FROM AttendanceLog a\n" +
+                        "WHERE a.date BETWEEN :startDate AND :endDate\n" +
+                        "GROUP BY a.employeeId")
         List<AttendanceAggregationDTO> aggregateAttendanceByPeriod(
                         @Param("startDate") LocalDate startDate,
                         @Param("endDate") LocalDate endDate);

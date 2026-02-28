@@ -122,6 +122,7 @@ const Sidebar: React.FC = () => {
   const [requestExpanded, setRequestExpanded] = useState(true);
   const [recruitmentExpanded, setRecruitmentExpanded] = useState(true);
   const [attendanceExpanded, setAttendanceExpanded] = useState(true);
+  const [payrollExpanded, setPayrollExpanded] = useState(true);
 
 
   const isPath = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
@@ -357,10 +358,64 @@ const Sidebar: React.FC = () => {
           )}
         </div>
 
+        {/* 4. Submenu: Payroll */}
+        <div>
+          <button
+            onClick={() => {
+              if (isCollapsed) {
+                setIsCollapsed(false);
+                setPayrollExpanded(true);
+              } else {
+                setPayrollExpanded(!payrollExpanded);
+              }
+            }}
+            title={isCollapsed ? "Payroll" : undefined}
+            className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
+              ${isCollapsed ? "justify-center" : ""}
+              ${isPath("/payroll")
+                ? "text-primary bg-primary/10"
+                : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
+              }
+            `}
+          >
+            <span className="flex-shrink-0">{Icons.payroll}</span>
+            {!isCollapsed && (
+              <>
+                <span className="flex-1 text-left">Payroll</span>
+                <span className={`transition-transform duration-200 ${payrollExpanded ? "rotate-180" : ""}`}>
+                  {Icons.chevronDown}
+                </span>
+              </>
+            )}
+          </button>
+
+          {/* Submenu */}
+          {!isCollapsed && payrollExpanded && (
+            <div className="mt-0.5 space-y-0.5 animate-slide-up">
+              {[
+                { label: "My Payslips", path: "/payroll/employee" },
+                { label: "HR Payroll", path: "/payroll/hr", roles: ["HR", "MANAGER"] as const },
+                { label: "Tax & Insurance", path: "/payroll/tax-report", roles: ["HR", "MANAGER", "FINANCE"] as const },
+              ]
+                .filter((item) => !item.roles || hasRole(...item.roles))
+                .map((item) => (
+                  <NavItem
+                    key={item.path}
+                    icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />}
+                    label={item.label}
+                    isActive={location.pathname === item.path}
+                    isCollapsed={false}
+                    indent
+                    onClick={() => navigate(item.path)}
+                  />
+                ))}
+            </div>
+          )}
+        </div>
+
         {[
           { label: "Check-in/Out", icon: Icons.timeoff, path: "/attendance/check-in-out", badge: 3 },
-          { label: "Payroll", icon: Icons.payroll, roles: ["HR", "FINANCE"] as const },
-          { label: "Performance", icon: Icons.performance, roles: ["HR", "MANAGER", "FINANCE"] as const },
+          { label: "Performance", icon: Icons.performance, path: "/performance", roles: ["HR", "MANAGER", "FINANCE"] as const },
         ]
           .filter((item) => !item.roles || hasRole(...item.roles))
           .map((item) => (

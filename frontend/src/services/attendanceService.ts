@@ -58,8 +58,10 @@ export const getMyHistory = async (employeeId: string): Promise<AttendanceLogRes
 
 export const getTodayLog = async (employeeId: string): Promise<AttendanceLogResponse | null> => {
     const logs = await getMyHistory(employeeId);
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-    return logs.find((log) => log.date === today) ?? null;
+    const now = new Date();
+    // Use local timezone to extract the correct today string ('YYYY-MM-DD') instead of UTC
+    const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return logs.find((log) => log.date === localToday) ?? null;
 };
 
 export interface ShiftResponse {
@@ -97,6 +99,16 @@ export const getAllSchedules = async (): Promise<WorkScheduleResponse[]> => {
         return response.data;
     } catch (error) {
         console.error("Error fetching all schedules:", error);
+        throw error;
+    }
+};
+
+export const getAllShifts = async (): Promise<ShiftResponse[]> => {
+    try {
+        const response = await apiClient.get('/api/v1/attendance/work-schedules/shifts');
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching shifts:", error);
         throw error;
     }
 };
