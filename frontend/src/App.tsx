@@ -9,6 +9,10 @@ import EmployeeOffboarding from "./components/EmployeeOffboarding";
 import CandidateProfileCompletion from "./components/CandidateProfileCompletion";
 import CreateChangeRequest from "./components/CreateChangeRequest";
 import EmployeeDirectory from "./components/EmployeeDirectory";
+import FilterBar from "./components/FilterBar";
+import PayrollModule from "./components/payroll/PayrollModule";
+
+
 
 // --- Nhóm route Attendance của bạn ---
 import ViewSchedule from "./components/attendance/ViewSchedule";
@@ -70,6 +74,12 @@ const AppShell: React.FC = () => {
                             />
                             <Route path="/attendance/review" element={<ReviewRequests />} />
                             <Route path="/attendance/summary" element={<AttendanceSummary />} />
+
+                            {/* Payroll routes — PayrollModule handles /payroll, /payroll/employee, /payroll/hr */}
+                            <Route path="/payroll" element={<PayrollModule />} />
+                            <Route path="/payroll/employee" element={<PayrollModule />} />
+                            <Route path="/payroll/hr" element={<PayrollModule />} />
+                            <Route path="/payroll/tax-report" element={<PayrollModule />} />
 
                             <Route path="/employee/:id" element={<EmployeeDetail />} />
                             <Route path="/profile" element={<EmployeeDetail />} />
