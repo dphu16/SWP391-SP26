@@ -132,7 +132,7 @@ public class PayrollReviewService {
 
         boolean hasCriticalError = details.stream()
                 .anyMatch(d -> d.getGrossSalary() != null && d.getGrossSalary().compareTo(BigDecimal.ZERO) < 0); // Lương
-        // âm
+                                                                                                                 // âm
 
         if (hasCriticalError) {
             throw new RuntimeException("Validation Failed: Found negative salary records.");

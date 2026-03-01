@@ -414,7 +414,20 @@ const EmployeeOffboarding: React.FC = () => {
     const codeStr = emp.employeeCode || "";
     const matchesSearch = nameStr.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
                          codeStr.toLowerCase().includes(debouncedSearch.toLowerCase());
-    return matchesSearch;
+                         
+    let matchesFilter = true;
+    if (filter.value && !filter.value.startsWith("All")) {
+      switch (filter.category) {
+        case "department":
+          matchesFilter = emp.departmentName === filter.value;
+          break;
+        case "position":
+          matchesFilter = emp.positionTitle === filter.value;
+          break;
+      }
+    }
+    
+    return matchesSearch && matchesFilter;
   });
 
   const fetchEmployees = useCallback(

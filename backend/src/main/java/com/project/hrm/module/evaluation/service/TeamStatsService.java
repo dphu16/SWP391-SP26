@@ -37,12 +37,14 @@ public class TeamStatsService {
         var activeCycle = cycleRepo.findFirstByStatusOrderByCreatedAtDesc(CycleStatus.ACTIVE)
                 .orElse(null);
 
-        if (activeCycle == null) return new TeamStatsResponse(0, 0, null);
+        if (activeCycle == null)
+            return new TeamStatsResponse(0, 0, null);
 
         List<Employee> team = employeeRepo.findByManager_EmployeeId(managerId);
         long totalMembers = team.size();
 
-        if (totalMembers == 0) return new TeamStatsResponse(0, 0, null);
+        if (totalMembers == 0)
+            return new TeamStatsResponse(0, 0, null);
 
         List<UUID> teamIds = team.stream().map(Employee::getEmployeeId).collect(Collectors.toList());
         UUID cycleId = activeCycle.getCycleId();
@@ -60,7 +62,8 @@ public class TeamStatsService {
         var activeCycle = cycleRepo.findFirstByStatusOrderByCreatedAtDesc(CycleStatus.ACTIVE)
                 .orElse(null);
 
-        if (activeCycle == null) return new GlobalPerformanceStatsResponse(0.0, 0.0);
+        if (activeCycle == null)
+            return new GlobalPerformanceStatsResponse(0.0, 0.0);
 
         UUID cycleId = activeCycle.getCycleId();
 
@@ -73,7 +76,8 @@ public class TeamStatsService {
 
         // 2. Total KPIs Assigned: Sum of targetValue
         Double totalTarget = goalRepo.sumTargetValueByCycle(cycleId);
-        if (totalTarget == null) totalTarget = 0.0;
+        if (totalTarget == null)
+            totalTarget = 0.0;
 
         return new GlobalPerformanceStatsResponse(orgAvg, totalTarget);
     }

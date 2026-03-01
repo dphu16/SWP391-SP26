@@ -145,7 +145,20 @@ const EmployeeOnboarding: React.FC<EmployeeOnboardingProps> = ({
     const emailStr = app.candidateEmail || "";
     const matchesSearch = nameStr.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
                          emailStr.toLowerCase().includes(debouncedSearch.toLowerCase());
-    return matchesSearch;
+                         
+    let matchesFilter = true;
+    if (filter.value && !filter.value.startsWith("All")) {
+      switch (filter.category) {
+        case "position":
+          matchesFilter = app.jobTitle === filter.value;
+          break;
+        case "status":
+          matchesFilter = app.status === filter.value || app.onboardingStatus === filter.value;
+          break;
+      }
+    }
+    
+    return matchesSearch && matchesFilter;
   });
 
  // Gọi API khi component được mount

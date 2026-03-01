@@ -312,7 +312,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
         setLoading(false);
       }
     },
-    [toastError],
+    [toastError, filterCategory, filterValue],
   );
 
   useEffect(() => {
