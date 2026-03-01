@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Icon } from "./PayrollModule";
 import {
     getBatches, createBatch, calculatePayroll,
-    getBatchDetailsForReview, updatePayrollDetail, approveBatch,
+    getBatchDetailsForReview, updatePayrollDetail, approveBatch, sendPayrollReport,
     type PayrollBatchDTO, type PayrollReviewDTO, type UpdatePayrollDetailRequest,
 } from "../../services/payrollService";
 
@@ -228,10 +228,16 @@ const PayrollReportModal: React.FC<{
 
     const handleConfirm = async () => {
         setSending(true);
-        await new Promise(r => setTimeout(r, 900)); // simulate send
-        setSent(true);
-        setSending(false);
-        setTimeout(() => { onConfirm(); onClose(); }, 1400);
+        try {
+            await sendPayrollReport(batch.batchId);
+            setSent(true);
+            onConfirm(); // Trigger background refresh
+        } catch (error: any) {
+            console.error("Failed to send report:", error);
+            alert(getErrMsg(error));
+        } finally {
+            setSending(false);
+        }
     };
 
     const handlePrint = () => window.print();
@@ -269,133 +275,156 @@ const PayrollReportModal: React.FC<{
 
                 {/* Body — scrollable */}
                 <div ref={printRef} className="flex-1 overflow-y-auto">
-
-                    {/* Summary strip */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border-b border-slate-100">
-                        {[
-                            { label: "Payroll Period", value: period, color: "text-violet-700" },
-                            { label: "Total Headcount", value: `${rows.length} emp.`, color: "text-slate-800" },
-                            { label: "Total Gross", value: fmt(totalGross), color: "text-emerald-700" },
-                            { label: "Warnings", value: `${warnCount} emp.`, color: warnCount > 0 ? "text-amber-600" : "text-slate-400" },
-                        ].map((s, i) => (
-                            <div key={i} className={`px-6 py-4 ${i < 3 ? "border-r border-slate-100" : ""}`}>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{s.label}</p>
-                                <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Breakdown cards */}
-                    <div className="px-6 py-4 grid grid-cols-3 gap-3 border-b border-slate-100 bg-slate-50/40">
-                        {[
-                            { label: "Total Base Salary", value: fmt(totalBase), color: "bg-blue-500" },
-                            { label: "Total OT Pay", value: fmt(totalOtPay), color: "bg-amber-500" },
-                            { label: "Total Deductions", value: fmt(totalDeduct), color: "bg-rose-500" },
-                        ].map((c, i) => (
-                            <div key={i} className="rounded-xl border border-slate-200 bg-white px-4 py-3 flex items-center gap-3">
-                                <div className={`w-2 h-10 rounded-full ${c.color} flex-shrink-0`} />
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{c.label}</p>
-                                    <p className="text-sm font-bold text-slate-800 mt-0.5">{c.value}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Employee table */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                            <thead>
-                                <tr className="border-b border-slate-100 bg-slate-50">
-                                    {["No.", "Employee", "Department", "Base Salary", "OT (h)", "OT Pay", "Deduct", "Gross Salary", "Status"].map(h => (
-                                        <th key={h} className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-left whitespace-nowrap">{h}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {rows.map((r, idx) => (
-                                    <tr key={r.detailId} className={r.hasWarning ? "bg-amber-50/40" : "hover:bg-slate-50/60"}>
-                                        <td className="px-4 py-2.5 text-slate-400 font-mono">{String(idx + 1).padStart(2, "0")}</td>
-                                        <td className="px-4 py-2.5">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">
-                                                    {r.employeeName?.charAt(0).toUpperCase()}
-                                                </div>
-                                                <span className="font-semibold text-slate-800 whitespace-nowrap">{r.employeeName}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-2.5 text-slate-500">{r.department || "—"}</td>
-                                        <td className="px-4 py-2.5 font-medium text-slate-700 whitespace-nowrap">{fmt(r.baseSalary)}</td>
-                                        <td className="px-4 py-2.5 text-center">
-                                            <span className={r.totalOtHours > 0 ? "text-amber-600 font-semibold" : "text-slate-400"}>{r.totalOtHours ?? 0}h</span>
-                                        </td>
-                                        <td className="px-4 py-2.5 whitespace-nowrap">{r.otPay > 0 ? fmt(r.otPay) : <span className="text-slate-300">—</span>}</td>
-                                        <td className="px-4 py-2.5 whitespace-nowrap">
-                                            {r.absentDeduction > 0
-                                                ? <span className="text-rose-600 font-medium">-{fmt(r.absentDeduction)}</span>
-                                                : <span className="text-slate-300">—</span>}
-                                        </td>
-                                        <td className="px-4 py-2.5 font-bold text-slate-800 whitespace-nowrap">{fmt(r.grossSalary)}</td>
-                                        <td className="px-4 py-2.5">
-                                            {r.hasWarning
-                                                ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold text-amber-700 bg-amber-100 border border-amber-200 whitespace-nowrap"><span className="w-1 h-1 rounded-full bg-amber-500" /> Warning</span>
-                                                : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200"><span className="w-1 h-1 rounded-full bg-emerald-500" /> OK</span>}
-                                        </td>
-                                    </tr>
+                    {!sent ? (
+                        <>
+                            {/* Summary strip */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border-b border-slate-100">
+                                {[
+                                    { label: "Payroll Period", value: period, color: "text-violet-700" },
+                                    { label: "Total Headcount", value: `${rows.length} emp.`, color: "text-slate-800" },
+                                    { label: "Total Gross", value: fmt(totalGross), color: "text-emerald-700" },
+                                    { label: "Warnings", value: `${warnCount} emp.`, color: warnCount > 0 ? "text-amber-600" : "text-slate-400" },
+                                ].map((s, i) => (
+                                    <div key={i} className={`px-6 py-4 ${i < 3 ? "border-r border-slate-100" : ""}`}>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{s.label}</p>
+                                        <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
+                                    </div>
                                 ))}
-                            </tbody>
-                            <tfoot>
-                                <tr className="border-t-2 border-slate-200 bg-slate-50">
-                                    <td colSpan={3} className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide">Total ({rows.length} Emp.)</td>
-                                    <td className="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">{fmt(totalBase)}</td>
-                                    <td className="px-4 py-3" />
-                                    <td className="px-4 py-3 font-bold text-amber-700 whitespace-nowrap">{fmt(totalOtPay)}</td>
-                                    <td className="px-4 py-3 font-bold text-rose-600 whitespace-nowrap">-{fmt(totalDeduct)}</td>
-                                    <td className="px-4 py-3 font-bold text-violet-700 text-sm whitespace-nowrap">{fmt(totalGross)}</td>
-                                    <td className="px-4 py-3" />
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
+                            </div>
 
-                    {/* Notes */}
-                    <div className="px-6 py-4 border-t border-slate-100 bg-amber-50/30">
-                        <p className="text-[11px] text-slate-500 leading-relaxed">
-                            <span className="font-bold text-slate-700">Note:</span> This report was automatically generated from the HRM system on {reportDate}.
-                            Gross Salary does not include deductions for Personal Income Tax and Social Insurances.
-                            Please review carefully before sending to the Finance department.
-                            {warnCount > 0 && <span className="text-amber-700 font-semibold"> There are {warnCount} employees requiring review.</span>}
-                        </p>
-                    </div>
+                            {/* Breakdown cards */}
+                            <div className="px-6 py-4 grid grid-cols-3 gap-3 border-b border-slate-100 bg-slate-50/40">
+                                {[
+                                    { label: "Total Base Salary", value: fmt(totalBase), color: "bg-blue-500" },
+                                    { label: "Total OT Pay", value: fmt(totalOtPay), color: "bg-amber-500" },
+                                    { label: "Total Deductions", value: fmt(totalDeduct), color: "bg-rose-500" },
+                                ].map((c, i) => (
+                                    <div key={i} className="rounded-xl border border-slate-200 bg-white px-4 py-3 flex items-center gap-3">
+                                        <div className={`w-2 h-10 rounded-full ${c.color} flex-shrink-0`} />
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{c.label}</p>
+                                            <p className="text-sm font-bold text-slate-800 mt-0.5">{c.value}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Employee table */}
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs">
+                                    <thead>
+                                        <tr className="border-b border-slate-100 bg-slate-50">
+                                            {["No.", "Employee", "Department", "Base Salary", "OT (h)", "OT Pay", "Deduct", "Gross Salary", "Status"].map(h => (
+                                                <th key={h} className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-left whitespace-nowrap">{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {rows.map((r, idx) => (
+                                            <tr key={r.detailId} className={r.hasWarning ? "bg-amber-50/40" : "hover:bg-slate-50/60"}>
+                                                <td className="px-4 py-2.5 text-slate-400 font-mono">{String(idx + 1).padStart(2, "0")}</td>
+                                                <td className="px-4 py-2.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">
+                                                            {r.employeeName?.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <span className="font-semibold text-slate-800 whitespace-nowrap">{r.employeeName}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-2.5 text-slate-500">{r.department || "—"}</td>
+                                                <td className="px-4 py-2.5 font-medium text-slate-700 whitespace-nowrap">{fmt(r.baseSalary)}</td>
+                                                <td className="px-4 py-2.5 text-center">
+                                                    <span className={r.totalOtHours > 0 ? "text-amber-600 font-semibold" : "text-slate-400"}>{r.totalOtHours ?? 0}h</span>
+                                                </td>
+                                                <td className="px-4 py-2.5 whitespace-nowrap">{r.otPay > 0 ? fmt(r.otPay) : <span className="text-slate-300">—</span>}</td>
+                                                <td className="px-4 py-2.5 whitespace-nowrap">
+                                                    {r.absentDeduction > 0
+                                                        ? <span className="text-rose-600 font-medium">-{fmt(r.absentDeduction)}</span>
+                                                        : <span className="text-slate-300">—</span>}
+                                                </td>
+                                                <td className="px-4 py-2.5 font-bold text-slate-800 whitespace-nowrap">{fmt(r.grossSalary)}</td>
+                                                <td className="px-4 py-2.5">
+                                                    {r.hasWarning
+                                                        ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold text-amber-700 bg-amber-100 border border-amber-200 whitespace-nowrap"><span className="w-1 h-1 rounded-full bg-amber-500" /> Warning</span>
+                                                        : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200"><span className="w-1 h-1 rounded-full bg-emerald-500" /> OK</span>}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr className="border-t-2 border-slate-200 bg-slate-50">
+                                            <td colSpan={3} className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide">Total ({rows.length} Emp.)</td>
+                                            <td className="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">{fmt(totalBase)}</td>
+                                            <td className="px-4 py-3" />
+                                            <td className="px-4 py-3 font-bold text-amber-700 whitespace-nowrap">{fmt(totalOtPay)}</td>
+                                            <td className="px-4 py-3 font-bold text-rose-600 whitespace-nowrap">-{fmt(totalDeduct)}</td>
+                                            <td className="px-4 py-3 font-bold text-violet-700 text-sm whitespace-nowrap">{fmt(totalGross)}</td>
+                                            <td className="px-4 py-3" />
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            {/* Notes */}
+                            <div className="px-6 py-4 border-t border-slate-100 bg-amber-50/30">
+                                <p className="text-[11px] text-slate-500 leading-relaxed">
+                                    <span className="font-bold text-slate-700">Note:</span> This report was automatically generated from the HRM system on {reportDate}.
+                                    Gross Salary does not include deductions for Personal Income Tax and Social Insurances.
+                                    Please review carefully before sending to the Finance department.
+                                    {warnCount > 0 && <span className="text-amber-700 font-semibold"> There are {warnCount} employees requiring review.</span>}
+                                </p>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center p-16 h-full min-h-[400px] text-center animate-in fade-in zoom-in duration-500">
+                            <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mb-6 shadow-inner ring-4 ring-emerald-50">
+                                <svg className="w-12 h-12 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-800 mb-3">Report Sent Successfully!</h3>
+                            <p className="text-slate-500 max-w-md leading-relaxed">
+                                The system has saved the status and notified the Finance department to proceed with the review. The current payroll batch has been locked.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer actions */}
                 <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-4 flex-shrink-0">
-                    <div className="text-xs text-slate-400">
-                        {sent
-                            ? <span className="text-emerald-600 font-semibold flex items-center gap-1.5">{Icon.checkCircle} Report sent successfully!</span>
-                            : <span>After confirmation, the report will be sent to the Finance department for review.</span>}
-                    </div>
-                    <div className="flex gap-3">
-                        <button onClick={onClose} disabled={sending || sent}
-                            className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-40 cursor-pointer transition-all">
-                            Cancel
-                        </button>
-                        <button onClick={handleConfirm} disabled={sending || sent}
-                            className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${sent ? "bg-emerald-500 text-white cursor-default" :
-                                sending ? "bg-violet-400 text-white cursor-wait" :
-                                    "bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700 cursor-pointer"
-                                }`}>
-                            <span className={sending ? "animate-spin" : ""}>
-                                {sent ? Icon.checkCircle : sending ? Icon.refresh : (
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                                        <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-                                    </svg>
-                                )}
-                            </span>
-                            {sent ? "Sent!" : sending ? "Sending..." : "Confirm & Send"}
-                        </button>
-                    </div>
+                    {!sent ? (
+                        <>
+                            <div className="text-xs text-slate-400">
+                                <span>After confirmation, the report will be sent to the Finance department for review.</span>
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={onClose} disabled={sending}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-40 cursor-pointer transition-all">
+                                    Cancel
+                                </button>
+                                <button onClick={handleConfirm} disabled={sending}
+                                    className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${sending ? "bg-violet-400 text-white cursor-wait" :
+                                        "bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700 cursor-pointer"
+                                        }`}>
+                                    <span className={sending ? "animate-spin" : ""}>
+                                        {sending ? Icon.refresh : (
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                                                <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                                            </svg>
+                                        )}
+                                    </span>
+                                    {sending ? "Sending..." : "Confirm & Send"}
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="w-full flex justify-end">
+                            <button onClick={onClose}
+                                className="px-8 py-2.5 rounded-xl text-sm font-bold bg-slate-800 text-white hover:bg-slate-900 transition-all cursor-pointer shadow-sm">
+                                Done
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

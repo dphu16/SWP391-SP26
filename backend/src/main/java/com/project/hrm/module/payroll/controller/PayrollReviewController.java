@@ -2,6 +2,7 @@ package com.project.hrm.module.payroll.controller;
 
 import com.project.hrm.module.payroll.dto.RequestDTO.PayrollReviewDTO;
 import com.project.hrm.module.payroll.dto.RequestDTO.UpdatePayrollDetailRequest;
+import com.project.hrm.module.payroll.dto.ResponseDTO.TaxInsuranceDTO;
 import com.project.hrm.module.payroll.service.PayrollReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -48,5 +49,24 @@ public class PayrollReviewController {
 
         reviewService.validateAndApproveBatch(batchId);
         return ResponseEntity.ok("Batch validated and approved successfully.");
+    }
+
+    /**
+     * 4. Gửi báo cáo (Send Report) -> Chuyển sang trạng thái LOCKED
+     * POST /api/v1/hr/payroll-review/{batchId}/send-report
+     */
+    @PostMapping("/{batchId}/send-report")
+    public ResponseEntity<String> sendReport(@PathVariable("batchId") UUID batchId) {
+        reviewService.sendReport(batchId);
+        return ResponseEntity.ok("Report sent successfully and batch is locked.");
+    }
+
+    /**
+     * 5. Lấy báo cáo Thuế & Bảo hiểm (Tax & Insurance)
+     * GET /api/v1/hr/payroll-review/{batchId}/tax-insurance
+     */
+    @GetMapping("/{batchId}/tax-insurance")
+    public ResponseEntity<List<TaxInsuranceDTO>> getTaxAndInsuranceReport(@PathVariable("batchId") UUID batchId) {
+        return ResponseEntity.ok(reviewService.getTaxAndInsuranceReport(batchId));
     }
 }

@@ -2,8 +2,10 @@ package com.project.hrm.module.payroll.service;
 
 import com.project.hrm.module.payroll.dto.RequestDTO.PayrollReviewDTO;
 import com.project.hrm.module.payroll.dto.RequestDTO.UpdatePayrollDetailRequest;
+import com.project.hrm.module.payroll.dto.ResponseDTO.TaxInsuranceDTO;
 import com.project.hrm.module.payroll.entity.PayrollBatch;
 import com.project.hrm.module.payroll.entity.PayrollDetail;
+import com.project.hrm.module.payroll.entity.Payslip;
 import com.project.hrm.module.payroll.enums.BatchStatus;
 import com.project.hrm.module.payroll.repository.PayrollBatchRepository;
 import com.project.hrm.module.payroll.repository.PayrollDetailRepository;
@@ -139,6 +141,90 @@ public class PayrollReviewService {
         // Chuyển trạng thái sang VALIDATED
         batch.setStatus(BatchStatus.VALIDATED);
         batchRepository.save(batch);
+    }
+
+    /**
+     * 4. Gửi báo cáo (Send Report)
+     * Chuyển trạng thái từ VALIDATED -> LOCKED
+     */
+    @Transactional
+    public void sendReport(UUID batchId) {
+        PayrollBatch batch = batchRepository.findById(batchId)
+                .orElseThrow(() -> new RuntimeException("Batch not found"));
+
+        if (batch.getStatus() == BatchStatus.DRAFT || batch.getStatus() == BatchStatus.PROCESSED) {
+            throw new RuntimeException("Chưa thể gửi báo cáo. Vui lòng Validate & Approve batch trước.");
+        }
+        if (batch.getStatus() == BatchStatus.LOCKED) {
+            throw new RuntimeException("Báo cáo đã được gửi và batch đã bị khoá.");
+        }
+
+        // Chuyển trạng thái sang LOCKED
+        batch.setStatus(BatchStatus.LOCKED);
+        batchRepository.save(batch);
+    }
+
+    /**
+     * 5. Lấy báo cáo Thuế & Bảo hiểm cho Batch
+     */
+    @Transactional(readOnly = true)
+    public List<TaxInsuranceDTO> getTaxAndInsuranceReport(UUID batchId) {
+        PayrollBatch batch = batchRepository.findById(batchId)
+                .orElseThrow(() -> new RuntimeException("Batch not found"));
+
+        if (batch.getPeriod() == null) {
+            throw new RuntimeException("Batch period is null");
+        }
+
+        // Fetch payslips for the month/year of this batch
+        // Here we use employee_id, month, year if periodId is not available, or we just
+        // rely on the new method
+        // finding the period associated with the batch
+        // Actually, we can just find payslips by month and year.
+        // Better: We can just use the details from this batch and look up their
+        // payslips.
+        List<PayrollDetail> details = detailRepository.findByPayrollBatch_BatchId(batchId);
+
+        return details.stream().map(d -> {
+            // Find payslip for this employee in this month
+            Payslip payslip = payslipRepository.findByEmployee_EmployeeIdAndPayrollPeriod_MonthAndPayrollPeriod_Year(
+                    d.getEmployee().getEmployeeId(),
+                    batch.getPeriod().getMonthValue(),
+                    batch.getPeriod().getYear()).stream().findFirst().orElse(null);
+
+            BigDecimal gross = payslip != null ? payslip.getGrossSalary() : d.getGrossSalary();
+            BigDecimal base = payslip != null ? payslip.getBaseSalary() : d.getBaseSalary();
+            BigDecimal totalIns = payslip != null ? payslip.getInsuranceAmount() : BigDecimal.ZERO;
+            BigDecimal pit = payslip != null ? payslip.getTaxAmount() : BigDecimal.ZERO;
+            BigDecimal net = payslip != null ? payslip.getNetSalary() : d.getNetSalary();
+            BigDecimal totalDeduct = totalIns.add(pit);
+
+            // Calculate the 8%, 1.5%, 1% from the 10.5% total insurance based on base
+            // salary
+            BigDecimal bhxh = base.multiply(BigDecimal.valueOf(0.08));
+            BigDecimal bhyt = base.multiply(BigDecimal.valueOf(0.015));
+            BigDecimal bhtn = base.multiply(BigDecimal.valueOf(0.01));
+
+            String deptName = "";
+            if (d.getEmployee().getDepartment() != null) {
+                deptName = d.getEmployee().getDepartment().getDeptName();
+            }
+
+            return TaxInsuranceDTO.builder()
+                    .employeeId(d.getEmployee().getEmployeeId())
+                    .employeeName(d.getEmployee().getFullName())
+                    .department(deptName)
+                    .grossSalary(gross)
+                    .baseSalary(base)
+                    .bhxh(bhxh)
+                    .bhyt(bhyt)
+                    .bhtn(bhtn)
+                    .totalIns(totalIns)
+                    .pit(pit)
+                    .totalDeduct(totalDeduct)
+                    .netSalary(net)
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     // --- Helper ---
