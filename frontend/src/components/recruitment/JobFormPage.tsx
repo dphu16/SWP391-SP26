@@ -33,7 +33,7 @@ const JobFormPage: React.FC = () => {
         quantity: state?.quantity || 1,
         status: "DRAFT",
         closedTime: "",
-        hrId: user?.employeeId || "",
+        hrId: user?.employeeId || "01111111-1111-1111-1111-111111111111",
     });
 
     useEffect(() => {
@@ -52,7 +52,7 @@ const JobFormPage: React.FC = () => {
                         quantity: job.quantity || 1,
                         status: job.status || "DRAFT",
                         closedTime: job.closedTime ? new Date(job.closedTime).toISOString().slice(0, 16) : "",
-                        hrId: job.hrId || "",
+                        hrId: job.hrId || "01111111-1111-1111-1111-111111111111",
                     });
                 } catch (err) {
                     setError("Failed to load job details.");
