@@ -210,11 +210,10 @@ const Pagination: React.FC<PaginationProps> = ({
               key={page}
               onClick={() => onPageChange(page as number)}
               className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors cursor-pointer
-              ${
-                currentPage === page
-                ? "bg-primary text-white shadow-sm"
-                : "text-text-secondary-light hover:bg-gray-100 "
-              }
+              ${currentPage === page
+                  ? "bg-primary text-white shadow-sm"
+                  : "text-text-secondary-light hover:bg-gray-100 "
+                }
               `}
             >
               {(page as number) + 1}
@@ -243,7 +242,7 @@ const OffboardingTrackerModal: React.FC<{
   onClose: () => void;
   onImmediateStatusChange: () => void;
 }> = ({ employee, onClose, onImmediateStatusChange }) => {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep] = useState(1);
 
   const steps = [
     {
@@ -284,12 +283,12 @@ const OffboardingTrackerModal: React.FC<{
                 Theo dõi quá trình Offboarding
               </h2>
               <p className="text-sm font-medium text-text-secondary-light mt-1 flex items-center gap-2">
-                <span className="text-primary">{employee.fullName}</span> 
-                <span className="w-1 h-1 rounded-full bg-gray-300" /> 
+                <span className="text-primary">{employee.fullName}</span>
+                <span className="w-1 h-1 rounded-full bg-gray-300" />
                 <span className="font-mono text-xs">{employee.employeeCode}</span>
               </p>
             </div>
-            <button 
+            <button
               onClick={onClose}
               className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
             >
@@ -305,24 +304,24 @@ const OffboardingTrackerModal: React.FC<{
           <div className="relative pl-2">
             {/* Connection Line */}
             <div className="absolute left-[34px] top-10 bottom-10 w-0.5 bg-gray-100" />
-            
+
             <div className="space-y-10 relative">
               {steps.map((step) => {
                 const isCompleted = step.id < currentStep;
                 const isCurrent = step.id === currentStep;
-                
+
                 return (
                   <div key={step.id} className="flex gap-6 relative group">
                     {/* Step Indicator */}
                     <div className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 z-10 transition-all duration-300 shadow-sm border-[3px]
-                      ${isCompleted ? "bg-primary text-white border-primary" : 
-                        isCurrent ? "bg-white text-primary border-primary shadow-md scale-110" : 
-                        "bg-white text-gray-300 border-gray-100"}`}>
+                      ${isCompleted ? "bg-primary text-white border-primary" :
+                        isCurrent ? "bg-white text-primary border-primary shadow-md scale-110" :
+                          "bg-white text-gray-300 border-gray-100"}`}>
                       {isCompleted ? (
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                       ) : step.icon}
                     </div>
-                    
+
                     {/* Content */}
                     <div className={`flex-1 pt-2 transition-opacity duration-300 ${!isCurrent && !isCompleted ? "opacity-50 group-hover:opacity-80" : ""}`}>
                       <div className="flex items-center justify-between">
@@ -331,9 +330,9 @@ const OffboardingTrackerModal: React.FC<{
                         </h3>
                         {/* Status Label */}
                         <div className="text-[10px] uppercase font-bold tracking-wider">
-                          {isCompleted ? <span className="text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">Đã xong</span> : 
-                           isCurrent ? <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full">Đang xử lý</span> : 
-                           <span className="text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">Chờ xử lý</span>}
+                          {isCompleted ? <span className="text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">Đã xong</span> :
+                            isCurrent ? <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full">Đang xử lý</span> :
+                              <span className="text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">Chờ xử lý</span>}
                         </div>
                       </div>
                       <p className="text-sm text-text-secondary-light mt-1.5 leading-relaxed pr-8">
@@ -354,7 +353,7 @@ const OffboardingTrackerModal: React.FC<{
             <span className="text-xs font-medium">Quá trình này có thể mất vài ngày làm việc.</span>
           </div>
           <div className="flex gap-3">
-            <button 
+            <button
               onClick={onImmediateStatusChange}
               className="px-5 py-2.5 bg-rose-50 text-rose-600 hover:text-white font-semibold text-sm rounded-xl hover:bg-rose-500 transition-all shadow-sm flex items-center gap-2 cursor-pointer group"
             >
@@ -370,7 +369,7 @@ const OffboardingTrackerModal: React.FC<{
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const EmployeeOffboarding: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // eslint-disable-line
   const { error: toastError } = useToast();
 
   const [employees, setEmployees] = useState<OffboardingEmployee[]>([]);
@@ -412,9 +411,9 @@ const EmployeeOffboarding: React.FC = () => {
   const filteredEmployees = employees.filter(emp => {
     const nameStr = emp.fullName || "";
     const codeStr = emp.employeeCode || "";
-    const matchesSearch = nameStr.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
-                         codeStr.toLowerCase().includes(debouncedSearch.toLowerCase());
-                         
+    const matchesSearch = nameStr.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      codeStr.toLowerCase().includes(debouncedSearch.toLowerCase());
+
     let matchesFilter = true;
     if (filter.value && !filter.value.startsWith("All")) {
       switch (filter.category) {
@@ -426,7 +425,7 @@ const EmployeeOffboarding: React.FC = () => {
           break;
       }
     }
-    
+
     return matchesSearch && matchesFilter;
   });
 
@@ -540,11 +539,10 @@ const EmployeeOffboarding: React.FC = () => {
     <svg
       viewBox="0 0 16 16"
       fill="currentColor"
-      className={`w-3.5 h-3.5 transition-colors ${
-        sortField === field
+      className={`w-3.5 h-3.5 transition-colors ${sortField === field
           ? "text-primary"
           : "text-gray-300 group-hover:text-gray-400"
-      }`}
+        }`}
     >
       {sortField === field && sortDir === "asc" ? (
         <path
@@ -609,93 +607,92 @@ const EmployeeOffboarding: React.FC = () => {
         </p>
       </div>
 
-      <FilterBar 
-        onSearch={setSearchTerm} 
+      <FilterBar
+        onSearch={setSearchTerm}
         onFilterChange={handleFilterChange}
       />
 
       <div className="rounded-2xl border border-border-light bg-surface-light overflow-hidden shadow-card animate-fade-in">
 
-      {/* ── Bulk action bar ─────────────────────────────────────────────────── */}
-      {selectedIds.size > 0 && (
-        <div className="px-6 py-3 bg-primary/5 border-b border-primary/20 flex items-center gap-4 animate-slide-up">
-          <span className="text-sm font-semibold text-primary">
-            {selectedIds.size} selected
-          </span>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={handleReactivate}
-              className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+        {/* ── Bulk action bar ─────────────────────────────────────────────────── */}
+        {selectedIds.size > 0 && (
+          <div className="px-6 py-3 bg-primary/5 border-b border-primary/20 flex items-center gap-4 animate-slide-up">
+            <span className="text-sm font-semibold text-primary">
+              {selectedIds.size} selected
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleReactivate}
+                className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+              >
+                Reactivate
+              </button>
+            </div>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="ml-auto text-xs text-text-secondary-light hover:text-text-primary-light transition-colors cursor-pointer"
             >
-              Reactivate
+              Clear
             </button>
           </div>
-          <button
-            onClick={() => setSelectedIds(new Set())}
-            className="ml-auto text-xs text-text-secondary-light hover:text-text-primary-light transition-colors cursor-pointer"
-          >
-            Clear
-          </button>
-        </div>
-      )}
+        )}
 
-      {/* ── Table ───────────────────────────────────────────────────────────── */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          {/* Sticky Header */}
-          <thead className="sticky top-0 z-10 bg-surface-light ">
-            <tr className="border-b border-gray-100 ">
-              {/* Checkbox */}
-              <th className="pl-6 pr-4 py-4 w-10">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleAll}
-                  className="w-4 h-4 rounded border-2 border-gray-300 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
-                  aria-label="Select all"
-                />
-              </th>
-
-              {COLUMNS.map((col) => (
-                <th
-                  key={col.key}
-                  className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light "
-                >
-                  {col.sortable ? (
-                    <button
-                      onClick={() => handleSort(col.key)}
-                      className="flex items-center gap-1.5 hover:text-text-primary-light transition-colors cursor-pointer group"
-                    >
-                      {col.label}
-                      <SortIcon field={col.key} />
-                    </button>
-                  ) : (
-                    col.label
-                  )}
+        {/* ── Table ───────────────────────────────────────────────────────────── */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            {/* Sticky Header */}
+            <thead className="sticky top-0 z-10 bg-surface-light ">
+              <tr className="border-b border-gray-100 ">
+                {/* Checkbox */}
+                <th className="pl-6 pr-4 py-4 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleAll}
+                    className="w-4 h-4 rounded border-2 border-gray-300 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
+                    aria-label="Select all"
+                  />
                 </th>
-              ))}
 
-              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light text-center sticky right-0 bg-surface-light ">
-                Actions
-              </th>
-            </tr>
-          </thead>
+                {COLUMNS.map((col) => (
+                  <th
+                    key={col.key}
+                    className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light "
+                  >
+                    {col.sortable ? (
+                      <button
+                        onClick={() => handleSort(col.key)}
+                        className="flex items-center gap-1.5 hover:text-text-primary-light transition-colors cursor-pointer group"
+                      >
+                        {col.label}
+                        <SortIcon field={col.key} />
+                      </button>
+                    ) : (
+                      col.label
+                    )}
+                  </th>
+                ))}
 
-          <tbody className="divide-y divide-gray-50 text-sm">
-            {loading
-              ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
-              : filteredEmployees.map((emp) => {
+                <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light text-center sticky right-0 bg-surface-light ">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-gray-50 text-sm">
+              {loading
+                ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
+                : filteredEmployees.map((emp) => {
                   const isSelected = selectedIds.has(emp.employeeId);
 
                   return (
                     <tr
                       key={emp.employeeId}
                       className={`table-row-hover group
-                      ${
-                        isSelected
-                        ? "bg-primary/5 "
-                        : "hover:bg-gray-50/80 "
-                      }
+                      ${isSelected
+                          ? "bg-primary/5 "
+                          : "hover:bg-gray-50/80 "
+                        }
                       `}
                     >
                       {/* Checkbox */}
@@ -742,10 +739,10 @@ const EmployeeOffboarding: React.FC = () => {
                       <td className="px-4 py-3.5 text-text-secondary-light tabular-nums">
                         {emp.dateOfJoining
                           ? new Date(emp.dateOfJoining).toLocaleDateString("en-GB", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
                           : <span className="text-text-muted-light ">—</span>
                         }
                       </td>
@@ -778,48 +775,48 @@ const EmployeeOffboarding: React.FC = () => {
                     </tr>
                   );
                 })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Empty state */}
-      {!loading && filteredEmployees.length === 0 && (
-        <div className="py-20 flex flex-col items-center gap-3 text-center animate-fade-in">
-          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-            <svg viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-gray-400">
-              <path fillRule="evenodd" d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 14a6 6 0 110-12 6 6 0 010 12zm0-9a1 1 0 00-1 1v3a1 1 0 002 0V8a1 1 0 00-1-1zm0 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <p className="font-semibold text-text-primary-light ">
-            No offboarding employees
-          </p>
-          <p className="text-sm text-text-secondary-light ">
-            Employees with TERMINATED or RESIGNED status will appear here.
-          </p>
+            </tbody>
+          </table>
         </div>
-      )}
 
-      {/* Pagination */}
-      {!loading && pageInfo.totalElements > 0 && (
-        <Pagination
-          currentPage={page}
-          totalPages={pageInfo.totalPages}
-          totalElements={pageInfo.totalElements}
-          pageSize={pageInfo.size}
-          onPageChange={setPage}
-        />
-      )}
+        {/* Empty state */}
+        {!loading && filteredEmployees.length === 0 && (
+          <div className="py-20 flex flex-col items-center gap-3 text-center animate-fade-in">
+            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-gray-400">
+                <path fillRule="evenodd" d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 14a6 6 0 110-12 6 6 0 010 12zm0-9a1 1 0 00-1 1v3a1 1 0 002 0V8a1 1 0 00-1-1zm0 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <p className="font-semibold text-text-primary-light ">
+              No offboarding employees
+            </p>
+            <p className="text-sm text-text-secondary-light ">
+              Employees with TERMINATED or RESIGNED status will appear here.
+            </p>
+          </div>
+        )}
 
-      {/* Tracking Modal */}
-      {trackingEmployee && (
-        <OffboardingTrackerModal
-          employee={trackingEmployee}
-          onClose={() => setTrackingEmployee(null)}
-          onImmediateStatusChange={handleImmediateStatusChange}
-        />
-      )}
+        {/* Pagination */}
+        {!loading && pageInfo.totalElements > 0 && (
+          <Pagination
+            currentPage={page}
+            totalPages={pageInfo.totalPages}
+            totalElements={pageInfo.totalElements}
+            pageSize={pageInfo.size}
+            onPageChange={setPage}
+          />
+        )}
+
+        {/* Tracking Modal */}
+        {trackingEmployee && (
+          <OffboardingTrackerModal
+            employee={trackingEmployee}
+            onClose={() => setTrackingEmployee(null)}
+            onImmediateStatusChange={handleImmediateStatusChange}
+          />
+        )}
+      </div>
     </div>
-  </div>
   );
 };
 

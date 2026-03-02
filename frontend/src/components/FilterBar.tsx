@@ -9,7 +9,7 @@ interface FilterBarProps {
 
 const STATIC_ROLES = ["Manager", "HR", "Employee", "Finance", "Mentor"];
 
-const FilterBar: React.FC<FilterBarProps> = ({ onSearch, onFilterChange, onAddEmployee }) => {
+const FilterBar: React.FC<FilterBarProps> = ({ onSearch, onFilterChange }) => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("department");
   const [value, setValue] = useState("All Departments");

@@ -8,10 +8,7 @@ import EmployeeOnboarding from "./components/EmployeeOnboarding";
 import EmployeeOffboarding from "./components/EmployeeOffboarding";
 import CandidateProfileCompletion from "./components/CandidateProfileCompletion";
 import CreateChangeRequest from "./components/CreateChangeRequest";
-import FilterBar from "./components/FilterBar";
 import EmployeeDirectory from "./components/EmployeeDirectory";
-import FilterBar from "./components/FilterBar";
-import PayrollModule from "./components/payroll/PayrollModule";
 
 
 
@@ -53,20 +50,7 @@ const AppShell: React.FC = () => {
                             <Route path="/dashboard" element={<HRDashboard />} />
 
                             {/* Core HR Routes */}
-                            <Route
-                                path="/employees"
-                                element={
-                                    <>
-                                        <div className="flex items-center justify-between">
-                                            <h1 className="text-2xl font-bold tracking-tight">
-                                                Employee Directory
-                                            </h1>
-                                        </div>
-                                        <FilterBar />
-                                        <EmployeeTable />
-                                    </>
-                                }
-                            />
+                            <Route path="/employees" element={<EmployeeDirectory />} />
 
                             <Route path="/onboarding" element={<EmployeeOnboarding />} />
                             <Route
