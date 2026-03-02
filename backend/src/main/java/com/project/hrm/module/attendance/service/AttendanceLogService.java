@@ -5,6 +5,8 @@ import com.project.hrm.module.attendance.dto.AttendanceSummaryDTO;
 import com.project.hrm.module.attendance.entity.AttendanceLog;
 import com.project.hrm.module.attendance.entity.Shift;
 import com.project.hrm.module.attendance.entity.WorkSchedule;
+import com.project.hrm.module.attendance.enums.AttendanceStatus;
+import com.project.hrm.module.attendance.enums.CheckInType;
 import com.project.hrm.module.attendance.repository.AttendanceLogRepository;
 import com.project.hrm.module.attendance.repository.WorkScheduleRepository;
 import com.project.hrm.module.corehr.entity.Employee;
@@ -39,33 +41,29 @@ public class AttendanceLogService {
         // Kiểm tra log hôm nay
         Optional<AttendanceLog> existingLog = logRepo.findByEmployeeIdAndDate(request.getEmployeeId(), today);
 
-        if ("IN".equalsIgnoreCase(request.getType())) {
-            // === LOGIC CHECK IN ===
+        if (CheckInType.IN.equals(request.getType())) {
             if (existingLog.isPresent()) {
-                throw new RuntimeException("Lỗi: Bạn đã Check-in ngày hôm nay rồi!");
+                throw new RuntimeException("Already checked in today!");
             }
 
-            // [FIX 3]: TỐI ƯU TRUY VẤN - Chọc DB 1 phát lấy đúng lịch hôm nay, không lôi mớ data rác lên RAM
             WorkSchedule todaySchedule = workScheduleRepo.findByEmployeeIdAndDate(request.getEmployeeId(), today);
 
             AttendanceLog newLog = new AttendanceLog();
             newLog.setEmployeeId(request.getEmployeeId());
             newLog.setDate(today);
             newLog.setCheckIn(now);
-            newLog.setStatus("MISSING_PUNCH"); // Trạng thái chờ Check-out
+            newLog.setStatus(AttendanceStatus.MISSING_PUNCH);
             newLog.setWorkingHours(BigDecimal.ZERO);
             newLog.setOtHours(BigDecimal.ZERO);
-            newLog.setWorkSchedule(todaySchedule); // Gán quan hệ ca làm
+            newLog.setWorkSchedule(todaySchedule);
 
             return logRepo.save(newLog);
 
-        } else if ("OUT".equalsIgnoreCase(request.getType())) {
-            // === LOGIC CHECK OUT ===
-            AttendanceLog log = existingLog.orElseThrow(() -> new RuntimeException("Lỗi: Chưa Check-in nên không thể Check-out!"));
+        } else if (CheckInType.OUT.equals(request.getType())) {
+            AttendanceLog log = existingLog
+                    .orElseThrow(() -> new RuntimeException("Cannot check out without checking in first!"));
 
             log.setCheckOut(now);
-
-            // [FIX 1 & 2]: Gọi hàm xịn để đánh giá Trạng thái và Trừ giờ nghỉ trưa
             evaluateAttendance(log);
 
             return logRepo.save(log);
@@ -78,8 +76,10 @@ public class AttendanceLogService {
         AttendanceLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bản ghi chấm công!"));
 
-        if (req.getCheckInTime() != null) log.setCheckIn(req.getCheckInTime());
-        if (req.getCheckOutTime() != null) log.setCheckOut(req.getCheckOutTime());
+        if (req.getCheckInTime() != null)
+            log.setCheckIn(req.getCheckInTime());
+        if (req.getCheckOutTime() != null)
+            log.setCheckOut(req.getCheckOutTime());
 
         // Nếu Manager chủ động set status thì dùng, không thì tự động tính lại
         if (req.getStatus() != null) {
@@ -102,13 +102,14 @@ public class AttendanceLogService {
 
     // --- HÀM NGHIỆP VỤ: ĐÁNH GIÁ TRẠNG THÁI & TÍNH GIỜ LÀM ---
     private void evaluateAttendance(AttendanceLog log) {
-        if (log.getCheckIn() == null || log.getCheckOut() == null) return;
+        if (log.getCheckIn() == null || log.getCheckOut() == null)
+            return;
 
-        // Nếu hôm nay làm "chui" (không có ca được xếp sẵn) -> Tính công bình thường, không trừ trưa
+        // No assigned shift -> count hours normally, no lunch break deduction
         if (log.getWorkSchedule() == null || log.getWorkSchedule().getShift() == null) {
             long minutes = Duration.between(log.getCheckIn(), log.getCheckOut()).toMinutes();
             log.setWorkingHours(BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP));
-            log.setStatus("VALID");
+            log.setStatus(AttendanceStatus.VALID);
             return;
         }
 
@@ -116,13 +117,13 @@ public class AttendanceLogService {
         LocalTime checkIn = log.getCheckIn();
         LocalTime checkOut = log.getCheckOut();
 
-        // [FIX 1]: Phán xét Đi muộn / Về sớm (Có cho phép du di 5 phút tắc đường)
+        // Evaluate Late / Early Leave (5-minute grace period for check-in)
         if (checkIn.isAfter(shift.getStartTime().plusMinutes(5))) {
-            log.setStatus("LATE");
+            log.setStatus(AttendanceStatus.LATE);
         } else if (checkOut.isBefore(shift.getEndTime())) {
-            log.setStatus("EARLY_LEAVE");
+            log.setStatus(AttendanceStatus.EARLY_LEAVE);
         } else {
-            log.setStatus("VALID");
+            log.setStatus(AttendanceStatus.VALID);
         }
 
         // [FIX 2]: Tính giờ làm và TRỪ GIỜ NGHỈ TRƯA (Cứu công ty khỏi lỗ tiền)
@@ -137,7 +138,8 @@ public class AttendanceLogService {
         }
 
         // Chống số âm nếu lỡ tay sửa bậy
-        if (totalMinutes < 0) totalMinutes = 0;
+        if (totalMinutes < 0)
+            totalMinutes = 0;
 
         // Chuyển phút thành giờ (Ví dụ: 480 phút -> 8.00 giờ)
         BigDecimal hours = BigDecimal.valueOf(totalMinutes)
@@ -173,10 +175,14 @@ public class AttendanceLogService {
             int lateDays = 0, earlyLeaveDays = 0, missingPunchDays = 0;
 
             for (AttendanceLog log : logs) {
-                if (log.getWorkingHours() != null) totalHours = totalHours.add(log.getWorkingHours());
-                if ("LATE".equals(log.getStatus())) lateDays++;
-                if ("EARLY_LEAVE".equals(log.getStatus())) earlyLeaveDays++;
-                if ("MISSING_PUNCH".equals(log.getStatus())) missingPunchDays++;
+                if (log.getWorkingHours() != null)
+                    totalHours = totalHours.add(log.getWorkingHours());
+                if (AttendanceStatus.LATE.equals(log.getStatus()))
+                    lateDays++;
+                if (AttendanceStatus.EARLY_LEAVE.equals(log.getStatus()))
+                    earlyLeaveDays++;
+                if (AttendanceStatus.MISSING_PUNCH.equals(log.getStatus()))
+                    missingPunchDays++;
             }
 
             String deptName = (emp.getDepartment() != null) ? emp.getDepartment().getDeptName() : "Chưa có phòng ban";

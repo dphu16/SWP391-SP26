@@ -1,5 +1,7 @@
 package com.project.hrm.module.attendance.dto;
 
+import com.project.hrm.module.attendance.enums.AttendanceStatus;
+import com.project.hrm.module.attendance.enums.CheckInType;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalTime;
@@ -7,16 +9,15 @@ import java.util.UUID;
 
 @Data
 public class AttendanceRequest {
-    // 1. Dùng cho Check-in / Check-out
+    // 1. For Check-in / Check-out
     private UUID employeeId;
-    private String type; // Gửi "IN" hoặc "OUT"
+    private CheckInType type;
 
-    // 2. Dùng cho Manager sửa công (Edit)
+    // 2. For Manager edit
     private LocalTime checkInTime;
     private LocalTime checkOutTime;
-    private String status;
+    private AttendanceStatus status;
 
-    // (Tuỳ chọn) Cho phép Manager sửa tay giờ OT nếu cần
-    // Nếu không gửi trường này, Service sẽ tự để mặc định là 0
+    // Optional: allow Manager to manually set OT hours
     private BigDecimal otHours;
 }

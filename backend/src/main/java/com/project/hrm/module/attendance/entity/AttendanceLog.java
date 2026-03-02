@@ -1,5 +1,6 @@
 package com.project.hrm.module.attendance.entity;
 
+import com.project.hrm.module.attendance.enums.AttendanceStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -21,8 +22,7 @@ public class AttendanceLog {
     @Column(name = "employee_id", nullable = false)
     private UUID employeeId;
 
-    // Quan hệ ManyToOne: Một log thuộc về một lịch làm việc
-    @ManyToOne(fetch = FetchType.EAGER) // Eager để khi query log lấy luôn được thông tin ca
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "schedule_id")
     private WorkSchedule workSchedule;
 
@@ -35,10 +35,10 @@ public class AttendanceLog {
     @Column(name = "check_out")
     private LocalTime checkOut;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
-    private String status;
+    private AttendanceStatus status;
 
-    // Map với kiểu NUMERIC(4, 2) trong DB
     @Column(name = "working_hours", precision = 4, scale = 2)
     private BigDecimal workingHours;
 
