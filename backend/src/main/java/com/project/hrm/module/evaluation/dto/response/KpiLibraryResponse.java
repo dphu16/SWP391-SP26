@@ -1,5 +1,7 @@
 package com.project.hrm.module.evaluation.dto.response;
 
+import com.project.hrm.module.evaluation.enums.KpiCategory;
+import com.project.hrm.module.evaluation.enums.MeasurementType;
 import lombok.Builder;
 import lombok.Data;
 
@@ -12,6 +14,7 @@ public class KpiLibraryResponse {
     private UUID libId;
     private String name;
     private String description;
-    private String category;
+    private KpiCategory category;
     private Double defaultWeight;
+    private MeasurementType measurementType;
 }

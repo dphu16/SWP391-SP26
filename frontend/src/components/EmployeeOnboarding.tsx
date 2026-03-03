@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../services/apiClient";
 import type { Application, PageResponse } from "../types";
+import FilterBar from "./FilterBar";
 
 const API_URL = "/api/applications/hired";
 
@@ -25,11 +26,16 @@ const ONBOARDING_STATUS_CONFIG: Record<
  text: "text-amber-700 ",
  bg: "bg-amber-50 ",
  },
- PENDING: {
- dot: "bg-gray-400",
- text: "text-gray-600 ",
- bg: "bg-gray-100 ",
- },
+  PENDING: {
+  dot: "bg-gray-400",
+  text: "text-gray-600 ",
+  bg: "bg-gray-100 ",
+  },
+  HIRED: {
+  dot: "bg-emerald-500",
+  text: "text-emerald-700 ",
+  bg: "bg-emerald-50 ",
+  },
 };
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -115,9 +121,32 @@ const EmployeeOnboarding: React.FC<EmployeeOnboardingProps> = ({
  onAction,
 }) => {
  const navigate = useNavigate();
- const [applications, setApplications] = useState<Application[]>([]);
- const [loading, setLoading] = useState<boolean>(true);
- const [error, setError] = useState<string | null>(null);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filter, setFilter] = useState({ category: "department", value: "All Departments" });
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  const handleFilterChange = (category: string, value: string) => {
+    setFilter({ category, value });
+  };
+
+  const filteredApplications = applications.filter(app => {
+    const nameStr = app.candidateName || "";
+    const emailStr = app.candidateEmail || "";
+    const matchesSearch = nameStr.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
+                         emailStr.toLowerCase().includes(debouncedSearch.toLowerCase());
+    return matchesSearch;
+  });
 
  // Gọi API khi component được mount
  useEffect(() => {
@@ -195,8 +224,23 @@ const EmployeeOnboarding: React.FC<EmployeeOnboardingProps> = ({
  { key: "status", label: "Status" },
  ];
 
- return (
- <div className="rounded-2xl border border-border-light bg-surface-light overflow-hidden shadow-card animate-fade-in">
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold tracking-tight text-text-primary-light font-heading">
+          Employee Onboarding
+        </h1>
+        <p className="text-text-secondary-light text-sm">
+          Track and manage the onboarding process for newly hired candidates.
+        </p>
+      </div>
+
+      <FilterBar 
+        onSearch={setSearchTerm} 
+        onFilterChange={handleFilterChange}
+      />
+
+      <div className="rounded-2xl border border-border-light bg-surface-light overflow-hidden shadow-card animate-fade-in">
  {/* Table */}
  <div className="overflow-x-auto">
  <table className="w-full text-left border-collapse">
@@ -244,8 +288,8 @@ const EmployeeOnboarding: React.FC<EmployeeOnboardingProps> = ({
  <tbody className="divide-y divide-gray-50 text-sm">
  {loading
  ? Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
- : applications.map((app) => (
- <tr
+  : filteredApplications.map((app) => (
+  <tr
  key={app.id}
  className="table-row-hover group hover:bg-gray-50/80 "
  >
@@ -303,11 +347,10 @@ const EmployeeOnboarding: React.FC<EmployeeOnboardingProps> = ({
         <button
           onClick={() => handleAction(app, app.onboardingStatus === "IN_PROGRESS" ? "continue" : "init")}
           title={app.onboardingStatus === "IN_PROGRESS" ? "Continue Onboarding" : "Initialize Onboarding"}
-          className="p-1.5 rounded-lg text-text-secondary-light hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+          className="p-2 rounded-full text-primary hover:text-white hover:bg-primary transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
         >
-          <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-            <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
-            <path fillRule="evenodd" d="M1.38 8.28a1.2 1.2 0 010-.56 7.16 7.16 0 0113.24 0c.044.185.044.378 0 .56a7.16 7.16 0 01-13.24 0zM8 11a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+          <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 translate-x-0.5">
+            <path d="M8 5v14l11-7z" />
           </svg>
         </button>
       ) : app.onboardingStatus === "COMPLETED" ? (
@@ -325,7 +368,7 @@ const EmployeeOnboarding: React.FC<EmployeeOnboardingProps> = ({
  </div>
 
  {/* Empty state */}
- {!loading && applications.length === 0 && (
+ {!loading && filteredApplications.length === 0 && (
  <div className="py-20 flex flex-col items-center gap-3 text-center animate-fade-in">
  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
  <svg viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-gray-400">
@@ -359,9 +402,10 @@ const EmployeeOnboarding: React.FC<EmployeeOnboardingProps> = ({
  <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L9.94 8 6.22 5.28a.75.75 0 010-1.06z" clipRule="evenodd" />
  </svg>
  </button>
- </div>
- </div>
- );
+      </div>
+    </div>
+  </div>
+  );
 };
 
 export default EmployeeOnboarding;

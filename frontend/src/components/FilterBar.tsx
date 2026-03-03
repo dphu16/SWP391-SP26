@@ -1,160 +1,167 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import apiClient from "../services/apiClient";
 
 interface FilterBarProps {
- onSearch?: (q: string) => void;
- onStatusChange?: (status: string) => void;
- onAddEmployee?: () => void;
+  onSearch?: (q: string) => void;
+  onFilterChange?: (category: string, value: string) => void;
+  onAddEmployee?: () => void;
 }
 
-const STATUS_OPTIONS = ["All Status", "Active", "Onboarding", "Probation", "On Leave", "Inactive"];
+const STATIC_ROLES = ["Manager", "HR", "Employee", "Finance", "Mentor"];
 
-const FilterBar: React.FC<FilterBarProps> = ({ onSearch, onStatusChange, onAddEmployee }) => {
- const [search, setSearch] = useState("");
- const [status, setStatus] = useState("All Status");
- const [statusOpen, setStatusOpen] = useState(false);
- const statusRef = useRef<HTMLDivElement>(null);
+const FilterBar: React.FC<FilterBarProps> = ({ onSearch, onFilterChange, onAddEmployee }) => {
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("department");
+  const [value, setValue] = useState("All Departments");
 
- // Close dropdown on outside click
- useEffect(() => {
- const handler = (e: MouseEvent) => {
- if (statusRef.current && !statusRef.current.contains(e.target as Node)) {
- setStatusOpen(false);
- }
- };
- document.addEventListener("mousedown", handler);
- return () => document.removeEventListener("mousedown", handler);
- }, []);
+  // Options state
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [positions, setPositions] = useState<string[]>([]);
 
- const handleSearch = (val: string) => {
- setSearch(val);
- onSearch?.(val);
- };
+  useEffect(() => {
+    // Fetch departments and positions
+    const fetchOptions = async () => {
+      try {
+        const [deptRes, posRes] = await Promise.all([
+          apiClient.get("/api/lookup/departments"),
+          apiClient.get("/api/lookup/positions"),
+        ]);
+        setDepartments(deptRes.data.map((d: any) => d.name));
+        setPositions(posRes.data.map((p: any) => p.title));
+      } catch (err) {
+        console.error("Failed to load options", err);
+      }
+    };
+    fetchOptions();
+  }, []);
 
- const handleStatus = (val: string) => {
- setStatus(val);
- setStatusOpen(false);
- onStatusChange?.(val);
- };
+  const FILTER_DATA: Record<string, { label: string; options: string[] }> = {
+    department: {
+      label: "Department",
+      options: ["All Departments", ...departments],
+    },
+    position: {
+      label: "Position",
+      options: ["All Positions", ...positions],
+    },
+    role: {
+      label: "Role",
+      options: ["All Roles", ...STATIC_ROLES],
+    },
+    status: {
+      label: "Status",
+      options: ["All Status", "Active", "Inactive"],
+    },
+  };
 
- return (
- <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
- {/* Search */}
- <div className="relative flex-1 max-w-sm group">
- <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary-light group-focus-within:text-primary transition-colors pointer-events-none">
- <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
- <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
- </svg>
- </span>
- <input
- type="search"
- value={search}
- onChange={(e) => handleSearch(e.target.value)}
- placeholder="Search by name, code, department…"
- className="w-full pl-10 pr-4 py-2.5 bg-surface-light border border-border-light rounded-xl text-sm text-text-primary-light placeholder-text-secondary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
- aria-label="Search employees"
- />
- {search && (
- <button
- onClick={() => handleSearch("")}
- className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary-light hover:text-text-primary-light transition-colors cursor-pointer"
- aria-label="Clear search"
- >
- <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
- <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z" />
- </svg>
- </button>
- )}
- </div>
+  const currentOptions = FILTER_DATA[category]?.options || [];
 
- {/* Filters */}
- <div className="flex items-center gap-2 ml-auto">
- {/* Department select */}
- <div className="relative">
- <select
- className="appearance-none pl-3 pr-8 py-2.5 bg-surface-light border border-border-light rounded-xl text-sm font-medium text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all cursor-pointer"
- aria-label="Filter by department"
- >
- <option>All Departments</option>
- <option>Engineering</option>
- <option>Sales</option>
- <option>Marketing</option>
- <option>HR</option>
- <option>Finance</option>
- </select>
- <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary-light ">
- <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
- <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 011.06 0L8 8.94l2.72-2.72a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0L4.22 7.28a.75.75 0 010-1.06z" clipRule="evenodd" />
- </svg>
- </span>
- </div>
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    onSearch?.(val);
+  };
 
- {/* Status custom dropdown */}
- <div className="relative" ref={statusRef}>
- <button
- onClick={() => setStatusOpen((o) => !o)}
- className={`flex items-center gap-2 pl-3 pr-3 py-2.5 rounded-xl text-sm font-medium border transition-all cursor-pointer
- ${statusOpen
- ? "bg-surface-light border-primary ring-2 ring-primary/20 text-text-primary-light "
- : "bg-surface-light border-border-light text-text-primary-light hover:border-gray-300 "
- }
- `}
- aria-haspopup="listbox"
- aria-expanded={statusOpen}
- >
- {status !== "All Status" && (
- <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
- )}
- <span>{status}</span>
- <svg viewBox="0 0 16 16" fill="currentColor" className={`w-3.5 h-3.5 text-text-secondary-light transition-transform duration-200 ${statusOpen ? "rotate-180" : ""}`}>
- <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 011.06 0L8 8.94l2.72-2.72a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0L4.22 7.28a.75.75 0 010-1.06z" clipRule="evenodd" />
- </svg>
- </button>
+  const handleCategoryChange = (newCategory: string) => {
+    setCategory(newCategory);
+    const firstOption = FILTER_DATA[newCategory]?.options[0] || "";
+    setValue(firstOption);
+    onFilterChange?.(newCategory, firstOption);
+  };
 
- {statusOpen && (
- <div className="absolute right-0 top-full mt-2 w-44 bg-surface-light rounded-xl border border-border-light shadow-dropdown py-1.5 z-30 animate-scale-in">
- {STATUS_OPTIONS.map((opt) => (
- <button
- key={opt}
- onClick={() => handleStatus(opt)}
- className={`w-full flex items-center justify-between px-3.5 py-2 text-sm transition-colors cursor-pointer
- ${status === opt
- ? "text-primary font-semibold bg-primary/5"
- : "text-text-primary-light hover:bg-gray-50 "
- }
- `}
- role="option"
- aria-selected={status === opt}
- >
- {opt}
- {status === opt && (
- <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-primary">
- <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
- </svg>
- )}
- </button>
- ))}
- </div>
- )}
- </div>
+  const handleValueChange = (newValue: string) => {
+    setValue(newValue);
+    onFilterChange?.(category, newValue);
+  };
 
- {/* Divider */}
- <div className="w-px h-6 bg-border-light " />
+  return (
+    <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-4 w-full bg-surface-light p-1 rounded-2xl shadow-sm border border-border-light/50">
+      {/* 1. Search Bar - flex-grow */}
+      <div className="relative flex-grow group">
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary-light group-focus-within:text-primary transition-colors duration-200 pointer-events-none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4.5 h-4.5">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+        </span>
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder="Search employees, departments, skills..."
+          className="w-full pl-11 pr-10 py-3 bg-background-light/50 border-none rounded-xl text-sm text-text-primary-light placeholder-text-secondary-light focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all duration-200 outline-none"
+        />
+        {search && (
+          <button
+            onClick={() => handleSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted-light hover:text-text-primary-light transition-colors cursor-pointer"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
 
- {/* Add Employee */}
- <button
- onClick={onAddEmployee}
- className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover transition-colors cursor-pointer btn-primary-action shadow-sm"
- aria-label="Add new employee"
- >
- <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
- <path d="M8.75 3.75a.75.75 0 00-1.5 0v3.5h-3.5a.75.75 0 000 1.5h3.5v3.5a.75.75 0 001.5 0v-3.5h3.5a.75.75 0 000-1.5h-3.5v-3.5z" />
- </svg>
- <span className="hidden sm:inline">Add Employee</span>
- <span className="sm:hidden">Add</span>
- </button>
- </div>
- </div>
- );
+      {/* 2 & 3. Filter Boxes */}
+      <div className="flex items-center gap-3">
+        {/* Category Box */}
+        <div className="relative min-w-[140px]">
+          <select
+            value={category}
+            onChange={(e) => handleCategoryChange(e.target.value)}
+            className="w-full appearance-none pl-4 pr-10 py-3 bg-surface-light border border-border-light rounded-xl text-sm font-medium text-text-primary-light hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer outline-none"
+          >
+            {Object.keys(FILTER_DATA).map((key) => (
+              <option key={key} value={key}>
+                {FILTER_DATA[key].label}
+              </option>
+            ))}
+          </select>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary-light">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </span>
+        </div>
+
+        {/* Value Box */}
+        <div className="relative min-w-[160px]">
+          <select
+            value={value}
+            onChange={(e) => handleValueChange(e.target.value)}
+            className="w-full appearance-none pl-4 pr-10 py-3 bg-surface-light border border-border-light rounded-xl text-sm font-medium text-text-primary-light hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer outline-none"
+          >
+            {currentOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary-light">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </span>
+        </div>
+
+        {/* Divider */}
+        <div className="hidden lg:block w-px h-8 bg-border-light mx-1" />
+
+        {/* 4. Add Employee Button */}
+        {onAddEmployee && (
+          <button
+            onClick={onAddEmployee}
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-primary/20 active:scale-[0.98] cursor-pointer"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M5 12h14m-7-7v14" />
+            </svg>
+            <span className="hidden sm:inline">Add Employee</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default FilterBar;

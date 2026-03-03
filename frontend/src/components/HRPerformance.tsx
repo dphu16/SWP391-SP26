@@ -65,6 +65,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     const [departments, setDepartments] = useState<Department[]>([]);
     const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
     const [allKpis, setAllKpis] = useState<KpiLibrary[]>([]);
+    const [globalKpis, setGlobalKpis] = useState<KpiLibrary[]>([]);
     const [structureDetails, setStructureDetails] = useState<KpiDetailDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAddKpiModalOpen, setIsAddKpiModalOpen] = useState(false);
@@ -87,13 +88,31 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     });
     const [cycleSaving, setCycleSaving] = useState(false);
     const [cycleError, setCycleError] = useState('');
+    const [cycleStatusError, setCycleStatusError] = useState('');
+    const [publishError, setPublishError] = useState('');
+    const [publishSuccess, setPublishSuccess] = useState('');
+    const [createKpiError, setCreateKpiError] = useState('');
+    const [createKpiSuccess, setCreateKpiSuccess] = useState('');
 
     // New KPI Form State
-    const KPI_CATEGORIES = ['EVALUATION', 'BEHAVIORAL', 'FINANCIAL', 'OPERATIONAL'] as const;
-    const [newKpi, setNewKpi] = useState({
+    const KPI_CATEGORIES = ['FINANCIAL', 'CUSTOMER', 'PROCESS'] as const;
+    const MEASUREMENT_TYPES: { value: import('../services/kpiService').MeasurementType; label: string; desc: string }[] = [
+        { value: 'NUMERIC', label: 'Numeric', desc: '' },
+        { value: 'PERCENTAGE', label: 'Percentage', desc: '' },
+        { value: 'BOOLEAN', label: 'Yes / No', desc: '' },
+        { value: 'RATING', label: 'Rating', desc: '' },
+    ];
+    const [newKpi, setNewKpi] = useState<{
+        name: string;
+        category: string;
+        defaultWeight: number;
+        measurementType: import('../services/kpiService').MeasurementType;
+        description: string;
+    }>({
         name: '',
-        category: 'EVALUATION' as string,
+        category: 'FINANCIAL',
         defaultWeight: 10,
+        measurementType: 'NUMERIC',
         description: ''
     });
 
@@ -104,13 +123,12 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
 
     useEffect(() => {
         const fetchInitialData = async () => {
+            setLoading(true);
             const [deptsData, kpisData] = await Promise.all([
                 kpiService.getAllDepartments(),
-                kpiService.getAllKpiLibraries()
+                kpiService.getAllKpiLibraries(selectedDeptId || undefined)
             ]);
-
             if (kpisData) setAllKpis(kpisData);
-
             if (deptsData && deptsData.length > 0) {
                 setDepartments(deptsData);
                 setSelectedDeptId(deptsData[0].id);
@@ -120,7 +138,6 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
         fetchInitialData();
     }, []);
 
-    // Fetch global stats or cycles when viewMode changes
     useEffect(() => {
         if (viewMode === 'global') {
             const fetchGlobalStats = async () => {
@@ -140,20 +157,38 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     }, [viewMode]);
 
     useEffect(() => {
+        if (isAddKpiModalOpen && modalTab === 'library') {
+            const fetchGlobal = async () => {
+                const data = await kpiService.getAllKpiLibraries();
+                setGlobalKpis(data);
+            };
+            fetchGlobal();
+        }
+    }, [isAddKpiModalOpen, modalTab]);
+
+    useEffect(() => {
         if (selectedDeptId) {
-            const fetchStructure = async () => {
-                const details = await kpiService.getKpisByDepartment(selectedDeptId);
+            const fetchStructureAndKpis = async () => {
+                setLoading(true);
+                const [details, kpis] = await Promise.all([
+                    kpiService.getKpisByDepartment(selectedDeptId),
+                    kpiService.getAllKpiLibraries(selectedDeptId)
+                ]);
+                setAllKpis(kpis || []);
                 if (details && details.length > 0) {
                     setStructureDetails(details);
                 } else {
                     setStructureDetails([]);
                 }
+                setLoading(false);
             };
-            fetchStructure();
+            fetchStructureAndKpis();
         }
     }, [selectedDeptId]);
 
     const handleWeightChange = (libraryId: string, newWeight: number) => {
+        setPublishError('');
+        setPublishSuccess('');
         setStructureDetails(prev => prev.map(d =>
             d.kpiLibraryId === libraryId ? { ...d, weight: newWeight } : d
         ));
@@ -161,36 +196,44 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
 
     const handleSave = async () => {
         if (!selectedDeptId) return;
-        if (currentTotalWeight > 100) {
-            alert(`Cannot publish! Total weight is ${currentTotalWeight}% — it must equal exactly 100%. Please adjust the weights before publishing.`);
+        setPublishError('');
+        setPublishSuccess('');
+
+        if (currentTotalWeight !== 100) {
+            setPublishError(`Total weight is ${currentTotalWeight}% — must equal exactly 100% before publishing.`);
             return;
         }
-        if (currentTotalWeight < 100) {
-            const confirm = window.confirm(`Total weight is only ${currentTotalWeight}%. It is recommended to reach exactly 100% for optimal evaluation. Publish anyway?`);
-            if (!confirm) return;
+
+        const hasInvalidWeight = structureDetails.some(d => (d.weight || 0) <= 0);
+        if (hasInvalidWeight) {
+            setPublishError('Each KPI must have a weight greater than 0%. Please review your entries.');
+            return;
         }
+
         try {
             await kpiService.assignKpisToDepartment({
                 departmentId: selectedDeptId,
                 details: structureDetails
             });
-            alert("Published KPI Structure to all employees successfully!");
+            setPublishSuccess('KPI Structure published successfully to all employees in this department!');
         } catch (e) {
-            alert("Error publishing KPI Structure");
+            setPublishError('Failed to publish. Please try again.');
         }
     };
 
     // Save Draft: only saves the structure template, does NOT publish to employee goals.
     const handleSaveDraft = async () => {
         if (!selectedDeptId) return;
+        setPublishError('');
+        setPublishSuccess('');
         try {
             await kpiService.saveDraftKpiStructure({
                 departmentId: selectedDeptId,
                 details: structureDetails
             });
-            alert("Draft saved! KPI structure saved for this department (not yet published to employees).");
+            setPublishSuccess('Draft saved! Structure has not been published to employees yet.');
         } catch (e) {
-            alert("Error saving draft");
+            setPublishError('Failed to save draft. Please try again.');
         }
     };
 
@@ -237,11 +280,12 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     };
 
     const handleCycleStatusChange = async (cycle: PerformanceCycle, newStatus: string) => {
+        setCycleStatusError('');
         try {
             const updated = await kpiService.updateCycleStatus(cycle.cycleId, newStatus);
             setCycles(prev => prev.map(c => c.cycleId === updated.cycleId ? updated : c));
         } catch (e: any) {
-            alert(e?.response?.data?.error || 'Cannot update status.');
+            setCycleStatusError(e?.response?.data?.error || 'Cannot update status.');
         }
     };
 
@@ -269,8 +313,8 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     }, [structureDetails, allKpis]);
 
     const availableKpis = useMemo(() => {
-        return allKpis.filter(k => !structureDetails.some(d => d.kpiLibraryId === k.libId));
-    }, [allKpis, structureDetails]);
+        return globalKpis.filter(k => !structureDetails.some(d => d.kpiLibraryId === k.libId));
+    }, [globalKpis, structureDetails]);
 
     // Filtered displayKpis based on search
     const filteredDisplayKpis = useMemo(() => {
@@ -296,22 +340,36 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     };
 
     const handleCreateAndAddKpi = async () => {
+        setCreateKpiError('');
+        setCreateKpiSuccess('');
         // Check for duplicate name
         const trimmedName = newKpi.name.trim();
         const isDuplicateName = allKpis.some(k => k.name.trim().toLowerCase() === trimmedName.toLowerCase());
         if (isDuplicateName) {
-            alert(`A KPI named "${trimmedName}" already exists in the library. Please use a different name.`);
+            setCreateKpiError(`A KPI named "${trimmedName}" already exists in the department/library. Please use a different name.`);
+            return;
+        }
+        if (newKpi.defaultWeight <= 0) {
+            setCreateKpiError("Default weight must be greater than 0%.");
             return;
         }
         try {
-            const created = await kpiService.createKpiLibrary({ ...newKpi, name: trimmedName });
+            const created = await kpiService.createKpiLibrary({
+                ...newKpi,
+                name: trimmedName,
+                measurementType: newKpi.measurementType as import('../services/kpiService').MeasurementType,
+                departmentId: selectedDeptId || undefined
+            });
             setAllKpis(prev => [...prev, created]);
             handleAddKpi(created);
-            setIsAddKpiModalOpen(false);
-            setNewKpi({ name: '', category: 'EVALUATION', defaultWeight: 10, description: '' });
-            alert("New KPI created and added!");
+            setCreateKpiSuccess("New KPI created and added to department!");
+            setTimeout(() => {
+                setIsAddKpiModalOpen(false);
+                setCreateKpiSuccess('');
+                setNewKpi({ name: '', category: 'FINANCIAL', defaultWeight: 10, measurementType: 'NUMERIC', description: '' });
+            }, 1000);
         } catch (e) {
-            alert("Failed to create new KPI");
+            setCreateKpiError("Failed to create new KPI");
         }
     };
 
@@ -321,7 +379,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                        Performance Module
+                        Performance
                     </h1>
                     <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
                         Global KPI Structure Definition & Cross-department Review
@@ -359,26 +417,6 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                         </button>
                     </div>
 
-                    <div className="flex items-center bg-surface-light dark:bg-surface-dark p-1 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
-                        <button
-                            onClick={() => setActiveTab("hr")}
-                            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === "hr"
-                                ? "bg-primary text-white shadow-sm"
-                                : "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light"
-                                }`}
-                        >
-                            HR Config
-                        </button>
-                        <button
-                            onClick={() => setActiveTab("manager")}
-                            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === "manager"
-                                ? "bg-surface-light dark:bg-surface-dark text-text-primary-light shadow-sm"
-                                : "text-text-secondary-light dark:text-text-secondary-dark hover:bg-surface-2-light dark:hover:bg-surface-2-dark"
-                                }`}
-                        >
-                            Manager Console
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -664,25 +702,40 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                         </div>{/* close KPI structure card */}
 
                         {/* Action Bar */}
-                        <div className="pt-2 flex justify-center gap-4">
-                            <button
-                                onClick={handleSaveDraft}
-                                className="px-6 py-2.5 rounded-lg text-sm font-bold border border-primary text-primary hover:bg-primary/5 transition-colors shadow-sm bg-surface-light dark:bg-surface-dark"
-                            >
-                                Save Draft
-                            </button>
+                        <div className="pt-2 flex flex-col items-center gap-3">
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={handleSaveDraft}
+                                    className="px-6 py-2.5 rounded-lg text-sm font-bold border border-primary text-primary hover:bg-primary/5 transition-colors shadow-sm bg-surface-light dark:bg-surface-dark"
+                                >
+                                    Save Draft
+                                </button>
 
-                            <button
-                                onClick={handleSave}
-                                disabled={currentTotalWeight > 100}
-                                title={currentTotalWeight > 100 ? `Total weight is ${currentTotalWeight}% — must be ≤ 100%` : ''}
-                                className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm ${currentTotalWeight > 100
-                                    ? 'bg-red-500 text-white cursor-not-allowed opacity-70'
-                                    : 'bg-primary text-white hover:bg-primary-hover'
-                                    }`}
-                            >
-                                {currentTotalWeight > 100 ? `Weight ${currentTotalWeight}% — Fix before Publish` : 'Publish to Employees'}
-                            </button>
+                                <button
+                                    onClick={handleSave}
+                                    className="px-6 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm bg-primary text-white hover:bg-primary-hover"
+                                >
+                                    Publish to Employees
+                                </button>
+                            </div>
+
+                            {/* Inline error / success feedback */}
+                            {publishError && (
+                                <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 font-semibold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2.5 w-full max-w-lg">
+                                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                                    </svg>
+                                    {publishError}
+                                </div>
+                            )}
+                            {publishSuccess && (
+                                <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg px-4 py-2.5 w-full max-w-lg">
+                                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                                    </svg>
+                                    {publishSuccess}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -772,6 +825,14 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                             </div>
                         ))}
                     </div>
+
+                    {/* Cycle Status Error */}
+                    {cycleStatusError && (
+                        <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 font-semibold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 shadow-sm">
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+                            {cycleStatusError}
+                        </div>
+                    )}
 
                     {/* Cycle Table */}
                     <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden">
@@ -943,15 +1004,47 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                             />
                                         </div>
                                     </div>
+                                    {/* Measurement Type */}
+                                    <div>
+                                        <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-2">Measurement Type</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {MEASUREMENT_TYPES.map(mt => (
+                                                <button
+                                                    key={mt.value}
+                                                    type="button"
+                                                    onClick={() => setNewKpi({ ...newKpi, measurementType: mt.value })}
+                                                    className={`text-left px-3 py-2.5 rounded-lg border transition-all ${newKpi.measurementType === mt.value
+                                                        ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                                                        : 'border-border-light dark:border-border-dark hover:bg-surface-2-light dark:hover:bg-surface-2-dark'
+                                                        }`}
+                                                >
+                                                    <div className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark">{mt.label}</div>
+                                                    <div className="text-[11px] text-text-muted-light dark:text-text-muted-dark mt-0.5">{mt.desc}</div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                     <div>
                                         <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1">Description (Optional)</label>
                                         <textarea
                                             value={newKpi.description}
                                             onChange={e => setNewKpi({ ...newKpi, description: e.target.value })}
                                             className="w-full px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus-ring"
-                                            rows={3}
+                                            rows={2}
                                         />
                                     </div>
+                                    {createKpiError && (
+                                        <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 font-semibold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2 mt-2">
+                                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+                                            {createKpiError}
+                                        </div>
+                                    )}
+                                    {createKpiSuccess && (
+                                        <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg px-4 py-2 mt-2">
+                                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
+                                            {createKpiSuccess}
+                                        </div>
+                                    )}
                                     <div className="pt-2 flex justify-end">
                                         <button
                                             onClick={handleCreateAndAddKpi}

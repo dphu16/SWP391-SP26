@@ -19,7 +19,14 @@ import Applications from "./components/attendance/Applications";
 import ReviewRequests from "./components/attendance/ReviewRequests";
 import AttendanceSummary from "./components/attendance/AttendanceSummary";
 import PerformanceModule from "./components/PerformanceModule";
-
+import PayrollModule from "./components/payroll/PayrollModule";
+import JobListPage from "./components/recruitment/JobListPage";
+import JobDetailPage from "./components/recruitment/JobDetailPage";
+import JobFormPage from "./components/recruitment/JobFormPage";
+import JobRequestListPage from "./components/recruitment/JobRequestListPage";
+import JobRequestDetailPage from "./components/recruitment/JobRequestDetailPage";
+import JobRequestFormPage from "./components/recruitment/JobRequestFormPage";
+import CVListPage from "./components/recruitment/CVListPage";
 // --- Auth ---
 import LoginPage from "./components/auth/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -59,7 +66,7 @@ const AppShell: React.FC = () => {
 
                             <Route path="/onboarding" element={<EmployeeOnboarding />} />
                             <Route
-path="/onboarding/:applicationId/profile"
+                                path="/onboarding/:applicationId/profile"
                                 element={<CandidateProfileCompletion />}
                             />
                             <Route path="/offboarding" element={<EmployeeOffboarding />} />
@@ -87,8 +94,21 @@ path="/onboarding/:applicationId/profile"
                             {/* Performance */}
                             <Route path="/performance" element={<PerformanceModule />} />
 
+                            {/* Payroll Module */}
+                            <Route path="/payroll/*" element={<PayrollModule />} />
+
                             <Route path="/employee/:id" element={<EmployeeDetail />} />
                             <Route path="/profile" element={<EmployeeDetail />} />
+                            <Route path="/recruitment/jobs" element={<JobListPage />} />
+                            <Route path="/recruitment/jobs/new" element={<JobFormPage />} />
+                            <Route path="/recruitment/jobs/:id" element={<JobDetailPage />} />
+                            <Route path="/recruitment/jobs/edit/:id" element={<JobFormPage />} />
+                            <Route path="/recruitment/cvs" element={<CVListPage />} />
+
+                            <Route path="/recruitment/job-requests" element={<JobRequestListPage />} />
+                            <Route path="/recruitment/job-requests/new" element={<JobRequestFormPage />} />
+                            <Route path="/recruitment/job-requests/:id" element={<JobRequestDetailPage />} />
+                            <Route path="/recruitment/job-requests/:id/edit" element={<JobRequestFormPage />} />
                         </Routes>
                     </div>
                 </div>

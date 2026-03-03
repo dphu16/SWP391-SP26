@@ -1,11 +1,15 @@
 import apiClient from "./apiClient";
 
+export type MeasurementType = 'NUMERIC' | 'PERCENTAGE' | 'BOOLEAN' | 'RATING';
+
 export interface KpiLibrary {
     libId: string;
     name: string;
     description: string;
     category: string;
     defaultWeight: number;
+    measurementType?: MeasurementType;
+    departmentId?: string;
 }
 
 export interface Department {
@@ -85,10 +89,11 @@ export const kpiService = {
         }
     },
 
-    getAllKpiLibraries: async (): Promise<KpiLibrary[]> => {
+    getAllKpiLibraries: async (departmentId?: string): Promise<KpiLibrary[]> => {
         try {
-            // Use local default fallback in development if no backend running, or actually call API
-            const response = await apiClient.get<KpiLibrary[]>("/api/kpi-libraries");
+            const response = await apiClient.get<KpiLibrary[]>("/api/kpi-libraries", {
+                params: { departmentId }
+            });
             return response.data;
         } catch (error) {
             console.error("Error fetching KPI Libraries", error);
@@ -227,5 +232,16 @@ export const kpiService = {
                 resolve(score);
             }, 300);
         });
+    },
+
+    // Employee actions
+    acknowledgeGoal: async (goalId: string): Promise<any> => {
+        const response = await apiClient.patch(`/api/employee-goals/${goalId}`, { status: 'ACTIVE' });
+        return response.data;
+    },
+
+    updateGoalProgress: async (goalId: string, data: { actualValue: number, comment?: string, imageUrl?: string }): Promise<any> => {
+        const response = await apiClient.patch(`/api/employee-goals/${goalId}/progress`, data);
+        return response.data;
     },
 };

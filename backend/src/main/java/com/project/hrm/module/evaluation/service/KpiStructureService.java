@@ -69,6 +69,18 @@ public class KpiStructureService {
         double totalWeight = request.getDetails() != null ?
                 request.getDetails().stream().mapToDouble(AssignKpiRequest.KpiDetailDto::getWeight).sum() : 0.0;
 
+        if (totalWeight != 100.0) {
+            throw new RuntimeException("Total weight of all KPIs in the structure must equal 100%");
+        }
+
+        if (request.getDetails() != null) {
+            for (AssignKpiRequest.KpiDetailDto dto : request.getDetails()) {
+                if (dto.getWeight() <= 0) {
+                    throw new RuntimeException("Each KPI weight must be greater than 0%");
+                }
+            }
+        }
+
         structure.setTotalWeight(totalWeight);
         KpiStructure savedStructure = structureRepository.save(structure);
 

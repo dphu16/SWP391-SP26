@@ -35,7 +35,7 @@ const Icons = {
   ),
   performance: (
     <svg viewBox="0 0 20 20" fill="currentColor" className="w-[18px] h-[18px]">
-<path fillRule="evenodd" d="M12.577 4.878a.75.75 0 01.919-.53l4.78 1.281a.75.75 0 01.531.919l-1.281 4.78a.75.75 0 01-1.449-.387l.81-3.022a19.407 19.407 0 00-5.594 5.203.75.75 0 01-1.139.093L7 10.06l-4.72 4.72a.75.75 0 01-1.06-1.061l5.25-5.25a.75.75 0 011.06 0l3.074 3.073a20.923 20.923 0 015.545-4.931l-3.042-.815a.75.75 0 01-.53-.918z" clipRule="evenodd" />
+      <path fillRule="evenodd" d="M12.577 4.878a.75.75 0 01.919-.53l4.78 1.281a.75.75 0 01.531.919l-1.281 4.78a.75.75 0 01-1.449-.387l.81-3.022a19.407 19.407 0 00-5.594 5.203.75.75 0 01-1.139.093L7 10.06l-4.72 4.72a.75.75 0 01-1.06-1.061l5.25-5.25a.75.75 0 011.06 0l3.074 3.073a20.923 20.923 0 015.545-4.931l-3.042-.815a.75.75 0 01-.53-.918z" clipRule="evenodd" />
     </svg>
   ),
   recruitment: (
@@ -95,7 +95,8 @@ const NavItem: React.FC<NavItemProps> = ({
     {!isCollapsed && (
       <span className="flex-1 text-left truncate">{label}</span>
     )}
-{!isCollapsed && badge !== undefined && badge > 0 && (
+
+    {!isCollapsed && badge !== undefined && badge > 0 && (
       <span className="ml-auto flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center">
         {badge}
       </span>
@@ -121,6 +122,7 @@ const Sidebar: React.FC = () => {
   const [requestExpanded, setRequestExpanded] = useState(true);
   const [recruitmentExpanded, setRecruitmentExpanded] = useState(true);
   const [attendanceExpanded, setAttendanceExpanded] = useState(true);
+  const [payrollExpanded, setPayrollExpanded] = useState(true);
 
 
   const isPath = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
@@ -149,7 +151,7 @@ const Sidebar: React.FC = () => {
         {isCollapsed && (
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
             <svg viewBox="0 0 20 20" fill="white" className="w-4 h-4">
-<path d="M7 8a3 3 0 100-6 3 3 0 000 6zM14.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM1.615 16.428a1.224 1.224 0 01-.569-1.175 6.002 6.002 0 0111.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 017 17a9.953 9.953 0 01-5.385-1.572zM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 00-1.588-3.755 4.502 4.502 0 015.874 2.636.818.818 0 01-.36.98A7.465 7.465 0 0114.5 16z" />
+              <path d="M7 8a3 3 0 100-6 3 3 0 000 6zM14.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM1.615 16.428a1.224 1.224 0 01-.569-1.175 6.002 6.002 0 0111.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 017 17a9.953 9.953 0 01-5.385-1.572zM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 00-1.588-3.755 4.502 4.502 0 015.874 2.636.818.818 0 01-.36.98A7.465 7.465 0 0114.5 16z" />
             </svg>
           </div>
         )}
@@ -216,7 +218,7 @@ const Sidebar: React.FC = () => {
                 <>
                   <span className="flex-1 text-left">Employees</span>
                   <span className={`transition-transform duration-200 ${employeesExpanded ? "rotate-180" : ""}`}>
-{Icons.chevronDown}
+                    {Icons.chevronDown}
                   </span>
                 </>
               )}
@@ -288,7 +290,7 @@ const Sidebar: React.FC = () => {
               ].map((item) => (
                 <NavItem
                   key={item.path}
-icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />}
+                  icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />}
                   label={item.label}
                   isActive={location.pathname === item.path}
                   isCollapsed={false}
@@ -356,10 +358,64 @@ icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrin
           )}
         </div>
 
+        {/* 4. Submenu: Payroll */}
+        <div>
+          <button
+            onClick={() => {
+              if (isCollapsed) {
+                setIsCollapsed(false);
+                setPayrollExpanded(true);
+              } else {
+                setPayrollExpanded(!payrollExpanded);
+              }
+            }}
+            title={isCollapsed ? "Payroll" : undefined}
+            className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
+              ${isCollapsed ? "justify-center" : ""}
+              ${isPath("/payroll")
+                ? "text-primary bg-primary/10"
+                : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
+              }
+            `}
+          >
+            <span className="flex-shrink-0">{Icons.payroll}</span>
+            {!isCollapsed && (
+              <>
+                <span className="flex-1 text-left">Payroll</span>
+                <span className={`transition-transform duration-200 ${payrollExpanded ? "rotate-180" : ""}`}>
+                  {Icons.chevronDown}
+                </span>
+              </>
+            )}
+          </button>
+
+          {/* Submenu */}
+          {!isCollapsed && payrollExpanded && (
+            <div className="mt-0.5 space-y-0.5 animate-slide-up">
+              {[
+                { label: "My Payslips", path: "/payroll/employee" },
+                { label: "HR Payroll", path: "/payroll/hr", roles: ["HR", "MANAGER"] as const },
+                { label: "Tax & Insurance", path: "/payroll/tax-report", roles: ["HR", "MANAGER", "FINANCE"] as const },
+              ]
+                .filter((item) => !item.roles || hasRole(...item.roles))
+                .map((item) => (
+                  <NavItem
+                    key={item.path}
+                    icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />}
+                    label={item.label}
+                    isActive={location.pathname === item.path}
+                    isCollapsed={false}
+                    indent
+                    onClick={() => navigate(item.path)}
+                  />
+                ))}
+            </div>
+          )}
+        </div>
+
         {[
           { label: "Check-in/Out", icon: Icons.timeoff, path: "/attendance/check-in-out", badge: 3 },
-          { label: "Payroll", icon: Icons.payroll, roles: ["HR", "FINANCE"] as const },
-{ label: "Performance", icon: Icons.performance, path: "/performance", roles: ["HR", "MANAGER", "FINANCE"] as const },
+          { label: "Performance", icon: Icons.performance, path: "/performance", roles: ["HR", "MANAGER", "FINANCE"] as const },
         ]
           .filter((item) => !item.roles || hasRole(...item.roles))
           .map((item) => (
@@ -435,4 +491,5 @@ icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrin
     </aside>
   );
 };
+
 export default Sidebar;

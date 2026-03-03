@@ -1,13 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ManagerPerformance from "./ManagerPerformance";
 import HRPerformance from "./HRPerformance";
+import EmployeePerformance from "./EmployeePerformance";
+import { getToken } from "../services/authService";
+import { decodeJwt } from "../utils/jwtDecode";
 
 const PerformanceModule = () => {
-    const [activeTab, setActiveTab] = useState("hr");
+    const [userRole, setUserRole] = useState<string | null>(null);
 
-    return activeTab === "manager"
-        ? <ManagerPerformance activeTab={activeTab} setActiveTab={setActiveTab} />
-        : <HRPerformance activeTab={activeTab} setActiveTab={setActiveTab} />;
+    useEffect(() => {
+        const token = getToken();
+        if (token) {
+            const payload = decodeJwt(token);
+            setUserRole(payload?.role?.toUpperCase() || 'EMPLOYEE');
+        }
+    }, []);
+
+    if (!userRole) return <div className="p-10 text-center uppercase font-black opacity-20 tracking-widest italic">Identifying Role...</div>;
+
+    if (userRole === 'HR') {
+        return <HRPerformance activeTab="hr" setActiveTab={() => { }} />;
+    }
+
+    if (userRole === 'MANAGER') {
+        return <ManagerPerformance activeTab="manager" setActiveTab={() => { }} />;
+    }
+
+    return <EmployeePerformance setActiveTab={() => { }} />;
 };
 
 export default PerformanceModule;

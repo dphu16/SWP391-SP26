@@ -273,33 +273,13 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                        Performance Module
+                        Performance
                     </h1>
                     <p className="mt-0.5 text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
                         Standardized KPI management and scoring workflow
                     </p>
                 </div>
 
-                <div className="flex items-center bg-surface-light dark:bg-surface-dark p-1.5 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
-                    <button
-                        onClick={() => setActiveTab("hr")}
-                        className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-all duration-200 ${activeTab === "hr"
-                            ? "bg-surface-2-light dark:bg-surface-2-dark text-text-primary-light dark:text-text-primary-dark shadow-sm"
-                            : "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light"
-                            }`}
-                    >
-                        HR Config
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("manager")}
-                        className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-all duration-200 ${activeTab === "manager"
-                            ? "bg-primary text-white shadow-sm"
-                            : "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light"
-                            }`}
-                    >
-                        Manager Console
-                    </button>
-                </div>
             </div>
 
             <div className="flex gap-6 items-start">
