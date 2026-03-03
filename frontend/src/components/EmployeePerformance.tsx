@@ -29,16 +29,13 @@ const Icons = {
     )
 };
 
-const EmployeePerformance = ({ setActiveTab }: { setActiveTab: (t: string) => void }) => {
+const EmployeePerformance = () => {
     const [kpis, setKpis] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
-    const [currentResult, setCurrentResult] = useState<string>('');
-    const [comments, setComments] = useState<string>('');
-    const [attachedFiles, setAttachedFiles] = useState<any[]>([
-        { name: 'Q3_Adoption_Metrics.pdf', size: '2.4 MB', time: 'Uploaded 2h ago' },
-        { name: 'User_Survey_Screenshot.png', size: '1.1 MB', time: 'Uploaded 2h ago' }
-    ]);
+    const [results, setResults] = useState<Record<string, string>>({});
+    const [goalComments, setGoalComments] = useState<Record<string, string>>({});
+    const [submitLoading, setSubmitLoading] = useState<Record<string, boolean>>({});
+    const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
 
     // Get real employee ID from session
     const employeeId = useMemo(() => {
@@ -52,21 +49,27 @@ const EmployeePerformance = ({ setActiveTab }: { setActiveTab: (t: string) => vo
             setLoading(true);
             try {
                 const goals = await kpiService.getGoalsByEmployee(employeeId);
-                const formatted = goals.map(g => ({
+                const formatted = goals.map((g: any) => ({
                     id: g.goalId,
                     name: g.title || g.kpiLibrary?.name || "Untitled Goal",
-                    measurement: g.kpiLibrary?.description || "Meet quarterly targets",
-                    weight: g.weight || 10,
-                    status: g.status || 'NEW',
-                    target: g.targetValue || 100,
-                    actual: g.actualValue || 0,
-                    category: g.kpiLibrary?.category || "OPERATIONAL"
+                    measurement: g.kpiLibrary?.description || "",
+                    weight: g.weight || 0,
+                    status: g.status,
+                    target: g.targetValue || 0,
+                    actual: g.currentValue || 0,
+                    category: g.kpiLibrary?.category || "N/A"
                 }));
                 setKpis(formatted);
-                if (formatted.length > 0) {
-                    setSelectedGoalId(formatted[0].id);
-                    setCurrentResult(String(formatted[0].actual));
-                }
+
+                // Initialize input maps
+                const resMap: Record<string, string> = {};
+                const comMap: Record<string, string> = {};
+                formatted.forEach(f => {
+                    resMap[f.id] = String(f.actual || '');
+                    comMap[f.id] = '';
+                });
+                setResults(resMap);
+                setGoalComments(comMap);
             } catch (error) {
                 console.error("Failed to load goals", error);
             } finally {
@@ -76,25 +79,89 @@ const EmployeePerformance = ({ setActiveTab }: { setActiveTab: (t: string) => vo
         fetchGoals();
     }, []);
 
-    const selectedGoal = useMemo(() => {
-        return kpis.find(k => k.id === selectedGoalId);
-    }, [kpis, selectedGoalId]);
+    const getProgressPercentage = (goalId: string, currentVal: string) => {
+        const goal = kpis.find(k => k.id === goalId);
+        if (!goal || !goal.target) return 0;
+        const val = parseFloat(currentVal) || 0;
+        return Math.min(Math.round((val / goal.target) * 100), 100);
+    };
 
-    const progressPercentage = useMemo(() => {
-        if (!selectedGoal || !selectedGoal.target) return 0;
-        const val = parseFloat(currentResult) || 0;
-        return Math.min(Math.round((val / selectedGoal.target) * 100), 100);
-    }, [selectedGoal, currentResult]);
+    const fetchGoalsForEmployee = async (silent = false) => {
+        if (!employeeId) return;
+        if (!silent) setLoading(true);
+        try {
+            const goals = await kpiService.getGoalsByEmployee(employeeId);
+            const formatted = goals.map((g: any) => ({
+                id: g.goalId,
+                name: g.title || g.kpiLibrary?.name || "Untitled Goal",
+                measurement: g.kpiLibrary?.description || "",
+                weight: g.weight || 0,
+                status: g.status,
+                target: g.targetValue || 0,
+                actual: g.currentValue || 0,
+                category: g.kpiLibrary?.category || "N/A"
+            }));
+
+            setKpis(formatted);
+
+            // Synchronize results map if needed (prevent current values from resetting)
+            setResults(prev => {
+                const newRes = { ...prev };
+                formatted.forEach(f => {
+                    if (!(f.id in newRes)) newRes[f.id] = String(f.actual || '');
+                });
+                return newRes;
+            });
+        } catch (error) {
+            console.error("Failed to load goals", error);
+        } finally {
+            if (!silent) setLoading(false);
+        }
+    };
 
     const handleAcknowledge = async (id: string) => {
         try {
-            // Mock API call – backend needs correct implementation
-            setKpis(prev => prev.map(k => k.id === id ? { ...k, status: 'ACTIVE' } : k));
-            alert("Goal acknowledged successfully!");
+            await kpiService.updateEmployeeGoalStatus(id, 'ACKNOWLEDGED');
+            // Optimistic update to UI state immediately
+            setKpis(prev => prev.map(k => k.id === id ? { ...k, status: 'ACKNOWLEDGED' } : k));
+            // Silent refresh in background to ensure data sync
+            await fetchGoalsForEmployee(true);
         } catch (e) {
             alert("Failed to acknowledge goal.");
         }
     };
+
+    const handleFileChange = (goalId: string, file: File | null) => {
+        setSelectedFiles(prev => ({ ...prev, [goalId]: file }));
+    };
+
+    const handleProgressUpdate = async (goalId: string) => {
+        const res = results[goalId];
+        const comm = goalComments[goalId];
+        const file = selectedFiles[goalId];
+
+        setSubmitLoading(prev => ({ ...prev, [goalId]: true }));
+        try {
+            let uploadedUrl = '';
+            if (file) {
+                uploadedUrl = await kpiService.uploadFile(file);
+            }
+
+            await kpiService.updateGoalProgress(goalId, {
+                actualValue: Number(res),
+                comment: comm,
+                imageUrl: uploadedUrl || undefined
+            });
+            await fetchGoalsForEmployee(true);
+            alert("Progress record updated successfully!");
+        } catch (e: any) {
+            alert(e?.response?.data || "Failed to update progress");
+        } finally {
+            setSubmitLoading(prev => ({ ...prev, [goalId]: false }));
+        }
+    };
+
+    if (loading) return <div className="p-20 text-center font-black opacity-20 uppercase tracking-[0.2em] animate-pulse">Loading My Performance...</div>;
 
     return (
         <div className="flex flex-col h-full space-y-8 animate-fade-in font-sans pb-10">
@@ -155,15 +222,19 @@ const EmployeePerformance = ({ setActiveTab }: { setActiveTab: (t: string) => vo
                                         <span className="font-black text-sm">{kpi.weight}%</span>
                                     </td>
                                     <td className="px-6 py-6 text-center">
-                                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${kpi.status === 'NEW'
-                                            ? 'bg-amber-100 text-amber-600 border border-amber-200'
-                                            : 'bg-indigo-100 text-indigo-600 border border-indigo-200'
+                                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${kpi.status === 'ASSIGNED'
+                                            ? 'bg-blue-100 text-blue-600 border border-blue-200'
+                                            : kpi.status === 'ACKNOWLEDGED'
+                                                ? 'bg-amber-100 text-amber-600 border border-amber-200'
+                                                : kpi.status === 'SUBMITTED'
+                                                    ? 'bg-indigo-100 text-indigo-600 border border-indigo-200'
+                                                    : 'bg-emerald-100 text-emerald-600 border border-emerald-200'
                                             }`}>
-                                            {kpi.status === 'NEW' ? 'New' : 'Active'}
+                                            {kpi.status}
                                         </div>
                                     </td>
                                     <td className="px-6 py-6 text-right">
-                                        {kpi.status === 'NEW' ? (
+                                        {kpi.status === 'ASSIGNED' ? (
                                             <button
                                                 onClick={() => handleAcknowledge(kpi.id)}
                                                 className="px-5 py-2.5 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all shadow-lg shadow-emerald-500/20"
@@ -171,12 +242,12 @@ const EmployeePerformance = ({ setActiveTab }: { setActiveTab: (t: string) => vo
                                                 Acknowledge
                                             </button>
                                         ) : (
-                                            <button
-                                                onClick={() => { setSelectedGoalId(kpi.id); setCurrentResult(String(kpi.actual)); }}
+                                            <a
+                                                href={`#update-section-${kpi.id}`}
                                                 className="text-primary hover:underline text-xs font-black uppercase tracking-widest"
                                             >
                                                 Update Progress
-                                            </button>
+                                            </a>
                                         )}
                                     </td>
                                 </tr>
@@ -187,114 +258,135 @@ const EmployeePerformance = ({ setActiveTab }: { setActiveTab: (t: string) => vo
             </div>
 
             {/* Update Progress Section */}
-            <div className="space-y-4 pt-4">
-                <div className="space-y-1">
-                    <h2 className="text-lg font-black text-text-primary-light uppercase tracking-tight">Update My Progress</h2>
-                    <p className="text-xs text-text-muted-light font-medium uppercase tracking-wide">Update current results and upload supporting documentation for the selected goal.</p>
+            <div className="space-y-6 pt-10 border-t border-border-light/10">
+                <div className="space-y-1 text-center mb-10">
+                    <h2 className="text-2xl font-black text-text-primary-light uppercase tracking-tight">Update My Progress</h2>
+                    <p className="text-xs text-text-muted-light font-bold uppercase tracking-widest">Submit current results and evidence for all assigned KPIs</p>
                 </div>
 
-                <div className="bg-white dark:bg-surface-dark border border-border-light rounded-3xl p-8 shadow-2xl flex flex-col md:flex-row gap-10 bento-card">
-                    {/* Progress Form */}
-                    <div className="flex-[1.2] space-y-8">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-text-muted-light tracking-widest">Selected Goal</label>
-                            <div className="w-full px-5 py-4 bg-surface-2-light/50 border border-border-light rounded-2xl text-sm font-bold text-text-primary-light">
-                                {selectedGoal?.name || "None selected"}
-                            </div>
+                <div className="grid grid-cols-1 gap-12">
+                    {kpis.filter(k => k.status !== 'ASSIGNED').length === 0 ? (
+                        <div className="p-20 bg-surface-2-light/30 rounded-3xl text-center border-2 border-dashed border-border-light">
+                            <p className="text-sm font-bold text-text-muted-light uppercase tracking-widest">Please Acknowledge your KPIs first to enable updates.</p>
                         </div>
+                    ) : kpis.filter(k => k.status !== 'ASSIGNED').map((kpi) => (
+                        <div key={kpi.id} id={`update-section-${kpi.id}`} className="bg-white dark:bg-surface-dark border border-border-light rounded-[2.5rem] p-10 shadow-2xl flex flex-col xl:flex-row gap-12 bento-card relative overflow-hidden group hover:border-primary/30 transition-all">
+                            {/* Watermark/Index */}
+                            <div className="absolute -top-10 -right-10 text-[120px] font-black text-primary opacity-[0.03] select-none pointer-events-none group-hover:opacity-[0.06] transition-opacity">
+                                {kpi.category.charAt(0)}
+                            </div>
 
-                        <div className="grid grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-text-muted-light tracking-widest">Target Value</label>
-                                <div className="w-full px-5 py-4 bg-primary/5 border border-primary/10 rounded-2xl text-sm font-black text-primary italic">
-                                    {selectedGoal?.target || 0} Adoption
+                            {/* Left: Input Fields */}
+                            <div className="flex-[1.4] space-y-10">
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-2 w-12 bg-primary rounded-full"></div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">{kpi.category}</span>
+                                    </div>
+                                    <h3 className="text-2xl font-black text-text-primary-light leading-tight">{kpi.name}</h3>
+                                    <p className="text-sm text-text-secondary-light font-medium italic opacity-70">"{kpi.measurement}"</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black uppercase text-text-muted-light tracking-widest">Target Objective</label>
+                                        <div className="px-6 py-5 bg-primary/5 border border-primary/10 rounded-2xl text-xl font-black text-primary italic">
+                                            {kpi.target}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black uppercase text-text-muted-light tracking-widest">Current Actual Result</label>
+                                        <input
+                                            type="number"
+                                            value={results[kpi.id] || ''}
+                                            onChange={(e) => setResults(prev => ({ ...prev, [kpi.id]: e.target.value }))}
+                                            disabled={kpi.status === 'COMPLETED'}
+                                            className="w-full px-6 py-5 bg-surface-2-light/50 border border-border-light focus:border-primary focus:ring-4 focus:ring-primary/5 rounded-2xl text-xl font-black transition-all outline-none"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="flex justify-between items-end">
+                                        <label className="text-[10px] font-black uppercase text-text-muted-light tracking-widest">Progress Visualization</label>
+                                        <span className="text-2xl font-black text-emerald-500">{getProgressPercentage(kpi.id, results[kpi.id] || '0')}%</span>
+                                    </div>
+                                    <div className="h-4 w-full bg-surface-2-light rounded-full overflow-hidden border border-border-light shadow-inner p-1">
+                                        <div
+                                            className="h-full bg-emerald-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(16,185,129,0.4)] relative"
+                                            style={{ width: `${getProgressPercentage(kpi.id, results[kpi.id] || '0')}%` }}
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase text-text-muted-light tracking-widest">Self Assessment & Context</label>
+                                    <textarea
+                                        value={goalComments[kpi.id] || ''}
+                                        onChange={(e) => setGoalComments(prev => ({ ...prev, [kpi.id]: e.target.value }))}
+                                        disabled={kpi.status === 'COMPLETED'}
+                                        className="w-full px-6 py-5 bg-surface-2-light/50 border border-border-light focus:border-primary focus:ring-4 focus:ring-primary/5 rounded-2xl text-sm font-medium transition-all outline-none min-h-[120px]"
+                                        placeholder="Briefly explain your progress..."
+                                    />
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-text-muted-light tracking-widest">Current Result</label>
-                                <input
-                                    type="number"
-                                    value={currentResult}
-                                    onChange={(e) => setCurrentResult(e.target.value)}
-                                    className="w-full px-5 py-4 bg-white border border-border-light focus:border-primary focus:ring-4 focus:ring-primary/5 rounded-2xl text-sm font-black transition-all outline-none"
-                                    placeholder="Enter current value"
-                                />
-                            </div>
-                        </div>
 
-                        {/* Progress Bar Visualization */}
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-end">
-                                <label className="text-[10px] font-black uppercase text-text-muted-light tracking-widest">Progress Overview</label>
-                                <span className="text-xl font-black text-emerald-500">{progressPercentage}%</span>
-                            </div>
-                            <div className="h-4 w-full bg-surface-2-light rounded-full overflow-hidden border border-border-light shadow-inner p-1">
-                                <div
-                                    className="h-full bg-emerald-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(16,185,129,0.3)] relative"
-                                    style={{ width: `${progressPercentage}%` }}
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"></div>
-                                </div>
-                            </div>
-                            <p className="text-[10px] font-bold text-text-muted-light/60 italic">
-                                You are currently {100 - progressPercentage}% away from your quarterly target.
-                            </p>
-                        </div>
+                            {/* Right: Evidence & Finalize */}
+                            <div className="flex-1 flex flex-col bg-surface-2-light/30 rounded-[2rem] p-8 border border-border-light/50">
+                                <label className="text-[10px] font-black uppercase text-text-muted-light tracking-widest mb-6 block">Evidence Documentation</label>
 
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-text-muted-light tracking-widest">Self-Assessment Comments</label>
-                            <textarea
-                                value={comments}
-                                onChange={(e) => setComments(e.target.value)}
-                                className="w-full px-5 py-4 bg-white border border-border-light focus:border-primary focus:ring-4 focus:ring-primary/5 rounded-2xl text-sm font-medium transition-all outline-none min-h-[140px]"
-                                placeholder="Describe your achievements, challenges, and next steps..."
-                            />
-                        </div>
-                    </div>
-
-                    {/* Evidence & File Upload */}
-                    <div className="flex-1 space-y-6">
-                        <label className="text-[10px] font-black uppercase text-text-muted-light tracking-widest mb-2 block">Evidence & Supporting Documents</label>
-
-                        <div className="border-2 border-dashed border-border-light bg-surface-2-light/20 rounded-3xl p-10 flex flex-col items-center justify-center text-center group hover:border-primary hover:bg-primary/[0.02] transition-all cursor-pointer">
-                            <div className="w-16 h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                                {Icons.upload}
-                            </div>
-                            <h3 className="text-sm font-black text-text-primary-light mb-1">Click or drag to upload</h3>
-                            <p className="text-[10px] font-bold text-text-muted-light uppercase tracking-tight">PDF, PNG, JPG or CSV (Max 10MB each)</p>
-                        </div>
-
-                        <div className="space-y-3 pt-2">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black uppercase text-text-muted-light tracking-widest">Attached Files ({attachedFiles.length})</span>
-                            </div>
-                            <div className="space-y-2">
-                                {attachedFiles.map((file, idx) => (
-                                    <div key={idx} className="flex items-center gap-4 p-4 bg-white dark:bg-surface-dark border border-border-light rounded-2xl hover:shadow-md transition-all group">
-                                        <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-                                            {Icons.file}
+                                <div className="flex-1 flex flex-col">
+                                    <input
+                                        type="file"
+                                        id={`file-upload-${kpi.id}`}
+                                        className="hidden"
+                                        onChange={(e) => handleFileChange(kpi.id, e.target.files?.[0] || null)}
+                                        accept="image/*,.pdf"
+                                    />
+                                    <div
+                                        onClick={() => document.getElementById(`file-upload-${kpi.id}`)?.click()}
+                                        className={`border-2 border-dashed rounded-3xl p-8 flex flex-col items-center justify-center text-center group transition-all cursor-pointer mb-8 ${selectedFiles[kpi.id]
+                                                ? 'border-emerald-500 bg-emerald-50/30'
+                                                : 'border-border-light bg-white hover:border-primary'
+                                            }`}
+                                    >
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${selectedFiles[kpi.id] ? 'bg-emerald-100' : 'bg-primary/10'
+                                            }`}>
+                                            {selectedFiles[kpi.id] ? Icons.checkCircle : Icons.upload}
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="text-sm font-bold text-text-primary-light truncate">{file.name}</div>
-                                            <div className="text-[10px] font-bold text-text-muted-light uppercase tracking-wide mt-0.5">{file.size} • {file.time}</div>
+                                        <h4 className="text-xs font-black text-text-primary-light">
+                                            {selectedFiles[kpi.id] ? selectedFiles[kpi.id]?.name : 'Upload Proof'}
+                                        </h4>
+                                        <p className="text-[9px] font-bold text-text-muted-light uppercase mt-1">
+                                            {selectedFiles[kpi.id] ? 'File selected' : 'PDF/Images Max 10MB'}
+                                        </p>
+                                    </div>
+
+                                    <div className="mt-auto space-y-4">
+                                        <div className="flex items-center justify-between text-[10px] font-black uppercase text-text-muted-light mb-2">
+                                            <span>Actions</span>
+                                            <span className={`px-2 py-0.5 rounded-full ${kpi.status === 'SUBMITTED' ? 'bg-indigo-100 text-indigo-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                {kpi.status}
+                                            </span>
                                         </div>
-                                        <button className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-50 rounded-lg transition-all">
-                                            {Icons.trash}
+                                        <button
+                                            onClick={() => handleProgressUpdate(kpi.id)}
+                                            disabled={kpi.status === 'COMPLETED' || submitLoading[kpi.id]}
+                                            className="w-full py-4 bg-emerald-500 text-white text-xs font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30"
+                                        >
+                                            {submitLoading[kpi.id] ? 'Processing...' : 'Submit Progress'}
+                                        </button>
+                                        <button className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-text-primary-light opacity-40 hover:opacity-100 transition-all">
+                                            Clear Changes
                                         </button>
                                     </div>
-                                ))}
+                                </div>
                             </div>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-4 pt-10 mt-auto">
-                            <button className="px-6 py-4 border-2 border-border-light text-text-primary-light text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-surface-2-light transition-all">
-                                Save Draft
-                            </button>
-                            <button className="px-6 py-4 bg-emerald-500 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all">
-                                Submit Update
-                            </button>
-                        </div>
-                    </div>
+                    ))}
                 </div>
             </div>
         </div>

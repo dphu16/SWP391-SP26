@@ -50,7 +50,7 @@ public class TeamStatsController {
         List<Employee> teamMembers = employeeRepo.findByPosition_Department_DeptId(manager.getDepartment().getDeptId());
 
         List<EmployeeDTO> dtos = teamMembers.stream()
-                .filter(e -> e.getEmployeeId() != null)
+                .filter(e -> e.getEmployeeId() != null && !e.getEmployeeId().equals(manager.getEmployeeId()))
                 .map(EmployeeMapper::toDTO)
                 .collect(Collectors.toList());
 

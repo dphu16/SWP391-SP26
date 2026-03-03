@@ -23,10 +23,10 @@ const PerformanceModule = () => {
     }
 
     if (userRole === 'MANAGER') {
-        return <ManagerPerformance activeTab="manager" setActiveTab={() => { }} />;
+        return <ManagerPerformance />;
     }
 
-    return <EmployeePerformance setActiveTab={() => { }} />;
+    return <EmployeePerformance />;
 };
 
 export default PerformanceModule;

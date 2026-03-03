@@ -50,7 +50,7 @@ const Icons = {
     )
 };
 
-const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) => {
+const ManagerPerformance = () => {
     const [kpis, setKpis] = useState<any[]>([]);
     const [employees, setEmployees] = useState<any[]>([]);
     const [activeEmployeeId, setActiveEmployeeId] = useState<string | null>(null);
@@ -64,6 +64,13 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
     const [kpiScoreInput, setKpiScoreInput] = useState('');
     const [attitudeScoreInput, setAttitudeScoreInput] = useState('');
     const [scoreSaving, setScoreSaving] = useState(false);
+
+    const activeEmployee = useMemo(() => employees.find(e => e.id === activeEmployeeId), [employees, activeEmployeeId]);
+
+    const filteredKpis = useMemo(() => kpis.filter(k =>
+        (k.name || "").toLowerCase().includes(searchKpiQuery.toLowerCase()) ||
+        (k.category || "").toLowerCase().includes(searchKpiQuery.toLowerCase())
+    ), [kpis, searchKpiQuery]);
 
     useEffect(() => {
         const fetchTeamData = async () => {
@@ -108,42 +115,51 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
 
     useEffect(() => {
         const loadEmployeeGoals = async () => {
-            if (!activeEmployeeId) return;
+            if (!activeEmployeeId || !activeEmployee) return;
+            setLoading(true);
+            try {
+                // Determine department - use active employee's department
+                const deptId = activeEmployee.departmentId || activeEmployee.position?.department?.deptId;
 
-            const goals = await kpiService.getGoalsByEmployee(activeEmployeeId);
-            console.log("goals for employee", activeEmployeeId, goals);
+                const [allLibs, structure, goals] = await Promise.all([
+                    kpiService.getAllKpiLibraries(),
+                    deptId ? kpiService.getKpisByDepartment(deptId) : Promise.resolve([]),
+                    kpiService.getGoalsByEmployee(activeEmployeeId)
+                ]);
 
-            if (goals && goals.length > 0) {
-                // Dedup by kpiLibraryId — keep the goal with the highest targetValue
-                const dedupMap = new Map<string, any>();
-                for (const g of goals) {
-                    const libId = g.kpiLibrary?.libId || g.kpiLibraryId || '';
-                    const prev = dedupMap.get(libId);
-                    if (!prev || (g.targetValue ?? 0) > (prev.targetValue ?? 0)) {
-                        dedupMap.set(libId, g);
-                    }
-                }
-                const dedupedGoals = Array.from(dedupMap.values());
+                // Map department structure to UI list, overlaying existing goals
+                const merged = (structure.length > 0 ? structure : (goals.length > 0 ? goals.map(g => ({ kpiLibraryId: g.kpiLibrary?.libId || g.kpiLibraryId, weight: g.weight })) : [])).map((s: any) => {
+                    const libId = s.kpiLibraryId || s.kpiLibrary?.libId;
+                    const lib = allLibs.find(l => l.libId === libId);
+                    const goal = goals.find(g => (g.kpiLibrary?.libId || g.kpiLibraryId) === libId);
 
-                const formatted = dedupedGoals.map((g: any) => ({
-                    goalId: g.goalId,
-                    cycleId: g.cycle?.cycleId,
-                    kpiLibraryId: g.kpiLibrary?.libId || '',
-                    name: g.title || g.kpiLibrary?.name || "Unknown",
-                    category: g.kpiLibrary?.category || "",
-                    description: g.kpiLibrary?.description || "",
-                    weight: g.weight || 0,
-                    imageUrl: g.imageUrl || "", // Evidence URL (image_url) from database
-                    _targetValue: g.targetValue && g.targetValue !== 0 ? String(g.targetValue) : '',
-                    _isAssigned: g.targetValue !== undefined && g.targetValue !== 0
-                }));
-                setKpis(formatted);
-            } else {
-                setKpis([]);
+                    const targetVal = goal?.targetValue || 0;
+                    const isActuallyAssigned = !!goal && targetVal > 0;
+
+                    return {
+                        goalId: goal?.goalId,
+                        cycleId: goal?.cycle?.cycleId,
+                        kpiLibraryId: libId,
+                        name: goal?.title || lib?.name || "Unknown",
+                        category: lib?.category || "N/A",
+                        description: lib?.description || "",
+                        weight: s.weight || lib?.defaultWeight || 0,
+                        status: goal?.status || null,
+                        imageUrl: goal?.imageUrl || "",
+                        _targetValue: targetVal ? String(targetVal) : '',
+                        _isAssigned: isActuallyAssigned
+                    };
+                });
+
+                setKpis(merged);
+            } catch (error) {
+                console.error("loadEmployeeGoals error:", error);
+            } finally {
+                setLoading(false);
             }
         };
         loadEmployeeGoals();
-    }, [activeEmployeeId]);
+    }, [activeEmployeeId, activeEmployee?.departmentId]);
 
     // Fetch active review whenever employee changes
     useEffect(() => {
@@ -184,11 +200,77 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                 weight: kpiToAssign.weight
             });
 
-            // Update UI to show assigned
-            setKpis(prev => prev.map(k => k.kpiLibraryId === kpiLibraryId ? { ...k, _isAssigned: true } : k));
+            // Refresh goals to get updated status immediately
+            if (activeEmployeeId) {
+                const [allLibs, structure, goals] = await Promise.all([
+                    kpiService.getAllKpiLibraries(),
+                    activeEmployee?.departmentId ? kpiService.getKpisByDepartment(activeEmployee.departmentId) : Promise.resolve([]),
+                    kpiService.getGoalsByEmployee(activeEmployeeId)
+                ]);
+
+                const merged = (structure.length > 0 ? structure : goals.map(g => ({ kpiLibraryId: g.kpiLibrary?.libId || g.kpiLibraryId, weight: g.weight }))).map((s: any) => {
+                    const libId = s.kpiLibraryId || s.kpiLibrary?.libId;
+                    const lib = allLibs.find(l => l.libId === libId);
+                    const goal = goals.find(g => (g.kpiLibrary?.libId || g.kpiLibraryId) === libId);
+                    const targetVal = goal?.targetValue || 0;
+                    const isActuallyAssigned = !!goal && targetVal > 0;
+                    return {
+                        goalId: goal?.goalId,
+                        cycleId: goal?.cycle?.cycleId,
+                        kpiLibraryId: libId,
+                        name: goal?.title || lib?.name || "Unknown",
+                        category: lib?.category || "N/A",
+                        description: lib?.description || "",
+                        weight: s.weight || lib?.defaultWeight || 0,
+                        status: goal?.status || null,
+                        imageUrl: goal?.imageUrl || "",
+                        _targetValue: targetVal ? String(targetVal) : '',
+                        _isAssigned: isActuallyAssigned
+                    };
+                });
+                setKpis(merged);
+            }
         } catch (e) {
             console.error("Failed to assign target", e);
             alert("Failed to save target. Please try again.");
+        }
+    };
+
+    const handleUpdateGoalStatus = async (goalId: string, nextStatus: string) => {
+        try {
+            await kpiService.updateEmployeeGoalStatus(goalId, nextStatus);
+            // Refresh goals
+            if (activeEmployeeId) {
+                const [allLibs, structure, goals] = await Promise.all([
+                    kpiService.getAllKpiLibraries(),
+                    activeEmployee?.departmentId ? kpiService.getKpisByDepartment(activeEmployee.departmentId) : Promise.resolve([]),
+                    kpiService.getGoalsByEmployee(activeEmployeeId)
+                ]);
+
+                const merged = (structure.length > 0 ? structure : goals.map(g => ({ kpiLibraryId: g.kpiLibrary?.libId || g.kpiLibraryId, weight: g.weight }))).map((s: any) => {
+                    const libId = s.kpiLibraryId || s.kpiLibrary?.libId;
+                    const lib = allLibs.find(l => l.libId === libId);
+                    const goal = goals.find(g => (g.kpiLibrary?.libId || g.kpiLibraryId) === libId);
+                    const targetVal = goal?.targetValue || 0;
+                    const isActuallyAssigned = !!goal && targetVal > 0;
+                    return {
+                        goalId: goal?.goalId,
+                        cycleId: goal?.cycle?.cycleId,
+                        kpiLibraryId: libId,
+                        name: goal?.title || lib?.name || "Unknown",
+                        category: lib?.category || "N/A",
+                        description: lib?.description || "",
+                        weight: s.weight || lib?.defaultWeight || 0,
+                        status: goal?.status || null,
+                        imageUrl: goal?.imageUrl || "",
+                        _targetValue: targetVal ? String(targetVal) : '',
+                        _isAssigned: isActuallyAssigned
+                    };
+                });
+                setKpis(merged);
+            }
+        } catch (e: any) {
+            alert(e?.response?.data || "Failed to update status");
         }
     };
 
@@ -260,12 +342,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
         }
     };
 
-    const activeEmployee = employees.find(e => e.id === activeEmployeeId);
 
-    const filteredKpis = kpis.filter(k =>
-        (k.name || "").toLowerCase().includes(searchKpiQuery.toLowerCase()) ||
-        (k.category || "").toLowerCase().includes(searchKpiQuery.toLowerCase())
-    );
 
     return (
         <div className="flex flex-col h-full space-y-5 animate-fade-in font-sans">
@@ -368,7 +445,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                                                     type="number"
                                                     value={kpi._targetValue}
                                                     readOnly={kpi._isAssigned}
-                                                    onChange={kpi._isAssigned ? undefined : (e) => handleTargetChange(kpi.kpiLibraryId, e.target.value)}
+                                                    onChange={(e) => handleTargetChange(kpi.kpiLibraryId, e.target.value)}
                                                     className={`w-full px-4 py-2 rounded-xl text-sm font-bold transition-all outline-none ${kpi._isAssigned
                                                         ? 'bg-surface-2-light/50 dark:bg-surface-2-dark/50 text-text-muted-light/60 cursor-not-allowed border-dashed border-border-light/50'
                                                         : 'bg-surface-2-light dark:bg-surface-2-dark border-border-light dark:border-border-dark focus:bg-white dark:focus:bg-surface-dark focus:border-primary focus:ring-4 focus:ring-primary/5'
@@ -376,20 +453,43 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                                                 />
                                             </td>
                                             <td className="px-6 py-5 text-right">
-                                                {kpi._isAssigned ? (
-                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-emerald-500/20">
-                                                        <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" /></svg>
-                                                        Finalized
-                                                    </div>
-                                                ) : (
+                                                {!kpi._isAssigned ? (
                                                     <button
                                                         onClick={() => handleAssignTarget(kpi.kpiLibraryId)}
-                                                        disabled={!kpi._targetValue}
+                                                        disabled={!kpi._targetValue || parseFloat(kpi._targetValue) <= 0}
                                                         className="px-4 py-2 bg-primary text-white hover:bg-primary-hover text-[10px] font-bold rounded-lg uppercase tracking-widest transition-all disabled:opacity-30"
                                                     >
                                                         Assign Target
                                                     </button>
-                                                )}
+                                                ) : kpi.status === 'ASSIGNED' ? (
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-blue-500/20">
+                                                        Assigned
+                                                    </div>
+                                                ) : kpi.status === 'ACKNOWLEDGED' ? (
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-amber-500/20">
+                                                        Acknowledged
+                                                    </div>
+                                                ) : kpi.status === 'SUBMITTED' ? (
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => handleUpdateGoalStatus(kpi.goalId, 'COMPLETED')}
+                                                            className="px-3 py-1 bg-emerald-500 text-white text-[9px] font-black uppercase rounded hover:bg-emerald-600 transition-colors"
+                                                        >
+                                                            Approve
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleUpdateGoalStatus(kpi.goalId, 'ACKNOWLEDGED')}
+                                                            className="px-3 py-1 bg-rose-500 text-white text-[9px] font-black uppercase rounded hover:bg-rose-600 transition-colors"
+                                                        >
+                                                            Reject
+                                                        </button>
+                                                    </div>
+                                                ) : kpi.status === 'COMPLETED' ? (
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-emerald-500/20">
+                                                        {Icons.checkCircle}
+                                                        Completed
+                                                    </div>
+                                                ) : null}
                                             </td>
                                         </tr>
                                     ))}
@@ -466,7 +566,17 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
 
                                     <div className="space-y-6 flex-1">
                                         <div className="bg-white dark:bg-surface-dark p-4 rounded-xl border border-border-light shadow-sm">
-                                            <label className="block text-[10px] font-black uppercase mb-2 opacity-60 italic">KPI PERFORMANCE (70%)</label>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <label className="block text-[10px] font-black uppercase opacity-60 italic">KPI PERFORMANCE (70%)</label>
+                                                {computedKpiScore !== null && (
+                                                    <button
+                                                        onClick={() => setKpiScoreInput(String(computedKpiScore))}
+                                                        className="text-[10px] font-black text-primary hover:underline"
+                                                    >
+                                                        SUGGESTED: {computedKpiScore}%
+                                                    </button>
+                                                )}
+                                            </div>
                                             <input
                                                 type="number"
                                                 value={kpiScoreInput}

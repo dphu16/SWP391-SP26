@@ -1,6 +1,7 @@
 package com.project.hrm.module.evaluation.controller;
 
 import com.project.hrm.module.evaluation.dto.EmployeeGoalRequest;
+import com.project.hrm.module.evaluation.dto.GoalProgressRequest;
 import com.project.hrm.module.evaluation.dto.GoalStatusRequest;
 import com.project.hrm.module.evaluation.entity.EmployeeGoal;
 import com.project.hrm.module.evaluation.service.EmployeeGoalService;
@@ -24,8 +25,9 @@ public class EmployeeGoalController {
     // 9
     @PostMapping("/employee-goals")
     public ResponseEntity<EmployeeGoal> assign(
+            java.security.Principal principal,
             @RequestBody EmployeeGoalRequest request){
-        return ResponseEntity.ok(service.assign(request));
+        return ResponseEntity.ok(service.assign(principal, request));
     }
 
     // 10
@@ -41,5 +43,12 @@ public class EmployeeGoalController {
             @PathVariable UUID id,
             @RequestBody GoalStatusRequest request){
         return ResponseEntity.ok(service.updateStatus(id, request));
+    }
+
+    @PatchMapping("/employee-goals/{id}/progress")
+    public ResponseEntity<EmployeeGoal> updateProgress(
+            @PathVariable UUID id,
+            @RequestBody GoalProgressRequest request){
+        return ResponseEntity.ok(service.updateProgress(id, request));
     }
 }

@@ -244,4 +244,20 @@ export const kpiService = {
         const response = await apiClient.patch(`/api/employee-goals/${goalId}/progress`, data);
         return response.data;
     },
+
+    updateEmployeeGoalStatus: async (goalId: string, status: string): Promise<any> => {
+        const response = await apiClient.patch(`/api/employee-goals/${goalId}`, { status });
+        return response.data;
+    },
+
+    uploadFile: async (file: File): Promise<string> => {
+        const formData = new FormData();
+        formData.append("file", file);
+        const response = await apiClient.post("/api/files/upload", formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        });
+        return response.data; // This is the public URL string
+    },
 };
