@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { jobRequestService } from "../../services/jobRequestService";
 import type { JobRequest } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
@@ -87,8 +87,10 @@ const JobRequestListPage: React.FC = () => {
                     <h1 className="text-2xl font-bold font-heading text-text-primary-light tracking-tight">
                         Job Requests
                     </h1>
-                    <p className="mt-0.5 text-sm text-text-secondary-light">
-                        Internal hiring requests from departments
+                    <p className="mt-0.5 text-sm font-medium text-text-secondary-light">
+                        <Link to="/dashboard" className="hover:text-primary transition-colors">Home</Link>
+                        <span className="mx-2">&gt;</span>
+                        <span className="text-text-primary-light">Job Requests</span>
                     </p>
                 </div>
                 <button

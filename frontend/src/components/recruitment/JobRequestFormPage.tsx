@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { jobRequestService } from "../../services/jobRequestService";
 import type { JobRequestInput } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
@@ -27,7 +27,7 @@ const JobRequestFormPage: React.FC = () => {
         quantity: 1,
         location: "Hanoi",
         type: "FULL_TIME",
-        reportTo: "6b20b71f-3c29-4cd1-98d9-e71dd4567796",
+        reportTo: "01111111-1111-1111-1111-111111111111",
         reason: "",
         status: "SUBMITTED",
         comment: "",
@@ -88,20 +88,16 @@ const JobRequestFormPage: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
             <div className="flex items-center gap-4">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="p-2 rounded-xl text-text-secondary-light hover:bg-gray-100 transition-colors cursor-pointer"
-                >
-                    <svg viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
-                        <path fillRule="evenodd" d="M7.78 12.53a.75.75 0 01-1.06 0L2.47 8.28a.75.75 0 010-1.06l4.25-4.25a.75.75 0 011.06 1.06L4.81 7h7.44a.75.75 0 010 1.5H4.81l2.97 2.97a.75.75 0 010 1.06z" clipRule="evenodd" />
-                    </svg>
-                </button>
                 <div>
                     <h1 className="text-2xl font-bold font-heading text-text-primary-light tracking-tight">
                         {isEdit ? "Update Job Request" : "Post Job Request"}
                     </h1>
-                    <p className="text-sm text-text-secondary-light">
-                        {isEdit ? "Modify existing hiring request details" : "Create a new hiring request for approval"}
+                    <p className="text-sm font-medium text-text-secondary-light mb-2">
+                        <Link to="/dashboard" className="hover:text-primary transition-colors">Home</Link>
+                        <span className="mx-2">&gt;</span>
+                        <Link to="/recruitment/job-requests" className="hover:text-primary transition-colors">Job Requests</Link>
+                        <span className="mx-2">&gt;</span>
+                        <span className="text-text-primary-light">{isEdit ? "Update Request" : "New Request"}</span>
                     </p>
                 </div>
             </div>

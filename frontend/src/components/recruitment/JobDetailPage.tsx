@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { jobService } from "../../services/jobService";
 import type { Job } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
@@ -41,15 +41,13 @@ const JobDetailPage: React.FC = () => {
             {/* Header section with back button and basic info */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
-                    <button
-                        onClick={() => navigate("/recruitment/jobs")}
-                        className="group flex items-center gap-2 text-sm font-medium text-text-secondary-light hover:text-primary transition-colors mb-2"
-                    >
-                        <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 transition-transform group-hover:-translate-x-1">
-                            <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
-                        </svg>
-                        Back to Job Postings
-                    </button>
+                    <div className="flex items-center gap-2 text-sm font-medium text-text-secondary-light mb-2">
+                        <Link to="/dashboard" className="hover:text-primary transition-colors">Home</Link>
+                        <span className="mx-1">&gt;</span>
+                        <Link to="/recruitment/jobs" className="hover:text-primary transition-colors">Job Postings</Link>
+                        <span className="mx-1">&gt;</span>
+                        <span className="text-text-primary-light">{job.title}</span>
+                    </div>
                     <h1 className="text-3xl font-bold font-heading text-text-primary-light tracking-tight">
                         {job.title}
                     </h1>
@@ -76,7 +74,16 @@ const JobDetailPage: React.FC = () => {
                         )}
                     </div>
                 </div>
-                <div>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => navigate(`/recruitment/cvs?jobId=${job.id}`)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 text-indigo-700 text-sm font-semibold hover:bg-indigo-100 transition-colors shadow-sm"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        List Candidate
+                    </button>
                     <button
                         onClick={() => navigate(`/recruitment/jobs/edit/${job.id}`)}
                         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors shadow-sm"
@@ -149,7 +156,7 @@ const JobDetailPage: React.FC = () => {
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-text-muted-light uppercase">Job Request ID</label>
-                                <p className="text-sm font-mono text-text-primary-light">{job.reqId}</p>
+                                <p className="text-sm font-mono text-text-primary-light">{job.reqId || "N/A"}</p>
                             </div>
                         </div>
                     </section>

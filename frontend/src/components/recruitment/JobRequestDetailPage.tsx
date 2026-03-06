@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { jobRequestService } from "../../services/jobRequestService";
 import type { JobRequest } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
@@ -56,15 +56,13 @@ const JobRequestDetailPage: React.FC = () => {
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border-light">
                 <div className="space-y-2">
-                    <button
-                        onClick={() => navigate("/recruitment/job-requests")}
-                        className="group flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary hover:text-primary-hover transition-colors mb-4"
-                    >
-                        <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 transition-transform group-hover:-translate-x-1">
-                            <path fillRule="evenodd" d="M12.5 8a.5.5 0 01-.5.5H4.707l3.147 3.146a.5.5 0 01-.708.708l-4-4a.5.5 0 010-.708l4-4a.5.5 0 11.708.708L4.707 7.5H12a.5.5 0 01.5.5z" clipRule="evenodd" />
-                        </svg>
-                        Back to List
-                    </button>
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-text-secondary-light mb-4">
+                        <Link to="/dashboard" className="hover:text-primary transition-colors">Home</Link>
+                        <span className="mx-1">&gt;</span>
+                        <Link to="/recruitment/job-requests" className="hover:text-primary transition-colors">Job Requests</Link>
+                        <span className="mx-1">&gt;</span>
+                        <span className="text-text-primary-light">{request.title}</span>
+                    </div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-black font-heading text-text-primary-light tracking-tight">
                             {request.title}

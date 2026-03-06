@@ -18,12 +18,8 @@ import CheckInOut from "./components/attendance/CheckInOut";
 import Applications from "./components/attendance/Applications";
 import ReviewRequests from "./components/attendance/ReviewRequests";
 import AttendanceSummary from "./components/attendance/AttendanceSummary";
-
-// --- Auth ---
-import LoginPage from "./components/auth/LoginPage";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-
-// --- Recruitment Feature Pages ---
+import PerformanceModule from "./components/PerformanceModule";
+import PayrollModule from "./components/payroll/PayrollModule";
 import JobListPage from "./components/recruitment/JobListPage";
 import JobDetailPage from "./components/recruitment/JobDetailPage";
 import JobFormPage from "./components/recruitment/JobFormPage";
@@ -31,6 +27,10 @@ import JobRequestListPage from "./components/recruitment/JobRequestListPage";
 import JobRequestDetailPage from "./components/recruitment/JobRequestDetailPage";
 import JobRequestFormPage from "./components/recruitment/JobRequestFormPage";
 import CVListPage from "./components/recruitment/CVListPage";
+// --- Auth ---
+import LoginPage from "./components/auth/LoginPage";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import PublicJobList from "./components/recruitment/PublicJobList";
 
 // --- Import từ nhánh develop của nhóm ---
 import { ToastProvider } from "./components/ui/Toast";
@@ -92,7 +92,14 @@ const AppShell: React.FC = () => {
                             <Route path="/attendance/review" element={<ReviewRequests />} />
                             <Route path="/attendance/summary" element={<AttendanceSummary />} />
 
-                            {/* Recruitment Routes */}
+                            {/* Performance */}
+                            <Route path="/performance" element={<PerformanceModule />} />
+
+                            {/* Payroll Module */}
+                            <Route path="/payroll/*" element={<PayrollModule />} />
+
+                            <Route path="/employee/:id" element={<EmployeeDetail />} />
+                            <Route path="/profile" element={<EmployeeDetail />} />
                             <Route path="/recruitment/jobs" element={<JobListPage />} />
                             <Route path="/recruitment/jobs/new" element={<JobFormPage />} />
                             <Route path="/recruitment/jobs/:id" element={<JobDetailPage />} />
@@ -103,9 +110,6 @@ const AppShell: React.FC = () => {
                             <Route path="/recruitment/job-requests/new" element={<JobRequestFormPage />} />
                             <Route path="/recruitment/job-requests/:id" element={<JobRequestDetailPage />} />
                             <Route path="/recruitment/job-requests/:id/edit" element={<JobRequestFormPage />} />
-
-                            <Route path="/employee/:id" element={<EmployeeDetail />} />
-                            <Route path="/profile" element={<EmployeeDetail />} />
                         </Routes>
                     </div>
                 </div>
@@ -119,6 +123,7 @@ const App: React.FC = () => {
         <ToastProvider>
             <Routes>
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/careers" element={<PublicJobList />} />
                 <Route
                     path="/*"
                     element={
