@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/kpi-structures")
 public class KpiStructureController {
@@ -21,6 +22,11 @@ public class KpiStructureController {
     @PostMapping("/assign")
     public ResponseEntity<?> assignKpis(@RequestBody AssignKpiRequest request) {
         return ResponseEntity.ok(kpiStructureService.assignKpisToDepartment(request));
+    }
+
+    @PostMapping("/assign/draft")
+    public ResponseEntity<?> saveDraft(@RequestBody AssignKpiRequest request) {
+        return ResponseEntity.ok(kpiStructureService.saveStructureOnly(request));
     }
 
     @GetMapping("/department/{departmentId}")

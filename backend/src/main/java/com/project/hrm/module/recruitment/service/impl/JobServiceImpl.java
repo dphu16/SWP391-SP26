@@ -29,7 +29,6 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public JobResponse create(CreateJobRequest request) {
-        System.out.println("Hello");
         Job entity = new Job();
         entity.setId(UUID.randomUUID());
         addJobFromRequest(entity, request);
@@ -122,7 +121,6 @@ public class JobServiceImpl implements JobService {
         entity.setResponsibilities(request.getResponsibility());
         entity.setRequirements(request.getRequirement());
         entity.setBenefits(request.getBenefit());
-        System.out.println("Sai rồi");
         entity.setClosedAt(request.getClosedTime());
         entity.setPostedAt(OffsetDateTime.now());
         entity.setStatus(request.getStatus().name());

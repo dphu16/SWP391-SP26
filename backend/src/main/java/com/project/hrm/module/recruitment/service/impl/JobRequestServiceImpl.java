@@ -171,14 +171,27 @@ public class JobRequestServiceImpl implements JobRequestService {
         response.setDeptName(entity.getDept().getDeptName());
         response.setQuantity(entity.getQuantity());
         response.setLocation(entity.getLocation());
-        response.setType(EmploymentType.valueOf(entity.getEmploymentType()));
+
+        // Fix 1: employmentType có thể null trong DB
+        if (entity.getEmploymentType() != null) {
+            response.setType(EmploymentType.valueOf(entity.getEmploymentType()));
+        }
+
+        // Fix 2: status có thể null
+        if (entity.getStatus() != null) {
+            response.setStatus(RequestStatus.valueOf(entity.getStatus()));
+        }
+
         response.setReason(entity.getReason());
-        response.setStatus(RequestStatus.valueOf(entity.getStatus()));
-        response.setReportTo(entity.getReportsTo().getEmployeeId());
-        response.setReviewer(entity.getReportsTo().getFullName());
+
+        // Fix 3: reportsTo có thể null (reviewer là optional)
+        if (entity.getReportsTo() != null) {
+            response.setReportTo(entity.getReportsTo().getEmployeeId());
+            response.setReviewer(entity.getReportsTo().getFullName());
+        }
+
         response.setComment(entity.getHrComment());
 
         return response;
     }
-
 }

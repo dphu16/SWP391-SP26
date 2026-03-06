@@ -1,5 +1,7 @@
 package com.project.hrm.module.request.entity;
 
+import com.project.hrm.module.request.enums.RequestStatus;
+import com.project.hrm.module.request.enums.RequestType;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -11,6 +13,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Request {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -20,32 +23,34 @@ public class Request {
     @Column(name = "employee_id", nullable = false)
     private UUID employeeId;
 
-    // Loại yêu cầu: "LEAVE" (Nghỉ), "OT" (Làm thêm), "SHIFT_CHANGE" (Đổi ca)
+    @Enumerated(EnumType.STRING)
     @Column(name = "request_type", nullable = false)
-    private String requestType;
+    private RequestType requestType;
 
     @Column(name = "reason")
-    private String reason; // Lý do xin phép
+    private String reason;
 
     @Column(name = "start_date")
-    private LocalDate startDate; // Ngày bắt đầu nghỉ/OT
+    private LocalDate startDate;
 
     @Column(name = "end_date")
-    private LocalDate endDate;   // Ngày kết thúc
+    private LocalDate endDate;
 
-    // Trạng thái: "PENDING" (Chờ), "APPROVED" (Duyệt), "REJECTED" (Từ chối)
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private String status;
+    private RequestStatus status;
 
     @Column(name = "manager_comment")
-    private String managerComment; // Ghi chú của sếp (nếu từ chối thì ghi lý do vào đây)
+    private String managerComment;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
-        if (this.status == null) this.status = "PENDING"; // Mặc định là Chờ duyệt
+        if (this.status == null) {
+            this.status = RequestStatus.PENDING;
+        }
     }
 }

@@ -23,7 +23,7 @@ public class PerformanceCyclesService {
 
     // Create cycle
     @Transactional
-    public PerformanceCycles create(PerformanceCyclesRequest req){
+    public PerformanceCycles create(PerformanceCyclesRequest req) {
 
         if (req.getEndDate().isBefore(req.getStartDate())) {
             throw new RuntimeException("End date must be after start date");
@@ -33,36 +33,53 @@ public class PerformanceCyclesService {
         cycle.setCycleName(req.getCycleName());
         cycle.setStartDate(req.getStartDate());
         cycle.setEndDate(req.getEndDate());
-        cycle.setStatus(CycleStatus.DRAFT);
+        cycle.setStatus(CycleStatus.ACTIVE); // New cycles start as ACTIVE (DB constraint: ACTIVE | CLOSED)
         cycle.setCreatedAt(LocalDateTime.now());
 
         return repository.save(cycle);
     }
 
-    // Get all cycles
-    public List<PerformanceCycles> getAll(){
-        return repository.findAll();
-    }
-
-    // Update status (DRAFT → ACTIVE → CLOSED)
+    // Update cycle details (only if ACTIVE)
     @Transactional
-    public PerformanceCycles updateStatus(UUID id, CycleStatusRequest req){
+    public PerformanceCycles update(UUID id, PerformanceCyclesRequest req) {
 
         PerformanceCycles cycle = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cycle not found"));
 
-        CycleStatus current = cycle.getStatus();
+        if (cycle.getStatus() == CycleStatus.CLOSED)
+            throw new RuntimeException("Cannot edit a closed cycle");
+
+        if (req.getEndDate().isBefore(req.getStartDate()))
+            throw new RuntimeException("End date must be after start date");
+
+        cycle.setCycleName(req.getCycleName());
+        cycle.setStartDate(req.getStartDate());
+        cycle.setEndDate(req.getEndDate());
+
+        return repository.save(cycle);
+    }
+
+    // Get all cycles
+    public List<PerformanceCycles> getAll() {
+        return repository.findAll();
+    }
+
+    // Update status (ACTIVE → CLOSED)
+    @Transactional
+    public PerformanceCycles updateStatus(UUID id, CycleStatusRequest req) {
+
+        PerformanceCycles cycle = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cycle not found"));
+
         CycleStatus next = req.getStatus();
 
-        // validate flow
-        if (current == CycleStatus.DRAFT && next != CycleStatus.ACTIVE)
-            throw new RuntimeException("Must activate first");
+        if (cycle.getStatus() == CycleStatus.ACTIVE && next != CycleStatus.CLOSED)
+            throw new RuntimeException("Can only close an active cycle");
 
-        if (current == CycleStatus.ACTIVE && next != CycleStatus.CLOSED)
-            throw new RuntimeException("Must close after active");
+        if (cycle.getStatus() == CycleStatus.CLOSED)
+            throw new RuntimeException("Cycle is already closed");
 
         cycle.setStatus(next);
-
         return repository.save(cycle);
     }
 }

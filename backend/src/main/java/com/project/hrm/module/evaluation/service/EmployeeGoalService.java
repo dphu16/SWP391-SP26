@@ -37,7 +37,7 @@ public class EmployeeGoalService {
         this.kpiLibraryRepository = kpiLibraryRepository;
     }
 
-    // API 9 - Assign KPI to employee
+    // API 9 - Assign KPI to employee (upsert: update targetValue if exists, create if not; dedup if multiple)
     @Transactional
     public EmployeeGoal assign(EmployeeGoalRequest req){
 
@@ -50,18 +50,36 @@ public class EmployeeGoalService {
         KpiLibrary kpi = kpiLibraryRepository.findById(req.getKpiLibraryId())
                 .orElseThrow(() -> new RuntimeException("KPI not found"));
 
-        EmployeeGoal goal = new EmployeeGoal();
-        goal.setEmployee(employee);
-        goal.setCycle(cycle);
-        goal.setKpiLibrary(kpi);
+        // Use findAll to safely handle pre-existing duplicate rows
+        List<EmployeeGoal> allMatching = repository.findAllByEmployee_EmployeeIdAndCycle_CycleIdAndKpiLibrary_LibId(
+                employee.getEmployeeId(), cycle.getCycleId(), kpi.getLibId());
+
+        EmployeeGoal goal;
+        if (allMatching.size() > 1) {
+            // Dedup: keep the one with highest targetValue, delete the rest
+            goal = allMatching.stream()
+                    .max(java.util.Comparator.comparingDouble(
+                            g -> g.getTargetValue() != null ? g.getTargetValue() : 0.0))
+                    .get();
+            allMatching.stream()
+                    .filter(g -> !g.getGoalId().equals(goal.getGoalId()))
+                    .forEach(repository::delete);
+            repository.flush();
+        } else if (allMatching.size() == 1) {
+            goal = allMatching.get(0);
+        } else {
+            goal = new EmployeeGoal();
+            goal.setEmployee(employee);
+            goal.setCycle(cycle);
+            goal.setKpiLibrary(kpi);
+            goal.setCurrentValue(0.0);
+            goal.setStatus(GoalStatus.ASSIGNED);
+        }
 
         goal.setTitle(req.getTitle());
         goal.setTargetValue(req.getTargetValue());
-        goal.setCurrentValue(0.0);
         goal.setWeight(req.getWeight());
-
         goal.setAssignedBy(req.getAssignedBy());
-        goal.setStatus(GoalStatus.ASSIGNED);
 
         return repository.save(goal);
     }

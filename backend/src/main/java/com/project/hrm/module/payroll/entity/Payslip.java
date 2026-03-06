@@ -1,7 +1,5 @@
 package com.project.hrm.module.payroll.entity;
 
-
-
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.payroll.enums.PayslipStatus;
 import jakarta.persistence.*;
@@ -54,7 +52,8 @@ public class Payslip {
     private BigDecimal netSalary;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "payslip_status")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.NAMED_ENUM)
+    @Column(name = "status", columnDefinition = "payslip_status")
     private PayslipStatus status;
 
     @Column(name = "created_at")

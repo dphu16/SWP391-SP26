@@ -1,5 +1,6 @@
 package com.project.hrm.module.evaluation.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.project.hrm.module.evaluation.enums.GoalStatus;
 import com.project.hrm.module.corehr.entity.Employee;
 import jakarta.persistence.*;
@@ -8,7 +9,12 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "employee_goals")
+@Table(
+    name = "employee_goals",
+    uniqueConstraints = @UniqueConstraint(
+        columnNames = {"employee_id", "cycle_id", "kpi_lib_id"}
+    )
+)
 @Data
 public class EmployeeGoal {
 
@@ -17,16 +23,19 @@ public class EmployeeGoal {
     @Column(name = "goal_id")
     private UUID goalId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personal", "contract", "dependent", "user", "department", "position", "manager"})
     private Employee employee;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cycle_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private PerformanceCycles cycle;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "kpi_lib_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private KpiLibrary kpiLibrary;
 
     private String title;
@@ -48,4 +57,7 @@ public class EmployeeGoal {
 
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
+
+    @Column(name = "image_url")
+    private String imageUrl;
 }

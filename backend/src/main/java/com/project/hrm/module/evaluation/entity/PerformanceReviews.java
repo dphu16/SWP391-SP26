@@ -1,4 +1,5 @@
 package com.project.hrm.module.evaluation.entity;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.project.hrm.module.evaluation.enums.ReviewStatus;
 import com.project.hrm.module.corehr.entity.Employee;
 import jakarta.persistence.*;
@@ -17,12 +18,14 @@ public class PerformanceReviews {
     @Column(name = "review_id")
     private UUID reviewId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cycle_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private PerformanceCycles cycle;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personal", "contracts", "dependents", "user", "department", "position", "manager"})
     private Employee employee;
 
     @Column(name = "manager_id")

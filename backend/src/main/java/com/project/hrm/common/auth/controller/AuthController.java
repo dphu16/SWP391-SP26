@@ -74,7 +74,7 @@ public class AuthController {
                 .ifPresent(user -> employeeRepository.findByUser(user).ifPresent(employee -> {
                     claims.put("fullName", employee.getFullName());
                     claims.put("employeeId", employee.getEmployeeId().toString());
-                    if (employee.getPersonal() != null && employee.getPersonal().getAvatar() != null) {
+                    if (employee.getPersonal().getAvatar() != null) {
                         claims.put("avatarUrl", employee.getPersonal().getAvatar());
                     }
                 }));

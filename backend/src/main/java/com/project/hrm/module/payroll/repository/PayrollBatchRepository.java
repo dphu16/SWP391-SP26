@@ -1,7 +1,5 @@
 package com.project.hrm.module.payroll.repository;
 
-
-
 import com.project.hrm.module.payroll.entity.PayrollBatch;
 import com.project.hrm.module.payroll.enums.BatchStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,7 +21,8 @@ public interface PayrollBatchRepository extends JpaRepository<PayrollBatch, UUID
     // Kiểm tra nhanh xem tháng này đã có batch nào chưa
     boolean existsByPeriod(LocalDate period);
 
-    // Lấy danh sách các batch theo trạng thái (Ví dụ: Lấy các batch đang DRAFT để xử lý)
+    // Lấy danh sách các batch theo trạng thái (Ví dụ: Lấy các batch đang DRAFT để
+    // xử lý)
     List<PayrollBatch> findByStatus(BatchStatus status);
 
     // Query tìm batch mới nhất

@@ -15,19 +15,19 @@ public class PayslipDetailDTO {
     private UUID payslipId;
 
     // Thông tin kỳ lương
-    private int month;
-    private int year;
+    private Integer month;
+    private Integer year;
     private LocalDate startDate;
     private LocalDate endDate;
 
     // Tổng hợp
     private BigDecimal baseSalary;
     private BigDecimal totalAllowances;
-    private BigDecimal grossSalary;     // Tổng thu nhập
-    private BigDecimal taxAmount;       // Thuế
+    private BigDecimal grossSalary; // Tổng thu nhập
+    private BigDecimal taxAmount; // Thuế
     private BigDecimal insuranceAmount; // Bảo hiểm
     private BigDecimal totalDeductions; // Tổng khấu trừ
-    private BigDecimal netSalary;       // Thực lĩnh
+    private BigDecimal netSalary; // Thực lĩnh
 
     // Trạng thái
     private PayslipStatus status;

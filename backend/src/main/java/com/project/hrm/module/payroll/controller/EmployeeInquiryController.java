@@ -1,7 +1,7 @@
 package com.project.hrm.module.payroll.controller;
 
-
-
+import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.payroll.dto.RequestDTO.CreateInquiryRequest;
 import com.project.hrm.module.payroll.dto.ResponseDTO.InquiryResponseDTO;
 import com.project.hrm.module.payroll.service.EmployeeInquiryService;
@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -20,10 +22,19 @@ import java.util.UUID;
 public class EmployeeInquiryController {
 
     private final EmployeeInquiryService inquiryService;
+    private final EmployeeRepository employeeRepository;
 
-    // Giả lập ID user đang đăng nhập
+    /**
+     * Lấy employeeId từ SecurityContext thay vì hardcode.
+     */
     private UUID getCurrentEmployeeId() {
-        return UUID.fromString("00000000-0000-0000-0000-000000000001");
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        Employee employee = employeeRepository.findByUser_Username(username)
+                .orElseThrow(() -> new RuntimeException("Employee not found for user: " + username));
+
+        return employee.getEmployeeId();
     }
 
     /**

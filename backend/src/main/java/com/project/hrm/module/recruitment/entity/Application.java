@@ -36,11 +36,9 @@ public class Application {
     @Column(name = "cv_url", nullable = false)
     private String cvUrl;
 
-    @Size(max = 30)
-    @ColumnDefault("'APPLIED'")
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 30)
-    private ApplicationStatus status;
+    @Column(name = "status", nullable = false)
+    private ApplicationStatus status = ApplicationStatus.APPLIED;
 
     @ColumnDefault("now()")
     @Column(name = "created_at")
