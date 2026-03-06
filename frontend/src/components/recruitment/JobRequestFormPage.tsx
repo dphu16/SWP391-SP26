@@ -6,6 +6,8 @@ import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
 import { useToast } from "../ui/Toast";
 import { departmentService } from "../../services/departmentService";
 import type { Department } from "../../services/departmentService";
+import { hrService } from "../../services/hrService";
+import type { EmployeeNameDto } from "../../services/hrService";
 
 const inputCls = "w-full px-4 py-2.5 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
 const labelCls = "block text-[11px] font-bold uppercase tracking-wider text-text-secondary-light mb-1.5";
@@ -20,14 +22,15 @@ const JobRequestFormPage: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [departments, setDepartments] = useState<Department[]>([]);
+    const [employees, setEmployees] = useState<EmployeeNameDto[]>([]);
 
     const [formData, setFormData] = useState<JobRequestInput>({
         title: "",
         deptId: "",
         quantity: 1,
-        location: "Hanoi",
+        location: "",
         type: "FULL_TIME",
-        reportTo: "01111111-1111-1111-1111-111111111111",
+        reportTo: "",
         reason: "",
         status: "SUBMITTED",
         comment: "",
@@ -36,9 +39,13 @@ const JobRequestFormPage: React.FC = () => {
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
-                // Fetch departments first
-                const deptRes = await departmentService.getAll();
+                // Fetch departments and employees
+                const [deptRes, empRes] = await Promise.all([
+                    departmentService.getAll(),
+                    hrService.getEmployeeNames()
+                ]);
                 setDepartments(deptRes.data);
+                setEmployees(empRes.data);
 
                 if (isEdit && id) {
                     const res = await jobRequestService.getById(id);
@@ -107,8 +114,8 @@ const JobRequestFormPage: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="rounded-2xl border border-border-light bg-white shadow-card p-6 md:p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="md:col-span-2">
-                            <label className={labelCls}>Job Title / Role Name</label>
+                        <div>
+                            <label className={labelCls}>Job Title</label>
                             <input
                                 required
                                 name="title"
@@ -117,6 +124,24 @@ const JobRequestFormPage: React.FC = () => {
                                 placeholder="e.g. Senior Product Designer"
                                 className={inputCls}
                             />
+                        </div>
+
+                        <div>
+                            <label className={labelCls}>Report To HR</label>
+                            <select
+                                required
+                                name="reportTo"
+                                value={formData.reportTo}
+                                onChange={handleChange}
+                                className={inputCls}
+                            >
+                                <option value="" disabled>Select an employee</option>
+                                {employees.map(emp => (
+                                    <option key={emp.id} value={emp.id}>
+                                        {emp.fullName}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                         <div>
@@ -138,7 +163,7 @@ const JobRequestFormPage: React.FC = () => {
                         </div>
 
                         <div>
-                            <label className={labelCls}>Headcount (Quantity)</label>
+                            <label className={labelCls}>Quantity</label>
                             <input
                                 required
                                 type="number"
@@ -157,7 +182,7 @@ const JobRequestFormPage: React.FC = () => {
                                 name="location"
                                 value={formData.location}
                                 onChange={handleChange}
-                                placeholder="e.g. Remote, Hanoi, Office"
+                                placeholder="e.g. Hanoi"
                                 className={inputCls}
                             />
                         </div>
@@ -182,7 +207,7 @@ const JobRequestFormPage: React.FC = () => {
 
 
                         <div className="md:col-span-2">
-                            <label className={labelCls}>Business Reason / Justification</label>
+                            <label className={labelCls}>Reason</label>
                             <textarea
                                 required
                                 name="reason"

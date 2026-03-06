@@ -92,7 +92,8 @@ const JobRequestDetailPage: React.FC = () => {
                                 state: {
                                     requestId: request.id,
                                     title: request.title,
-                                    quantity: request.quantity
+                                    quantity: request.quantity,
+                                    reportTo: request.reportTo
                                 }
                             })}
                             className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 cursor-pointer"
@@ -117,7 +118,6 @@ const JobRequestDetailPage: React.FC = () => {
                             <div>
                                 <label className={labelCls}>Department</label>
                                 <div className={valueCls}>{request.deptName}</div>
-                                <div className="text-[10px] text-text-muted-light mt-0.5 font-mono">{request.deptId}</div>
                             </div>
                             <div>
                                 <label className={labelCls}>Employment Type</label>
@@ -126,20 +126,12 @@ const JobRequestDetailPage: React.FC = () => {
                                 </div>
                             </div>
                             <div>
-                                <label className={labelCls}>Headcount</label>
+                                <label className={labelCls}>Quantity</label>
                                 <div className="text-lg font-black text-primary">{request.quantity} Position(s)</div>
                             </div>
                             <div>
-                                <label className={labelCls}>Location</label>
+                                <label className={labelCls}>Work Location</label>
                                 <div className={valueCls}>{request.location}</div>
-                            </div>
-                            <div>
-                                <label className={labelCls}>Reports To</label>
-                                <div className={valueCls}>{request.reportTo || "None specified"}</div>
-                            </div>
-                            <div>
-                                <label className={labelCls}>Reviewer</label>
-                                <div className={valueCls}>{request.reviewer || "Not reviewed yet"}</div>
                             </div>
                         </div>
                     </section>
@@ -157,20 +149,27 @@ const JobRequestDetailPage: React.FC = () => {
 
                 {/* Sidebar Info */}
                 <div className="space-y-6">
-                    <section className="bg-white rounded-3xl p-6 border border-border-light shadow-sm">
-                        <label className={labelCls}>Internal ID</label>
-                        <div className="font-mono text-xs text-text-muted-light break-all">
-                            {request.id}
+                    <section className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-3xl p-6 border border-indigo-100/50 shadow-sm relative overflow-hidden">
+                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/40 rounded-full blur-2xl pointer-events-none" />
+                        <h2 className="text-[11px] font-black uppercase tracking-widest text-indigo-900 mb-3 relative z-10">
+                            Report To HR
+                        </h2>
+                        <div className="flex items-center gap-3 relative z-10">
+                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 shadow-sm">
+                                {request.reviewer ? request.reviewer.charAt(0).toUpperCase() : "H"}
+                            </div>
+                            <span className="font-semibold text-indigo-900 text-sm">
+                                {request.reviewer || "Not Assigned"}
+                            </span>
                         </div>
                     </section>
 
                     <section className="bg-white rounded-3xl p-6 border border-border-light shadow-sm flex flex-col gap-4">
                         <h2 className="text-[11px] font-black uppercase tracking-widest text-text-primary-light">
-                            Admin Feedback
+                            HR Feedback
                         </h2>
                         <div className="space-y-4">
                             <div>
-                                <label className={labelCls}>HR Comment</label>
                                 {request.status === "SUBMITTED" ? (
                                     <textarea
                                         rows={3}

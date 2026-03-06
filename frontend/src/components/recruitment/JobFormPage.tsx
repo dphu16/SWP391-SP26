@@ -31,9 +31,11 @@ const JobFormPage: React.FC = () => {
         requirement: "",
         benefit: "",
         quantity: state?.quantity || 1,
+        maxCv: 50,
+        salary: "Negotiable",
         status: "DRAFT",
         closedTime: "",
-        hrId: user?.employeeId || "01111111-1111-1111-1111-111111111111",
+        hrId: state?.reportTo || user?.employeeId || "",
     });
 
     useEffect(() => {
@@ -50,6 +52,8 @@ const JobFormPage: React.FC = () => {
                         requirement: job.requirement || "",
                         benefit: job.benefit || "",
                         quantity: job.quantity || 1,
+                        maxCv: job.maxCv || 0,
+                        salary: job.salary || "",
                         status: job.status || "DRAFT",
                         closedTime: job.closedTime ? new Date(job.closedTime).toISOString().slice(0, 16) : "",
                         hrId: job.hrId || "",
@@ -69,7 +73,7 @@ const JobFormPage: React.FC = () => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: name === "quantity" ? parseInt(value) || 0 : value
+            [name]: (name === "quantity" || name === "maxCv") ? parseInt(value) || 0 : value
         }));
     };
 
@@ -124,7 +128,7 @@ const JobFormPage: React.FC = () => {
             <form onSubmit={(e) => handleSubmit(e, "OPEN")} className="space-y-6">
                 <div className="rounded-2xl border border-border-light bg-white shadow-card p-6 md:p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="md:col-span-2">
+                        <div>
                             <label className={labelCls}>Job Title</label>
                             <input
                                 required
@@ -132,6 +136,17 @@ const JobFormPage: React.FC = () => {
                                 value={formData.title}
                                 onChange={handleChange}
                                 placeholder="e.g. Senior Frontend Developer"
+                                className={inputCls}
+                            />
+                        </div>
+
+                        <div>
+                            <label className={labelCls}>Close Time</label>
+                            <input
+                                type="datetime-local"
+                                name="closedTime"
+                                value={formData.closedTime}
+                                onChange={handleChange}
                                 className={inputCls}
                             />
                         </div>
@@ -150,12 +165,26 @@ const JobFormPage: React.FC = () => {
                         </div>
 
                         <div>
-                            <label className={labelCls}>Close Time</label>
+                            <label className={labelCls}>Max CV</label>
                             <input
-                                type="datetime-local"
-                                name="closedTime"
-                                value={formData.closedTime}
+                                required
+                                type="number"
+                                min="1"
+                                name="maxCv"
+                                value={formData.maxCv}
                                 onChange={handleChange}
+                                className={inputCls}
+                            />
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <label className={labelCls}>Salary</label>
+                            <input
+                                required
+                                name="salary"
+                                value={formData.salary}
+                                onChange={handleChange}
+                                placeholder="e.g. Negotiable, $1000 - $2000"
                                 className={inputCls}
                             />
                         </div>

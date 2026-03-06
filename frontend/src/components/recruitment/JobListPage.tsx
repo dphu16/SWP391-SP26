@@ -131,7 +131,7 @@ const JobListPage: React.FC = () => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-gray-100 bg-white">
-                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Job Detail</th>
+                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Job Title</th>
                                 <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Status</th>
                                 <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Dates</th>
                                 <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Applications</th>
@@ -155,9 +155,6 @@ const JobListPage: React.FC = () => {
                                         <td className="px-6 py-4">
                                             <div className="font-semibold text-text-primary-light text-sm mb-0.5">
                                                 {job.title}
-                                            </div>
-                                            <div className="text-[10px] text-text-tertiary-light uppercase tracking-wide">
-                                                ID: {job.id.substring(0, 8)}...
                                             </div>
                                         </td>
                                         <td className="px-4 py-4">

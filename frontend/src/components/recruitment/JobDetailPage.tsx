@@ -118,7 +118,7 @@ const JobDetailPage: React.FC = () => {
                             <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                             </svg>
-                            Key Responsibilities
+                            Responsibilities
                         </h2>
                         <div className="prose prose-sm max-w-none text-text-secondary-light whitespace-pre-wrap leading-relaxed">
                             {job.responsibility}
@@ -146,17 +146,47 @@ const JobDetailPage: React.FC = () => {
                             Recruitment Info
                         </h2>
                         <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted-light uppercase">Quantity</label>
+                                    <p className="text-xl font-bold text-primary">{job.quantity} Position(s)</p>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted-light uppercase">Max CV</label>
+                                    <p className="text-xl font-bold text-emerald-600 truncate" title={String(job.maxCv)}>{job.maxCv || "N/A"}</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted-light uppercase">Work Location</label>
+                                    <p className="text-xl font-bold text-primary truncate" title={job.location}>{job.location || "N/A"}</p>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted-light uppercase">Employment Type</label>
+                                    <div className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-xs font-bold text-text-secondary-light uppercase tracking-wide mt-1">
+                                        {job.employmentType || "FULL_TIME"}
+                                    </div>
+                                </div>
+                            </div>
                             <div>
-                                <label className="text-[10px] font-bold text-text-muted-light uppercase">Number of Openings</label>
-                                <p className="text-xl font-bold text-primary">{job.quantity}</p>
+                                <label className="text-[10px] font-bold text-text-muted-light uppercase">Salary</label>
+                                <p className="text-xl font-bold text-emerald-600 truncate" title={job.salary}>{job.salary || "N/A"}</p>
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-text-muted-light uppercase">HR Manager</label>
-                                <p className="text-sm font-mono text-text-primary-light">{job.hrId || "N/A"}</p>
+                                <p className="text-sm font-mono text-text-primary-light">{job.hrName || "N/A"}</p>
                             </div>
                             <div>
-                                <label className="text-[10px] font-bold text-text-muted-light uppercase">Job Request ID</label>
-                                <p className="text-sm font-mono text-text-primary-light">{job.reqId || "N/A"}</p>
+                                <label className="text-[10px] font-bold text-text-muted-light uppercase">Job Request</label>
+                                <p className="text-sm font-mono text-text-primary-light">
+                                    {job.reqId ? (
+                                        <Link to={`/recruitment/job-requests/${job.reqId}`} className="hover:text-primary transition-colors hover:underline font-semibold">
+                                            {job.reqName || job.reqId}
+                                        </Link>
+                                    ) : (
+                                        "N/A"
+                                    )}
+                                </p>
                             </div>
                         </div>
                     </section>

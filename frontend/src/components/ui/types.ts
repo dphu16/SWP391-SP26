@@ -1,4 +1,4 @@
-export type EmploymentType = "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERNSHIP" | "OTHER";
+export type EmploymentType = "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERN";
 export type RequestStatus = "SUBMITTED" | "APPROVED" | "REJECTED" | "COMPLETED";
 
 export interface JobRequest {
@@ -33,6 +33,7 @@ export type JobStatus = "OPEN" | "CLOSED" | "DRAFT" | "FILLED";
 export interface Job {
     id: string;
     reqId: string;
+    reqName: string;
     title: string;
     description: string;
     responsibility: string;
@@ -43,6 +44,11 @@ export interface Job {
     closedTime: string; // OffsetDateTime -> string
     createAt: string;
     hrId: string;
+    hrName: string;
+    maxCv: number;
+    salary: string;
+    employmentType: EmploymentType;
+    location: string;
 }
 
 export interface JobInput {
@@ -56,4 +62,6 @@ export interface JobInput {
     status: string;
     closedTime: string;
     hrId: string;
+    maxCv: number;
+    salary: string;
 }
