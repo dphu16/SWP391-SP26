@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import ManagerPerformance from "./ManagerPerformance";
 import HRPerformance from "./HRPerformance";
 import EmployeePerformance from "./EmployeePerformance";
+import MentorPerformance from "./MentorPerformance";
 import { getToken } from "../services/authService";
 import { decodeJwt } from "../utils/jwtDecode";
 
@@ -24,6 +25,10 @@ const PerformanceModule = () => {
 
     if (userRole === 'MANAGER') {
         return <ManagerPerformance />;
+    }
+
+    if (userRole === 'MENTOR') {
+        return <MentorPerformance />;
     }
 
     return <EmployeePerformance />;

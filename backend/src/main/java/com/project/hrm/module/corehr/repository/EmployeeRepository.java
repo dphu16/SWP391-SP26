@@ -46,8 +46,11 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>,
         @EntityGraph(attributePaths = { "user", "position", "position.department" })
         List<Employee> findByManager_EmployeeId(UUID managerId);
 
-        @EntityGraph(attributePaths = { "user", "position", "position.department" })
+        @EntityGraph(attributePaths = { "user", "position", "department" })
         List<Employee> findByPosition_Department_DeptId(UUID deptId);
+
+        @EntityGraph(attributePaths = { "user", "position", "department" })
+        List<Employee> findByDepartment_DeptId(UUID deptId);
 
         @EntityGraph(attributePaths = { "user", "position", "department" })
         @Query("SELECT e FROM Employee e WHERE e.user.username = :username")

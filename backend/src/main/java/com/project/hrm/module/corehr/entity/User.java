@@ -1,5 +1,6 @@
 package com.project.hrm.module.corehr.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.project.hrm.module.corehr.enums.UserRole;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import jakarta.persistence.*;
@@ -13,6 +14,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class User {
 
     @Id

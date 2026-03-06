@@ -236,44 +236,6 @@ const ManagerPerformance = () => {
         }
     };
 
-    const handleUpdateGoalStatus = async (goalId: string, nextStatus: string) => {
-        try {
-            await kpiService.updateEmployeeGoalStatus(goalId, nextStatus);
-            // Refresh goals
-            if (activeEmployeeId) {
-                const [allLibs, structure, goals] = await Promise.all([
-                    kpiService.getAllKpiLibraries(),
-                    activeEmployee?.departmentId ? kpiService.getKpisByDepartment(activeEmployee.departmentId) : Promise.resolve([]),
-                    kpiService.getGoalsByEmployee(activeEmployeeId)
-                ]);
-
-                const merged = (structure.length > 0 ? structure : goals.map(g => ({ kpiLibraryId: g.kpiLibrary?.libId || g.kpiLibraryId, weight: g.weight }))).map((s: any) => {
-                    const libId = s.kpiLibraryId || s.kpiLibrary?.libId;
-                    const lib = allLibs.find(l => l.libId === libId);
-                    const goal = goals.find(g => (g.kpiLibrary?.libId || g.kpiLibraryId) === libId);
-                    const targetVal = goal?.targetValue || 0;
-                    const isActuallyAssigned = !!goal && targetVal > 0;
-                    return {
-                        goalId: goal?.goalId,
-                        cycleId: goal?.cycle?.cycleId,
-                        kpiLibraryId: libId,
-                        name: goal?.title || lib?.name || "Unknown",
-                        category: lib?.category || "N/A",
-                        description: lib?.description || "",
-                        weight: s.weight || lib?.defaultWeight || 0,
-                        status: goal?.status || null,
-                        imageUrl: goal?.imageUrl || "",
-                        _targetValue: targetVal ? String(targetVal) : '',
-                        _isAssigned: isActuallyAssigned
-                    };
-                });
-                setKpis(merged);
-            }
-        } catch (e: any) {
-            alert(e?.response?.data || "Failed to update status");
-        }
-    };
-
     const handleTargetChange = (kpiLibraryId: string, value: string) => {
         setKpis(prev => prev.map(k => k.kpiLibraryId === kpiLibraryId ? { ...k, _targetValue: value, _isAssigned: false } : k));
     };
@@ -471,18 +433,9 @@ const ManagerPerformance = () => {
                                                     </div>
                                                 ) : kpi.status === 'SUBMITTED' ? (
                                                     <div className="flex items-center justify-end gap-2">
-                                                        <button
-                                                            onClick={() => handleUpdateGoalStatus(kpi.goalId, 'COMPLETED')}
-                                                            className="px-3 py-1 bg-emerald-500 text-white text-[9px] font-black uppercase rounded hover:bg-emerald-600 transition-colors"
-                                                        >
-                                                            Approve
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleUpdateGoalStatus(kpi.goalId, 'ACKNOWLEDGED')}
-                                                            className="px-3 py-1 bg-rose-500 text-white text-[9px] font-black uppercase rounded hover:bg-rose-600 transition-colors"
-                                                        >
-                                                            Reject
-                                                        </button>
+                                                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-blue-500/20">
+                                                            Pending Mentor
+                                                        </div>
                                                     </div>
                                                 ) : kpi.status === 'COMPLETED' ? (
                                                     <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-emerald-500/20">

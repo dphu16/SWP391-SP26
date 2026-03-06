@@ -1,6 +1,7 @@
 package com.project.hrm.module.corehr.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.project.hrm.module.corehr.enums.Gender;
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,6 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Personal {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

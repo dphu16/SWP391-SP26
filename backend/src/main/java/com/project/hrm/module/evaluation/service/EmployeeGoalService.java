@@ -28,6 +28,7 @@ public class EmployeeGoalService {
     private final KpiLibraryRepository kpiLibraryRepository;
     private final com.project.hrm.module.evaluation.repository.KpiStructureDetailRepository kpiStructureDetailRepository;
     private final com.project.hrm.module.corehr.repository.UserRepository userRepository;
+    private final com.project.hrm.module.evaluation.repository.GoalEvidenceRepository goalEvidenceRepository;
 
     public EmployeeGoalService(
             EmployeeGoalRepository repository,
@@ -35,13 +36,15 @@ public class EmployeeGoalService {
             PerformanceCyclesRepository cycleRepository,
             KpiLibraryRepository kpiLibraryRepository,
             com.project.hrm.module.evaluation.repository.KpiStructureDetailRepository kpiStructureDetailRepository,
-            com.project.hrm.module.corehr.repository.UserRepository userRepository) {
+            com.project.hrm.module.corehr.repository.UserRepository userRepository,
+            com.project.hrm.module.evaluation.repository.GoalEvidenceRepository goalEvidenceRepository) {
         this.repository = repository;
         this.employeeRepository = employeeRepository;
         this.cycleRepository = cycleRepository;
         this.kpiLibraryRepository = kpiLibraryRepository;
         this.kpiStructureDetailRepository = kpiStructureDetailRepository;
         this.userRepository = userRepository;
+        this.goalEvidenceRepository = goalEvidenceRepository;
     }
 
     // API 9 - Assign KPI to employee (upsert: update targetValue if exists, create if not; dedup if multiple)
@@ -204,7 +207,16 @@ public class EmployeeGoalService {
         }
 
         goal.setCurrentValue(req.getActualValue());
-        goal.setImageUrl(req.getImageUrl());
+        
+        if (req.getImageUrl() != null && !req.getImageUrl().isBlank()) {
+            goal.setImageUrl(req.getImageUrl());
+            com.project.hrm.module.evaluation.entity.GoalEvidence evidence = new com.project.hrm.module.evaluation.entity.GoalEvidence();
+            evidence.setGoal(goal);
+            evidence.setFileUrl(req.getImageUrl());
+            evidence.setStatus(com.project.hrm.module.evaluation.enums.EvidenceStatus.PENDING);
+            goalEvidenceRepository.save(evidence);
+        }
+        
         goal.setStatus(GoalStatus.SUBMITTED);
         goal.setSubmittedAt(LocalDateTime.now());
 

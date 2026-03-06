@@ -223,16 +223,39 @@ export const kpiService = {
     },
 
     getMentorAttitudeScore: async (employeeId: string): Promise<number> => {
-        // TODO: Replace with actual backend endpoint for Mentor evaluations when available
-        return new Promise(resolve => {
-            setTimeout(() => {
-                // Return a pseudo-random but consistent mock score between 80-98 based on ID
-                const charCodeSum = Array.from(employeeId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                const score = 80 + (charCodeSum % 19);
-                resolve(score);
-            }, 300);
-        });
+        try {
+            const review = await kpiService.getActiveReview(employeeId);
+            if (review) {
+                const res = await apiClient.get(`/api/mentor/review/${review.reviewId}/assessment`);
+                return res.data?.averageScore || 0;
+            }
+            return 0;
+        } catch {
+            return 0;
+        }
     },
+
+    // Mentor specific actions
+    getMentees: async (mentorId: string): Promise<any[]> => {
+        const response = await apiClient.get(`/api/mentor/mentees/${mentorId}`);
+        return response.data;
+    },
+
+    getGoalEvidences: async (goalId: string): Promise<any[]> => {
+        const response = await apiClient.get(`/api/mentor/goal/${goalId}/evidences`);
+        return response.data;
+    },
+
+    updateEvidenceStatus: async (evidenceId: string, status: 'APPROVED' | 'REJECTED', comment?: string): Promise<any> => {
+        const response = await apiClient.patch(`/api/mentor/evidence/${evidenceId}/status`, { status, comment });
+        return response.data;
+    },
+
+    submitMentorAssessment: async (mentorId: string, data: { employeeId: string, cycleId: string, teamworkScore: number, communicationScore: number, technicalScore: number, adaptabilityScore: number }): Promise<any> => {
+        const response = await apiClient.post(`/api/mentor/assess/${mentorId}`, data);
+        return response.data;
+    },
+
 
     // Employee actions
     acknowledgeGoal: async (goalId: string): Promise<any> => {
