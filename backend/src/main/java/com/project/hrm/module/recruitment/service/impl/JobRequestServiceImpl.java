@@ -5,7 +5,6 @@ import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.recruitment.dto.request.JobRequestRequest;
 import com.project.hrm.module.recruitment.dto.response.JobRequestResponse;
 import com.project.hrm.module.recruitment.entity.JobRequest;
-import com.project.hrm.module.recruitment.enums.EmploymentType;
 import com.project.hrm.module.recruitment.enums.RequestStatus;
 import com.project.hrm.module.recruitment.repository.JobRequestRepository;
 import com.project.hrm.module.recruitment.repository.RDepartmentRepository;
@@ -45,10 +44,10 @@ public class JobRequestServiceImpl implements JobRequestService {
         entity.setDept(department);
         entity.setQuantity(request.getQuantity());
         entity.setLocation(request.getLocation());
-        entity.setEmploymentType(request.getType().name());
+        entity.setEmploymentType(request.getType());
         entity.setReportsTo(reviewer);
         entity.setReason(request.getReason());
-        entity.setStatus(RequestStatus.SUBMITTED.name());
+        entity.setStatus(RequestStatus.SUBMITTED);
         entity.setCreatedAt(OffsetDateTime.now());
 
         jobRequestRepository.save(entity);
@@ -120,7 +119,7 @@ public class JobRequestServiceImpl implements JobRequestService {
         entity.setJobTitle(request.getTitle());
         entity.setQuantity(request.getQuantity());
         entity.setLocation(request.getLocation());
-        entity.setEmploymentType(request.getType().name());
+        entity.setEmploymentType(request.getType());
         entity.setReason(request.getReason());
 
         JobRequest updated = jobRequestRepository.save(entity);
@@ -133,8 +132,8 @@ public class JobRequestServiceImpl implements JobRequestService {
         JobRequest entity = jobRequestRepository.findById(id)
                 .orElseThrow(() ->
                         new RuntimeException("Job request not found with id: " + id));
-        if (entity.getStatus().equals(RequestStatus.APPROVED.name()) ||
-                entity.getStatus().equals(RequestStatus.REJECTED.name())) {
+        if (entity.getStatus().equals(RequestStatus.APPROVED) ||
+                entity.getStatus().equals(RequestStatus.REJECTED)) {
 
             throw new IllegalStateException("Request already processed");
         }
@@ -143,7 +142,7 @@ public class JobRequestServiceImpl implements JobRequestService {
 
             throw new IllegalArgumentException("Comment is required when rejecting");
         }
-        entity.setStatus(status.name());
+        entity.setStatus(status);
 
         if (comment != null) {
             entity.setHrComment(comment);
@@ -174,12 +173,12 @@ public class JobRequestServiceImpl implements JobRequestService {
 
         // Fix 1: employmentType có thể null trong DB
         if (entity.getEmploymentType() != null) {
-            response.setType(EmploymentType.valueOf(entity.getEmploymentType()));
+            response.setType(entity.getEmploymentType());
         }
 
         // Fix 2: status có thể null
         if (entity.getStatus() != null) {
-            response.setStatus(RequestStatus.valueOf(entity.getStatus()));
+            response.setStatus(entity.getStatus());
         }
 
         response.setReason(entity.getReason());

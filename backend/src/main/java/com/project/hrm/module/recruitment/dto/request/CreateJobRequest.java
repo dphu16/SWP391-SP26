@@ -21,5 +21,7 @@ public class CreateJobRequest {
     private OffsetDateTime closedTime;
     private JobStatus status;
     private UUID hrId;
+    private int maxCv;
+    private String salary;
 
 }

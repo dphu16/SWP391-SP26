@@ -3,6 +3,7 @@ package com.project.hrm.module.corehr.repository;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.entity.User;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
+import com.project.hrm.module.corehr.enums.UserRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -19,6 +20,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>,
                 JpaSpecificationExecutor<Employee> {
 
         Optional<Employee> findByUser(User user);
+
+        List<Employee> findByUser_Role(UserRole role);
 
         @Override
         Optional<Employee> findById(UUID uuid);

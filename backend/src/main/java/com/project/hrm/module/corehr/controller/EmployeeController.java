@@ -11,6 +11,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -66,5 +67,10 @@ public class EmployeeController {
         Page<EmployeeDTO> result = employeeService.searchEmployees(fullName, employeeCode, phoneNumber, department,
                 position, role, status, pageable);
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/hr/name")
+    public ResponseEntity<List<EmployeeDTO>> getListHr(){
+        return ResponseEntity.ok(employeeService.getListHr());
     }
 }

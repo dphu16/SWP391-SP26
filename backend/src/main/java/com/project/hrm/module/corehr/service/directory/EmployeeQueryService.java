@@ -2,12 +2,16 @@ package com.project.hrm.module.corehr.service.directory;
 
 import com.project.hrm.module.corehr.dto.request.EmployeeDetailDTO;
 import com.project.hrm.module.corehr.dto.request.EmployeeDTO;
+import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.enums.UserRole;
 import com.project.hrm.module.corehr.mapper.EmployeeDetailMapper;
 import com.project.hrm.module.corehr.mapper.EmployeeMapper;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -37,6 +41,14 @@ public class EmployeeQueryService {
                 .filterEmployees(fullName, employeeCode, phoneNumber, department, position, role, status);
 
         return employeeRepository.findAll(spec, pageable).map(EmployeeMapper::toDTO);
+    }
+
+    public List<EmployeeDTO> getListHr(){
+        List<Employee> employees = employeeRepository.findByUser_Role(UserRole.HR);
+
+        return employees.stream()
+                .map(EmployeeMapper::toDTO)
+                .toList();
     }
 
 }

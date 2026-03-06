@@ -2,6 +2,8 @@ package com.project.hrm.module.recruitment.entity;
 
 import com.project.hrm.module.corehr.entity.Department;
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.recruitment.enums.EmploymentType;
+import com.project.hrm.module.recruitment.enums.RequestStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -41,10 +43,9 @@ public class JobRequest {
     @Column(name = "location", nullable = false, length = 150)
     private String location;
 
-    @Size(max = 20)
-    @NotNull
-    @Column(name = "employment_type", nullable = false, length = 20)
-    private String employmentType;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "employment_type", nullable = false)
+    private EmploymentType employmentType;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reports_to")
@@ -54,10 +55,9 @@ public class JobRequest {
     @Column(name = "reason", nullable = false, length = Integer.MAX_VALUE)
     private String reason;
 
-    @Size(max = 20)
-    @ColumnDefault("'SUBMITTED'")
-    @Column(name = "status", length = 20)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private RequestStatus status = RequestStatus.SUBMITTED;
 
     @Column(name = "hr_comment", length = Integer.MAX_VALUE)
     private String hrComment;

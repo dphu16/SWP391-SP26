@@ -32,9 +32,6 @@ public class CvReview {
     @JoinColumn(name = "reviewer_id", nullable = false)
     private Employee reviewer;
 
-    @Column(name = "ai_score", precision = 5, scale = 2)
-    private BigDecimal aiScore;
-
     @Column(name = "interview_score", precision = 4, scale = 2)
     private BigDecimal interviewScore;
 

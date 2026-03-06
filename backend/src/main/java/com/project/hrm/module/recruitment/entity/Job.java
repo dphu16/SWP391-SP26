@@ -1,6 +1,7 @@
 package com.project.hrm.module.recruitment.entity;
 
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.recruitment.enums.JobStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -49,10 +50,9 @@ public class Job {
     @Column(name = "quantity")
     private Integer quantity;
 
-    @Size(max = 20)
-    @ColumnDefault("'OPEN'")
-    @Column(name = "status", length = 20)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private JobStatus status = JobStatus.OPEN;
 
     @ColumnDefault("now()")
     @Column(name = "posted_at")
@@ -65,5 +65,11 @@ public class Job {
     @JoinColumn(name = "hr_id")
     private Employee employee;
 
+    @ColumnDefault("50")
+    @Column(name = "max_cv_quantity")
+    private Integer maxCvQuantity;
+
+    @Column(name = "salary")
+    private String salary;
 
 }

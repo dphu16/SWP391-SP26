@@ -1,5 +1,6 @@
 package com.project.hrm.module.recruitment.dto.response;
 
+import com.project.hrm.module.recruitment.enums.EmploymentType;
 import com.project.hrm.module.recruitment.enums.JobStatus;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,6 +14,9 @@ public class JobResponse {
 
     private UUID id;
     private UUID reqId;
+    private String reqName;
+    private EmploymentType type;
+    private String location;
     private String title;
     private String description;
     private String responsibility;
@@ -23,5 +27,8 @@ public class JobResponse {
     private OffsetDateTime closedTime;
     private OffsetDateTime createAt;
     private UUID hrId;
+    private String hrName;
+    private int maxCv;
+    private String salary;
 
 }

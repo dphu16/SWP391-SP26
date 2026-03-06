@@ -83,11 +83,11 @@ public class JobServiceImpl implements JobService {
                 .orElseThrow(() ->
                         new RuntimeException("Job not found with id: " + id));
 
-        if (entity.getStatus().equals(JobStatus.CLOSED.name())) {
+        if (entity.getStatus().equals(JobStatus.CLOSED)) {
             throw new RuntimeException("Cannot update status of closed job");
         }
 
-        entity.setStatus(status.name());
+        entity.setStatus(status);
 
         if (status == JobStatus.CLOSED) {
             entity.setClosedAt(OffsetDateTime.now());
@@ -123,8 +123,10 @@ public class JobServiceImpl implements JobService {
         entity.setBenefits(request.getBenefit());
         entity.setClosedAt(request.getClosedTime());
         entity.setPostedAt(OffsetDateTime.now());
-        entity.setStatus(request.getStatus().name());
+        entity.setStatus(request.getStatus());
         entity.setEmployee(employee);
+        entity.setMaxCvQuantity(request.getMaxCv());
+        entity.setSalary(request.getSalary());
     }
 
     private JobResponse mapToResponse(Job entity){
@@ -132,6 +134,9 @@ public class JobServiceImpl implements JobService {
         response.setId(entity.getId());
         if(entity.getRequest()!=null) {
             response.setReqId(entity.getRequest().getId());
+            response.setReqName(entity.getRequest().getJobTitle());
+            response.setType(entity.getRequest().getEmploymentType());
+            response.setLocation(entity.getRequest().getLocation());
         }
         response.setTitle(entity.getTitle());
         response.setQuantity(entity.getQuantity());
@@ -141,8 +146,11 @@ public class JobServiceImpl implements JobService {
         response.setBenefit(entity.getBenefits());
         response.setClosedTime(entity.getClosedAt());
         response.setCreateAt(entity.getPostedAt());
-        response.setStatus(JobStatus.valueOf(entity.getStatus()));
+        response.setStatus(entity.getStatus());
         response.setHrId(entity.getEmployee().getEmployeeId());
+        response.setHrName(entity.getEmployee().getFullName());
+        response.setMaxCv(entity.getMaxCvQuantity());
+        response.setSalary(entity.getSalary());
         return response;
     }
 }
