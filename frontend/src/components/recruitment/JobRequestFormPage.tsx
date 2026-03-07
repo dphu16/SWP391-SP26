@@ -135,7 +135,7 @@ const JobRequestFormPage: React.FC = () => {
                                 onChange={handleChange}
                                 className={inputCls}
                             >
-                                <option value="" disabled>Select an employee</option>
+                                <option value="" disabled>Select a HR</option>
                                 {employees.map(emp => (
                                     <option key={emp.id} value={emp.id}>
                                         {emp.fullName}
@@ -198,7 +198,7 @@ const JobRequestFormPage: React.FC = () => {
                                 <option value="FULL_TIME">Full-time</option>
                                 <option value="PART_TIME">Part-time</option>
                                 <option value="CONTRACT">Contract</option>
-                                <option value="INTERNSHIP">Internship</option>
+                                <option value="INTERN">Internship</option>
                             </select>
                         </div>
 

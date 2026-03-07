@@ -1,25 +1,33 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { jobService } from "../../services/jobService";
-import { applicationService } from "../../services/applicationService";
 import type { Job } from "../ui/types";
 import { useToast } from "../ui/Toast";
 
 const ITEMS_PER_PAGE = 6;
 
+const formatTimeLeft = (closedTime: string | null) => {
+    if (!closedTime) return "Open until filled";
+    const closeDate = new Date(closedTime);
+    const now = new Date();
+    const diffMs = closeDate.getTime() - now.getTime();
+    if (diffMs <= 0) return "Closed";
+
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    if (diffHours > 24) {
+        const diffDays = Math.floor(diffHours / 24);
+        return `${diffDays} days left`;
+    }
+    return `${diffHours} hours left`;
+};
+
 const PublicJobList: React.FC = () => {
-    const { error: toastError, success: toastSuccess } = useToast();
+    const { error: toastError } = useToast();
+    const navigate = useNavigate();
     const [jobs, setJobs] = useState<Job[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
-
-    const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
-    const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-    const [applicantName, setApplicantName] = useState("");
-    const [applicantEmail, setApplicantEmail] = useState("");
-    const [applicantPhone, setApplicantPhone] = useState("");
-    const [applicantCv, setApplicantCv] = useState<File | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const fetchJobs = useCallback(async () => {
         try {
@@ -47,47 +55,7 @@ const PublicJobList: React.FC = () => {
     }, [fetchJobs]);
 
     const handleApplyClick = (job: Job) => {
-        setSelectedJob(job);
-        setIsApplyModalOpen(true);
-    };
-
-    const handleCloseModal = () => {
-        setIsApplyModalOpen(false);
-        setSelectedJob(null);
-        setApplicantName("");
-        setApplicantEmail("");
-        setApplicantPhone("");
-        setApplicantCv(null);
-    };
-
-    const handleSubmitApplication = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedJob) return;
-
-        if (!applicantName || !applicantEmail || !applicantPhone || !applicantCv) {
-            toastError("Validation Error", "Please fill in all fields and attach a CV.");
-            return;
-        }
-
-        try {
-            setIsSubmitting(true);
-
-            const formData = new FormData();
-            formData.append("jobId", selectedJob.id);
-            formData.append("fullName", applicantName);
-            formData.append("email", applicantEmail);
-            formData.append("phone", applicantPhone);
-            formData.append("cvUrl", applicantCv);
-
-            await applicationService.applyJob(formData);
-
-            toastSuccess("Success", "Your application has been submitted successfully!");
-            handleCloseModal();
-        } catch (err: any) {
-            toastError("Error", "Could not submit application. Please try again later.");
-        } finally {
-            setIsSubmitting(false);
-        }
+        navigate(`/careers/${job.id}`);
     };
 
     const filteredJobs = useMemo(() => {
@@ -108,7 +76,7 @@ const PublicJobList: React.FC = () => {
     }, [searchTerm]);
 
     return (
-        <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="h-full overflow-y-auto bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
                 <div className="text-center space-y-4">
                     <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Open Positions</h1>
@@ -120,7 +88,7 @@ const PublicJobList: React.FC = () => {
                 <div className="relative max-w-xl mx-auto">
                     <input
                         type="text"
-                        placeholder="Search open positions..."
+                        placeholder="Search jobs by title"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-12 pr-4 py-3 rounded-2xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-gray-900"
@@ -145,23 +113,39 @@ const PublicJobList: React.FC = () => {
                         <p className="mt-1 text-gray-500">We are not recruiting for any matching positions right now. Please check back later.</p>
                     </div>
                 ) : (
-                    <div className="grid gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {paginatedJobs.map((job) => (
-                            <div key={job.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div className="space-y-1">
+                            <div key={job.id} onClick={() => handleApplyClick(job)} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between gap-4 cursor-pointer">
+                                <div className="space-y-3">
                                     <h2 className="text-xl font-bold text-gray-900">{job.title}</h2>
-                                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                                        <div className="flex items-center gap-1.5">
+
+                                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                                        <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                                            <span className="font-semibold">{job.type || "FULL_TIME"}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 bg-gray-50 text-gray-700 px-2 py-1 rounded">
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            {job.location || "Anywhere"}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                                        <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2 py-1 rounded">
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            {job.salary || "Negotiable"}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 bg-orange-50 text-orange-700 px-2 py-1 rounded">
                                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
-                                            Closing: {job.closedTime ? new Date(job.closedTime).toLocaleDateString() : "Open until filled"}
+                                            {formatTimeLeft(job.closedTime)}
                                         </div>
                                     </div>
                                 </div>
-                                <button className="self-start sm:self-center px-6 py-2 bg-primary text-white font-medium rounded-xl hover:bg-primary-hover transition-colors shadow-sm" onClick={() => handleApplyClick(job)}>
-                                    Apply Now
-                                </button>
                             </div>
                         ))}
                     </div>
@@ -185,102 +169,6 @@ const PublicJobList: React.FC = () => {
                         >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                         </button>
-                    </div>
-                )}
-
-                {/* Apply Job Modal */}
-                {isApplyModalOpen && selectedJob && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 transition-opacity animate-fade-in">
-                        <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-slide-up">
-                            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                                <h3 className="text-xl font-bold text-gray-900">
-                                    Apply for {selectedJob.title}
-                                </h3>
-                                <button
-                                    onClick={handleCloseModal}
-                                    className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
-                                >
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                                </button>
-                            </div>
-                            <form onSubmit={handleSubmitApplication} className="p-6 space-y-5">
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium text-gray-700">Full Name</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={applicantName}
-                                        onChange={(e) => setApplicantName(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                                        placeholder="John Doe"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium text-gray-700">Email Address</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        value={applicantEmail}
-                                        onChange={(e) => setApplicantEmail(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                                        placeholder="john@example.com"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium text-gray-700">Phone Number</label>
-                                    <input
-                                        type="tel"
-                                        required
-                                        value={applicantPhone}
-                                        onChange={(e) => setApplicantPhone(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                                        placeholder="+1 234 567 890"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium text-gray-700">CV (PDF only)</label>
-                                    <input
-                                        type="file"
-                                        accept=".pdf"
-                                        required
-                                        onChange={(e) => {
-                                            if (e.target.files && e.target.files.length > 0) {
-                                                setApplicantCv(e.target.files[0]);
-                                            }
-                                        }}
-                                        className="w-full px-3 py-2 text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all border border-gray-200 rounded-xl bg-white shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                    />
-                                </div>
-
-                                <div className="pt-4 flex items-center justify-end gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={handleCloseModal}
-                                        className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors border border-gray-200 shadow-sm"
-                                        disabled={isSubmitting}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className="px-5 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                    >
-                                        {isSubmitting ? (
-                                            <>
-                                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                                Submitting...
-                                            </>
-                                        ) : (
-                                            "Submit Application"
-                                        )}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
                     </div>
                 )}
             </div>

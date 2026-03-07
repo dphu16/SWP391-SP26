@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 const Icons = {
@@ -116,7 +117,7 @@ const SectionLabel: React.FC<{ label: string; isCollapsed: boolean }> = ({ label
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const hasRole = (..._args: any[]) => true; // Auth removed
+  const { hasRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [employeesExpanded, setEmployeesExpanded] = useState(true);
   const [requestExpanded, setRequestExpanded] = useState(true);
@@ -430,8 +431,8 @@ const Sidebar: React.FC = () => {
             />
           ))}
 
-        {/* Growth — HR only */}
-        {hasRole("HR") && (
+        {/* Growth — HR & MANAGER */}
+        {hasRole("HR", "MANAGER") && (
           <>
             <SectionLabel label="Growth" isCollapsed={isCollapsed} />
 
@@ -469,19 +470,21 @@ const Sidebar: React.FC = () => {
               {!isCollapsed && recruitmentExpanded && (
                 <div className="mt-0.5 space-y-0.5 animate-slide-up">
                   {[
-                    { label: "Job Requests", path: "/recruitment/job-requests" },
-                    { label: "Job Openings", path: "/recruitment/jobs" },
-                  ].map((item) => (
-                    <NavItem
-                      key={item.path}
-                      icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />}
-                      label={item.label}
-                      isActive={location.pathname === item.path}
-                      isCollapsed={false}
-                      indent
-                      onClick={() => navigate(item.path)}
-                    />
-                  ))}
+                    { label: "Job Requests", path: "/recruitment/job-requests", roles: ["HR", "MANAGER"] as const },
+                    { label: "Job Openings", path: "/recruitment/jobs", roles: ["HR"] as const },
+                  ]
+                    .filter((item) => hasRole(...item.roles))
+                    .map((item) => (
+                      <NavItem
+                        key={item.path}
+                        icon={<span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />}
+                        label={item.label}
+                        isActive={location.pathname === item.path}
+                        isCollapsed={false}
+                        indent
+                        onClick={() => navigate(item.path)}
+                      />
+                    ))}
                 </div>
               )}
             </div>

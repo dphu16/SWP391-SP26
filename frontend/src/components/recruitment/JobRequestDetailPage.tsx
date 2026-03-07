@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { jobRequestService } from "../../services/jobRequestService";
 import type { JobRequest } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
+import { useAuth } from "../../hooks/useAuth";
 
 const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-text-muted-light mb-1";
 const valueCls = "text-sm font-semibold text-text-primary-light";
@@ -15,6 +16,9 @@ const JobRequestDetailPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [hrComment, setHrComment] = useState("");
     const [updating, setUpdating] = useState(false);
+
+    const { user } = useAuth();
+    const isManager = user?.role === "MANAGER";
 
     useEffect(() => {
         const fetchDetail = async () => {
@@ -86,7 +90,7 @@ const JobRequestDetailPage: React.FC = () => {
                             Edit Request
                         </button>
                     )}
-                    {request.status === "APPROVED" && (
+                    {request.status === "APPROVED" && !isManager && (
                         <button
                             onClick={() => navigate(`/recruitment/jobs/new`, {
                                 state: {
@@ -166,47 +170,49 @@ const JobRequestDetailPage: React.FC = () => {
                         </div>
                     </section>
 
-                    <section className="bg-white rounded-3xl p-6 border border-border-light shadow-sm flex flex-col gap-4">
-                        <h2 className="text-[11px] font-black uppercase tracking-widest text-text-primary-light">
-                            HR Feedback
-                        </h2>
-                        <div className="space-y-4">
-                            <div>
-                                {request.status === "SUBMITTED" ? (
-                                    <textarea
-                                        rows={3}
-                                        value={hrComment}
-                                        onChange={(e) => setHrComment(e.target.value)}
-                                        placeholder="Add internal notes or approval terms before deciding..."
-                                        className="w-full px-4 py-2 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none"
-                                    />
-                                ) : (
-                                    <div className="text-xs text-text-secondary-light leading-relaxed p-3 bg-gray-50 rounded-xl border border-gray-100 italic">
-                                        {request.comment || "No comments added."}
+                    {!(isManager && request.status === "SUBMITTED") && (
+                        <section className="bg-white rounded-3xl p-6 border border-border-light shadow-sm flex flex-col gap-4">
+                            <h2 className="text-[11px] font-black uppercase tracking-widest text-text-primary-light">
+                                HR Feedback
+                            </h2>
+                            <div className="space-y-4">
+                                <div>
+                                    {request.status === "SUBMITTED" ? (
+                                        <textarea
+                                            rows={3}
+                                            value={hrComment}
+                                            onChange={(e) => setHrComment(e.target.value)}
+                                            placeholder="Add internal notes or approval terms before deciding..."
+                                            className="w-full px-4 py-2 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none"
+                                        />
+                                    ) : (
+                                        <div className="text-xs text-text-secondary-light leading-relaxed p-3 bg-gray-50 rounded-xl border border-gray-100 italic">
+                                            {request.comment || "No comments added."}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {request.status === "SUBMITTED" && !isManager && (
+                                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                                        <button
+                                            onClick={() => handleStatusUpdate("REJECTED")}
+                                            disabled={updating}
+                                            className="px-4 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                                        >
+                                            Reject
+                                        </button>
+                                        <button
+                                            onClick={() => handleStatusUpdate("APPROVED")}
+                                            disabled={updating}
+                                            className="px-4 py-2 text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg transition-all shadow-md shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
+                                        >
+                                            Approve
+                                        </button>
                                     </div>
                                 )}
                             </div>
-
-                            {request.status === "SUBMITTED" && (
-                                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-                                    <button
-                                        onClick={() => handleStatusUpdate("REJECTED")}
-                                        disabled={updating}
-                                        className="px-4 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                                    >
-                                        Reject
-                                    </button>
-                                    <button
-                                        onClick={() => handleStatusUpdate("APPROVED")}
-                                        disabled={updating}
-                                        className="px-4 py-2 text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg transition-all shadow-md shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
-                                    >
-                                        Approve
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </section>
+                        </section>
+                    )}
                 </div>
             </div>
         </div>

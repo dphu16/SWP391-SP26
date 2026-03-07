@@ -31,6 +31,8 @@ import CVListPage from "./components/recruitment/CVListPage";
 import LoginPage from "./components/auth/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PublicJobList from "./components/recruitment/PublicJobList";
+import PublicJobDetail from "./components/recruitment/PublicJobDetail";
+import RoleGate from "./components/auth/RoleGate";
 
 // --- Import từ nhánh develop của nhóm ---
 import { ToastProvider } from "./components/ui/Toast";
@@ -100,16 +102,16 @@ const AppShell: React.FC = () => {
 
                             <Route path="/employee/:id" element={<EmployeeDetail />} />
                             <Route path="/profile" element={<EmployeeDetail />} />
-                            <Route path="/recruitment/jobs" element={<JobListPage />} />
-                            <Route path="/recruitment/jobs/new" element={<JobFormPage />} />
-                            <Route path="/recruitment/jobs/:id" element={<JobDetailPage />} />
-                            <Route path="/recruitment/jobs/edit/:id" element={<JobFormPage />} />
-                            <Route path="/recruitment/cvs" element={<CVListPage />} />
+                            <Route path="/recruitment/jobs" element={<RoleGate allowed={["HR"]}><JobListPage /></RoleGate>} />
+                            <Route path="/recruitment/jobs/new" element={<RoleGate allowed={["HR"]}><JobFormPage /></RoleGate>} />
+                            <Route path="/recruitment/jobs/:id" element={<RoleGate allowed={["HR"]}><JobDetailPage /></RoleGate>} />
+                            <Route path="/recruitment/jobs/edit/:id" element={<RoleGate allowed={["HR"]}><JobFormPage /></RoleGate>} />
+                            <Route path="/recruitment/cvs" element={<RoleGate allowed={["HR"]}><CVListPage /></RoleGate>} />
 
-                            <Route path="/recruitment/job-requests" element={<JobRequestListPage />} />
-                            <Route path="/recruitment/job-requests/new" element={<JobRequestFormPage />} />
-                            <Route path="/recruitment/job-requests/:id" element={<JobRequestDetailPage />} />
-                            <Route path="/recruitment/job-requests/:id/edit" element={<JobRequestFormPage />} />
+                            <Route path="/recruitment/job-requests" element={<RoleGate allowed={["HR", "MANAGER"]}><JobRequestListPage /></RoleGate>} />
+                            <Route path="/recruitment/job-requests/new" element={<RoleGate allowed={["HR", "MANAGER"]}><JobRequestFormPage /></RoleGate>} />
+                            <Route path="/recruitment/job-requests/:id" element={<RoleGate allowed={["HR", "MANAGER"]}><JobRequestDetailPage /></RoleGate>} />
+                            <Route path="/recruitment/job-requests/:id/edit" element={<RoleGate allowed={["HR", "MANAGER"]}><JobRequestFormPage /></RoleGate>} />
                         </Routes>
                     </div>
                 </div>
@@ -124,6 +126,7 @@ const App: React.FC = () => {
             <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/careers" element={<PublicJobList />} />
+                <Route path="/careers/:id" element={<PublicJobDetail />} />
                 <Route
                     path="/*"
                     element={
