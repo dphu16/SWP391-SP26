@@ -47,7 +47,7 @@ export interface Job {
     hrName: string;
     maxCv: number;
     salary: string;
-    employmentType: EmploymentType;
+    type: EmploymentType;
     location: string;
 }
 
@@ -64,4 +64,6 @@ export interface JobInput {
     hrId: string;
     maxCv: number;
     salary: string;
+    type: EmploymentType;
+    location: string;
 }

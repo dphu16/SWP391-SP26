@@ -143,7 +143,7 @@ const JobDetailPage: React.FC = () => {
                 <div className="space-y-6">
                     <section className="p-6 rounded-2xl border border-border-light bg-white shadow-card">
                         <h2 className="text-sm font-bold uppercase tracking-wider text-text-muted-light mb-4">
-                            Recruitment Info
+                            JOB DETAILS
                         </h2>
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -164,7 +164,7 @@ const JobDetailPage: React.FC = () => {
                                 <div>
                                     <label className="text-[10px] font-bold text-text-muted-light uppercase">Employment Type</label>
                                     <div className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-xs font-bold text-text-secondary-light uppercase tracking-wide mt-1">
-                                        {job.employmentType || "FULL_TIME"}
+                                        {job.type || "FULL_TIME"}
                                     </div>
                                 </div>
                             </div>

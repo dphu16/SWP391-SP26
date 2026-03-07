@@ -33,6 +33,8 @@ const JobFormPage: React.FC = () => {
         quantity: state?.quantity || 1,
         maxCv: 50,
         salary: "Negotiable",
+        type: state?.type || "FULL_TIME",
+        location: state?.location || "",
         status: "DRAFT",
         closedTime: "",
         hrId: state?.reportTo || user?.employeeId || "",
@@ -54,6 +56,8 @@ const JobFormPage: React.FC = () => {
                         quantity: job.quantity || 1,
                         maxCv: job.maxCv || 0,
                         salary: job.salary || "",
+                        type: job.type || "FULL_TIME",
+                        location: job.location || "",
                         status: job.status || "DRAFT",
                         closedTime: job.closedTime ? new Date(job.closedTime).toISOString().slice(0, 16) : "",
                         hrId: job.hrId || "",
@@ -173,6 +177,34 @@ const JobFormPage: React.FC = () => {
                                 name="maxCv"
                                 value={formData.maxCv}
                                 onChange={handleChange}
+                                className={inputCls}
+                            />
+                        </div>
+
+                        <div>
+                            <label className={labelCls}>Employment Type</label>
+                            <select
+                                required
+                                name="type"
+                                value={formData.type}
+                                onChange={handleChange}
+                                className={inputCls}
+                            >
+                                <option value="FULL_TIME">Full Time</option>
+                                <option value="PART_TIME">Part Time</option>
+                                <option value="CONTRACT">Contract</option>
+                                <option value="INTERN">Intern</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className={labelCls}>Location</label>
+                            <input
+                                required
+                                name="location"
+                                value={formData.location}
+                                onChange={handleChange}
+                                placeholder="e.g. Ho Chi Minh City"
                                 className={inputCls}
                             />
                         </div>

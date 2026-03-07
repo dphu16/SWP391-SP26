@@ -93,7 +93,9 @@ const JobRequestDetailPage: React.FC = () => {
                                     requestId: request.id,
                                     title: request.title,
                                     quantity: request.quantity,
-                                    reportTo: request.reportTo
+                                    reportTo: request.reportTo,
+                                    type: request.type,
+                                    location: request.location
                                 }
                             })}
                             className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 cursor-pointer"
