@@ -1,6 +1,7 @@
 package com.project.hrm.module.recruitment.entity;
 
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.recruitment.enums.EmploymentType;
 import com.project.hrm.module.recruitment.enums.JobStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -71,5 +72,12 @@ public class Job {
 
     @Column(name = "salary")
     private String salary;
+
+    @Column(name = "location")
+    private String location;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "employment_type", nullable = false)
+    private EmploymentType employmentType;
 
 }

@@ -1,5 +1,6 @@
 package com.project.hrm.module.recruitment.dto.request;
 
+import com.project.hrm.module.recruitment.enums.EmploymentType;
 import com.project.hrm.module.recruitment.enums.JobStatus;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,5 +24,7 @@ public class CreateJobRequest {
     private UUID hrId;
     private int maxCv;
     private String salary;
+    private String location;
+    private EmploymentType type;
 
 }

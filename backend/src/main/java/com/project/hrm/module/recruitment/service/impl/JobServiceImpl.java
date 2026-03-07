@@ -127,6 +127,8 @@ public class JobServiceImpl implements JobService {
         entity.setEmployee(employee);
         entity.setMaxCvQuantity(request.getMaxCv());
         entity.setSalary(request.getSalary());
+        entity.setLocation(request.getLocation());
+        entity.setEmploymentType(request.getType());
     }
 
     private JobResponse mapToResponse(Job entity){
@@ -135,8 +137,6 @@ public class JobServiceImpl implements JobService {
         if(entity.getRequest()!=null) {
             response.setReqId(entity.getRequest().getId());
             response.setReqName(entity.getRequest().getJobTitle());
-            response.setType(entity.getRequest().getEmploymentType());
-            response.setLocation(entity.getRequest().getLocation());
         }
         response.setTitle(entity.getTitle());
         response.setQuantity(entity.getQuantity());
@@ -151,6 +151,8 @@ public class JobServiceImpl implements JobService {
         response.setHrName(entity.getEmployee().getFullName());
         response.setMaxCv(entity.getMaxCvQuantity());
         response.setSalary(entity.getSalary());
+        response.setType(entity.getEmploymentType());
+        response.setLocation(entity.getLocation());
         return response;
     }
 }
