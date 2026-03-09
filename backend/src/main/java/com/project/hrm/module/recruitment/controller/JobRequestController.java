@@ -38,12 +38,12 @@ public class JobRequestController {
         return ResponseEntity.ok(responses);
     }
 
-    @GetMapping("/department/{id}")
+    @GetMapping("/department-name/{name}")
     public ResponseEntity<List<JobRequestResponse>> getRequestToManager(
-            @PathVariable UUID id) {
+            @PathVariable String name) {
 
         List<JobRequestResponse> responses =
-                jobRequestService.getRequestByDepartmentId(id);
+                jobRequestService.getRequestByDepartmentName(name);
 
         return ResponseEntity.ok(responses);
     }

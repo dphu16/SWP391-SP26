@@ -2,10 +2,13 @@ package com.project.hrm.common.email;
 
 import com.project.hrm.module.recruitment.entity.Application;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import java.io.File;
 
 @Service
 public class EmailService {
@@ -26,26 +29,30 @@ public class EmailService {
             helper.setTo(app.getCandidate().getEmail());
             helper.setSubject("Application Submitted Successfully");
 
-            String cvUrl = "http://localhost:8080" + app.getCvUrl();
-
             String content = """
-                <p>Dear %s,</p>
+            <p>Dear %s,</p>
 
-                <p>You have successfully applied for: <b>%s</b>.</p>
+            <p>You have successfully applied for: <b>%s</b>.</p>
+            <p>We will contact you via Email or phone number: <b>%s</b>.</p>
+            <p>Your CV is attached below.</p>
 
-                <p>Here is your CV:</p>
-
-                <a href="%s">View your CV</a>
-
-                <br><br>
-                <p>HR Team</p>
-                """.formatted(
+            <br>
+            <p>HR Team</p>
+            """.formatted(
                     app.getCandidate().getFullName(),
                     app.getJob().getTitle(),
-                    cvUrl
+                    app.getCandidate().getPhone()
             );
 
-            helper.setText(content, true); // true = HTML email
+            helper.setText(content, true);
+
+            // đường dẫn file CV
+            File file = new File("uploads/" + app.getCvUrl());
+
+            FileSystemResource resource = new FileSystemResource(file);
+
+            // attach file
+            helper.addAttachment("CV_" + app.getCandidate().getFullName() + ".pdf", resource);
 
             mailSender.send(message);
 

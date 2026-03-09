@@ -65,9 +65,9 @@ public class JobRequestServiceImpl implements JobRequestService {
     }
 
     @Override
-    public List<JobRequestResponse> getRequestByDepartmentId(UUID id) {
+    public List<JobRequestResponse> getRequestByDepartmentName(String name) {
         List<JobRequest> entities =
-                jobRequestRepository.findByDept_DeptId(id);
+                jobRequestRepository.findByDept_DeptName(name);
 
         return entities.stream()
                 .map(this::mapToResponse)
