@@ -40,7 +40,7 @@ public class TeamStatsService {
         if (activeCycle == null)
             return new TeamStatsResponse(0, 0, null);
 
-        List<Employee> team = employeeRepo.findByManager_EmployeeId(managerId);
+        List<Employee> team = employeeRepo.findByMentor_EmployeeId(managerId);
         long totalMembers = team.size();
 
         if (totalMembers == 0)

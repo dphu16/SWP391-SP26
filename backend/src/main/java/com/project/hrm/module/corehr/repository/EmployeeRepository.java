@@ -1,8 +1,8 @@
 package com.project.hrm.module.corehr.repository;
 
 import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.module.corehr.entity.User;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
+import com.project.hrm.module.corehr.enums.ProgressStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -17,27 +17,26 @@ import java.util.UUID;
 
 public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSpecificationExecutor<Employee> {
 
-    Optional<Employee> findByUser(User user);
+    @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal" })
+    Optional<Employee> findByUser_Email(String email);
 
-    @EntityGraph(attributePaths = { "user", "position", "department" })
-    @Query("SELECT e FROM Employee e WHERE e.user.username = :username")
-    Optional<Employee> findByUser_Username(String username);
-
-    @EntityGraph(attributePaths = { "user", "position", "department" })
+    @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal" })
     @Query(value = "SELECT e FROM Employee e ORDER BY e.fullName ASC", countQuery = "SELECT COUNT(e) FROM Employee e")
     Page<Employee> findAllWithDetails(Pageable pageable);
 
     @EntityGraph(attributePaths = { "user", "position", "position.department" })
     List<Employee> findByPosition_Department_DeptId(UUID deptId);
+
+    @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal" })
     @Override
     Optional<Employee> findById(UUID uuid);
 
-    @EntityGraph(attributePaths = { "user", "position", "department" })
+    @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal" })
     @Query("SELECT e FROM Employee e WHERE e.employeeId = :id")
     Optional<Employee> findByIdWithDetails(@Param("id") UUID id);
 
-    @EntityGraph(attributePaths = { "user", "position", "department" })
-    List<Employee> findByEmpStatusIn(List<EmployeeStatus> statuses);
+    @EntityGraph(attributePaths = { "user", "position", "department", "personal" })
+    List<Employee> findByStatusIn(List<EmployeeStatus> statuses);
 
     @Query("SELECT e FROM Employee e LEFT JOIN e.personal p " +
             "WHERE LOWER(e.fullName) LIKE LOWER(CONCAT('%', :search, '%')) " +
@@ -45,10 +44,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
             "OR LOWER(p.phone) LIKE LOWER(CONCAT('%', :search, '%'))")
     Page<Employee> searchEmployeesByKeyword(@Param("search") String keyword, Pageable pageable);
 
-    @EntityGraph(attributePaths = { "user", "position", "position.department" })
-    List<Employee> findByManager_EmployeeId(UUID managerId);
+    @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal" })
+    List<Employee> findByMentor_EmployeeId(UUID mentorId);
 
-    // Sửa lại để trả về List<Employee> và truy vấn thông qua quan hệ với User
-    @Query("SELECT e FROM Employee e WHERE e.user.status = 'ACTIVE'")
-    List<Employee> findActiveEmployeesForPayroll();
+    @EntityGraph(attributePaths = { "user", "position", "department", "personal" })
+    List<Employee> findByEmpStatusNot(ProgressStatus status);
 }
