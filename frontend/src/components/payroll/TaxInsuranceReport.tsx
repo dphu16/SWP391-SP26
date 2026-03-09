@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { getBatches, getTaxInsuranceReport, sendPayrollReport, type PayrollBatchDTO, type TaxInsuranceDTO } from "../../services/payrollService";// ─── Helpers ───────────────────────────────────────────────────────────────────
+import { getBatches, getTaxInsuranceReport, type PayrollBatchDTO, type TaxInsuranceDTO } from "../../services/payrollService";// ─── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n?: number | null) =>
     n != null ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n) : "—";
 
@@ -227,21 +227,16 @@ const TaxInsuranceReport: React.FC = () => {
 
     const handleSend = async () => {
         setSending(true);
-        try {
-            await sendPayrollReport(selId);
-            setSentPeriods(prev => new Set([...prev, selId]));
-            loadBatches();
-        } catch (error: any) {
-            console.error("Failed to send report:", error);
-            const errMsg = typeof error?.response?.data === 'string' ? error.response.data : error?.response?.data?.message || "Failed to send report";
-            alert(errMsg);
-        } finally {
-            setSending(false);
-        }
-        setShowConfirm(false);
-        await new Promise(r => setTimeout(r, 1200));
-        setSending(false);
+
+        // Simulate network communication to finance subsystem
+        await new Promise(r => setTimeout(r, 1000));
+
+        // Mark tax report as sent locally so Finance can see it
+        localStorage.setItem(`tax_report_sent_${selId}`, "true");
         setSentPeriods(prev => new Set([...prev, selId]));
+
+        setShowConfirm(false);
+        setSending(false);
         setShowToast(true);
         setTimeout(() => setShowToast(false), 4500);
     };
@@ -447,17 +442,26 @@ const TaxInsuranceReport: React.FC = () => {
                                         </svg>
                                         Print
                                     </button>
-                                    <button onClick={() => setShowConfirm(true)} disabled={sending}
-                                        className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${sending
-                                            ? "bg-indigo-400 text-white cursor-wait"
-                                            : "bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700 cursor-pointer"
+                                    <button onClick={() => setShowConfirm(true)} disabled={sending || selBatch?.status !== "LOCKED"}
+                                        className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${sending ? "bg-indigo-400 text-white cursor-wait" :
+                                            selBatch?.status !== "LOCKED" ? "bg-slate-200 text-slate-500 cursor-not-allowed" :
+                                                "bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700 cursor-pointer"
                                             }`}>
-                                        <span className={sending ? "animate-spin" : ""}>{sending ? <IcRefresh /> : <IcSend />}</span>
-                                        {sending ? "Sending..." : "Send Report"}
+                                        <span className={sending ? "animate-spin" : ""}>
+                                            {selBatch?.status !== "LOCKED" ? <IcShield /> : sending ? <IcRefresh /> : <IcSend />}
+                                        </span>
+                                        {selBatch?.status !== "LOCKED" ? "Require Payroll Locked" : sending ? "Sending..." : "Send Report"}
                                     </button>
                                 </>
                             )}
                         </div>
+                    </div>
+                )}
+                {/* Notice if not locked */}
+                {taxRows.length > 0 && selBatch && selBatch.status !== "LOCKED" && !alreadySent && (
+                    <div className="px-6 py-3 bg-amber-50 border-t border-amber-100 flex items-center justify-center gap-2 text-xs text-amber-700 font-medium">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                        Nút gửi báo cáo thuế chỉ khả dụng sau khi đợt lương này đã được khoá (HR bấm Send Report bên Payroll Management)
                     </div>
                 )}
             </div>

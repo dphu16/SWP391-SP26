@@ -605,12 +605,35 @@ const HRPayrollView: React.FC = () => {
         } finally { setApproveBusy(false); }
     };
 
+    const [selectedDepartment, setSelectedDepartment] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 30;
+
+    const uniqueDepartments = React.useMemo(() => {
+        const dpts = new Set(rows.map(r => r.department).filter(Boolean));
+        return Array.from(dpts).sort();
+    }, [rows]);
+
     // ── Derived ───────────────────────────────────────────────────────────────
-    const filtered = rows.filter(r => {
-        const matchSearch = r.employeeName.toLowerCase().includes(search.toLowerCase());
-        const matchFilter = filter === "all" || (filter === "warning" ? r.hasWarning : !r.hasWarning);
-        return matchSearch && matchFilter;
-    });
+    const filtered = React.useMemo(() => {
+        return rows.filter(r => {
+            const matchSearch = r.employeeName.toLowerCase().includes(search.toLowerCase());
+            const matchFilter = filter === "all" || (filter === "warning" ? r.hasWarning : !r.hasWarning);
+            const matchDept = selectedDepartment === "all" || r.department === selectedDepartment;
+            return matchSearch && matchFilter && matchDept;
+        });
+    }, [rows, search, filter, selectedDepartment]);
+
+    // Reset pagination when filter changes
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [search, filter, selectedDepartment, selId]);
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+    const paginatedRows = React.useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage;
+        return filtered.slice(start, start + itemsPerPage);
+    }, [filtered, currentPage]);
 
     const warnCount = rows.filter(r => r.hasWarning).length;
     const okCount = rows.filter(r => !r.hasWarning).length;
@@ -766,6 +789,24 @@ const HRPayrollView: React.FC = () => {
                                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search employee..."
                                     className="pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 w-44 transition-colors" />
                             </div>
+                            {/* Department Filter */}
+                            {uniqueDepartments.length > 0 && (
+                                <div className="relative min-w-[140px]">
+                                    <select
+                                        value={selectedDepartment}
+                                        onChange={(e) => setSelectedDepartment(e.target.value)}
+                                        className="w-full appearance-none pl-4 pr-9 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer transition-colors"
+                                    >
+                                        <option value="all">All Departments</option>
+                                        {uniqueDepartments.map(dept => (
+                                            <option key={dept} value={dept}>{dept}</option>
+                                        ))}
+                                    </select>
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M6 9l6 6 6-6" /></svg>
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -807,7 +848,7 @@ const HRPayrollView: React.FC = () => {
                                     )}
                                 </td></tr>
                             ) : (
-                                filtered.map(row => (
+                                paginatedRows.map(row => (
                                     <tr key={row.detailId}
                                         className={`group cursor-pointer transition-colors ${row.hasWarning ? "bg-amber-50/30 hover:bg-amber-50/60" : "hover:bg-slate-50/70"}`}
                                         onClick={() => setEditRow(row)}>
@@ -867,6 +908,58 @@ const HRPayrollView: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {filtered.length > 0 && (
+                    <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between flex-wrap gap-4">
+                        <div className="text-xs text-slate-500">
+                            Showing <span className="font-semibold text-slate-700">{(currentPage - 1) * itemsPerPage + (filtered.length > 0 ? 1 : 0)}</span>
+                            {" "}to <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span>
+                            {" "}of <span className="font-semibold text-slate-700">{filtered.length}</span> employees
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                            >
+                                Previous
+                            </button>
+
+                            <div className="flex items-center gap-1.5 px-2">
+                                {Array.from({ length: totalPages }).map((_, i) => {
+                                    const page = i + 1;
+                                    if (totalPages > 7) {
+                                        if (page !== 1 && page !== totalPages && Math.abs(page - currentPage) > 1) {
+                                            if (page === 2 || page === totalPages - 1) return <span key={page} className="text-slate-400 text-xs px-1">...</span>;
+                                            return null;
+                                        }
+                                    }
+                                    return (
+                                        <button
+                                            key={page}
+                                            onClick={() => setCurrentPage(page)}
+                                            className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-colors cursor-pointer ${currentPage === page
+                                                    ? "bg-emerald-500 text-white shadow-sm"
+                                                    : "text-slate-500 hover:bg-slate-200"
+                                                }`}
+                                        >
+                                            {page}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Footer: approve */}
                 {rowsLoaded && rows.length > 0 && (
