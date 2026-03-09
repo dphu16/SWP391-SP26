@@ -8,6 +8,8 @@ import { departmentService } from "../../services/departmentService";
 import type { Department } from "../../services/departmentService";
 import { hrService } from "../../services/hrService";
 import type { EmployeeNameDto } from "../../services/hrService";
+import { useAuth } from "../../hooks/useAuth";
+import { employeeService } from "../../services/employeeService";
 
 const inputCls = "w-full px-4 py-2.5 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
 const labelCls = "block text-[11px] font-bold uppercase tracking-wider text-text-secondary-light mb-1.5";
@@ -16,6 +18,7 @@ const JobRequestFormPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { error: toastError, success: toastSuccess } = useToast();
+    const { user } = useAuth();
 
     const isEdit = Boolean(id);
     const [loading, setLoading] = useState(isEdit);
@@ -23,6 +26,7 @@ const JobRequestFormPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<EmployeeNameDto[]>([]);
+    const [managerDeptId, setManagerDeptId] = useState<string | null>(null);
 
     const [formData, setFormData] = useState<JobRequestInput>({
         title: "",
@@ -44,12 +48,26 @@ const JobRequestFormPage: React.FC = () => {
                     departmentService.getAll(),
                     hrService.getEmployeeNames()
                 ]);
-                setDepartments(deptRes.data);
+                const depts = deptRes.data;
+                setDepartments(depts);
                 setEmployees(empRes.data);
+
+                let autoDeptId: string | null = null;
+                if (user?.role === "MANAGER" && user.employeeId) {
+                    const empData = await employeeService.getEmployeeDetail(user.employeeId);
+                    const mDeptName = empData.data.deptName;
+                    const matchedDept = depts.find(d => d.deptName === mDeptName);
+                    if (matchedDept) {
+                        autoDeptId = matchedDept.deptId;
+                        setManagerDeptId(autoDeptId);
+                    }
+                }
 
                 if (isEdit && id) {
                     const res = await jobRequestService.getById(id);
                     setFormData(res.data);
+                } else if (!isEdit && autoDeptId) {
+                    setFormData(prev => ({ ...prev, deptId: autoDeptId as string }));
                 }
             } catch (err) {
                 setError("Failed to load necessary data.");
@@ -60,7 +78,7 @@ const JobRequestFormPage: React.FC = () => {
         };
 
         fetchInitialData();
-    }, [id, isEdit, toastError]);
+    }, [id, isEdit, toastError, user]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -152,6 +170,7 @@ const JobRequestFormPage: React.FC = () => {
                                 value={formData.deptId}
                                 onChange={handleChange}
                                 className={inputCls}
+                                disabled={user?.role === "MANAGER" && !!managerDeptId}
                             >
                                 <option value="" disabled>Select a department</option>
                                 {departments.map(dept => (

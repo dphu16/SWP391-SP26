@@ -5,10 +5,12 @@ import type { JobRequest } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
 import { DeleteConfirmation } from "./DeleteConfirmation";
 import { useToast } from "../ui/Toast";
-
+import { useAuth } from "../../hooks/useAuth";
+import { employeeService } from "../../services/employeeService";
 const JobRequestListPage: React.FC = () => {
     const navigate = useNavigate();
     const { error: toastError, success: toastSuccess } = useToast();
+    const { user } = useAuth();
 
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -26,15 +28,34 @@ const JobRequestListPage: React.FC = () => {
         try {
             setLoading(true);
             setError(null);
-            const res = await jobRequestService.getAll();
-            setRequests(res.data);
+
+            if (user?.role === "MANAGER" && user.employeeId) {
+                // Fetch employee detail to get department
+                const employeeRes = await employeeService.getEmployeeDetail(user.employeeId);
+                const deptName = employeeRes.data.deptName;
+
+                if (deptName) {
+                    const reqRes = await jobRequestService.getByDepartment(deptName);
+                    setRequests(reqRes.data);
+                } else {
+                    setRequests([]);
+                }
+            } else if (user?.role === "HR" && user.employeeId) {
+                // HR gets their assigned requests
+                const reqRes = await jobRequestService.getByHR(user.employeeId);
+                setRequests(reqRes.data);
+            } else {
+                // Admin or others get all requests
+                const res = await jobRequestService.getAll();
+                setRequests(res.data);
+            }
         } catch (err: any) {
             setError("Failed to load job requests. Please try again later.");
             toastError("Error", "Could not fetch job requests.");
         } finally {
             setLoading(false);
         }
-    }, [toastError]);
+    }, [toastError, user]);
 
     useEffect(() => {
         fetchRequests();
