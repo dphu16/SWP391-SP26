@@ -1,6 +1,7 @@
 package com.project.hrm.module.corehr.dto.response;
 
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
+import com.project.hrm.module.corehr.enums.ProgressStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,6 +24,6 @@ public class InactiveEmployeeResponseDTO {
     private String avatarUrl;
     private String departmentName;
     private String positionTitle;
-    private EmployeeStatus employeeStatus;
+    private EmployeeStatus status;
     private LocalDate dateOfJoining;
 }

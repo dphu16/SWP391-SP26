@@ -23,7 +23,7 @@ export interface RequestResponseDTO {
     requestId: string;
     employeeName: string;
     deptName: string;
-    requestType: "LEAVE" | "OT" | "SHIFT_CHANGE";
+    requestType: "LEAVE" | "OT" | "SHIFT_CHANGE" | "APPROVAL";
     status: "PENDING" | "APPROVED" | "REJECTED";
     reason: string;
     startDate: string;
