@@ -2,6 +2,7 @@ package com.project.hrm.module.corehr.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -22,14 +23,27 @@ public class GlobalExceptionHandler {
         body.put("errorCode", ex.getErrorCode().name());
         body.put("message", ex.getMessage());
 
-        // Xác định HTTP status dựa trên loại lỗi
         HttpStatus status = switch (ex.getErrorCode()) {
-            case INVALID_CREDENTIALS -> HttpStatus.UNAUTHORIZED; // 401
-            case ACCOUNT_LOCKED, ACCOUNT_INACTIVE -> HttpStatus.FORBIDDEN; // 403
-            default -> HttpStatus.BAD_REQUEST; // 400
+            case INVALID_CREDENTIALS -> HttpStatus.UNAUTHORIZED;
+            case ACCOUNT_LOCKED, ACCOUNT_INACTIVE, ACCESS_DENIED -> HttpStatus.FORBIDDEN;
+            case APPROVAL_REQUEST_EXISTS -> HttpStatus.CONFLICT;
+            case EMPLOYEE_NOT_FOUND, APPROVAL_REQUEST_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case ACTIVATION_TOKEN_INVALID -> HttpStatus.BAD_REQUEST;
+            case ACTIVATION_NO_USER_ACCOUNT -> HttpStatus.UNPROCESSABLE_ENTITY;
+            default -> HttpStatus.BAD_REQUEST;
         };
 
         return ResponseEntity.status(status).body(body);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", OffsetDateTime.now().toString());
+        body.put("message", "Invalid request body: " + ex.getMostSpecificCause().getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -55,11 +69,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-    /**
-     * Bắt tất cả RuntimeException (từ Service layer) — trả về 500 với thông báo rõ
-     * ràng
-     * để tránh bị Spring Security nuốt thành 401.
-     */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
         Map<String, Object> body = new LinkedHashMap<>();

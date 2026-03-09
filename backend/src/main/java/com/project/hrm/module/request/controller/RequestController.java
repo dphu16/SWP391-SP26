@@ -6,6 +6,7 @@ import com.project.hrm.module.request.entity.Request;
 import com.project.hrm.module.request.service.RequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,7 +15,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/requests")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*") // Đảm bảo React có thể gọi API nếu khác port
+@CrossOrigin(origins = "http://localhost:5173")
 public class RequestController {
 
     private final RequestService service;
@@ -22,12 +23,14 @@ public class RequestController {
     // --- 1. LẤY TẤT CẢ ĐƠN (MANAGER) ---
     // Endpoint này trả về RequestResponseDTO đã có sẵn employeeName và deptName
     @GetMapping("/all")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<RequestResponseDTO>> getAllRequests() {
         return ResponseEntity.ok(service.getAllRequestsForReview());
     }
 
     // --- 2. DUYỆT ĐƠN (APPROVE) ---
     @PutMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<Request> approveRequest(
             @PathVariable UUID id,
             @RequestBody(required = false) RequestDTO dto) {
@@ -36,6 +39,7 @@ public class RequestController {
 
     // --- 3. TỪ CHỐI ĐƠN (REJECT) ---
     @PutMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<Request> rejectRequest(
             @PathVariable UUID id,
             @RequestBody(required = false) RequestDTO dto) {

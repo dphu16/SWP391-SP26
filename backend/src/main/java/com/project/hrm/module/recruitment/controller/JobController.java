@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,7 +20,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class JobController {
     private final JobService jobService;
+
     @PostMapping
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<JobResponse> create(
             @Valid @RequestBody CreateJobRequest request) {
 
@@ -29,20 +32,20 @@ public class JobController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<JobResponse>> getAll() {
 
-        List<JobResponse> responses =
-                jobService.getAllJob();
+        List<JobResponse> responses = jobService.getAllJob();
 
         return ResponseEntity.ok(responses);
     }
 
     @GetMapping("/hr/{id}")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<JobResponse>> getJobByHrId(
             @PathVariable UUID id) {
 
-        List<JobResponse> responses =
-                jobService.getJobByEmployeeId(id);
+        List<JobResponse> responses = jobService.getJobByEmployeeId(id);
 
         return ResponseEntity.ok(responses);
     }
@@ -50,8 +53,7 @@ public class JobController {
     @GetMapping("/candidate/list-job")
     public ResponseEntity<List<JobResponse>> getActiveJob() {
 
-        List<JobResponse> responses =
-                jobService.getJobByStatus("OPEN");
+        List<JobResponse> responses = jobService.getJobByStatus("OPEN");
 
         return ResponseEntity.ok(responses);
     }
@@ -64,16 +66,17 @@ public class JobController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<JobResponse> update(
             @PathVariable UUID id,
             @RequestBody CreateJobRequest request) {
 
         return ResponseEntity.ok(
-                jobService.update(id, request)
-        );
+                jobService.update(id, request));
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<JobResponse> updateStatus(
             @PathVariable UUID id,
             @RequestParam JobStatus status) {
@@ -83,6 +86,7 @@ public class JobController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
 
         jobService.delete(id);

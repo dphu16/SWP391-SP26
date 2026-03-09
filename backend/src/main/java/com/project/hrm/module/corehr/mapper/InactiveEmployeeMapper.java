@@ -13,7 +13,7 @@ public class InactiveEmployeeMapper {
                                 .employeeId(employee.getEmployeeId())
                                 .employeeCode(employee.getEmployeeCode())
                                 .fullName(employee.getPersonal() != null ? employee.getFullName() : null)
-                                .email(employee.getPersonal().getEmail())
+                                .email(employee.getPersonal() != null ? employee.getPersonal().getEmail() : null)
                                 .phone(employee.getPersonal() != null ? employee.getPersonal().getPhone() : null)
                                 .avatarUrl(employee.getPersonal() != null ? employee.getPersonal().getAvatar() : null)
                                 .departmentName(employee.getDepartment() != null
@@ -21,7 +21,7 @@ public class InactiveEmployeeMapper {
                                                 : null)
                                 .positionTitle(employee.getPosition() != null ? employee.getPosition().getTitle()
                                                 : null)
-                                .employeeStatus(employee.getEmpStatus())
+                                .status(employee.getStatus())
                                 .dateOfJoining(employee.getDateOfJoining())
                                 .build();
         }

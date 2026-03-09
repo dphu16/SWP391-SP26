@@ -3,19 +3,25 @@ package com.project.hrm.module.corehr.service.directory;
 import com.project.hrm.module.corehr.dto.request.EmployeeChangeDTO;
 import com.project.hrm.module.corehr.dto.request.EmployeeDetailDTO;
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.entity.Role;
+import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.mapper.EmployeeDetailMapper;
+import com.project.hrm.module.corehr.repository.RoleRepository;
 import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class EmployeeCommandService {
     private final EmployeeHelper employeeHelper;
+    private final RoleRepository roleRepository;
 
-    public EmployeeCommandService(EmployeeHelper employeeHelper) {
+    public EmployeeCommandService(EmployeeHelper employeeHelper, RoleRepository roleRepository) {
         this.employeeHelper = employeeHelper;
+        this.roleRepository = roleRepository;
     }
 
     private void applyPersonalInfo(Employee e, EmployeeChangeDTO req) {
@@ -49,18 +55,27 @@ public class EmployeeCommandService {
             e.setPosition(employeeHelper.findPositionOrThrow(req.getPositionId()));
         }
         if (req.getEmpStatus() != null)
-            e.setEmpStatus(req.getEmpStatus());
+            e.setStatus(req.getEmpStatus());
     }
 
     private void applyUserAccount(Employee e, EmployeeChangeDTO req) {
         if (e.getUser() == null)
             return;
-        if (req.getRole() != null)
-            e.getUser().setRole(req.getRole());
-        if (req.getUserStatus() != null)
-            e.getUser().setStatus(req.getUserStatus());
-        if (req.getEmail() != null)
-            e.getPersonal().setEmail(req.getEmail());
+
+        if (req.getRole() != null) {
+            Role role = roleRepository.findByName(req.getRole())
+                    .orElseThrow(() -> new RuntimeException("Role không tồn tại"));
+            e.getUser().setRoles(Set.of(role));
+        }
+
+        if (req.getEmpStatus() != null) {
+            UserStatus userStatus = switch (req.getEmpStatus()) {
+                case OFFICIAL, INTERN, PROBATION -> UserStatus.ACTIVE;
+                case TERMINATED, RESIGNED -> UserStatus.INACTIVE;
+                default -> UserStatus.INACTIVE;
+            };
+            e.getUser().setStatus(userStatus);
+        }
     }
 
     @Transactional
