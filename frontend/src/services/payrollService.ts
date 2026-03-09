@@ -261,3 +261,109 @@ export async function getTaxInsuranceReport(batchId: string) {
     );
     return res.data;
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Finance Payment DTOs
+// ──────────────────────────────────────────────────────────────────────────────
+
+export interface PaymentRequestDTO {
+    requestId: string;
+    payrollBatchId: string;
+    requesterId: string;
+    approverId: string | null;
+    totalAmountRequested: number;
+    status: string;
+    hrNote: string | null;
+    financeNote: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export interface PaymentBatchHistoryDTO {
+    paymentBatchId: string;
+    payrollBatchId: string;
+    month: number;
+    year: number;
+    totalAmount: number;
+    totalTransactions: number;
+    successTransactions: number;
+    failedTransactions: number;
+    status: string;
+    createdAt: string | null;
+    completedAt: string | null;
+}
+
+export interface PaymentTransactionHistoryDTO {
+    transactionId: string;
+    paymentBatchId: string;
+    employeeId: string;
+    employeeName: string;
+    amount: number;
+    bankResponseCode: string | null;
+    status: string;
+    createdAt: string | null;
+}
+
+export interface FinanceAccountDTO {
+    accountId: string;
+    accountName: string;
+    bankName: string;
+    accountNumber: string;
+    currentBalance: number;
+    status: string;
+}
+
+export interface ApprovePaymentRequest {
+    requestId: string;
+    sourceAccountId: string;
+    bankRefCode: string;
+    financeNote?: string;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Finance Payment APIs
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** GET /api/v1/finance/payment-requests — Lấy danh sách yêu cầu thanh toán */
+export async function getFinanceRequests(status?: string) {
+    const res = await apiClient.get<PaymentRequestDTO[]>(
+        "/api/v1/finance/payment-requests",
+        { params: status ? { status } : undefined }
+    );
+    return res.data;
+}
+
+/** POST /api/v1/finance/payment-requests/:id/approve-and-execute — Duyệt & thực hiện chi trả */
+export async function approveAndExecutePayment(payload: ApprovePaymentRequest) {
+    const res = await apiClient.post<string>(
+        `/api/v1/finance/payment-requests/${payload.requestId}/approve-and-execute`,
+        payload
+    );
+    return res.data;
+}
+
+/** POST /api/v1/finance/payment-requests/:id/reject — Từ chối yêu cầu */
+export async function rejectPaymentRequest(requestId: string, note: string) {
+    const res = await apiClient.post<string>(
+        `/api/v1/finance/payment-requests/${requestId}/reject`,
+        { financeNote: note }
+    );
+    return res.data;
+}
+
+/** GET /api/v1/finance/payment-batches — Lịch sử batch thanh toán */
+export async function getPaymentBatches(page = 0, size = 50) {
+    const res = await apiClient.get<PageResponse<PaymentBatchHistoryDTO>>(
+        "/api/v1/finance/payment-batches",
+        { params: { page, size } }
+    );
+    return res.data;
+}
+
+/** GET /api/v1/finance/payment-batches/:id/transactions — Giao dịch chi tiết của 1 batch */
+export async function getPaymentTransactions(paymentBatchId: string) {
+    const res = await apiClient.get<PageResponse<PaymentTransactionHistoryDTO>>(
+        `/api/v1/finance/payment-batches/${paymentBatchId}/transactions`
+    );
+    return res.data;
+}

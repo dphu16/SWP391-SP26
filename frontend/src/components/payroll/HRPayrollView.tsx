@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+﻿import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Icon } from "./PayrollModule";
 import {
     getBatches, createBatch, calculatePayroll,
@@ -6,12 +6,12 @@ import {
     type PayrollBatchDTO, type PayrollReviewDTO, type UpdatePayrollDetailRequest,
 } from "../../services/payrollService";
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const fmt = (n?: number | null) =>
-    n != null ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n) : "—";
+    n != null ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n) : "ΓÇö";
 
 const fmtPeriod = (period?: string | null) => {
-    if (!period) return "—";
+    if (!period) return "ΓÇö";
     const d = new Date(period);
     return `Month ${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 };
@@ -23,7 +23,7 @@ const getErrMsg = (e: unknown) => {
         : err?.response?.data?.message ?? "An error occurred, please try again.";
 };
 
-// ─── Status config ─────────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Status config ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const BATCH_STATUS: Record<string, { label: string; dot: string; text: string; bg: string; border: string }> = {
     DRAFT: { label: "Draft", dot: "bg-slate-400", text: "text-slate-600", bg: "bg-slate-100", border: "border-slate-200" },
     PROCESSED: { label: "Calculated", dot: "bg-blue-500", text: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
@@ -31,7 +31,7 @@ const BATCH_STATUS: Record<string, { label: string; dot: string; text: string; b
     LOCKED: { label: "Locked", dot: "bg-amber-500", text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
 };
 
-// ─── Sub-components ────────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Sub-components ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const BatchBadge: React.FC<{ status: string }> = ({ status }) => {
     const c = BATCH_STATUS[status] ?? BATCH_STATUS.DRAFT;
     return (
@@ -52,7 +52,7 @@ const SkeletonRows = () => (
     ))}</>
 );
 
-// ─── Create Batch Modal ────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Create Batch Modal ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const CreateBatchModal: React.FC<{ onCreated: (b: PayrollBatchDTO) => void; onClose: () => void }> = ({ onCreated, onClose }) => {
     const now = new Date();
     const [month, setMonth] = useState(now.getMonth() + 1);
@@ -123,7 +123,7 @@ const CreateBatchModal: React.FC<{ onCreated: (b: PayrollBatchDTO) => void; onCl
     );
 };
 
-// ─── Edit Detail Modal ─────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Edit Detail Modal ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const EditModal: React.FC<{ detail: PayrollReviewDTO; onSaved: () => void; onClose: () => void }> = ({ detail, onSaved, onClose }) => {
     const [ot, setOt] = useState(detail.totalOtHours ?? 0);
     const [abs, setAbs] = useState(detail.totalAbsentDays ?? 0);
@@ -153,7 +153,7 @@ const EditModal: React.FC<{ detail: PayrollReviewDTO; onSaved: () => void; onClo
                         </div>
                         <div>
                             <h3 className="text-base font-bold text-slate-900">Adjust Data</h3>
-                            <p className="text-xs text-slate-500">{detail.employeeName}{detail.department && ` · ${detail.department}`}</p>
+                            <p className="text-xs text-slate-500">{detail.employeeName}{detail.department && ` ┬╖ ${detail.department}`}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 cursor-pointer">{Icon.close}</button>
@@ -206,7 +206,7 @@ const EditModal: React.FC<{ detail: PayrollReviewDTO; onSaved: () => void; onClo
     );
 };
 
-// ─── Payroll Report Modal ──────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Payroll Report Modal ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const PayrollReportModal: React.FC<{
     batch: PayrollBatchDTO;
     rows: PayrollReviewDTO[];
@@ -265,7 +265,7 @@ const PayrollReportModal: React.FC<{
                         </div>
                         <div>
                             <h2 className="text-base font-bold text-white">Payroll Report for Finance</h2>
-                            <p className="text-xs text-white/70">{period} · Created at {reportDate}</p>
+                            <p className="text-xs text-white/70">{period} ┬╖ Created at {reportDate}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -277,7 +277,7 @@ const PayrollReportModal: React.FC<{
                     </div>
                 </div>
 
-                {/* Body — scrollable */}
+                {/* Body ΓÇö scrollable */}
                 <div ref={printRef} className="flex-1 overflow-y-auto">
                     {!sent ? (
                         <>
@@ -350,16 +350,16 @@ const PayrollReportModal: React.FC<{
                                                         <span className="font-semibold text-slate-800 whitespace-nowrap">{r.employeeName}</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-2.5 text-slate-500">{r.department || "—"}</td>
+                                                <td className="px-4 py-2.5 text-slate-500">{r.department || "ΓÇö"}</td>
                                                 <td className="px-4 py-2.5 font-medium text-slate-700 whitespace-nowrap">{fmt(r.baseSalary)}</td>
                                                 <td className="px-4 py-2.5 text-center">
                                                     <span className={r.totalOtHours > 0 ? "text-amber-600 font-semibold" : "text-slate-400"}>{r.totalOtHours ?? 0}h</span>
                                                 </td>
-                                                <td className="px-4 py-2.5 whitespace-nowrap">{r.otPay > 0 ? fmt(r.otPay) : <span className="text-slate-300">—</span>}</td>
+                                                <td className="px-4 py-2.5 whitespace-nowrap">{r.otPay > 0 ? fmt(r.otPay) : <span className="text-slate-300">ΓÇö</span>}</td>
                                                 <td className="px-4 py-2.5 whitespace-nowrap">
                                                     {r.absentDeduction > 0
                                                         ? <span className="text-rose-600 font-medium">-{fmt(r.absentDeduction)}</span>
-                                                        : <span className="text-slate-300">—</span>}
+                                                        : <span className="text-slate-300">ΓÇö</span>}
                                                 </td>
                                                 <td className="px-4 py-2.5 font-bold text-slate-800 whitespace-nowrap">{fmt(r.grossSalary)}</td>
                                                 <td className="px-4 py-2.5">
@@ -484,7 +484,7 @@ const PayrollReportModal: React.FC<{
     );
 };
 
-// ─── Stat Card ─────────────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Stat Card ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const StatCard: React.FC<{
     label: string; value: string | number; icon: React.ReactNode; bg: string;
     valueColor?: string; subtitle?: string; active?: boolean; onClick?: () => void;
@@ -503,22 +503,22 @@ const StatCard: React.FC<{
     </button>
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 // MAIN: HR Payroll View
-// ═══════════════════════════════════════════════════════════════════════════════
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 const HRPayrollView: React.FC = () => {
-    // ── Batch state ────────────────────────────────────────────────────────────
+    // ΓöÇΓöÇ Batch state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     const [batches, setBatches] = useState<PayrollBatchDTO[]>([]);
     const [batchLoad, setBatchLoad] = useState(true);
     const [batchErr, setBatchErr] = useState("");
     const [selId, setSelId] = useState("");
     const [showCreate, setShowCreate] = useState(false);
 
-    // ── Calculate state ────────────────────────────────────────────────────────
+    // ΓöÇΓöÇ Calculate state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     const [calcState, setCalcState] = useState<"idle" | "busy" | "ok" | "err">("idle");
     const [calcErr, setCalcErr] = useState("");
 
-    // ── Review table state ─────────────────────────────────────────────────────
+    // ΓöÇΓöÇ Review table state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     const [rows, setRows] = useState<PayrollReviewDTO[]>([]);
     const [rowsLoad, setRowsLoad] = useState(false);
     const [rowsLoaded, setRowsLoaded] = useState(false);
@@ -526,15 +526,15 @@ const HRPayrollView: React.FC = () => {
     const [filter, setFilter] = useState<"all" | "ok" | "warning">("all");
     const [editRow, setEditRow] = useState<PayrollReviewDTO | null>(null);
 
-    // ── Approve state ──────────────────────────────────────────────────────────
+    // ΓöÇΓöÇ Approve state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     const [approveBusy, setApproveBusy] = useState(false);
     const [approveMsg, setApproveMsg] = useState("");
     const [approveMsgType, setApproveMsgType] = useState<"ok" | "err">("ok");
 
-    // ── Report state ───────────────────────────────────────────────────────────
+    // ΓöÇΓöÇ Report state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     const [showReport, setShowReport] = useState(false);
 
-    // ── Load batches ───────────────────────────────────────────────────────────
+    // ΓöÇΓöÇ Load batches ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     const loadBatches = useCallback(async () => {
         setBatchLoad(true); setBatchErr("");
         try {
@@ -547,7 +547,7 @@ const HRPayrollView: React.FC = () => {
 
     useEffect(() => { loadBatches(); }, []); // eslint-disable-line
 
-    // ── Load review data whenever batch changes ────────────────────────────────
+    // ΓöÇΓöÇ Load review data whenever batch changes ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     const loadReview = useCallback(async (batchId: string) => {
         if (!batchId) return;
         setRowsLoad(true); setCalcErr(""); setApproveMsg(""); setRowsLoaded(false);
@@ -569,7 +569,7 @@ const HRPayrollView: React.FC = () => {
         }
     }, [selId, loadReview]);
 
-    // ── Handlers ──────────────────────────────────────────────────────────────
+    // ΓöÇΓöÇ Handlers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     const onBatchCreated = (b: PayrollBatchDTO) => {
         setBatches(prev => [b, ...prev]);
         setSelId(b.batchId);
@@ -605,45 +605,22 @@ const HRPayrollView: React.FC = () => {
         } finally { setApproveBusy(false); }
     };
 
-    const [selectedDepartment, setSelectedDepartment] = useState("all");
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 30;
-
-    const uniqueDepartments = React.useMemo(() => {
-        const dpts = new Set(rows.map(r => r.department).filter(Boolean));
-        return Array.from(dpts).sort();
-    }, [rows]);
-
-    // ── Derived ───────────────────────────────────────────────────────────────
-    const filtered = React.useMemo(() => {
-        return rows.filter(r => {
-            const matchSearch = r.employeeName.toLowerCase().includes(search.toLowerCase());
-            const matchFilter = filter === "all" || (filter === "warning" ? r.hasWarning : !r.hasWarning);
-            const matchDept = selectedDepartment === "all" || r.department === selectedDepartment;
-            return matchSearch && matchFilter && matchDept;
-        });
-    }, [rows, search, filter, selectedDepartment]);
-
-    // Reset pagination when filter changes
-    React.useEffect(() => {
-        setCurrentPage(1);
-    }, [search, filter, selectedDepartment, selId]);
-
-    const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
-    const paginatedRows = React.useMemo(() => {
-        const start = (currentPage - 1) * itemsPerPage;
-        return filtered.slice(start, start + itemsPerPage);
-    }, [filtered, currentPage]);
+    // ΓöÇΓöÇ Derived ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    const filtered = rows.filter(r => {
+        const matchSearch = r.employeeName.toLowerCase().includes(search.toLowerCase());
+        const matchFilter = filter === "all" || (filter === "warning" ? r.hasWarning : !r.hasWarning);
+        return matchSearch && matchFilter;
+    });
 
     const warnCount = rows.filter(r => r.hasWarning).length;
     const okCount = rows.filter(r => !r.hasWarning).length;
     const totalGross = rows.reduce((s, r) => s + (r.grossSalary ?? 0), 0);
     const selBatch = batches.find(b => b.batchId === selId);
 
-    // ── Render ────────────────────────────────────────────────────────────────
+    // ΓöÇΓöÇ Render ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     return (
         <>
-            {/* ── Batch control panel ───────────────────────────────────────────── */}
+            {/* ΓöÇΓöÇ Batch control panel ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden mb-5">
                 <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
@@ -651,7 +628,7 @@ const HRPayrollView: React.FC = () => {
                     </div>
                     <div>
                         <h3 className="text-sm font-bold text-slate-800">Payroll Management</h3>
-                        <p className="text-xs text-slate-400">Select Batch → Calculate → Review → Approve</p>
+                        <p className="text-xs text-slate-400">Select Batch ΓåÆ Calculate ΓåÆ Review ΓåÆ Approve</p>
                     </div>
                 </div>
 
@@ -673,7 +650,7 @@ const HRPayrollView: React.FC = () => {
                             ) : batches.length === 0 ? (
                                 <div className="px-4 py-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
                                     No payroll batches found.{" "}
-                                    <button onClick={() => setShowCreate(true)} className="text-emerald-600 font-semibold hover:underline cursor-pointer">Create new →</button>
+                                    <button onClick={() => setShowCreate(true)} className="text-emerald-600 font-semibold hover:underline cursor-pointer">Create new ΓåÆ</button>
                                 </div>
                             ) : (
                                 <div className="relative">
@@ -681,7 +658,7 @@ const HRPayrollView: React.FC = () => {
                                         className="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer hover:border-emerald-300 transition-colors">
                                         {batches.map(b => (
                                             <option key={b.batchId} value={b.batchId}>
-                                                {fmtPeriod(b.period)} — {BATCH_STATUS[b.status]?.label ?? b.status}
+                                                {fmtPeriod(b.period)} ΓÇö {BATCH_STATUS[b.status]?.label ?? b.status}
                                             </option>
                                         ))}
                                     </select>
@@ -738,7 +715,7 @@ const HRPayrollView: React.FC = () => {
                 </div>
             </div>
 
-            {/* ── Stat cards (only when data loaded) ───────────────────────────── */}
+            {/* ΓöÇΓöÇ Stat cards (only when data loaded) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
             {rowsLoaded && rows.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
                     <StatCard label="Total Employees" value={rows.length} icon={Icon.users}
@@ -759,7 +736,7 @@ const HRPayrollView: React.FC = () => {
                 </div>
             )}
 
-            {/* ── Review table ──────────────────────────────────────────────────── */}
+            {/* ΓöÇΓöÇ Review table ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
                 {/* Toolbar */}
                 <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -767,7 +744,7 @@ const HRPayrollView: React.FC = () => {
                         <h3 className="text-sm font-bold text-slate-800">Employee Payroll Table</h3>
                         {rows.length > 0 && (
                             <p className="text-xs text-slate-400 mt-0.5">
-                                {filtered.length}/{rows.length} employees{selBatch && ` · ${fmtPeriod(selBatch.period)}`}
+                                {filtered.length}/{rows.length} employees{selBatch && ` ┬╖ ${fmtPeriod(selBatch.period)}`}
                             </p>
                         )}
                     </div>
@@ -789,24 +766,6 @@ const HRPayrollView: React.FC = () => {
                                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search employee..."
                                     className="pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 w-44 transition-colors" />
                             </div>
-                            {/* Department Filter */}
-                            {uniqueDepartments.length > 0 && (
-                                <div className="relative min-w-[140px]">
-                                    <select
-                                        value={selectedDepartment}
-                                        onChange={(e) => setSelectedDepartment(e.target.value)}
-                                        className="w-full appearance-none pl-4 pr-9 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer transition-colors"
-                                    >
-                                        <option value="all">All Departments</option>
-                                        {uniqueDepartments.map(dept => (
-                                            <option key={dept} value={dept}>{dept}</option>
-                                        ))}
-                                    </select>
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M6 9l6 6 6-6" /></svg>
-                                    </span>
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>
@@ -838,7 +797,7 @@ const HRPayrollView: React.FC = () => {
                                     </div>
                                     <p className="text-sm font-semibold text-slate-600">
                                         {rows.length === 0
-                                            ? 'No data in this batch — click "Calculate" to start.'
+                                            ? 'No data in this batch ΓÇö click "Calculate" to start.'
                                             : "No matching results."}
                                     </p>
                                     {rows.length === 0 && (
@@ -848,7 +807,7 @@ const HRPayrollView: React.FC = () => {
                                     )}
                                 </td></tr>
                             ) : (
-                                paginatedRows.map(row => (
+                                filtered.map(row => (
                                     <tr key={row.detailId}
                                         className={`group cursor-pointer transition-colors ${row.hasWarning ? "bg-amber-50/30 hover:bg-amber-50/60" : "hover:bg-slate-50/70"}`}
                                         onClick={() => setEditRow(row)}>
@@ -861,7 +820,7 @@ const HRPayrollView: React.FC = () => {
                                                 <span className="font-semibold text-slate-800 whitespace-nowrap">{row.employeeName}</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3.5 text-slate-500 text-xs">{row.department || "—"}</td>
+                                        <td className="px-4 py-3.5 text-slate-500 text-xs">{row.department || "ΓÇö"}</td>
                                         <td className="px-4 py-3.5 font-medium text-slate-700 whitespace-nowrap">{fmt(row.baseSalary)}</td>
                                         <td className="px-4 py-3.5">
                                             <span className={`font-semibold ${row.totalOtHours > 80 ? "text-amber-600" : "text-slate-700"}`}>
@@ -877,7 +836,7 @@ const HRPayrollView: React.FC = () => {
                                         <td className="px-4 py-3.5 whitespace-nowrap">
                                             {row.absentDeduction
                                                 ? <span className="text-rose-600 font-medium">-{fmt(row.absentDeduction)}</span>
-                                                : <span className="text-slate-300">—</span>}
+                                                : <span className="text-slate-300">ΓÇö</span>}
                                         </td>
                                         <td className="px-4 py-3.5">
                                             <span className="font-bold text-slate-800 whitespace-nowrap">{fmt(row.grossSalary)}</span>
@@ -909,58 +868,6 @@ const HRPayrollView: React.FC = () => {
                     </table>
                 </div>
 
-                {/* Pagination Controls */}
-                {filtered.length > 0 && (
-                    <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between flex-wrap gap-4">
-                        <div className="text-xs text-slate-500">
-                            Showing <span className="font-semibold text-slate-700">{(currentPage - 1) * itemsPerPage + (filtered.length > 0 ? 1 : 0)}</span>
-                            {" "}to <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span>
-                            {" "}of <span className="font-semibold text-slate-700">{filtered.length}</span> employees
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                            >
-                                Previous
-                            </button>
-
-                            <div className="flex items-center gap-1.5 px-2">
-                                {Array.from({ length: totalPages }).map((_, i) => {
-                                    const page = i + 1;
-                                    if (totalPages > 7) {
-                                        if (page !== 1 && page !== totalPages && Math.abs(page - currentPage) > 1) {
-                                            if (page === 2 || page === totalPages - 1) return <span key={page} className="text-slate-400 text-xs px-1">...</span>;
-                                            return null;
-                                        }
-                                    }
-                                    return (
-                                        <button
-                                            key={page}
-                                            onClick={() => setCurrentPage(page)}
-                                            className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-colors cursor-pointer ${currentPage === page
-                                                    ? "bg-emerald-500 text-white shadow-sm"
-                                                    : "text-slate-500 hover:bg-slate-200"
-                                                }`}
-                                        >
-                                            {page}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            <button
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                disabled={currentPage === totalPages}
-                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </div>
-                )}
-
                 {/* Footer: approve */}
                 {rowsLoaded && rows.length > 0 && (
                     <div className="px-6 py-4 border-t border-slate-100 bg-gradient-to-r from-slate-50 to-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -975,7 +882,7 @@ const HRPayrollView: React.FC = () => {
                                     <span className="font-semibold">{warnCount}</span> warnings
                                 </span>
                             )}
-                            <span className="text-slate-400">·</span>
+                            <span className="text-slate-400">┬╖</span>
                             <span className="text-slate-500 text-xs">Total gross: <span className="font-semibold text-slate-700">{fmt(totalGross)}</span></span>
                         </div>
                         <div className="flex items-center gap-2">

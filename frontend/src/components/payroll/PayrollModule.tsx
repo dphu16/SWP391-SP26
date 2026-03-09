@@ -4,6 +4,32 @@ import EmployeePayrollView from "./EmployeePayrollView";
 import HRPayrollView from "./HRPayrollView";
 import TaxInsuranceReport from "./TaxInsuranceReport";
 
+// ─── Shared helpers ────────────────────────────────────────────────────────────
+export const fmt = (n?: number | null) =>
+    n != null ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n) : "—";
+
+export const getErrMsg = (e: unknown): string => {
+    if (e && typeof e === "object" && "response" in e) {
+        const res = (e as { response?: { data?: { message?: string } } }).response;
+        if (res?.data?.message) return res.data.message;
+    }
+    if (e instanceof Error) return e.message;
+    return "An unexpected error occurred.";
+};
+
+export const Badge: React.FC<{
+    status: string;
+    cfg: Record<string, { label: string; dot: string; text: string; bg: string; border: string }>;
+}> = ({ status, cfg }) => {
+    const c = cfg[status] ?? { label: status, dot: "bg-slate-400", text: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${c.bg} ${c.text} ${c.border}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
+            {c.label}
+        </span>
+    );
+};
+
 // ─── Icon exports (dùng lại trong các file khác) ──────────────────────────────
 export const Icon = {
     layers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>,
