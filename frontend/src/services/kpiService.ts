@@ -72,17 +72,6 @@ export interface GlobalStats {
     totalKpiTargetValue: number;
 }
 
-export interface TeamStats {
-    totalMembers: number;
-    submittedMembers: number;
-    averageScore: number | null;
-}
-
-export interface GlobalStats {
-    orgAverageScore: number;
-    totalKpiTargetValue: number;
-}
-
 export const kpiService = {
     getGlobalStats: async (): Promise<GlobalStats> => {
         try {
@@ -180,16 +169,6 @@ export const kpiService = {
             return response.data;
         } catch (error) {
             console.error("Error fetching goals for employee", error);
-            return [];
-        }
-    },
-
-    getGoalsByEmployeeAndCycle: async (employeeId: string, cycleId: string): Promise<any[]> => {
-        try {
-            const response = await apiClient.get<any[]>(`/api/employees/${employeeId}/cycles/${cycleId}/goals`);
-            return response.data;
-        } catch (error) {
-            console.error("Error fetching goals for employee in cycle", error);
             return [];
         }
     },

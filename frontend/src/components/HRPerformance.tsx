@@ -98,14 +98,8 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     const [cycleReviews, setCycleReviews] = useState<PerformanceReview[]>([]);
     const [reviewsLoading, setReviewsLoading] = useState(false);
 
-    // Employee KPI Detail state
-    const [selectedEmployeeReview, setSelectedEmployeeReview] = useState<PerformanceReview | null>(null);
-    const [employeeGoals, setEmployeeGoals] = useState<any[]>([]);
-    const [goalsLoading, setGoalsLoading] = useState(false);
-
     const handleViewCycleResults = async (cycleId: string) => {
         setSelectedCycleId(cycleId);
-        setSelectedEmployeeReview(null);
         setReviewsLoading(true);
         try {
             const results = await kpiService.getReviewsByCycle(cycleId);
@@ -114,20 +108,6 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
             console.error(error);
         } finally {
             setReviewsLoading(false);
-        }
-    };
-
-    const handleViewEmployeeKpis = async (review: PerformanceReview) => {
-        if (!selectedCycleId || !review.employee?.employeeId) return;
-        setSelectedEmployeeReview(review);
-        setGoalsLoading(true);
-        try {
-            const goals = await kpiService.getGoalsByEmployeeAndCycle(review.employee.employeeId, selectedCycleId);
-            setEmployeeGoals(goals);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setGoalsLoading(false);
         }
     };
 
@@ -857,202 +837,69 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                     </div>
 
                     {selectedCycleId ? (
-                        selectedEmployeeReview ? (
-                            /* ─── EMPLOYEE KPI DETAIL VIEW ─────────────────────────── */
-                            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col animate-fade-in">
-                                <div className="px-5 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between bg-surface-light dark:bg-surface-dark gap-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-base">
-                                            {(selectedEmployeeReview.employee?.fullName || 'U')[0]}
-                                        </div>
-                                        <div>
-                                            <h2 className="text-base font-bold text-text-primary-light dark:text-text-primary-dark">
-                                                {selectedEmployeeReview.employee?.fullName || 'Unknown'}
-                                            </h2>
-                                            <p className="text-xs text-text-muted-light dark:text-text-muted-dark">KPI Breakdown Detail</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => setSelectedEmployeeReview(null)}
-                                        className="px-4 py-2 text-sm font-semibold rounded-lg border border-border-light text-text-secondary-light hover:bg-surface-2-light transition-colors"
-                                    >
-                                        ← Back to Results
-                                    </button>
+                        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col">
+                            <div className="px-5 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between bg-surface-light dark:bg-surface-dark gap-3">
+                                <div>
+                                    <h2 className="text-base font-bold text-text-primary-light dark:text-text-primary-dark">
+                                        Employee Results
+                                    </h2>
                                 </div>
-
-                                {/* Score Summary Cards */}
-                                <div className="grid grid-cols-3 gap-4 p-5">
-                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                                        <p className="text-[11px] font-bold text-blue-500 uppercase tracking-widest mb-1">KPI Score (70%)</p>
-                                        <p className="text-2xl font-black text-blue-600 dark:text-blue-400">{selectedEmployeeReview.kpiScore ?? '-'}</p>
-                                    </div>
-                                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                                        <p className="text-[11px] font-bold text-amber-500 uppercase tracking-widest mb-1">Attitude (30%)</p>
-                                        <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{selectedEmployeeReview.attitudeScore ?? '-'}</p>
-                                    </div>
-                                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                                        <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-1">Overall</p>
-                                        <p className="text-2xl font-black text-primary">{selectedEmployeeReview.overallScore !== null && selectedEmployeeReview.overallScore !== undefined ? selectedEmployeeReview.overallScore.toFixed(1) : '-'}</p>
-                                    </div>
-                                </div>
-
-                                {/* KPI Goals Table */}
-                                <div className="px-5 pb-2">
-                                    <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-3">Individual KPI Goals</h3>
-                                </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr className="border-y border-border-light dark:border-border-dark bg-surface-2-light/60 dark:bg-surface-2-dark/60">
-                                                <th className="px-5 py-3 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest">KPI Name</th>
-                                                <th className="px-5 py-3 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-center">Weight</th>
-                                                <th className="px-5 py-3 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-center">Target</th>
-                                                <th className="px-5 py-3 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-center">Actual</th>
-                                                <th className="px-5 py-3 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-center">Completion</th>
-                                                <th className="px-5 py-3 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-center">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                                            {goalsLoading ? (
-                                                <tr><td colSpan={6} className="px-5 py-8 text-center text-text-muted-light dark:text-text-muted-dark">Loading KPI details...</td></tr>
-                                            ) : employeeGoals.length === 0 ? (
-                                                <tr><td colSpan={6} className="px-5 py-8 text-center text-text-muted-light dark:text-text-muted-dark">No KPI goals assigned for this employee in this cycle.</td></tr>
-                                            ) : (
-                                                employeeGoals.map((goal: any) => {
-                                                    const target = goal.targetValue || 0;
-                                                    const current = goal.currentValue || 0;
-                                                    const completion = target > 0 ? Math.min(Math.round((current / target) * 100), 100) : 0;
-                                                    const goalStatusColors: Record<string, string> = {
-                                                        ASSIGNED: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-                                                        ACKNOWLEDGED: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-                                                        SUBMITTED: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-                                                        COMPLETED: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-                                                    };
-                                                    return (
-                                                        <tr key={goal.goalId} className="hover:bg-surface-2-light/50 dark:hover:bg-surface-2-dark/50 transition-colors">
-                                                            <td className="px-5 py-4">
-                                                                <div className="font-semibold text-sm text-text-primary-light dark:text-text-primary-dark">
-                                                                    {goal.kpiLibrary?.name || goal.title || 'Unnamed KPI'}
-                                                                </div>
-                                                                {goal.kpiLibrary?.category && (
-                                                                    <div className="text-[11px] text-text-muted-light dark:text-text-muted-dark mt-0.5">{goal.kpiLibrary.category}</div>
-                                                                )}
-                                                            </td>
-                                                            <td className="px-5 py-4 text-center font-bold text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                                                                {goal.weight != null ? `${goal.weight}%` : '-'}
-                                                            </td>
-                                                            <td className="px-5 py-4 text-center font-bold text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                                                                {target}
-                                                            </td>
-                                                            <td className="px-5 py-4 text-center font-bold text-sm text-text-primary-light dark:text-text-primary-dark">
-                                                                {current}
-                                                            </td>
-                                                            <td className="px-5 py-4 text-center">
-                                                                <div className="flex items-center gap-2 justify-center">
-                                                                    <div className="w-16 h-2 bg-surface-2-light dark:bg-surface-2-dark rounded-full overflow-hidden">
-                                                                        <div
-                                                                            className={`h-full rounded-full transition-all duration-500 ${completion >= 100 ? 'bg-emerald-500' : completion >= 50 ? 'bg-primary' : 'bg-amber-500'}`}
-                                                                            style={{ width: `${completion}%` }}
-                                                                        />
-                                                                    </div>
-                                                                    <span className={`text-xs font-bold ${completion >= 100 ? 'text-emerald-600' : completion >= 50 ? 'text-primary' : 'text-amber-600'}`}>
-                                                                        {completion}%
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-5 py-4 text-center">
-                                                                <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${goalStatusColors[goal.status] || 'bg-gray-100 text-gray-600'}`}>
-                                                                    {goal.status}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <button
+                                    onClick={() => setSelectedCycleId(null)}
+                                    className="px-4 py-2 text-sm font-semibold rounded-lg border border-border-light text-text-secondary-light hover:bg-surface-2-light transition-colors"
+                                >
+                                    Back to Cycles
+                                </button>
                             </div>
-                        ) : (
-                            /* ─── EMPLOYEE RESULTS LIST ─────────────────────────── */
-                            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col">
-                                <div className="px-5 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between bg-surface-light dark:bg-surface-dark gap-3">
-                                    <div>
-                                        <h2 className="text-base font-bold text-text-primary-light dark:text-text-primary-dark">
-                                            Employee Results
-                                        </h2>
-                                        <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">Click on an employee to view KPI breakdown</p>
-                                    </div>
-                                    <button
-                                        onClick={() => setSelectedCycleId(null)}
-                                        className="px-4 py-2 text-sm font-semibold rounded-lg border border-border-light text-text-secondary-light hover:bg-surface-2-light transition-colors"
-                                    >
-                                        Back to Cycles
-                                    </button>
-                                </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr className="border-b border-border-light bg-surface-2-light/60">
-                                                <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest">Employee</th>
-                                                <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">KPI (70%)</th>
-                                                <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">Attitude (30%)</th>
-                                                <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">Overall</th>
-                                                <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">Status</th>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-border-light bg-surface-2-light/60">
+                                            <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest">Employee</th>
+                                            <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">KPI (70%)</th>
+                                            <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">Attitude (30%)</th>
+                                            <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">Overall</th>
+                                            <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border-light">
+                                        {reviewsLoading ? (
+                                            <tr>
+                                                <td colSpan={5} className="px-5 py-8 text-center text-text-muted-light">Loading results...</td>
                                             </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-border-light">
-                                            {reviewsLoading ? (
-                                                <tr>
-                                                    <td colSpan={5} className="px-5 py-8 text-center text-text-muted-light">Loading results...</td>
+                                        ) : cycleReviews.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="px-5 py-8 text-center text-text-muted-light">No evaluations submitted for this cycle yet.</td>
+                                            </tr>
+                                        ) : (
+                                            cycleReviews.map((review) => (
+                                                <tr key={review.reviewId} className="hover:bg-surface-2-light/50 transition-colors">
+                                                    <td className="px-5 py-4 font-semibold text-sm text-text-primary-light">
+                                                        {review.employee?.fullName || 'Unknown Employee'}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center font-bold text-text-secondary-light">
+                                                        {review.kpiScore ?? '-'}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center font-bold text-text-secondary-light">
+                                                        {review.attitudeScore ?? '-'}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center">
+                                                        <span className="text-base font-black text-primary">
+                                                            {review.overallScore !== null && review.overallScore !== undefined ? review.overallScore.toFixed(1) : '-'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center">
+                                                        <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${review.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                            {review.status}
+                                                        </span>
+                                                    </td>
                                                 </tr>
-                                            ) : cycleReviews.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={5} className="px-5 py-8 text-center text-text-muted-light">No evaluations submitted for this cycle yet.</td>
-                                                </tr>
-                                            ) : (
-                                                cycleReviews.map((review) => (
-                                                    <tr
-                                                        key={review.reviewId}
-                                                        onClick={() => handleViewEmployeeKpis(review)}
-                                                        className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors cursor-pointer group"
-                                                    >
-                                                        <td className="px-5 py-4">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-surface-2-light dark:bg-surface-2-dark flex items-center justify-center text-xs font-bold text-text-muted-light dark:text-text-muted-dark group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                                                                    {(review.employee?.fullName || 'U')[0]}
-                                                                </div>
-                                                                <div>
-                                                                    <span className="font-semibold text-sm text-text-primary-light dark:text-text-primary-dark group-hover:text-primary transition-colors">
-                                                                        {review.employee?.fullName || 'Unknown Employee'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-5 py-4 text-center font-bold text-text-secondary-light">
-                                                            {review.kpiScore ?? '-'}
-                                                        </td>
-                                                        <td className="px-5 py-4 text-center font-bold text-text-secondary-light">
-                                                            {review.attitudeScore ?? '-'}
-                                                        </td>
-                                                        <td className="px-5 py-4 text-center">
-                                                            <span className="text-base font-black text-primary">
-                                                                {review.overallScore !== null && review.overallScore !== undefined ? review.overallScore.toFixed(1) : '-'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-5 py-4 text-center">
-                                                            <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${review.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : review.status === 'SUBMITTED' ? 'bg-amber-100 text-amber-700' : review.status === 'DRAFT' ? 'bg-gray-100 text-gray-500' : 'bg-blue-100 text-blue-700'}`}>
-                                                                {review.status}
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
-                        )
+                        </div>
                     ) : (
                         <>
 

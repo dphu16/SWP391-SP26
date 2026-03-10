@@ -173,10 +173,6 @@ public class EmployeeGoalService {
         return repository.findAllByEmployee_EmployeeIdAndCycle_CycleId(employeeId, activeCycle.getCycleId());
     }
 
-    public List<EmployeeGoal> getByEmployeeAndCycle(UUID employeeId, UUID cycleId){
-        return repository.findAllByEmployee_EmployeeIdAndCycle_CycleId(employeeId, cycleId);
-    }
-
     // API 11 - Update status
     @Transactional
     public EmployeeGoal updateStatus(UUID id, GoalStatusRequest req){
