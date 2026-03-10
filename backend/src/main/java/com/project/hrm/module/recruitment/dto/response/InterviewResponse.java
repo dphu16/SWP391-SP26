@@ -19,5 +19,6 @@ public class InterviewResponse {
     private OffsetDateTime scheduleTime;
     private InterviewStatus status;
     private String feedback;
+    private BigDecimal score;
 
 }

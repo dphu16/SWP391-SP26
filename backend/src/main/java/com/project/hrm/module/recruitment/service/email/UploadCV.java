@@ -1,4 +1,4 @@
-package com.project.hrm.common.email;
+package com.project.hrm.module.recruitment.service.email;
 
 import com.project.hrm.module.recruitment.entity.Application;
 import jakarta.mail.internet.MimeMessage;
@@ -11,16 +11,16 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 
 @Service
-public class EmailService {
+public class UploadCV {
 
     private final JavaMailSender mailSender;
 
-    public EmailService(JavaMailSender mailSender) {
+    public UploadCV(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
 
     @Async
-    public void sendApplicationSuccessEmail(Application app) {
+    public void sendEmail(Application app) {
 
         try {
             MimeMessage message = mailSender.createMimeMessage();

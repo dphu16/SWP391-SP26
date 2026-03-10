@@ -40,6 +40,12 @@ public class Application {
     @Column(name = "status", nullable = false)
     private ApplicationStatus status = ApplicationStatus.APPLIED;
 
+    @Column(name = "end_time")
+    private OffsetDateTime end;
+
+    @Column(name = "start_time")
+    private OffsetDateTime start;
+
     @ColumnDefault("now()")
     @Column(name = "created_at")
     private OffsetDateTime createdAt;

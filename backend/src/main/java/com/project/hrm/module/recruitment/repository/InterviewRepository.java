@@ -8,5 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface InterviewRepository extends JpaRepository<Interview, UUID> {
-
+    Interview findByApp_Id(UUID id);
+    List<Interview> findAllByApp_IdIn(List<UUID> ids);
+    List<Interview> findByInterviewer_EmployeeIdAndStatus(UUID id, InterviewStatus status);
 }

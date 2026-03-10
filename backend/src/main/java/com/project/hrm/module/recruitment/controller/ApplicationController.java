@@ -1,7 +1,10 @@
 package com.project.hrm.module.recruitment.controller;
 
 import com.project.hrm.module.recruitment.dto.request.ApplicationRequest;
+import com.project.hrm.module.recruitment.dto.request.DateLimitRequest;
 import com.project.hrm.module.recruitment.dto.response.ApplicationResponse;
+import com.project.hrm.module.recruitment.dto.response.InterviewResponse;
+import com.project.hrm.module.recruitment.enums.ApplicationStatus;
 import com.project.hrm.module.recruitment.service.ApplicationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,10 +38,11 @@ public class ApplicationController {
 
     @GetMapping("/job/{jobId}")
     public ResponseEntity<List<ApplicationResponse>> getByJobId(
-            @PathVariable UUID jobId) {
+            @PathVariable UUID jobId,
+            @RequestParam ApplicationStatus status) {
 
         return ResponseEntity.ok(
-                applicationService.getApplicationByJobId(jobId)
+                applicationService.getAppByJobIdAndStatus(jobId, status)
         );
     }
 
@@ -56,5 +60,25 @@ public class ApplicationController {
         applicationService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/date-limit")
+    public ResponseEntity<ApplicationResponse> setDateLimit(@RequestBody DateLimitRequest request) {
+        ApplicationResponse response = applicationService.setDateLimit(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/last-stage/{id}")
+    public ResponseEntity<ApplicationResponse> lastStage(@PathVariable UUID id) {
+        ApplicationResponse response = applicationService.lastStage(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/list/next-stage")
+    public ResponseEntity<List<ApplicationResponse>> nextStage(@RequestBody List<UUID> ids) {
+        List<ApplicationResponse> responses = applicationService.nextStage(ids);
+        return ResponseEntity.ok(responses);
+    }
+
+
 
 }
