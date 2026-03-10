@@ -105,16 +105,14 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
 
   return (
     <div
-      className={`fixed top-6 right-6 z-[9999] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-lg border animate-slide-in-right max-w-sm ${
-        type === "success"
+      className={`fixed top-6 right-6 z-[9999] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-lg border animate-slide-in-right max-w-sm ${type === "success"
           ? "bg-emerald-50 border-emerald-200 text-emerald-800"
           : "bg-rose-50 border-rose-200 text-rose-800"
-      }`}
+        }`}
     >
       <span
-        className={`flex-shrink-0 ${
-          type === "success" ? "text-emerald-500" : "text-rose-500"
-        }`}
+        className={`flex-shrink-0 ${type === "success" ? "text-emerald-500" : "text-rose-500"
+          }`}
       >
         {type === "success" ? <VerifiedIcon /> : <ErrorIcon />}
       </span>
@@ -1047,11 +1045,10 @@ const CandidateProfileCompletion: React.FC = () => {
                               setCurrentStep(index);
                             }
                           }}
-                          className={`w-full text-left px-4 py-4 transition-colors flex items-center gap-3 relative ${
-                            index <= currentStep
+                          className={`w-full text-left px-4 py-4 transition-colors flex items-center gap-3 relative ${index <= currentStep
                               ? "cursor-pointer hover:bg-gray-50"
                               : "cursor-not-allowed opacity-50"
-                          } ${isActive ? "bg-primary/5" : ""}`}
+                            } ${isActive ? "bg-primary/5" : ""}`}
                         >
                           {/* Active bar */}
                           {isActive && (
@@ -1060,13 +1057,12 @@ const CandidateProfileCompletion: React.FC = () => {
 
                           {/* Circle */}
                           <div
-                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                              isCompleted
+                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isCompleted
                                 ? "border-primary bg-primary text-white"
                                 : isActive
                                   ? "border-primary text-primary"
                                   : "border-gray-300 text-gray-300"
-                            }`}
+                              }`}
                           >
                             {isCompleted ? (
                               <CheckIcon />
@@ -1078,13 +1074,12 @@ const CandidateProfileCompletion: React.FC = () => {
                           {/* Label */}
                           <div className="flex-1 min-w-0">
                             <span
-                              className={`text-xs block font-semibold truncate ${
-                                isActive
+                              className={`text-xs block font-semibold truncate ${isActive
                                   ? "text-text-primary-light"
                                   : isCompleted
                                     ? "text-text-secondary-light line-through decoration-gray-400"
                                     : "text-text-primary-light"
-                              }`}
+                                }`}
                             >
                               {step.title}
                             </span>
@@ -1119,11 +1114,10 @@ const CandidateProfileCompletion: React.FC = () => {
                   {/* Submit CTA in sidebar */}
                   <div className="p-4 border-t border-border-light">
                     <button
-                      className={`w-full py-2.5 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors text-sm ${
-                        currentStep === STEPS.length - 1
+                      className={`w-full py-2.5 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors text-sm ${currentStep === STEPS.length - 1
                           ? "bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/20 cursor-pointer btn-primary-action"
                           : "bg-gray-100 text-text-muted-light cursor-not-allowed"
-                      }`}
+                        }`}
                       disabled={currentStep !== STEPS.length - 1 || submitting}
                       onClick={handleSubmit}
                     >

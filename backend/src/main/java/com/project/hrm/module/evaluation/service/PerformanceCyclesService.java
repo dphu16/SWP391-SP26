@@ -29,6 +29,13 @@ public class PerformanceCyclesService {
             throw new RuntimeException("End date must be after start date");
         }
 
+        boolean hasOverlap = repository.findAll().stream().anyMatch(c ->
+                !req.getStartDate().isAfter(c.getEndDate()) && !req.getEndDate().isBefore(c.getStartDate())
+        );
+        if (hasOverlap) {
+            throw new RuntimeException("Thời gian của chu kỳ này bị trùng lặp với một chu kỳ đã tồn tại");
+        }
+
         PerformanceCycles cycle = new PerformanceCycles();
         cycle.setCycleName(req.getCycleName());
         cycle.setStartDate(req.getStartDate());
@@ -51,6 +58,14 @@ public class PerformanceCyclesService {
 
         if (req.getEndDate().isBefore(req.getStartDate()))
             throw new RuntimeException("End date must be after start date");
+
+        boolean hasOverlap = repository.findAll().stream()
+                .filter(c -> !c.getCycleId().equals(id)) // exclude current cycle
+                .anyMatch(c -> !req.getStartDate().isAfter(c.getEndDate()) && !req.getEndDate().isBefore(c.getStartDate())
+        );
+        if (hasOverlap) {
+            throw new RuntimeException("Thời gian cập nhật bị trùng lặp với một chu kỳ khác đã tồn tại");
+        }
 
         cycle.setCycleName(req.getCycleName());
         cycle.setStartDate(req.getStartDate());

@@ -1,6 +1,7 @@
 package com.project.hrm.module.corehr.repository;
 
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.entity.User;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import org.springframework.data.domain.Page;
@@ -49,4 +50,16 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
 
     @EntityGraph(attributePaths = { "user", "position", "department", "personal" })
     List<Employee> findByEmpStatusNot(ProgressStatus status);
+
+    Optional<Employee> findByUser(User user);
+    @Query("SELECT e FROM Employee e WHERE e.user.status = com.project.hrm.module.corehr.enums.UserStatus.ACTIVE")
+List<Employee> findAllActive();
+
+        @EntityGraph(attributePaths = { "user", "position", "position.department" })
+        List<Employee> findByManager_EmployeeId(UUID managerId);
+
+        @EntityGraph(attributePaths = { "user", "position", "department" })
+        List<Employee> findByDepartment_DeptId(UUID deptId);
+
+
 }

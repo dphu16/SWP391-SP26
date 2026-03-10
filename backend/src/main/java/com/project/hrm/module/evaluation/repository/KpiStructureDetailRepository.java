@@ -16,6 +16,8 @@ import java.util.UUID;
 public interface KpiStructureDetailRepository extends JpaRepository<KpiStructureDetail, UUID> {
     List<KpiStructureDetail> findByStructure_StructureId(UUID structureId);
 
+    List<KpiStructureDetail> findByStructure_DepartmentId(UUID departmentId);
+
     @Transactional
     @Modifying
     @Query("delete from KpiStructureDetail d where d.structure.structureId = :structureId")

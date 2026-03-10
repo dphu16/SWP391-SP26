@@ -50,7 +50,7 @@ const Icons = {
     )
 };
 
-const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) => {
+const ManagerPerformance = () => {
     const [kpis, setKpis] = useState<any[]>([]);
     const [employees, setEmployees] = useState<any[]>([]);
     const [activeEmployeeId, setActiveEmployeeId] = useState<string | null>(null);
@@ -63,7 +63,15 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
     const [reviewLoading, setReviewLoading] = useState(false);
     const [kpiScoreInput, setKpiScoreInput] = useState('');
     const [attitudeScoreInput, setAttitudeScoreInput] = useState('');
+    const [managerNoteInput, setManagerNoteInput] = useState('');
     const [scoreSaving, setScoreSaving] = useState(false);
+
+    const activeEmployee = useMemo(() => employees.find(e => e.id === activeEmployeeId), [employees, activeEmployeeId]);
+
+    const filteredKpis = useMemo(() => kpis.filter(k =>
+        (k.name || "").toLowerCase().includes(searchKpiQuery.toLowerCase()) ||
+        (k.category || "").toLowerCase().includes(searchKpiQuery.toLowerCase())
+    ), [kpis, searchKpiQuery]);
 
     useEffect(() => {
         const fetchTeamData = async () => {
@@ -108,42 +116,51 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
 
     useEffect(() => {
         const loadEmployeeGoals = async () => {
-            if (!activeEmployeeId) return;
+            if (!activeEmployeeId || !activeEmployee) return;
+            setLoading(true);
+            try {
+                // Determine department - use active employee's department
+                const deptId = activeEmployee.departmentId || activeEmployee.position?.department?.deptId;
 
-            const goals = await kpiService.getGoalsByEmployee(activeEmployeeId);
-            console.log("goals for employee", activeEmployeeId, goals);
+                const [allLibs, structure, goals] = await Promise.all([
+                    kpiService.getAllKpiLibraries(),
+                    deptId ? kpiService.getKpisByDepartment(deptId) : Promise.resolve([]),
+                    kpiService.getGoalsByEmployee(activeEmployeeId)
+                ]);
 
-            if (goals && goals.length > 0) {
-                // Dedup by kpiLibraryId — keep the goal with the highest targetValue
-                const dedupMap = new Map<string, any>();
-                for (const g of goals) {
-                    const libId = g.kpiLibrary?.libId || g.kpiLibraryId || '';
-                    const prev = dedupMap.get(libId);
-                    if (!prev || (g.targetValue ?? 0) > (prev.targetValue ?? 0)) {
-                        dedupMap.set(libId, g);
-                    }
-                }
-                const dedupedGoals = Array.from(dedupMap.values());
+                // Map department structure to UI list, overlaying existing goals
+                const merged = (structure.length > 0 ? structure : (goals.length > 0 ? goals.map(g => ({ kpiLibraryId: g.kpiLibrary?.libId || g.kpiLibraryId, weight: g.weight })) : [])).map((s: any) => {
+                    const libId = s.kpiLibraryId || s.kpiLibrary?.libId;
+                    const lib = allLibs.find(l => l.libId === libId);
+                    const goal = goals.find(g => (g.kpiLibrary?.libId || g.kpiLibraryId) === libId);
 
-                const formatted = dedupedGoals.map((g: any) => ({
-                    goalId: g.goalId,
-                    cycleId: g.cycle?.cycleId,
-                    kpiLibraryId: g.kpiLibrary?.libId || '',
-                    name: g.title || g.kpiLibrary?.name || "Unknown",
-                    category: g.kpiLibrary?.category || "",
-                    description: g.kpiLibrary?.description || "",
-                    weight: g.weight || 0,
-                    imageUrl: g.imageUrl || "", // Evidence URL (image_url) from database
-                    _targetValue: g.targetValue && g.targetValue !== 0 ? String(g.targetValue) : '',
-                    _isAssigned: g.targetValue !== undefined && g.targetValue !== 0
-                }));
-                setKpis(formatted);
-            } else {
-                setKpis([]);
+                    const targetVal = goal?.targetValue || 0;
+                    const isActuallyAssigned = !!goal && targetVal > 0;
+
+                    return {
+                        goalId: goal?.goalId,
+                        cycleId: goal?.cycle?.cycleId,
+                        kpiLibraryId: libId,
+                        name: goal?.title || lib?.name || "Unknown",
+                        category: lib?.category || "N/A",
+                        description: lib?.description || "",
+                        weight: s.weight || lib?.defaultWeight || 0,
+                        status: goal?.status || null,
+                        imageUrl: goal?.imageUrl || "",
+                        _targetValue: targetVal ? String(targetVal) : '',
+                        _isAssigned: isActuallyAssigned
+                    };
+                });
+
+                setKpis(merged);
+            } catch (error) {
+                console.error("loadEmployeeGoals error:", error);
+            } finally {
+                setLoading(false);
             }
         };
         loadEmployeeGoals();
-    }, [activeEmployeeId]);
+    }, [activeEmployeeId, activeEmployee?.departmentId]);
 
     // Fetch active review whenever employee changes
     useEffect(() => {
@@ -159,9 +176,11 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                 setKpiScoreInput(review.kpiScore !== null && review.kpiScore !== undefined ? String(review.kpiScore) : '');
                 // Override with mentor score since it's now managed by Mentor
                 setAttitudeScoreInput(String(mentorScore));
+                setManagerNoteInput(review.rating || '');
             } else {
                 setKpiScoreInput('');
                 setAttitudeScoreInput(String(mentorScore));
+                setManagerNoteInput('');
             }
             setReviewLoading(false);
         };
@@ -184,8 +203,36 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                 weight: kpiToAssign.weight
             });
 
-            // Update UI to show assigned
-            setKpis(prev => prev.map(k => k.kpiLibraryId === kpiLibraryId ? { ...k, _isAssigned: true } : k));
+            // Refresh goals to get updated status immediately
+            if (activeEmployeeId) {
+                const [allLibs, structure, goals] = await Promise.all([
+                    kpiService.getAllKpiLibraries(),
+                    activeEmployee?.departmentId ? kpiService.getKpisByDepartment(activeEmployee.departmentId) : Promise.resolve([]),
+                    kpiService.getGoalsByEmployee(activeEmployeeId)
+                ]);
+
+                const merged = (structure.length > 0 ? structure : goals.map(g => ({ kpiLibraryId: g.kpiLibrary?.libId || g.kpiLibraryId, weight: g.weight }))).map((s: any) => {
+                    const libId = s.kpiLibraryId || s.kpiLibrary?.libId;
+                    const lib = allLibs.find(l => l.libId === libId);
+                    const goal = goals.find(g => (g.kpiLibrary?.libId || g.kpiLibraryId) === libId);
+                    const targetVal = goal?.targetValue || 0;
+                    const isActuallyAssigned = !!goal && targetVal > 0;
+                    return {
+                        goalId: goal?.goalId,
+                        cycleId: goal?.cycle?.cycleId,
+                        kpiLibraryId: libId,
+                        name: goal?.title || lib?.name || "Unknown",
+                        category: lib?.category || "N/A",
+                        description: lib?.description || "",
+                        weight: s.weight || lib?.defaultWeight || 0,
+                        status: goal?.status || null,
+                        imageUrl: goal?.imageUrl || "",
+                        _targetValue: targetVal ? String(targetVal) : '',
+                        _isAssigned: isActuallyAssigned
+                    };
+                });
+                setKpis(merged);
+            }
         } catch (e) {
             console.error("Failed to assign target", e);
             alert("Failed to save target. Please try again.");
@@ -215,7 +262,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
         if (kpi < 0 || kpi > 100 || att < 0 || att > 100) { alert('Scores must be between 0 and 100.'); return; }
         setScoreSaving(true);
         try {
-            const updated = await kpiService.updateReviewScore(activeReview.reviewId, { kpiScore: kpi, attitudeScore: att });
+            const updated = await kpiService.updateReviewScore(activeReview.reviewId, { kpiScore: kpi, attitudeScore: att, rating: managerNoteInput });
             setActiveReview(updated);
         } catch (e) {
             alert('Failed to save score.');
@@ -232,20 +279,13 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
     const handleFinalize = async () => {
         if (!activeReview) return;
 
-        // Check for evidence requirement
-        const evidenceCount = kpis.filter(k => k.imageUrl).length;
-        if (evidenceCount === 0) {
-            alert('Cannot finalize: No evidence images were found for this employee. Please wait for the employee to upload supporting materials.');
-            return;
-        }
-
         // Save scores first if changed, then finalize
         const kpi = parseFloat(kpiScoreInput);
         const att = parseFloat(attitudeScoreInput);
         if (isNaN(kpi) || isNaN(att)) { alert('Please enter KPI Score and Attitude Score first.'); return; }
         setScoreSaving(true);
         try {
-            await kpiService.updateReviewScore(activeReview.reviewId, { kpiScore: kpi, attitudeScore: att });
+            await kpiService.updateReviewScore(activeReview.reviewId, { kpiScore: kpi, attitudeScore: att, rating: managerNoteInput });
             const finalized = await kpiService.finalizeReview(activeReview.reviewId);
             setActiveReview(finalized);
 
@@ -260,12 +300,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
         }
     };
 
-    const activeEmployee = employees.find(e => e.id === activeEmployeeId);
 
-    const filteredKpis = kpis.filter(k =>
-        (k.name || "").toLowerCase().includes(searchKpiQuery.toLowerCase()) ||
-        (k.category || "").toLowerCase().includes(searchKpiQuery.toLowerCase())
-    );
 
     return (
         <div className="flex flex-col h-full space-y-5 animate-fade-in font-sans">
@@ -273,33 +308,13 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                        Performance Module
+                        Performance
                     </h1>
                     <p className="mt-0.5 text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
                         Standardized KPI management and scoring workflow
                     </p>
                 </div>
 
-                <div className="flex items-center bg-surface-light dark:bg-surface-dark p-1.5 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
-                    <button
-                        onClick={() => setActiveTab("hr")}
-                        className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-all duration-200 ${activeTab === "hr"
-                            ? "bg-surface-2-light dark:bg-surface-2-dark text-text-primary-light dark:text-text-primary-dark shadow-sm"
-                            : "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light"
-                            }`}
-                    >
-                        HR Config
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("manager")}
-                        className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-all duration-200 ${activeTab === "manager"
-                            ? "bg-primary text-white shadow-sm"
-                            : "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light"
-                            }`}
-                    >
-                        Manager Console
-                    </button>
-                </div>
             </div>
 
             <div className="flex gap-6 items-start">
@@ -388,7 +403,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                                                     type="number"
                                                     value={kpi._targetValue}
                                                     readOnly={kpi._isAssigned}
-                                                    onChange={kpi._isAssigned ? undefined : (e) => handleTargetChange(kpi.kpiLibraryId, e.target.value)}
+                                                    onChange={(e) => handleTargetChange(kpi.kpiLibraryId, e.target.value)}
                                                     className={`w-full px-4 py-2 rounded-xl text-sm font-bold transition-all outline-none ${kpi._isAssigned
                                                         ? 'bg-surface-2-light/50 dark:bg-surface-2-dark/50 text-text-muted-light/60 cursor-not-allowed border-dashed border-border-light/50'
                                                         : 'bg-surface-2-light dark:bg-surface-2-dark border-border-light dark:border-border-dark focus:bg-white dark:focus:bg-surface-dark focus:border-primary focus:ring-4 focus:ring-primary/5'
@@ -396,20 +411,34 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                                                 />
                                             </td>
                                             <td className="px-6 py-5 text-right">
-                                                {kpi._isAssigned ? (
-                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-emerald-500/20">
-                                                        <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" /></svg>
-                                                        Finalized
-                                                    </div>
-                                                ) : (
+                                                {!kpi._isAssigned ? (
                                                     <button
                                                         onClick={() => handleAssignTarget(kpi.kpiLibraryId)}
-                                                        disabled={!kpi._targetValue}
+                                                        disabled={!kpi._targetValue || parseFloat(kpi._targetValue) <= 0}
                                                         className="px-4 py-2 bg-primary text-white hover:bg-primary-hover text-[10px] font-bold rounded-lg uppercase tracking-widest transition-all disabled:opacity-30"
                                                     >
                                                         Assign Target
                                                     </button>
-                                                )}
+                                                ) : kpi.status === 'ASSIGNED' ? (
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-blue-500/20">
+                                                        Assigned
+                                                    </div>
+                                                ) : kpi.status === 'ACKNOWLEDGED' ? (
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-amber-500/20">
+                                                        Acknowledged
+                                                    </div>
+                                                ) : kpi.status === 'SUBMITTED' ? (
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-blue-500/20">
+                                                            Pending Mentor
+                                                        </div>
+                                                    </div>
+                                                ) : kpi.status === 'COMPLETED' ? (
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-emerald-500/20">
+                                                        {Icons.checkCircle}
+                                                        Completed
+                                                    </div>
+                                                ) : null}
                                             </td>
                                         </tr>
                                     ))}
@@ -421,7 +450,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                     {/* Evidence & Decision */}
                     <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col bento-card">
                         <div className="px-5 py-4 border-b border-border-light dark:border-border-dark bg-white dark:bg-surface-dark/40 flex items-center justify-between">
-                            <h2 className="text-lg font-bold font-heading text-text-primary-light">Evidence Review & Final Scoring</h2>
+                            <h2 className="text-lg font-bold font-heading text-text-primary-light">Final Scoring & Notes</h2>
                             {activeReview && (
                                 <span className={`px-3 py-1 text-[10px] font-black rounded-full uppercase border ${activeReview.status === 'SUBMITTED' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-amber-100 text-amber-700 border-amber-200'
                                     }`}>
@@ -434,45 +463,7 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                             <div className="p-12 text-center text-text-muted-light">Loading analysis...</div>
                         ) : (
                             <div className="flex divide-x divide-border-light dark:divide-border-dark">
-                                {/* Left: Images */}
-                                <div className="flex-[1.2] p-6 flex flex-col min-h-[450px]">
-                                    <h3 className="text-xs font-bold uppercase tracking-widest text-text-primary-light mb-4 flex items-center justify-between">
-                                        Employee Evidence Summary
-                                        <span className="text-[10px] opacity-60">{kpis.filter(k => k.imageUrl).length} Files</span>
-                                    </h3>
-
-                                    <div className="flex-1 flex flex-col justify-center">
-                                        {kpis.filter(k => k.imageUrl).length === 0 ? (
-                                            <div className="p-12 border-2 border-dashed border-border-light rounded-2xl flex flex-col items-center opacity-40">
-                                                {Icons.image}
-                                                <p className="text-xs font-bold mt-2">No Evidence Uploaded</p>
-                                            </div>
-                                        ) : (
-                                            <div className="h-full flex flex-col gap-4">
-                                                <div className="flex-1 relative group rounded-2xl overflow-hidden shadow-2xl bg-black/5 flex items-center justify-center border border-border-light">
-                                                    <img
-                                                        src={kpis.find(k => k.imageUrl)?.imageUrl}
-                                                        className="max-w-full max-h-full object-contain cursor-zoom-in group-hover:scale-105 transition-transform duration-700"
-                                                        onClick={() => window.open(kpis.find(k => k.imageUrl)?.imageUrl, '_blank')}
-                                                    />
-                                                </div>
-                                                {kpis.filter(k => k.imageUrl).length > 1 && (
-                                                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-                                                        {kpis.filter(k => k.imageUrl).map((kpi, idx) => (
-                                                            <div key={idx} className="w-16 h-16 rounded-lg overflow-hidden border-2 border-primary/20 flex-shrink-0 cursor-pointer hover:border-primary">
-                                                                <img src={kpi.imageUrl} className="w-full h-full object-cover" />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-
-
-                                </div>
-
-                                {/* Right: SCORING */}
+                                {/* Left: SCORING */}
                                 <div className="flex-1 p-6 flex flex-col bg-surface-2-light/20">
                                     <div className="flex justify-between items-center mb-6">
                                         <h3 className="text-xs font-black uppercase tracking-widest text-text-primary-light">Final Decision</h3>
@@ -486,7 +477,17 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
 
                                     <div className="space-y-6 flex-1">
                                         <div className="bg-white dark:bg-surface-dark p-4 rounded-xl border border-border-light shadow-sm">
-                                            <label className="block text-[10px] font-black uppercase mb-2 opacity-60 italic">KPI PERFORMANCE (70%)</label>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <label className="block text-[10px] font-black uppercase opacity-60 italic">KPI PERFORMANCE (70%)</label>
+                                                {computedKpiScore !== null && (
+                                                    <button
+                                                        onClick={() => setKpiScoreInput(String(computedKpiScore))}
+                                                        className="text-[10px] font-black text-primary hover:underline"
+                                                    >
+                                                        SUGGESTED: {computedKpiScore}%
+                                                    </button>
+                                                )}
+                                            </div>
                                             <input
                                                 type="number"
                                                 value={kpiScoreInput}
@@ -510,9 +511,8 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                                     <div className="grid grid-cols-1 gap-3 mt-8">
                                         <button
                                             onClick={handleFinalize}
-                                            disabled={scoreSaving || activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED' || kpis.filter(k => k.imageUrl).length === 0}
+                                            disabled={scoreSaving || activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
                                             className="w-full py-3.5 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/30 transition-all active:scale-95 disabled:opacity-30"
-                                            title={kpis.filter(k => k.imageUrl).length === 0 ? "Evidence required to finalize" : ""}
                                         >
                                             {activeReview?.status === 'SUBMITTED' ? '✓ Data Locked' : 'Finalize Performance Record'}
                                         </button>
@@ -524,6 +524,20 @@ const ManagerPerformance = ({ activeTab, setActiveTab }: { activeTab: string, se
                                             {scoreSaving ? 'Processing...' : 'Save Draft Snapshot'}
                                         </button>
                                     </div>
+                                </div>
+
+                                {/* Right: Notes */}
+                                <div className="flex-[1.2] p-6 flex flex-col min-h-[450px]">
+                                    <h3 className="text-xs font-bold uppercase tracking-widest text-text-primary-light mb-4">
+                                        Manager's Rating & Notes
+                                    </h3>
+                                    <textarea
+                                        value={managerNoteInput}
+                                        onChange={e => setManagerNoteInput(e.target.value)}
+                                        disabled={activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
+                                        placeholder="Enter your assessment notes, feedback, and developmental goals here..."
+                                        className="w-full flex-1 p-4 bg-surface-2-light dark:bg-surface-2-dark border border-border-light dark:border-border-dark rounded-xl resize-none outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+                                    />
                                 </div>
                             </div>
                         )}
