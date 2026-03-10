@@ -4,21 +4,33 @@ import com.project.hrm.module.corehr.dto.request.CreateNewHireDTO;
 import com.project.hrm.module.corehr.dto.response.NewHireResponseDTO;
 import com.project.hrm.module.corehr.entity.*;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class NewHireMapper {
 
         private NewHireMapper() {
         }
 
-        public static Employee toEntity(CreateNewHireDTO dto, Department department, Position position,
-                        Dependent dependent) {
+        public static Employee toEntity(CreateNewHireDTO dto, Department department, Position position) {
                 Employee employee = Employee.builder()
                                 .fullName(dto.getFullName())
                                 .department(department)
                                 .position(position)
+                                .role(dto.getRole())
+                                .dateOfJoining(dto.getDateOfJoining())
                                 .build();
+
+                Contract contract = Contract.builder()
+                                .employee(employee)
+                                .contractNumber(dto.getContractNumber() != null ? dto.getContractNumber()
+                                                : "CTR-" + java.util.UUID.randomUUID().toString().substring(0, 8)
+                                                                .toUpperCase())
+                                .contractType(dto.getContractType() != null ? dto.getContractType() : "PROBATION")
+                                .startDate(dto.getStartDate() != null ? dto.getStartDate() : java.time.LocalDate.now())
+                                .endDate(dto.getEndDate())
+                                .baseSalary(dto.getBaseSalary())
+                                .status("ACTIVE")
+                                .build();
+
+                employee.setContract(contract);
 
                 Personal personal = Personal.builder()
                                 .employee(employee)
@@ -34,17 +46,10 @@ public class NewHireMapper {
 
                 employee.setPersonal(personal);
 
-                if (dependent != null) {
-                        dependent.setEmployee(employee);
-                        List<Dependent> dependents = new ArrayList<>();
-                        dependents.add(dependent);
-                        employee.setDependents(dependents);
-                }
-
                 return employee;
         }
 
-        public static NewHireResponseDTO toResponseDTO(Employee e, String rawPassword) {
+        public static NewHireResponseDTO toResponseDTO(Employee e) {
                 return NewHireResponseDTO.builder()
                                 .employeeId(e.getEmployeeId())
                                 .employeeCode(e.getEmployeeCode())
@@ -55,23 +60,21 @@ public class NewHireMapper {
                                 .address(e.getPersonal() != null ? e.getPersonal().getAddress() : null)
                                 .departmentName(e.getDepartment() != null ? e.getDepartment().getDeptName() : null)
                                 .positionTitle(e.getPosition() != null ? e.getPosition().getTitle() : null)
+                                .role(e.getRole())
+                                .status(e.getEmpStatus())
                                 .dependentName((e.getDependents() != null && !e.getDependents().isEmpty())
-                                                ? e.getDependents().get(0).getFullName()
+                                                ? e.getDependents().get(0).getContactName()
                                                 : null)
                                 .relationship((e.getDependents() != null && !e.getDependents().isEmpty())
                                                 ? e.getDependents().get(0).getRelationship()
                                                 : null)
-                                .baseSalaryMin(e.getPosition() != null ? e.getPosition().getBaseSalaryMin() : null)
-                                .baseSalaryMax(e.getPosition() != null ? e.getPosition().getBaseSalaryMax() : null)
+                                .baseSalary((e.getContracts() != null && !e.getContracts().isEmpty())
+                                                ? e.getContracts().get(0).getBaseSalary()
+                                                : (e.getContract() != null ? e.getContract().getBaseSalary() : null))
                                 .citizenId(e.getPersonal() != null ? e.getPersonal().getCitizenId() : null)
                                 .taxCode(e.getPersonal() != null ? e.getPersonal().getTaxCode() : null)
                                 .dateOfBirth(e.getPersonal() != null ? e.getPersonal().getDateOfBirth() : null)
                                 .avatarUrl(e.getPersonal() != null ? e.getPersonal().getAvatar() : null)
-                                .status(e.getEmpStatus())
-                                .role(e.getUser() != null ? e.getUser().getRole() : null)
-                                .username(e.getUser() != null ? e.getUser().getUsername() : null)
-                                .rawPassword(rawPassword)
-                                .createdAt(e.getUser() != null ? e.getUser().getCreatedAt() : null)
                                 .build();
         }
 }

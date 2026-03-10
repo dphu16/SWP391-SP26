@@ -30,7 +30,7 @@ public class TeamStatsController {
     @GetMapping("/team-stats")
     public ResponseEntity<TeamStatsResponse> getTeamStats() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Employee manager = employeeRepo.findByUser_Username(auth.getName()).orElse(null);
+        Employee manager = employeeRepo.findByUser_Email(auth.getName()).orElse(null);
         if (manager == null) {
             return ResponseEntity.ok(new TeamStatsResponse(0, 0, null));
         }
@@ -40,7 +40,7 @@ public class TeamStatsController {
     @GetMapping("/my-team")
     public ResponseEntity<List<EmployeeDTO>> getMyTeam() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Employee manager = employeeRepo.findByUser_Username(auth.getName()).orElse(null);
+        Employee manager = employeeRepo.findByUser_Email(auth.getName()).orElse(null);
 
         if (manager == null || manager.getDepartment() == null) {
             return ResponseEntity.ok(Collections.emptyList());

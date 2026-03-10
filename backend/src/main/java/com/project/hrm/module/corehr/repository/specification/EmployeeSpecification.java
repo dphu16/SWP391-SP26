@@ -50,7 +50,7 @@ public class EmployeeSpecification {
                 }
 
                 try {
-                    com.project.hrm.module.corehr.enums.UserRole parsedRole = com.project.hrm.module.corehr.enums.UserRole
+                    com.project.hrm.module.corehr.enums.EmployeeRole parsedRole = com.project.hrm.module.corehr.enums.EmployeeRole
                             .valueOf(roleEnumStr);
                     predicate = criteriaBuilder.and(predicate,
                             criteriaBuilder.equal(userJoin.get("role"), parsedRole));

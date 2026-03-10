@@ -48,6 +48,7 @@ export interface PerformanceReview {
     kpiScore: number | null;
     attitudeScore: number | null;
     overallScore: number | null;
+    rating?: string;
     status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'PENDING';
     createdAt?: string;
     cycle?: { cycleId: string; cycleName: string };
@@ -57,6 +58,18 @@ export interface PerformanceReview {
 export interface UpdateReviewScoreRequest {
     kpiScore: number;
     attitudeScore: number;
+    rating?: string;
+}
+
+export interface TeamStats {
+    totalMembers: number;
+    submittedMembers: number;
+    averageScore: number | null;
+}
+
+export interface GlobalStats {
+    orgAverageScore: number;
+    totalKpiTargetValue: number;
 }
 
 export interface TeamStats {
@@ -219,6 +232,16 @@ export const kpiService = {
         } catch (error) {
             console.error('Error fetching active review', error);
             return null;
+        }
+    },
+
+    getReviewsByCycle: async (cycleId: string): Promise<PerformanceReview[]> => {
+        try {
+            const response = await apiClient.get<PerformanceReview[]>(`/api/performance-cycles/${cycleId}/reviews`);
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching reviews by cycle', error);
+            return [];
         }
     },
 

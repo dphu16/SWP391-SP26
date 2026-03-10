@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -25,6 +26,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/hr/employees")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<Page<EmployeeDTO>> getAllEmployees(
             @PageableDefault(size = 10, sort = "fullName") Pageable pageable) {
         Page<EmployeeDTO> result = employeeService.searchEmployees(null, null, null, null, null, null, "OFFICIAL",
@@ -33,6 +35,7 @@ public class EmployeeController {
     }
 
     @GetMapping("employee/{id}/view-detail")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<EmployeeDetailDTO> getEmployeeDetail(
             @PathVariable("id") UUID id) {
 
@@ -41,6 +44,7 @@ public class EmployeeController {
     }
 
     @PutMapping("/employees/{id}/edit")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<EmployeeDetailDTO> updateEmployee(
             @PathVariable("id") UUID id,
             @Valid @RequestBody EmployeeChangeDTO req) {
@@ -49,6 +53,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/employees/search")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<Page<EmployeeDTO>> searchEmployees(
             @RequestParam(required = false) String fullName,
             @RequestParam(required = false) String employeeCode,

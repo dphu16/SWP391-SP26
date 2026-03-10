@@ -11,12 +11,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-public class LookupService {
+public class DropdownService {
 
     private final DepartmentRepository departmentRepository;
     private final PositionRepository positionRepository;
 
-    public LookupService(DepartmentRepository departmentRepository,
+    public DropdownService(DepartmentRepository departmentRepository,
                          PositionRepository positionRepository) {
         this.departmentRepository = departmentRepository;
         this.positionRepository = positionRepository;

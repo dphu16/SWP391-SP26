@@ -51,4 +51,11 @@ public class EmployeeGoalController {
             @RequestBody GoalProgressRequest request){
         return ResponseEntity.ok(service.updateProgress(id, request));
     }
+
+    @GetMapping("/employees/{employeeId}/cycles/{cycleId}/goals")
+    public ResponseEntity<List<EmployeeGoal>> getByEmployeeAndCycle(
+            @PathVariable UUID employeeId,
+            @PathVariable UUID cycleId){
+        return ResponseEntity.ok(service.getByEmployeeAndCycle(employeeId, cycleId));
+    }
 }

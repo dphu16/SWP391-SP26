@@ -63,13 +63,13 @@ public class EmployeeGoalService {
         // Find the assigning Employee
         Employee assigner = null;
         if (principal != null) {
-            assigner = employeeRepository.findByUser_Username(principal.getName()).orElse(null);
+            assigner = employeeRepository.findByUser_Email(principal.getName()).orElse(null);
         }
         
         // Fallback to request's assignedBy if not found from principal
         if (assigner == null && req.getAssignedBy() != null) {
             assigner = employeeRepository.findById(req.getAssignedBy())
-                    .orElseGet(() -> employeeRepository.findByUser_Username(req.getAssignedBy().toString()).orElse(null));
+                    .orElseGet(() -> employeeRepository.findByUser_Email(req.getAssignedBy().toString()).orElse(null));
         }
 
         if (assigner == null) {
@@ -163,9 +163,18 @@ public class EmployeeGoalService {
         return repository.save(goal);
     }
 
-    // API 10 - Get employee goals
+    // API 10 - Get employee goals (Active Cycle Only)
     public List<EmployeeGoal> getByEmployee(UUID employeeId){
-        return repository.findByEmployee_EmployeeId(employeeId);
+        PerformanceCycles activeCycle = cycleRepository.findFirstByStatusOrderByCreatedAtDesc(com.project.hrm.module.evaluation.enums.CycleStatus.ACTIVE)
+                .orElse(null);
+                
+        if (activeCycle == null) return List.of();
+        
+        return repository.findAllByEmployee_EmployeeIdAndCycle_CycleId(employeeId, activeCycle.getCycleId());
+    }
+
+    public List<EmployeeGoal> getByEmployeeAndCycle(UUID employeeId, UUID cycleId){
+        return repository.findAllByEmployee_EmployeeIdAndCycle_CycleId(employeeId, cycleId);
     }
 
     // API 11 - Update status

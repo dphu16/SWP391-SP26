@@ -44,7 +44,10 @@ const EmployeePerformance = () => {
     }, []);
 
     useEffect(() => {
-        if (!employeeId) return;
+        if (!employeeId) {
+            setLoading(false);
+            return;
+        }
         const fetchGoals = async () => {
             setLoading(true);
             try {
@@ -77,7 +80,7 @@ const EmployeePerformance = () => {
             }
         };
         fetchGoals();
-    }, []);
+    }, [employeeId]);
 
     const getProgressPercentage = (goalId: string, currentVal: string) => {
         const goal = kpis.find(k => k.id === goalId);
@@ -349,8 +352,8 @@ const EmployeePerformance = () => {
                                     <div
                                         onClick={() => document.getElementById(`file-upload-${kpi.id}`)?.click()}
                                         className={`border-2 border-dashed rounded-3xl p-8 flex flex-col items-center justify-center text-center group transition-all cursor-pointer mb-8 ${selectedFiles[kpi.id]
-                                                ? 'border-emerald-500 bg-emerald-50/30'
-                                                : 'border-border-light bg-white hover:border-primary'
+                                            ? 'border-emerald-500 bg-emerald-50/30'
+                                            : 'border-border-light bg-white hover:border-primary'
                                             }`}
                                     >
                                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${selectedFiles[kpi.id] ? 'bg-emerald-100' : 'bg-primary/10'

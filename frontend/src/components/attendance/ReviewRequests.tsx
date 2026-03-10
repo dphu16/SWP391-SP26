@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getAllRequestsForReview, approveRequest, rejectRequest, type RequestResponseDTO } from "../../services/requestService";
+import { processApprovalRequest } from "../../services/approvalService";
 
 type AppStatus = "Pending" | "Approved" | "Rejected";
 
@@ -10,6 +11,7 @@ interface ReviewEntry {
     employeeName: string;
     position: string;
     appType: string;
+    rawType: string;
     dateRequested: string;
     details: string;
     sub: string;
@@ -20,6 +22,7 @@ const parseRequest = (dto: RequestResponseDTO): ReviewEntry => {
     let appType = "Annual Leave";
     if (dto.requestType === "OT") appType = "Overtime";
     if (dto.requestType === "SHIFT_CHANGE") appType = "Change Shift";
+    if (dto.requestType === "APPROVAL") appType = "Onboarding Approval";
 
     let status: AppStatus = "Pending";
     if (dto.status === "APPROVED") status = "Approved";
@@ -68,6 +71,9 @@ const parseRequest = (dto: RequestResponseDTO): ReviewEntry => {
             sub = rawReason;
             details = dStart.toLocaleDateString("en-US", { month: "short", day: "numeric" });
         }
+    } else if (dto.requestType === "APPROVAL") {
+        details = "New Employee Onboarding";
+        sub = "Review and approve profile setup";
     }
 
     const nameParts = (dto.employeeName || "Unknown").split(" ");
@@ -87,6 +93,7 @@ const parseRequest = (dto: RequestResponseDTO): ReviewEntry => {
         employeeName: dto.employeeName || "Unknown",
         position: dto.deptName || "N/A",
         appType,
+        rawType: dto.requestType,
         dateRequested,
         details,
         sub,
@@ -95,6 +102,13 @@ const parseRequest = (dto: RequestResponseDTO): ReviewEntry => {
 };
 
 const typeIcon: Record<string, React.ReactNode> = {
+    "Onboarding Approval": (
+        <span className="w-8 h-8 rounded-lg bg-[#f3e8ff] text-[#7e22ce] flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+        </span>
+    ),
     "Annual Leave": (
         <span className="w-8 h-8 rounded-lg bg-[#ccfbf1] text-[#0f766e] flex items-center justify-center flex-shrink-0">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -149,18 +163,32 @@ const ReviewRequests: React.FC = () => {
     const displayed = entries.filter(e => e.status === activeTab);
     const pendingCount = entries.filter(e => e.status === "Pending").length;
 
-    const approve = async (id: string) => {
+    const approve = async (entry: ReviewEntry) => {
         try {
-            await approveRequest(id);
+            if (entry.rawType === "APPROVAL") {
+                await processApprovalRequest(entry.id, "APPROVED");
+            } else {
+                await approveRequest(entry.id);
+            }
             loadData();
         } catch (e: any) {
             alert("Action failed: " + (e.response?.data?.message || e.message));
         }
     };
 
-    const reject = async (id: string) => {
+    const reject = async (entry: ReviewEntry) => {
         try {
-            await rejectRequest(id);
+            if (entry.rawType === "APPROVAL") {
+                const reason = window.prompt("Reason for rejection:");
+                if (reason === null) return; // User cancelled prompt
+                if (!reason.trim()) {
+                    alert("Reason is required to reject an onboarding approval.");
+                    return;
+                }
+                await processApprovalRequest(entry.id, "REJECTED", reason.trim());
+            } else {
+                await rejectRequest(entry.id);
+            }
             loadData();
         } catch (e: any) {
             alert("Action failed: " + (e.response?.data?.message || e.message));
@@ -276,7 +304,7 @@ const ReviewRequests: React.FC = () => {
                                         {activeTab === "Pending" ? (
                                             <div className="flex items-center gap-2">
                                                 <button
-                                                    onClick={() => approve(entry.id)}
+                                                    onClick={() => approve(entry)}
                                                     className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0d9488] hover:bg-[#0f766e] text-white text-xs font-bold rounded-lg shadow-sm transition-all"
                                                 >
                                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -285,7 +313,7 @@ const ReviewRequests: React.FC = () => {
                                                     Approve
                                                 </button>
                                                 <button
-                                                    onClick={() => reject(entry.id)}
+                                                    onClick={() => reject(entry)}
                                                     className="flex items-center gap-1.5 px-3.5 py-1.5 border border-[#fca5a5] bg-white hover:bg-[#fef2f2] text-[#dc2626] text-xs font-bold rounded-lg transition-all"
                                                 >
                                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

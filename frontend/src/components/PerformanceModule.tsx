@@ -13,7 +13,12 @@ const PerformanceModule = () => {
         const token = getToken();
         if (token) {
             const payload = decodeJwt(token);
-            setUserRole(payload?.role?.toUpperCase() || 'EMPLOYEE');
+            const roles = (payload?.roles || []).map((r: string) => r.replace(/^ROLE_/i, '').toUpperCase());
+            // Pick highest-priority role
+            const priority = ['HR', 'MANAGER', 'MENTOR'];
+            const primaryRole = priority.find(p => roles.includes(p)) || 'EMPLOYEE';
+            console.log('[PerformanceModule] JWT roles:', payload?.roles, '-> selected:', primaryRole);
+            setUserRole(primaryRole);
         }
     }, []);
 
