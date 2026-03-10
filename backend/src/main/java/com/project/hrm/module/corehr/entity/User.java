@@ -43,7 +43,7 @@ public class User {
     private UserStatus status;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "provider" ,nullable = false)
     private AuthProvider provider = AuthProvider.LOCAL;
 
     @Column(name = "provider_id")

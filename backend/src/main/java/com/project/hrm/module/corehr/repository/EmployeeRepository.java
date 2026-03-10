@@ -35,7 +35,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
     @Query("SELECT e FROM Employee e WHERE e.employeeId = :id")
     Optional<Employee> findByIdWithDetails(@Param("id") UUID id);
 
-    @EntityGraph(attributePaths = { "user", "position", "department", "personal" })
+    @EntityGraph(attributePaths = { "user", "position", "department" })
     List<Employee> findByStatusIn(List<EmployeeStatus> statuses);
 
     @Query("SELECT e FROM Employee e LEFT JOIN e.personal p " +
