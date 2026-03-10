@@ -3,15 +3,17 @@ import { Icon } from "./PayrollModule";
 import {
     getBatches, createBatch, calculatePayroll,
     getBatchDetailsForReview, updatePayrollDetail, approveBatch, sendPayrollReport,
+    getAllInquiries, replyInquiry, updateInquiryStatus,
     type PayrollBatchDTO, type PayrollReviewDTO, type UpdatePayrollDetailRequest,
+    type InquiryResponseDTO
 } from "../../services/payrollService";
 
-// ΓöÇΓöÇΓöÇ Helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n?: number | null) =>
-    n != null ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n) : "ΓÇö";
+    n != null ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n) : "—";
 
 const fmtPeriod = (period?: string | null) => {
-    if (!period) return "ΓÇö";
+    if (!period) return "—";
     const d = new Date(period);
     return `Month ${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 };
@@ -23,7 +25,7 @@ const getErrMsg = (e: unknown) => {
         : err?.response?.data?.message ?? "An error occurred, please try again.";
 };
 
-// ΓöÇΓöÇΓöÇ Status config ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Status config ─────────────────────────────────────────────────────────────
 const BATCH_STATUS: Record<string, { label: string; dot: string; text: string; bg: string; border: string }> = {
     DRAFT: { label: "Draft", dot: "bg-slate-400", text: "text-slate-600", bg: "bg-slate-100", border: "border-slate-200" },
     PROCESSED: { label: "Calculated", dot: "bg-blue-500", text: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
@@ -31,7 +33,7 @@ const BATCH_STATUS: Record<string, { label: string; dot: string; text: string; b
     LOCKED: { label: "Locked", dot: "bg-amber-500", text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
 };
 
-// ΓöÇΓöÇΓöÇ Sub-components ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Sub-components ────────────────────────────────────────────────────────────
 const BatchBadge: React.FC<{ status: string }> = ({ status }) => {
     const c = BATCH_STATUS[status] ?? BATCH_STATUS.DRAFT;
     return (
@@ -52,7 +54,223 @@ const SkeletonRows = () => (
     ))}</>
 );
 
-// ΓöÇΓöÇΓöÇ Create Batch Modal ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+const INQUIRY_STATUS: Record<string, { label: string; dot: string; text: string; bg: string; border: string }> = {
+    OPEN: { label: "Open", dot: "bg-blue-500", text: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
+    IN_PROGRESS: { label: "In Progress", dot: "bg-amber-500", text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
+    RESOLVED: { label: "Resolved", dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
+    REJECTED: { label: "Rejected", dot: "bg-rose-500", text: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200" },
+};
+
+const InquiryBadge: React.FC<{ status: string }> = ({ status }) => {
+    const c = INQUIRY_STATUS[status] ?? INQUIRY_STATUS.OPEN;
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${c.text} ${c.bg} ${c.border}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
+            {c.label}
+        </span>
+    );
+};
+
+const HRInquiriesModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+    const [inquiries, setInquiries] = useState<InquiryResponseDTO[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [replyingTo, setReplyingTo] = useState<string | null>(null);
+    const [replyText, setReplyText] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [err, setErr] = useState("");
+    const [activeTab, setActiveTab] = useState<"OPEN" | "IN_PROGRESS" | "RESOLVED" | "REJECTED">("OPEN");
+
+    const loadData = useCallback(async () => {
+        setLoading(true); setErr("");
+        try {
+            const res = await getAllInquiries(0, 100);
+            setInquiries(res.content);
+        } catch (e) { setErr(getErrMsg(e)); }
+        finally { setLoading(false); }
+    }, []);
+
+    useEffect(() => { loadData(); }, [loadData]);
+
+    const handleReply = async (inqId: string, statusOverride?: "RESOLVED" | "REJECTED") => {
+        if (!replyText.trim()) return;
+        setSubmitting(true); setErr("");
+        try {
+            // Note: In real app, responderId would be JWT. Use a fake UUID for now
+            await replyInquiry({
+                inquiryId: inqId,
+                responderId: "00000000-0000-0000-0000-000000000000",
+                officialResponse: replyText.trim()
+            });
+
+            // If a specific final status is requested, also update it via the new API
+            if (statusOverride) {
+                await updateInquiryStatus(inqId, statusOverride);
+            }
+
+            setReplyingTo(null);
+            setReplyText("");
+            loadData();
+        } catch (e) {
+            setErr(getErrMsg(e));
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleUpdateStatus = async (inqId: string, status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "REJECTED") => {
+        setSubmitting(true); setErr("");
+        try {
+            await updateInquiryStatus(inqId, status);
+            loadData();
+        } catch (e) {
+            setErr(getErrMsg(e));
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const filteredInquiries = inquiries.filter(i => i.status === activeTab);
+    const tabs = ["OPEN", "IN_PROGRESS", "RESOLVED", "REJECTED"] as const;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 flex flex-col gap-4 bg-slate-50">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                                {Icon.help}
+                            </div>
+                            <div>
+                                <h2 className="text-sm font-bold text-slate-800">Employee Inquiries</h2>
+                                <p className="text-xs text-slate-500">Manage and reply to payroll questions</p>
+                            </div>
+                        </div>
+                        <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:bg-slate-200">{Icon.close}</button>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="flex gap-2">
+                        {tabs.map(t => (
+                            <button
+                                key={t}
+                                onClick={() => { setActiveTab(t); setReplyingTo(null); setErr(""); }}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${activeTab === t
+                                    ? "bg-white text-blue-700 shadow-sm border border-blue-200"
+                                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-transparent"
+                                    }`}
+                            >
+                                {t.replace("_", " ")}
+                                <span className="ml-2 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px]">
+                                    {inquiries.filter(i => i.status === t).length}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+                    {err && <div className="mb-4 p-3 bg-rose-50 text-rose-600 text-sm rounded-xl border border-rose-200">{err}</div>}
+
+                    {loading ? (
+                        <div className="py-12 flex justify-center"><span className="animate-spin text-slate-400 scale-150">{Icon.refresh}</span></div>
+                    ) : filteredInquiries.length === 0 ? (
+                        <div className="text-center py-12">
+                            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-300">
+                                {Icon.inbox}
+                            </div>
+                            <p className="text-slate-500 text-sm font-semibold">No inquiries in this status.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {filteredInquiries.map(inq => (
+                                <div key={inq.id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-slate-300 transition-colors">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="font-bold text-slate-800">{inq.subject}</h3>
+                                                <InquiryBadge status={inq.status} />
+                                            </div>
+                                            <p className="text-xs text-slate-500">
+                                                From: <span className="font-semibold text-slate-700">{inq.employeeName || "Unknown"}</span>
+                                                {inq.payslipPeriod && ` • Payslip: Month ${inq.payslipPeriod}`}
+                                            </p>
+                                        </div>
+                                        <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
+                                            {new Date(inq.createdAt).toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div className="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100 whitespace-pre-wrap leading-relaxed">
+                                        {inq.message}
+                                    </div>
+
+                                    {/* Action Area based on Status */}
+                                    <div className="mt-4 pt-4 border-t border-slate-100">
+                                        {inq.status === "OPEN" && (
+                                            <div className="flex gap-2">
+                                                <button disabled={submitting} onClick={() => handleUpdateStatus(inq.id, "IN_PROGRESS")}
+                                                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-lg transition-colors cursor-pointer">
+                                                    {Icon.refresh} Mark as In Progress (Reviewing)
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {inq.status === "IN_PROGRESS" && (
+                                            <>
+                                                {replyingTo === inq.id ? (
+                                                    <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
+                                                        <textarea
+                                                            className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none bg-slate-50"
+                                                            rows={3} placeholder="Write your official response to resolve or reject this inquiry..."
+                                                            value={replyText} onChange={e => setReplyText(e.target.value)}
+                                                        />
+                                                        <div className="flex justify-between items-center gap-2">
+                                                            <button disabled={submitting} onClick={() => { setReplyingTo(null); setReplyText(""); }}
+                                                                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer">
+                                                                Cancel
+                                                            </button>
+                                                            <div className="flex gap-2">
+                                                                <button disabled={submitting || !replyText.trim()} onClick={() => handleReply(inq.id, "REJECTED")}
+                                                                    className="px-4 py-2 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer">
+                                                                    {submitting ? "..." : "Reply & Reject"}
+                                                                </button>
+                                                                <button disabled={submitting || !replyText.trim()} onClick={() => handleReply(inq.id, "RESOLVED")}
+                                                                    className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors cursor-pointer shadow-sm">
+                                                                    {submitting ? "Sending..." : "Reply & Resolve"}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <button onClick={() => { setReplyingTo(inq.id); setReplyText(""); }}
+                                                        className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer">
+                                                        {Icon.edit} Write Final Response
+                                                    </button>
+                                                )}
+                                            </>
+                                        )}
+
+                                        {(inq.status === "RESOLVED" || inq.status === "REJECTED") && inq.hrResponse && (
+                                            <div>
+                                                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-2">Official HR Response</p>
+                                                <div className={`text-sm p-3.5 rounded-xl border ${inq.status === 'RESOLVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-rose-50 border-rose-100 text-rose-800'} whitespace-pre-wrap leading-relaxed shadow-sm`}>
+                                                    {inq.hrResponse}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ─── Create Batch Modal ────────────────────────────────────────────────────────
 const CreateBatchModal: React.FC<{ onCreated: (b: PayrollBatchDTO) => void; onClose: () => void }> = ({ onCreated, onClose }) => {
     const now = new Date();
     const [month, setMonth] = useState(now.getMonth() + 1);
@@ -123,7 +341,7 @@ const CreateBatchModal: React.FC<{ onCreated: (b: PayrollBatchDTO) => void; onCl
     );
 };
 
-// ΓöÇΓöÇΓöÇ Edit Detail Modal ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Adjust Detail Modal ───────────────────────────────────────────────────────
 const EditModal: React.FC<{ detail: PayrollReviewDTO; onSaved: () => void; onClose: () => void }> = ({ detail, onSaved, onClose }) => {
     const [ot, setOt] = useState(detail.totalOtHours ?? 0);
     const [abs, setAbs] = useState(detail.totalAbsentDays ?? 0);
@@ -153,7 +371,7 @@ const EditModal: React.FC<{ detail: PayrollReviewDTO; onSaved: () => void; onClo
                         </div>
                         <div>
                             <h3 className="text-base font-bold text-slate-900">Adjust Data</h3>
-                            <p className="text-xs text-slate-500">{detail.employeeName}{detail.department && ` ┬╖ ${detail.department}`}</p>
+                            <p className="text-xs text-slate-500">{detail.employeeName}{detail.department && ` · ${detail.department}`}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 cursor-pointer">{Icon.close}</button>
@@ -206,7 +424,7 @@ const EditModal: React.FC<{ detail: PayrollReviewDTO; onSaved: () => void; onClo
     );
 };
 
-// ΓöÇΓöÇΓöÇ Payroll Report Modal ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Payroll Report Modal ──────────────────────────────────────────────────────
 const PayrollReportModal: React.FC<{
     batch: PayrollBatchDTO;
     rows: PayrollReviewDTO[];
@@ -228,14 +446,11 @@ const PayrollReportModal: React.FC<{
 
     const handleConfirm = async () => {
         setSending(true);
-        await new Promise(r => setTimeout(r, 900)); // simulate send
-        setSent(true);
-        setSending(false);
-        setTimeout(() => { onConfirm(); onClose(); }, 1400);
         try {
             await sendPayrollReport(batch.batchId);
             setSent(true);
             onConfirm(); // Trigger background refresh
+            setTimeout(() => { onClose(); }, 1400); // Close shortly after success
         } catch (error: any) {
             console.error("Failed to send report:", error);
             alert(getErrMsg(error));
@@ -265,7 +480,7 @@ const PayrollReportModal: React.FC<{
                         </div>
                         <div>
                             <h2 className="text-base font-bold text-white">Payroll Report for Finance</h2>
-                            <p className="text-xs text-white/70">{period} ┬╖ Created at {reportDate}</p>
+                            <p className="text-xs text-white/70">{period} · Created at {reportDate}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -277,25 +492,10 @@ const PayrollReportModal: React.FC<{
                     </div>
                 </div>
 
-                {/* Body ΓÇö scrollable */}
+                {/* Body — scrollable */}
                 <div ref={printRef} className="flex-1 overflow-y-auto">
                     {!sent ? (
                         <>
-                            {/* Summary strip */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border-b border-slate-100">
-                                {[
-                                    { label: "Payroll Period", value: period, color: "text-violet-700" },
-                                    { label: "Total Headcount", value: `${rows.length} emp.`, color: "text-slate-800" },
-                                    { label: "Total Gross", value: fmt(totalGross), color: "text-emerald-700" },
-                                    { label: "Warnings", value: `${warnCount} emp.`, color: warnCount > 0 ? "text-amber-600" : "text-slate-400" },
-                                ].map((s, i) => (
-                                    <div key={i} className={`px-6 py-4 ${i < 3 ? "border-r border-slate-100" : ""}`}>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{s.label}</p>
-                                        <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
-                                    </div>
-                                ))}
-                            </div>
-
                             {/* Summary strip */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border-b border-slate-100">
                                 {[
@@ -350,16 +550,16 @@ const PayrollReportModal: React.FC<{
                                                         <span className="font-semibold text-slate-800 whitespace-nowrap">{r.employeeName}</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-2.5 text-slate-500">{r.department || "ΓÇö"}</td>
+                                                <td className="px-4 py-2.5 text-slate-500">{r.department || "—"}</td>
                                                 <td className="px-4 py-2.5 font-medium text-slate-700 whitespace-nowrap">{fmt(r.baseSalary)}</td>
                                                 <td className="px-4 py-2.5 text-center">
                                                     <span className={r.totalOtHours > 0 ? "text-amber-600 font-semibold" : "text-slate-400"}>{r.totalOtHours ?? 0}h</span>
                                                 </td>
-                                                <td className="px-4 py-2.5 whitespace-nowrap">{r.otPay > 0 ? fmt(r.otPay) : <span className="text-slate-300">ΓÇö</span>}</td>
+                                                <td className="px-4 py-2.5 whitespace-nowrap">{r.otPay > 0 ? fmt(r.otPay) : <span className="text-slate-300">—</span>}</td>
                                                 <td className="px-4 py-2.5 whitespace-nowrap">
                                                     {r.absentDeduction > 0
                                                         ? <span className="text-rose-600 font-medium">-{fmt(r.absentDeduction)}</span>
-                                                        : <span className="text-slate-300">ΓÇö</span>}
+                                                        : <span className="text-slate-300">—</span>}
                                                 </td>
                                                 <td className="px-4 py-2.5 font-bold text-slate-800 whitespace-nowrap">{fmt(r.grossSalary)}</td>
                                                 <td className="px-4 py-2.5">
@@ -393,15 +593,6 @@ const PayrollReportModal: React.FC<{
                                     {warnCount > 0 && <span className="text-amber-700 font-semibold"> There are {warnCount} employees requiring review.</span>}
                                 </p>
                             </div>
-                            {/* Notes */}
-                            <div className="px-6 py-4 border-t border-slate-100 bg-amber-50/30">
-                                <p className="text-[11px] text-slate-500 leading-relaxed">
-                                    <span className="font-bold text-slate-700">Note:</span> This report was automatically generated from the HRM system on {reportDate}.
-                                    Gross Salary does not include deductions for Personal Income Tax and Social Insurances.
-                                    Please review carefully before sending to the Finance department.
-                                    {warnCount > 0 && <span className="text-amber-700 font-semibold"> There are {warnCount} employees requiring review.</span>}
-                                </p>
-                            </div>
                         </>
                     ) : (
                         <div className="flex flex-col items-center justify-center p-16 h-full min-h-[400px] text-center animate-in fade-in zoom-in duration-500">
@@ -420,31 +611,6 @@ const PayrollReportModal: React.FC<{
 
                 {/* Footer actions */}
                 <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-4 flex-shrink-0">
-                    <div className="text-xs text-slate-400">
-                        {sent
-                            ? <span className="text-emerald-600 font-semibold flex items-center gap-1.5">{Icon.checkCircle} Report sent successfully!</span>
-                            : <span>After confirmation, the report will be sent to the Finance department for review.</span>}
-                    </div>
-                    <div className="flex gap-3">
-                        <button onClick={onClose} disabled={sending || sent}
-                            className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-40 cursor-pointer transition-all">
-                            Cancel
-                        </button>
-                        <button onClick={handleConfirm} disabled={sending || sent}
-                            className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${sent ? "bg-emerald-500 text-white cursor-default" :
-                                sending ? "bg-violet-400 text-white cursor-wait" :
-                                    "bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700 cursor-pointer"
-                                }`}>
-                            <span className={sending ? "animate-spin" : ""}>
-                                {sent ? Icon.checkCircle : sending ? Icon.refresh : (
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                                        <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-                                    </svg>
-                                )}
-                            </span>
-                            {sent ? "Sent!" : sending ? "Sending..." : "Confirm & Send"}
-                        </button>
-                    </div>
                     {!sent ? (
                         <>
                             <div className="text-xs text-slate-400">
@@ -471,12 +637,17 @@ const PayrollReportModal: React.FC<{
                             </div>
                         </>
                     ) : (
-                        <div className="w-full flex justify-end">
-                            <button onClick={onClose}
-                                className="px-8 py-2.5 rounded-xl text-sm font-bold bg-slate-800 text-white hover:bg-slate-900 transition-all cursor-pointer shadow-sm">
-                                Done
-                            </button>
-                        </div>
+                        <>
+                            <div className="text-xs text-slate-400">
+                                <span className="text-emerald-600 font-semibold flex items-center gap-1.5">{Icon.checkCircle} Report sent successfully!</span>
+                            </div>
+                            <div className="w-full flex justify-end">
+                                <button onClick={onClose}
+                                    className="px-8 py-2.5 rounded-xl text-sm font-bold bg-slate-800 text-white hover:bg-slate-900 transition-all cursor-pointer shadow-sm">
+                                    Done
+                                </button>
+                            </div>
+                        </>
                     )}
                 </div>
             </div>
@@ -484,7 +655,7 @@ const PayrollReportModal: React.FC<{
     );
 };
 
-// ΓöÇΓöÇΓöÇ Stat Card ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Stat Card ─────────────────────────────────────────────────────────────────
 const StatCard: React.FC<{
     label: string; value: string | number; icon: React.ReactNode; bg: string;
     valueColor?: string; subtitle?: string; active?: boolean; onClick?: () => void;
@@ -503,22 +674,22 @@ const StatCard: React.FC<{
     </button>
 );
 
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN: HR Payroll View
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// ═══════════════════════════════════════════════════════════════════════════════
 const HRPayrollView: React.FC = () => {
-    // ΓöÇΓöÇ Batch state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── Batch state ────────────────────────────────────────────────────────────
     const [batches, setBatches] = useState<PayrollBatchDTO[]>([]);
     const [batchLoad, setBatchLoad] = useState(true);
     const [batchErr, setBatchErr] = useState("");
     const [selId, setSelId] = useState("");
     const [showCreate, setShowCreate] = useState(false);
 
-    // ΓöÇΓöÇ Calculate state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── Calculate state ────────────────────────────────────────────────────────
     const [calcState, setCalcState] = useState<"idle" | "busy" | "ok" | "err">("idle");
     const [calcErr, setCalcErr] = useState("");
 
-    // ΓöÇΓöÇ Review table state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── Review table state ─────────────────────────────────────────────────────
     const [rows, setRows] = useState<PayrollReviewDTO[]>([]);
     const [rowsLoad, setRowsLoad] = useState(false);
     const [rowsLoaded, setRowsLoaded] = useState(false);
@@ -526,15 +697,18 @@ const HRPayrollView: React.FC = () => {
     const [filter, setFilter] = useState<"all" | "ok" | "warning">("all");
     const [editRow, setEditRow] = useState<PayrollReviewDTO | null>(null);
 
-    // ΓöÇΓöÇ Approve state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── Approve state ──────────────────────────────────────────────────────────
     const [approveBusy, setApproveBusy] = useState(false);
     const [approveMsg, setApproveMsg] = useState("");
     const [approveMsgType, setApproveMsgType] = useState<"ok" | "err">("ok");
 
-    // ΓöÇΓöÇ Report state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── Report state ───────────────────────────────────────────────────────────
     const [showReport, setShowReport] = useState(false);
 
-    // ΓöÇΓöÇ Load batches ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── Inquiries state ────────────────────────────────────────────────────────
+    const [showInquiries, setShowInquiries] = useState(false);
+
+    // ── Load batches ───────────────────────────────────────────────────────────
     const loadBatches = useCallback(async () => {
         setBatchLoad(true); setBatchErr("");
         try {
@@ -547,7 +721,7 @@ const HRPayrollView: React.FC = () => {
 
     useEffect(() => { loadBatches(); }, []); // eslint-disable-line
 
-    // ΓöÇΓöÇ Load review data whenever batch changes ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── Load review data whenever batch changes ────────────────────────────────
     const loadReview = useCallback(async (batchId: string) => {
         if (!batchId) return;
         setRowsLoad(true); setCalcErr(""); setApproveMsg(""); setRowsLoaded(false);
@@ -569,7 +743,7 @@ const HRPayrollView: React.FC = () => {
         }
     }, [selId, loadReview]);
 
-    // ΓöÇΓöÇ Handlers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── Handlers ──────────────────────────────────────────────────────────────
     const onBatchCreated = (b: PayrollBatchDTO) => {
         setBatches(prev => [b, ...prev]);
         setSelId(b.batchId);
@@ -605,7 +779,7 @@ const HRPayrollView: React.FC = () => {
         } finally { setApproveBusy(false); }
     };
 
-    // ΓöÇΓöÇ Derived ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── Derived ───────────────────────────────────────────────────────────────
     const filtered = rows.filter(r => {
         const matchSearch = r.employeeName.toLowerCase().includes(search.toLowerCase());
         const matchFilter = filter === "all" || (filter === "warning" ? r.hasWarning : !r.hasWarning);
@@ -617,10 +791,10 @@ const HRPayrollView: React.FC = () => {
     const totalGross = rows.reduce((s, r) => s + (r.grossSalary ?? 0), 0);
     const selBatch = batches.find(b => b.batchId === selId);
 
-    // ΓöÇΓöÇ Render ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── Render ────────────────────────────────────────────────────────────────
     return (
         <>
-            {/* ΓöÇΓöÇ Batch control panel ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
+            {/* ── Batch control panel ───────────────────────────────────────────── */}
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden mb-5">
                 <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
@@ -628,7 +802,7 @@ const HRPayrollView: React.FC = () => {
                     </div>
                     <div>
                         <h3 className="text-sm font-bold text-slate-800">Payroll Management</h3>
-                        <p className="text-xs text-slate-400">Select Batch ΓåÆ Calculate ΓåÆ Review ΓåÆ Approve</p>
+                        <p className="text-xs text-slate-400">Select Batch → Calculate → Review → Approve</p>
                     </div>
                 </div>
 
@@ -650,7 +824,7 @@ const HRPayrollView: React.FC = () => {
                             ) : batches.length === 0 ? (
                                 <div className="px-4 py-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
                                     No payroll batches found.{" "}
-                                    <button onClick={() => setShowCreate(true)} className="text-emerald-600 font-semibold hover:underline cursor-pointer">Create new ΓåÆ</button>
+                                    <button onClick={() => setShowCreate(true)} className="text-emerald-600 font-semibold hover:underline cursor-pointer">Create new →</button>
                                 </div>
                             ) : (
                                 <div className="relative">
@@ -658,7 +832,7 @@ const HRPayrollView: React.FC = () => {
                                         className="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer hover:border-emerald-300 transition-colors">
                                         {batches.map(b => (
                                             <option key={b.batchId} value={b.batchId}>
-                                                {fmtPeriod(b.period)} ΓÇö {BATCH_STATUS[b.status]?.label ?? b.status}
+                                                {fmtPeriod(b.period)} — {BATCH_STATUS[b.status]?.label ?? b.status}
                                             </option>
                                         ))}
                                     </select>
@@ -684,6 +858,10 @@ const HRPayrollView: React.FC = () => {
                                     {calcState === "ok" ? Icon.check : Icon.refresh}
                                 </span>
                                 {calcState === "busy" ? "Calculating..." : calcState === "ok" ? "Done" : "Calculate"}
+                            </button>
+                            <button onClick={() => setShowInquiries(true)}
+                                className="inline-flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all cursor-pointer">
+                                {Icon.help} Inquiries
                             </button>
                         </div>
                     </div>
@@ -715,7 +893,7 @@ const HRPayrollView: React.FC = () => {
                 </div>
             </div>
 
-            {/* ΓöÇΓöÇ Stat cards (only when data loaded) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
+            {/* ── Stat cards (only when data loaded) ───────────────────────────── */}
             {rowsLoaded && rows.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
                     <StatCard label="Total Employees" value={rows.length} icon={Icon.users}
@@ -736,7 +914,7 @@ const HRPayrollView: React.FC = () => {
                 </div>
             )}
 
-            {/* ΓöÇΓöÇ Review table ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
+            {/* ── Review table ──────────────────────────────────────────────────── */}
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
                 {/* Toolbar */}
                 <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -744,7 +922,7 @@ const HRPayrollView: React.FC = () => {
                         <h3 className="text-sm font-bold text-slate-800">Employee Payroll Table</h3>
                         {rows.length > 0 && (
                             <p className="text-xs text-slate-400 mt-0.5">
-                                {filtered.length}/{rows.length} employees{selBatch && ` ┬╖ ${fmtPeriod(selBatch.period)}`}
+                                {filtered.length}/{rows.length} employees{selBatch && ` · ${fmtPeriod(selBatch.period)}`}
                             </p>
                         )}
                     </div>
@@ -797,7 +975,7 @@ const HRPayrollView: React.FC = () => {
                                     </div>
                                     <p className="text-sm font-semibold text-slate-600">
                                         {rows.length === 0
-                                            ? 'No data in this batch ΓÇö click "Calculate" to start.'
+                                            ? 'No data in this batch — click "Calculate" to start.'
                                             : "No matching results."}
                                     </p>
                                     {rows.length === 0 && (
@@ -820,7 +998,7 @@ const HRPayrollView: React.FC = () => {
                                                 <span className="font-semibold text-slate-800 whitespace-nowrap">{row.employeeName}</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3.5 text-slate-500 text-xs">{row.department || "ΓÇö"}</td>
+                                        <td className="px-4 py-3.5 text-slate-500 text-xs">{row.department || "—"}</td>
                                         <td className="px-4 py-3.5 font-medium text-slate-700 whitespace-nowrap">{fmt(row.baseSalary)}</td>
                                         <td className="px-4 py-3.5">
                                             <span className={`font-semibold ${row.totalOtHours > 80 ? "text-amber-600" : "text-slate-700"}`}>
@@ -836,7 +1014,7 @@ const HRPayrollView: React.FC = () => {
                                         <td className="px-4 py-3.5 whitespace-nowrap">
                                             {row.absentDeduction
                                                 ? <span className="text-rose-600 font-medium">-{fmt(row.absentDeduction)}</span>
-                                                : <span className="text-slate-300">ΓÇö</span>}
+                                                : <span className="text-slate-300">—</span>}
                                         </td>
                                         <td className="px-4 py-3.5">
                                             <span className="font-bold text-slate-800 whitespace-nowrap">{fmt(row.grossSalary)}</span>
@@ -882,7 +1060,7 @@ const HRPayrollView: React.FC = () => {
                                     <span className="font-semibold">{warnCount}</span> warnings
                                 </span>
                             )}
-                            <span className="text-slate-400">┬╖</span>
+                            <span className="text-slate-400">·</span>
                             <span className="text-slate-500 text-xs">Total gross: <span className="font-semibold text-slate-700">{fmt(totalGross)}</span></span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -921,6 +1099,7 @@ const HRPayrollView: React.FC = () => {
                     onClose={() => setShowReport(false)}
                 />
             )}
+            {showInquiries && <HRInquiriesModal onClose={() => setShowInquiries(false)} />}
         </>
     );
 };

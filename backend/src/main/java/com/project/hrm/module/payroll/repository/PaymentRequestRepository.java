@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface PaymentRequestRepository extends JpaRepository<PaymentRequest, UUID> {
     List<PaymentRequest> findByStatusOrderByCreatedAtDesc(String status);
+
+    List<PaymentRequest> findAllByOrderByCreatedAtDesc();
 }

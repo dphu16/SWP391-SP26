@@ -17,6 +17,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.project.hrm.module.payroll.dto.ResponseDTO.InquiryResponseDTO;
+import com.project.hrm.module.payroll.service.EmployeeInquiryService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 @RestController
 @RequestMapping("/api/v1/hr/payroll")
 @RequiredArgsConstructor
@@ -24,6 +29,27 @@ public class HrPayrollController {
 
     private final PayrollCalculationService payrollService;
     private final PayrollBatchRepository batchRepository;
+    private final EmployeeInquiryService employeeInquiryService;
+
+    /**
+     * Lấy toàn bộ danh sách thắc mắc cho HR
+     * GET /api/v1/hr/payroll/inquiries
+     */
+    @GetMapping("/inquiries")
+    public ResponseEntity<Page<InquiryResponseDTO>> getAllInquiries(Pageable pageable) {
+        return ResponseEntity.ok(employeeInquiryService.getAllInquiries(pageable));
+    }
+
+    /**
+     * Cập nhật trạng thái thắc mắc
+     * PUT /api/v1/hr/payroll/inquiries/{id}/status?status=IN_PROGRESS
+     */
+    @PutMapping("/inquiries/{id}/status")
+    public ResponseEntity<InquiryResponseDTO> updateInquiryStatus(
+            @PathVariable("id") UUID inquiryId,
+            @RequestParam("status") com.project.hrm.module.payroll.enums.InquiryStatus status) {
+        return ResponseEntity.ok(employeeInquiryService.updateInquiryStatus(inquiryId, status));
+    }
 
     /**
      * GET /api/v1/hr/payroll/batches

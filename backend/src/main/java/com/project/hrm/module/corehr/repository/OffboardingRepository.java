@@ -17,4 +17,10 @@ public interface OffboardingRepository extends JpaRepository<Offboarding, UUID> 
      * (PENDING hoặc APPROVED).
      */
     boolean existsByEmployee_EmployeeIdAndStatusIn(UUID employeeId, List<OffboardingStatus> statuses);
+
+    @org.springframework.data.jpa.repository.Query("SELECT o FROM Offboarding o WHERE o.employee.employeeId = :employeeId AND o.expectedLastDay >= :start AND o.expectedLastDay <= :end AND o.status = 'APPROVED'")
+    java.util.Optional<Offboarding> findApprovedOffboardingInPeriod(
+            @org.springframework.data.repository.query.Param("employeeId") UUID employeeId,
+            @org.springframework.data.repository.query.Param("start") java.time.LocalDate start,
+            @org.springframework.data.repository.query.Param("end") java.time.LocalDate end);
 }

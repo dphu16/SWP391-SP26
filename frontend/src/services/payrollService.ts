@@ -69,6 +69,15 @@ export interface InquiryResponseDTO {
     resolvedAt: string | null;
     payslipId: string | null;
     payslipPeriod: string | null;
+    employeeId: string | null;
+    employeeName: string | null;
+}
+
+export interface CreateInquiryResponseDTO {
+    inquiryId: string;
+    responderId: string;
+    officialResponse: string;
+    internalNote?: string;
 }
 
 // --- PayrollBatchDTO ---
@@ -190,6 +199,34 @@ export async function getMyInquiries(page = 0, size = 10) {
     return res.data;
 }
 
+/** GET /api/v1/hr/payroll/inquiries — Lấy toàn bộ danh sách thắc mắc (HR view) */
+export async function getAllInquiries(page = 0, size = 20) {
+    const res = await apiClient.get<PageResponse<InquiryResponseDTO>>(
+        "/api/v1/hr/payroll/inquiries",
+        { params: { page, size } }
+    );
+    return res.data;
+}
+
+/** POST /api/v1/salary-inquiries/responses — Phản hồi thắc mắc */
+export async function replyInquiry(data: CreateInquiryResponseDTO) {
+    const res = await apiClient.post(
+        "/api/v1/salary-inquiries/responses",
+        data
+    );
+    return res.data;
+}
+
+/** PUT /api/v1/hr/payroll/inquiries/:id/status?status=... — Cập nhật trạng thái thắc mắc */
+export async function updateInquiryStatus(inquiryId: string, status: string) {
+    const res = await apiClient.put<InquiryResponseDTO>(
+        `/api/v1/hr/payroll/inquiries/${inquiryId}/status`,
+        null,
+        { params: { status } }
+    );
+    return res.data;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // HR Payroll Batch Management APIs (HrPayrollController)
 // ──────────────────────────────────────────────────────────────────────────────
@@ -250,6 +287,14 @@ export async function approveBatch(batchId: string) {
 export async function sendPayrollReport(batchId: string) {
     const res = await apiClient.post<string>(
         `/api/v1/hr/payroll-review/${batchId}/send-report`
+    );
+    return res.data;
+}
+
+/** POST /api/v1/hr/payroll-review/:batchId/send-tax-report — Gửi báo cáo Thuế & Bảo Hiểm */
+export async function sendTaxReport(batchId: string) {
+    const res = await apiClient.post<string>(
+        `/api/v1/hr/payroll-review/${batchId}/send-tax-report`
     );
     return res.data;
 }

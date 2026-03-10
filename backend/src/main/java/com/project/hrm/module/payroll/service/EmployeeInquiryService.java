@@ -1,6 +1,5 @@
 package com.project.hrm.module.payroll.service;
 
-
 import com.project.hrm.module.payroll.dto.RequestDTO.CreateInquiryRequest;
 import com.project.hrm.module.payroll.dto.ResponseDTO.InquiryResponseDTO;
 import com.project.hrm.module.corehr.entity.Employee;
@@ -72,6 +71,30 @@ public class EmployeeInquiryService {
                 .map(this::mapToDto);
     }
 
+    /**
+     * Lấy toàn bộ danh sách thắc mắc (dành cho HR)
+     */
+    @Transactional(readOnly = true)
+    public Page<InquiryResponseDTO> getAllInquiries(Pageable pageable) {
+        return inquiryRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(this::mapToDto);
+    }
+
+    /**
+     * Cập nhật trạng thái thắc mắc
+     */
+    @Transactional
+    public InquiryResponseDTO updateInquiryStatus(UUID inquiryId, InquiryStatus status) {
+        SalaryInquiry inquiry = inquiryRepository.findById(inquiryId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thắc mắc này!"));
+        inquiry.setStatus(status);
+        if (status == InquiryStatus.RESOLVED || status == InquiryStatus.REJECTED) {
+            inquiry.setResolvedAt(LocalDateTime.now());
+        }
+        SalaryInquiry saved = inquiryRepository.save(inquiry);
+        return mapToDto(saved);
+    }
+
     // Helper mapper
     private InquiryResponseDTO mapToDto(SalaryInquiry entity) {
         String periodInfo = null;
@@ -80,12 +103,21 @@ public class EmployeeInquiryService {
         if (entity.getPayslip() != null) {
             payslipId = entity.getPayslip().getPayslipId();
             // Lấy thông tin tháng/năm cho dễ đọc
-            // Lưu ý: Cần đảm bảo Payslip đã fetch PayrollPeriod nếu không sẽ bị LazyInitializationException
-            // Trong thực tế nên dùng DTO projection hoặc EntityGraph, ở đây giả sử đã fetch.
+            // Lưu ý: Cần đảm bảo Payslip đã fetch PayrollPeriod nếu không sẽ bị
+            // LazyInitializationException
+            // Trong thực tế nên dùng DTO projection hoặc EntityGraph, ở đây giả sử đã
+            // fetch.
             if (entity.getPayslip().getPayrollPeriod() != null) {
                 periodInfo = entity.getPayslip().getPayrollPeriod().getMonth() + "/"
                         + entity.getPayslip().getPayrollPeriod().getYear();
             }
+        }
+
+        String employeeName = "Unknown";
+        UUID empId = null;
+        if (entity.getEmployee() != null) {
+            empId = entity.getEmployee().getEmployeeId();
+            employeeName = entity.getEmployee().getFullName();
         }
 
         return InquiryResponseDTO.builder()
@@ -98,6 +130,8 @@ public class EmployeeInquiryService {
                 .resolvedAt(entity.getResolvedAt())
                 .payslipId(payslipId)
                 .payslipPeriod(periodInfo)
+                .employeeId(empId)
+                .employeeName(employeeName)
                 .build();
     }
 }

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import EmployeePayrollView from "./EmployeePayrollView";
 import HRPayrollView from "./HRPayrollView";
 import TaxInsuranceReport from "./TaxInsuranceReport";
+import FinancePayrollView from "./FinancePayrollView";
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 export const fmt = (n?: number | null) =>
@@ -113,9 +114,14 @@ const PayrollModule: React.FC = () => {
     // Render both views with their own header based on current path
     const isHR = location.pathname.startsWith("/payroll/hr");
     const isTaxReport = location.pathname.startsWith("/payroll/tax-report");
+    const isFinance = location.pathname.startsWith("/payroll/finance");
 
     if (isTaxReport) {
         return <TaxInsuranceReport />;
+    }
+
+    if (isFinance) {
+        return <FinancePayrollView />;
     }
 
     return (

@@ -21,7 +21,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
 
     @EntityGraph(attributePaths = { "user", "position", "department" })
     @Query("SELECT e FROM Employee e WHERE e.user.username = :username")
-    Optional<Employee> findByUser_Username(String username);
+    Optional<Employee> findByUser_Username(@Param("username") String username);
 
     @EntityGraph(attributePaths = { "user", "position", "department" })
     @Query(value = "SELECT e FROM Employee e ORDER BY e.fullName ASC", countQuery = "SELECT COUNT(e) FROM Employee e")
@@ -29,6 +29,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
 
     @EntityGraph(attributePaths = { "user", "position", "position.department" })
     List<Employee> findByPosition_Department_DeptId(UUID deptId);
+
     @Override
     Optional<Employee> findById(UUID uuid);
 

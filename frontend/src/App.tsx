@@ -79,17 +79,11 @@ const AppShell: React.FC = () => {
                             <Route path="/attendance/review" element={<ReviewRequests />} />
                             <Route path="/attendance/summary" element={<AttendanceSummary />} />
 
-                            {/* Payroll routes — PayrollModule handles /payroll, /payroll/employee, /payroll/hr */}
-                            <Route path="/payroll" element={<PayrollModule />} />
-                            <Route path="/payroll/employee" element={<PayrollModule />} />
-                            <Route path="/payroll/hr" element={<PayrollModule />} />
-                            <Route path="/payroll/tax-report" element={<PayrollModule />} />
+                            {/* Payroll routes — PayrollModule handles /payroll, /payroll/employee, /payroll/hr, /payroll/finance */}
+                            <Route path="/payroll/*" element={<PayrollModule />} />
 
                             {/* Performance */}
                             <Route path="/performance" element={<PerformanceModule />} />
-
-                            {/* Payroll Module */}
-                            <Route path="/payroll/*" element={<PayrollModule />} />
 
                             <Route path="/employee/:id" element={<EmployeeDetail />} />
                             <Route path="/profile" element={<EmployeeDetail />} />

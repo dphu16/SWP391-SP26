@@ -3,7 +3,6 @@ package com.project.hrm.module.payroll.service;
 import com.project.hrm.module.attendance.dto.AttendanceAggregationDTO;
 import com.project.hrm.module.attendance.repository.AttendanceLogRepository;
 import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.payroll.entity.*;
 import com.project.hrm.module.payroll.enums.BatchStatus;
 import com.project.hrm.module.payroll.repository.*;
@@ -27,9 +26,11 @@ public class PayrollCalculationService {
     private final AttendanceLogRepository attendanceRepository;
     private final SalaryProfileRepository profileRepository;
     private final PayrollDetailRepository payrollDetailRepository;
-    private final EmployeeRepository employeeRepository;
-    private final PayslipRepository payslipRepository;
-    private final PayrollPeriodRepository periodRepository;
+    private final com.project.hrm.module.corehr.repository.EmployeeRepository employeeRepository;
+    private final com.project.hrm.module.payroll.repository.PayslipRepository payslipRepository;
+    private final com.project.hrm.module.payroll.repository.PayrollPeriodRepository periodRepository;
+    private final com.project.hrm.module.corehr.repository.OffboardingRepository offboardingRepository;
+    private final com.project.hrm.module.evaluation.repository.PerformanceReviewsRepository performanceReviewsRepository;
 
     @Transactional
     public void calculatePayrollForBatch(UUID batchId) {
@@ -80,10 +81,21 @@ public class PayrollCalculationService {
                     emp.getEmployeeId(),
                     new AttendanceAggregationDTO(emp.getEmployeeId(), BigDecimal.ZERO, BigDecimal.ZERO, 0L));
 
+            // Tiêu chuẩn ngày công (Standard Working Days)
+            int standardDays = 22;
+            int month = batch.getPeriod().getMonthValue();
+            int year = batch.getPeriod().getYear();
+            if (month == 2) {
+                boolean isLeap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+                standardDays = isLeap ? 21 : 20;
+            }
+
             // Xóa detail cũ nếu có (tính lại)
             // Tính toán Lương Cơ Bản & Phụ Cấp
             BigDecimal baseSalary = profile.getBaseSalary() != null ? profile.getBaseSalary() : BigDecimal.ZERO;
+            BigDecimal originalBaseSalary = baseSalary; // Lưu lại log
             BigDecimal totalAllowances = BigDecimal.ZERO;
+
             if (profile.getAllowances() != null) {
                 for (Object value : profile.getAllowances().values()) {
                     if (value instanceof Number) {
@@ -97,11 +109,46 @@ public class PayrollCalculationService {
                 }
             }
 
-            // Không cần tính daily/hourly salary nữa do đã fixed OT và Absence r
+            // Bonus KPI >= 80
+            List<com.project.hrm.module.evaluation.entity.PerformanceReviews> reviews = performanceReviewsRepository
+                    .findByEmployee_EmployeeId(emp.getEmployeeId());
+            if (!reviews.isEmpty()) {
+                // Get highest or latest. For simplicity, we just use the first/max one we find
+                // in the recent cycle.
+                // Assuming we just check if any review in the last couple of months or just the
+                // latest one has KPI >= 80.
+                com.project.hrm.module.evaluation.entity.PerformanceReviews latestReview = reviews.stream()
+                        .max(java.util.Comparator
+                                .comparing(com.project.hrm.module.evaluation.entity.PerformanceReviews::getCreatedAt))
+                        .orElse(null);
+                if (latestReview != null && latestReview.getKpiScore() != null && latestReview.getKpiScore() >= 80.0) {
+                    totalAllowances = totalAllowances.add(BigDecimal.valueOf(2_000_000));
+                }
+            }
 
-            // Vắng mặt (Cố định trừ 400.000 VNĐ / ngày)
+            // Kiểm tra nghỉ việc giữa chừng
+            java.util.Optional<com.project.hrm.module.corehr.entity.Offboarding> offboardingOpt = offboardingRepository
+                    .findApprovedOffboardingInPeriod(emp.getEmployeeId(), startDate, endDate);
+
+            boolean isOffboardedMidMonth = offboardingOpt.isPresent();
             BigDecimal absentDays = BigDecimal.valueOf(att.getTotalAbsentDays());
             BigDecimal absentDeduction = absentDays.multiply(BigDecimal.valueOf(400000));
+
+            if (isOffboardedMidMonth) {
+                com.project.hrm.module.corehr.entity.Offboarding offReq = offboardingOpt.get();
+                // Tính số ngày làm việc thực tế từ đầu tháng tới ngày nghỉ
+                long actualWorkingDays = java.time.temporal.ChronoUnit.DAYS.between(startDate,
+                        offReq.getExpectedLastDay()) + 1 - absentDays.longValue();
+                if (actualWorkingDays < 0)
+                    actualWorkingDays = 0;
+
+                // Prorate base salary
+                baseSalary = originalBaseSalary.multiply(BigDecimal.valueOf(actualWorkingDays))
+                        .divide(BigDecimal.valueOf(standardDays), 2, java.math.RoundingMode.HALF_UP);
+
+                // Không trừ absentDeduction cứng nữa vì đã tính tỷ lệ lương
+                absentDeduction = BigDecimal.ZERO;
+            }
 
             // OT (Giả định fixed 200.000 VNĐ / giờ)
             BigDecimal otHours = att.getTotalOtHours() != null ? att.getTotalOtHours() : BigDecimal.ZERO;
@@ -112,21 +159,20 @@ public class PayrollCalculationService {
             if (grossSalary.compareTo(BigDecimal.ZERO) < 0)
                 grossSalary = BigDecimal.ZERO;
 
-            // Bảo hiểm (BHXH, BHYT, BHTN): 10.5% của Lương cơ bản hiện tại ở VN
-            // Dùng fixed 10.5% hoặc fetch từ config nếu có (sẽ dùng 10.5% mặc định cho
-            // Employee)
-            BigDecimal insuranceAmount = baseSalary.multiply(BigDecimal.valueOf(0.105));
-
-            // Thuế TNCN (Progressive Tax)
-            // Thu nhập chịu thuế = Gross - Bảo Hiểm
-            BigDecimal taxableIncome = grossSalary.subtract(insuranceAmount);
-            // Giảm trừ gia cảnh (Cá nhân 11M, chưa tính người phụ thuộc 4.4M)
-            BigDecimal personalDeduction = BigDecimal.valueOf(11_000_000);
-            BigDecimal assessableIncome = taxableIncome.subtract(personalDeduction);
-
+            // Bảo hiểm & Thuế TNCN
+            BigDecimal insuranceAmount = BigDecimal.ZERO;
             BigDecimal taxAmount = BigDecimal.ZERO;
-            if (assessableIncome.compareTo(BigDecimal.ZERO) > 0) {
-                taxAmount = calculatePersonalIncomeTax(assessableIncome);
+
+            if (!isOffboardedMidMonth) {
+                insuranceAmount = baseSalary.multiply(BigDecimal.valueOf(0.105)); // 10.5%
+
+                BigDecimal taxableIncome = grossSalary.subtract(insuranceAmount);
+                BigDecimal personalDeduction = BigDecimal.valueOf(11_000_000);
+                BigDecimal assessableIncome = taxableIncome.subtract(personalDeduction);
+
+                if (assessableIncome.compareTo(BigDecimal.ZERO) > 0) {
+                    taxAmount = calculatePersonalIncomeTax(assessableIncome);
+                }
             }
 
             // Lương Thực Nhận (Net Salary)
@@ -139,6 +185,7 @@ public class PayrollCalculationService {
             detail.setEmployee(emp);
 
             // Populating initial values before final calculation
+            // Base salary that we store here is the actual one used in the formula
             detail.setBaseSalary(baseSalary);
             detail.setTotalOtHours(otHours);
             detail.setTotalAbsentDays(absentDays);

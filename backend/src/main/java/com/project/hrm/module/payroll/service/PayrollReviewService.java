@@ -26,6 +26,8 @@ public class PayrollReviewService {
     private final PayrollDetailRepository detailRepository;
     private final PayrollCalculationService payrollCalculationService;
     private final com.project.hrm.module.payroll.repository.PayslipRepository payslipRepository;
+    private final FinanceService financeService;
+    private final com.project.hrm.module.corehr.repository.EmployeeRepository employeeRepository;
 
     /**
      * 1. Lấy danh sách chi tiết bảng lương để Review
@@ -159,9 +161,66 @@ public class PayrollReviewService {
             throw new RuntimeException("Báo cáo đã được gửi và batch đã bị khoá.");
         }
 
+        List<PayrollDetail> details = detailRepository.findByPayrollBatch_BatchId(batchId);
+        BigDecimal totalAmount = details.stream()
+                .map(PayrollDetail::getNetSalary)
+                .reduce(BigDecimal.ZERO, (a, b) -> a != null && b != null ? a.add(b)
+                        : (a != null ? a : (b != null ? b : BigDecimal.ZERO)));
+
         // Chuyển trạng thái sang LOCKED
         batch.setStatus(BatchStatus.LOCKED);
         batchRepository.save(batch);
+
+        // Tạo yêu cầu thanh toán sang Finance
+        UUID safeRequesterId = employeeRepository.findAll().stream().findFirst()
+                .map(com.project.hrm.module.corehr.entity.Employee::getEmployeeId)
+                .orElse(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+
+        com.project.hrm.module.payroll.dto.RequestDTO.PaymentRequestDTO req = com.project.hrm.module.payroll.dto.RequestDTO.PaymentRequestDTO
+                .builder()
+                .payrollBatchId(batchId)
+                .requesterId(safeRequesterId)
+                .totalAmountRequested(totalAmount)
+                .reportUrl("System generated")
+                .hrNote("Payroll Payment Request for " + batch.getPeriod().getMonthValue() + "/"
+                        + batch.getPeriod().getYear())
+                .build();
+        financeService.createPaymentRequest(req);
+    }
+
+    @Transactional
+    public void sendTaxReport(UUID batchId) {
+        PayrollBatch batch = batchRepository.findById(batchId)
+                .orElseThrow(() -> new RuntimeException("Batch not found"));
+
+        if (batch.getStatus() != BatchStatus.LOCKED) {
+            throw new RuntimeException("Chỉ có thể gửi báo cáo thuế khi bảng lương đã LOCKED (đã gửi Finance).");
+        }
+
+        List<TaxInsuranceDTO> taxRows = getTaxAndInsuranceReport(batchId);
+
+        BigDecimal totalInsAndTax = BigDecimal.ZERO;
+        for (TaxInsuranceDTO dto : taxRows) {
+            if (dto.getTotalIns() != null)
+                totalInsAndTax = totalInsAndTax.add(dto.getTotalIns());
+            if (dto.getPit() != null)
+                totalInsAndTax = totalInsAndTax.add(dto.getPit());
+        }
+
+        UUID safeRequesterId = employeeRepository.findAll().stream().findFirst()
+                .map(com.project.hrm.module.corehr.entity.Employee::getEmployeeId)
+                .orElse(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+
+        com.project.hrm.module.payroll.dto.RequestDTO.PaymentRequestDTO req = com.project.hrm.module.payroll.dto.RequestDTO.PaymentRequestDTO
+                .builder()
+                .payrollBatchId(batchId)
+                .requesterId(safeRequesterId)
+                .totalAmountRequested(totalInsAndTax)
+                .reportUrl("System generated")
+                .hrNote("Tax & Insurance Payment Request for " + batch.getPeriod().getMonthValue() + "/"
+                        + batch.getPeriod().getYear())
+                .build();
+        financeService.createPaymentRequest(req);
     }
 
     /**

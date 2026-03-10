@@ -8,6 +8,15 @@ import com.project.hrm.module.payroll.entity.PaymentRequest;
 import com.project.hrm.module.payroll.repository.FinanceAccountRepository;
 import com.project.hrm.module.payroll.repository.FinancialTransactionRepository;
 import com.project.hrm.module.payroll.repository.PaymentRequestRepository;
+import com.project.hrm.module.payroll.repository.PaymentBatchRepository;
+import com.project.hrm.module.payroll.entity.PaymentBatch;
+import com.project.hrm.module.payroll.entity.PaymentTransaction;
+import com.project.hrm.module.payroll.enums.TransactionStatus;
+import com.project.hrm.module.payroll.dto.ResponseDTO.PaymentBatchHistoryDTO;
+import com.project.hrm.module.payroll.dto.ResponseDTO.PaymentTransactionHistoryDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,7 +32,8 @@ public class FinanceService {
     private final FinanceAccountRepository financeAccountRepository;
     private final PaymentRequestRepository paymentRequestRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
-
+    private final PaymentBatchRepository paymentBatchRepository;
+    private final com.project.hrm.module.payroll.repository.PaymentTransactionRepository paymentTransactionRepository;
 
     // --- HR ACTION: Create a request ---
     @Transactional
@@ -89,5 +99,74 @@ public class FinanceService {
         // PaymentBatch and PaymentDetails statuses to 'SUCCESS/COMPLETED'
 
         return "Payment processed successfully. Transaction ID: " + txn.getTransactionId();
+    }
+
+    // --- OTHER METHODS ---
+
+    public List<PaymentRequest> getAllRequests() {
+        return paymentRequestRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    public List<PaymentRequest> getRequestsByStatus(String status) {
+        return paymentRequestRepository.findByStatusOrderByCreatedAtDesc(status);
+    }
+
+    @Transactional
+    public void rejectPaymentRequest(UUID id, String note) {
+        PaymentRequest request = paymentRequestRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payment request not found: " + id));
+
+        if (!"PENDING".equals(request.getStatus())) {
+            throw new RuntimeException("Only PENDING requests can be rejected.");
+        }
+
+        request.setStatus("REJECTED");
+        request.setFinanceNote(note);
+        paymentRequestRepository.save(request);
+    }
+
+    public Page<PaymentBatchHistoryDTO> getPaymentBatches(Pageable pageable) {
+        return paymentBatchRepository.findAllByOrderByCreatedAtDesc(pageable).map(b -> PaymentBatchHistoryDTO.builder()
+                .paymentBatchId(b.getPaymentBatchId())
+                .payrollBatchId(b.getPayrollBatch() != null ? b.getPayrollBatch().getBatchId() : null)
+                .month(b.getPeriod() != null ? b.getPeriod().getMonth() : null)
+                .year(b.getPeriod() != null ? b.getPeriod().getYear() : null)
+                .totalAmount(b.getTotalAmount())
+                .status(b.getStatus())
+                .createdAt(b.getCreatedAt())
+                .completedAt(b.getCompletedAt())
+                .processedById(b.getProcessedBy() != null ? b.getProcessedBy().getEmployeeId() : null)
+                .processedByName(b.getProcessedBy() != null ? b.getProcessedBy().getFullName() : null)
+                .totalTransactions(
+                        paymentTransactionRepository.countByPaymentBatch_PaymentBatchId(b.getPaymentBatchId()))
+                .successTransactions(paymentTransactionRepository
+                        .countByPaymentBatch_PaymentBatchIdAndStatus(b.getPaymentBatchId(), TransactionStatus.SUCCESS))
+                .failedTransactions(paymentTransactionRepository
+                        .countByPaymentBatch_PaymentBatchIdAndStatus(b.getPaymentBatchId(), TransactionStatus.FAILED))
+                .build());
+    }
+
+    public Page<PaymentTransactionHistoryDTO> getPaymentTransactions(UUID batchId, Pageable pageable) {
+        return paymentTransactionRepository.findHistoryByPaymentBatchId(batchId, pageable)
+                .map(t -> PaymentTransactionHistoryDTO.builder()
+                        .transactionId(t.getTxnId())
+                        .paymentBatchId(t.getPaymentBatch().getPaymentBatchId())
+                        .payslipId(t.getPayslip() != null ? t.getPayslip().getPayslipId() : null)
+                        .employeeId(t.getPayslip() != null && t.getPayslip().getEmployee() != null
+                                ? t.getPayslip().getEmployee().getEmployeeId()
+                                : null)
+                        .employeeName(t.getPayslip() != null && t.getPayslip().getEmployee() != null
+                                ? t.getPayslip().getEmployee().getFullName()
+                                : null)
+                        .amount(t.getAmount())
+                        .status(t.getStatus())
+                        .bankResponseCode(t.getBankResponseCode())
+                        .createdAt(t.getCreatedAt())
+                        .updatedAt(t.getUpdatedAt())
+                        .build());
+    }
+
+    public List<FinanceAccount> getAllAccounts() {
+        return financeAccountRepository.findAll();
     }
 }

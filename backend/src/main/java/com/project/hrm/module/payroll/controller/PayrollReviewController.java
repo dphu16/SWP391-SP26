@@ -62,6 +62,16 @@ public class PayrollReviewController {
     }
 
     /**
+     * 5. Gửi báo cáo Thuế & Bảo hiểm -> Tạo request Finance
+     * POST /api/v1/hr/payroll-review/{batchId}/send-tax-report
+     */
+    @PostMapping("/{batchId}/send-tax-report")
+    public ResponseEntity<String> sendTaxReport(@PathVariable("batchId") UUID batchId) {
+        reviewService.sendTaxReport(batchId);
+        return ResponseEntity.ok("Tax & Insurance Report sent successfully.");
+    }
+
+    /**
      * 5. Lấy báo cáo Thuế & Bảo hiểm (Tax & Insurance)
      * GET /api/v1/hr/payroll-review/{batchId}/tax-insurance
      */

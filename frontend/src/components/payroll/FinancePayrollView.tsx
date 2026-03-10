@@ -477,7 +477,25 @@ const FinancePayrollView: React.FC = () => {
     ];
 
     return (
-        <>
+        <div className="space-y-5">
+            {/* ── Page Header (Dark Theme for Finance) ───────────────────────── */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-black p-6 shadow-xl">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full -translate-y-1/3 translate-x-1/4 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-slate-500/10 rounded-full translate-y-1/2 -translate-x-1/4 pointer-events-none" />
+                <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shadow-lg flex-shrink-0"
+                            style={{ boxShadow: "0 0 28px rgba(16,185,129,0.45)" }}>
+                            <span className="text-white scale-125">{Icon.wallet}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-400/80">Finance · Accounting</span>
+                            <h1 className="text-2xl font-bold text-white tracking-tight">Finance Payment Dashboard</h1>
+                            <p className="text-sm text-slate-300 mt-0.5">Manage, review and approve payroll & tax payment requests</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
             {/* ── Header Stats ── */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
                 {[
@@ -576,58 +594,69 @@ const FinancePayrollView: React.FC = () => {
                             <p className="text-xs text-slate-400 mt-1">When HR creates a payroll request, it will appear here.</p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto min-h-[400px]">
                             <table className="w-full text-sm">
                                 <thead className="bg-slate-50 border-b border-slate-200">
                                     <tr>
                                         {["Payroll Batch", "Amount", "HR Note", "Status", "Created", "Actions"].map(h => (
-                                            <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">{h}</th>
+                                            <th key={h} className="px-5 py-4 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-50">
+                                <tbody className="divide-y divide-slate-100/50">
                                     {requests.map(req => (
-                                        <tr key={req.requestId} className="hover:bg-slate-50/60 transition-colors group">
-                                            <td className="px-4 py-4">
-                                                <div>
-                                                    <p className="font-mono text-xs font-bold text-slate-700">{req.payrollBatchId.slice(-12).toUpperCase()}</p>
-                                                    <p className="text-[10px] text-slate-400 mt-0.5">ID: {req.requestId.slice(-8)}</p>
+                                        <tr key={req.requestId} className="hover:bg-blue-50/30 transition-colors group">
+                                            <td className="px-5 py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 font-bold shadow-sm">
+                                                        #
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-mono text-sm font-bold text-slate-700">{req.payrollBatchId.slice(-12).toUpperCase()}</p>
+                                                        <p className="text-[10px] text-slate-400 mt-0.5">ID: {req.requestId.slice(-8)}</p>
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4">
-                                                <span className="font-bold text-slate-800 text-base">{fmt(req.totalAmountRequested)}</span>
+                                            <td className="px-5 py-4 whitespace-nowrap">
+                                                <span className="font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 text-sm">
+                                                    {fmt(req.totalAmountRequested)}
+                                                </span>
                                             </td>
-                                            <td className="px-4 py-4 text-slate-500 max-w-[160px]">
-                                                <p className="truncate text-xs">{req.hrNote || "—"}</p>
+                                            <td className="px-5 py-4 text-slate-500 max-w-[180px]">
+                                                <p className="truncate text-xs group-hover:whitespace-normal group-hover:break-words transition-all">{req.hrNote || "—"}</p>
                                             </td>
-                                            <td className="px-4 py-4">
+                                            <td className="px-5 py-4 whitespace-nowrap">
                                                 <Badge status={req.status} cfg={REQUEST_STATUS} />
                                             </td>
-                                            <td className="px-4 py-4 text-xs text-slate-400 whitespace-nowrap">{fmtDate(req.createdAt)}</td>
-                                            <td className="px-4 py-4">
-                                                <div className="flex flex-col gap-2 relative">
+                                            <td className="px-5 py-4 text-xs font-medium text-slate-500 whitespace-nowrap">{fmtDate(req.createdAt)}</td>
+                                            <td className="px-5 py-4">
+                                                <div className="flex flex-col sm:flex-row gap-2 relative">
                                                     {(req.status === "PENDING" || req.status === "APPROVED") && (
-                                                        <div className="flex items-center gap-2">
+                                                        <>
                                                             <button onClick={() => setApproveItem(req)}
-                                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors cursor-pointer shadow-sm">
+                                                                className="inline-flex flex-1 justify-center items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors cursor-pointer shadow-sm min-w-[110px]">
                                                                 {Icon.checkCircle} Duyệt & Chi
                                                             </button>
                                                             <button onClick={() => setRejectItem(req)}
-                                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer">
+                                                                className="inline-flex flex-1 justify-center items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer min-w-[90px]">
                                                                 {Icon.close} Từ chối
                                                             </button>
-                                                        </div>
+                                                        </>
                                                     )}
                                                     {req.status === "PAID" && (
-                                                        <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">{Icon.checkCircle} Completed</span>
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200">
+                                                            {Icon.checkCircle} Completed
+                                                        </span>
                                                     )}
                                                     {req.status === "REJECTED" && (
-                                                        <span className="text-xs text-rose-500 font-medium">{req.financeNote || "Rejected"}</span>
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 truncate max-w-[200px]" title={req.financeNote || "Rejected"}>
+                                                            {Icon.close} {req.financeNote || "Rejected"}
+                                                        </span>
                                                     )}
 
                                                     {localStorage.getItem(`tax_report_sent_${req.payrollBatchId}`) === "true" && (
                                                         <button onClick={() => setTaxReportItem(req)}
-                                                            className="w-fit inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer">
+                                                            className="inline-flex justify-center items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-semibold border border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer">
                                                             {Icon.wallet} Xem Thuế & Bảo hiểm
                                                         </button>
                                                     )}
@@ -667,44 +696,44 @@ const FinancePayrollView: React.FC = () => {
                             <p className="text-sm font-semibold text-slate-600">No payment batches yet</p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto min-h-[400px]">
                             <table className="w-full text-sm">
                                 <thead className="bg-slate-50 border-b border-slate-200">
                                     <tr>
                                         {["Period", "Total", "Transactions", "Success", "Failed", "Status", "Created", "Completed", ""].map(h => (
-                                            <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">{h}</th>
+                                            <th key={h} className="px-5 py-4 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-50">
+                                <tbody className="divide-y divide-slate-100/50">
                                     {batches.map(b => (
-                                        <tr key={b.paymentBatchId} className="hover:bg-slate-50/60 transition-colors group">
-                                            <td className="px-4 py-4 font-bold text-slate-800 whitespace-nowrap">
+                                        <tr key={b.paymentBatchId} className="hover:bg-blue-50/30 transition-colors group">
+                                            <td className="px-5 py-4 font-bold text-slate-800 whitespace-nowrap">
                                                 {String(b.month).padStart(2, "0")}/{b.year}
                                             </td>
-                                            <td className="px-4 py-4 font-bold text-emerald-700">{fmt(b.totalAmount)}</td>
-                                            <td className="px-4 py-4 text-slate-600 font-semibold">{b.totalTransactions}</td>
-                                            <td className="px-4 py-4">
-                                                <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
+                                            <td className="px-5 py-4 font-bold text-emerald-700 bg-emerald-50/50">{fmt(b.totalAmount)}</td>
+                                            <td className="px-5 py-4 text-slate-600 font-semibold">{b.totalTransactions}</td>
+                                            <td className="px-5 py-4">
+                                                <span className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold bg-emerald-50 px-2 py-1 rounded-md">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                                     {b.successTransactions}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-4">
+                                            <td className="px-5 py-4">
                                                 {b.failedTransactions > 0 ? (
-                                                    <span className="inline-flex items-center gap-1 text-rose-600 font-semibold">
+                                                    <span className="inline-flex items-center gap-1.5 text-rose-600 font-semibold bg-rose-50 px-2 py-1 rounded-md">
                                                         <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                                                         {b.failedTransactions}
                                                     </span>
                                                 ) : <span className="text-slate-300">—</span>}
                                             </td>
-                                            <td className="px-4 py-4"><Badge status={b.status} cfg={BATCH_STATUS_CFG} /></td>
-                                            <td className="px-4 py-4 text-xs text-slate-400 whitespace-nowrap">{fmtDate(b.createdAt)}</td>
-                                            <td className="px-4 py-4 text-xs text-slate-400 whitespace-nowrap">{fmtDate(b.completedAt)}</td>
-                                            <td className="px-4 py-4">
+                                            <td className="px-5 py-4 whitespace-nowrap"><Badge status={b.status} cfg={BATCH_STATUS_CFG} /></td>
+                                            <td className="px-5 py-4 text-xs font-medium text-slate-500 whitespace-nowrap">{fmtDate(b.createdAt)}</td>
+                                            <td className="px-5 py-4 text-xs font-medium text-slate-500 whitespace-nowrap">{fmtDate(b.completedAt)}</td>
+                                            <td className="px-5 py-4 text-right">
                                                 <button onClick={() => setSelectedBatch(b)}
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer opacity-0 group-hover:opacity-100">
-                                                    {Icon.layers} Transactions
+                                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100">
+                                                    {Icon.layers} Details
                                                 </button>
                                             </td>
                                         </tr>
@@ -745,7 +774,7 @@ const FinancePayrollView: React.FC = () => {
                     onClose={() => setSelectedBatch(null)}
                 />
             )}
-        </>
+        </div>
     );
 };
 
