@@ -43,6 +43,11 @@ public class PerformanceReviewsController {
         return ResponseEntity.ok(service.getOrCreateForActiveCycle(id));
     }
 
+    @GetMapping("/performance-cycles/{id}/reviews")
+    public ResponseEntity<List<PerformanceReviews>> getReviewsByCycle(@PathVariable UUID id){
+        return ResponseEntity.ok(service.getByCycle(id));
+    }
+
     // 15
     @PutMapping("/performance-reviews/{id}")
     public ResponseEntity<PerformanceReviews> updateScore(

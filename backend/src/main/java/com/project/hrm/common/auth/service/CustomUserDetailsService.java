@@ -29,6 +29,11 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .map(r -> new SimpleGrantedAuthority(r.getName().name()))
                 .collect(Collectors.toList());
 
+        // Fallback: if user_roles table is empty, use the 'role' column directly
+        if (authorities.isEmpty() && user.getRole() != null) {
+            authorities = List.of(new SimpleGrantedAuthority(user.getRole().name()));
+        }
+
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword() == null ? "" : user.getPassword(),

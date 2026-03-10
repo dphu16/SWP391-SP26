@@ -197,11 +197,10 @@ const Pagination: React.FC<PaginationProps> = ({
               key={page}
               onClick={() => onPageChange(page as number)}
               className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors cursor-pointer
-              ${
-                currentPage === page
+              ${currentPage === page
                   ? "bg-primary text-white shadow-sm"
                   : "text-text-secondary-light hover:bg-gray-100 "
-              }
+                }
               `}
             >
               {(page as number) + 1}
@@ -355,13 +354,12 @@ const OffboardingTrackerModal: React.FC<{
                     {/* Step Indicator */}
                     <div
                       className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 z-10 transition-all duration-300 shadow-sm border-[3px]
-                      ${
-                        isCompleted
+                      ${isCompleted
                           ? "bg-primary text-white border-primary"
                           : isCurrent
                             ? "bg-white text-primary border-primary shadow-md scale-110"
                             : "bg-white text-gray-300 border-gray-100"
-                      }`}
+                        }`}
                     >
                       {isCompleted ? (
                         <svg
@@ -652,11 +650,10 @@ const EmployeeOffboarding: React.FC = () => {
     <svg
       viewBox="0 0 16 16"
       fill="currentColor"
-      className={`w-3.5 h-3.5 transition-colors ${
-        sortField === field
+      className={`w-3.5 h-3.5 transition-colors ${sortField === field
           ? "text-primary"
           : "text-gray-300 group-hover:text-gray-400"
-      }`}
+        }`}
     >
       {sortField === field && sortDir === "asc" ? (
         <path
@@ -801,105 +798,105 @@ const EmployeeOffboarding: React.FC = () => {
             <tbody className="divide-y divide-gray-50 text-sm">
               {loading
                 ? Array.from({ length: 8 }).map((_, i) => (
-                    <SkeletonRow key={i} />
-                  ))
+                  <SkeletonRow key={i} />
+                ))
                 : filteredEmployees.map((emp) => {
-                    const isSelected = selectedIds.has(emp.employeeId);
+                  const isSelected = selectedIds.has(emp.employeeId);
 
-                    return (
-                      <tr
-                        key={emp.employeeId}
-                        className={`table-row-hover group
+                  return (
+                    <tr
+                      key={emp.employeeId}
+                      className={`table-row-hover group
                       ${isSelected ? "bg-primary/5 " : "hover:bg-gray-50/80 "}
                       `}
-                      >
-                        {/* Checkbox */}
-                        <td className="pl-6 pr-4 py-3.5">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleOne(emp.employeeId)}
-                            className="w-4 h-4 rounded border-2 border-gray-300 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
-                            aria-label={`Select ${emp.fullName}`}
-                          />
-                        </td>
+                    >
+                      {/* Checkbox */}
+                      <td className="pl-6 pr-4 py-3.5">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleOne(emp.employeeId)}
+                          className="w-4 h-4 rounded border-2 border-gray-300 text-primary focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer accent-primary"
+                          aria-label={`Select ${emp.fullName}`}
+                        />
+                      </td>
 
-                        {/* Employee Name + Code */}
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <Avatar name={emp.fullName} url={emp.avatarUrl} />
-                            <div>
-                              <div className="font-semibold text-text-primary-light leading-snug">
-                                {emp.fullName}
-                              </div>
-                              <div className="text-[11px] text-text-secondary-light font-mono mt-0.5">
-                                {emp.employeeCode}
-                              </div>
+                      {/* Employee Name + Code */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={emp.fullName} url={emp.avatarUrl} />
+                          <div>
+                            <div className="font-semibold text-text-primary-light leading-snug">
+                              {emp.fullName}
+                            </div>
+                            <div className="text-[11px] text-text-secondary-light font-mono mt-0.5">
+                              {emp.employeeCode}
                             </div>
                           </div>
-                        </td>
+                        </div>
+                      </td>
 
-                        {/* Department */}
-                        <td className="px-4 py-3.5 text-text-primary-light ">
-                          {emp.departmentName || (
-                            <span className="text-text-muted-light ">—</span>
-                          )}
-                        </td>
+                      {/* Department */}
+                      <td className="px-4 py-3.5 text-text-primary-light ">
+                        {emp.departmentName || (
+                          <span className="text-text-muted-light ">—</span>
+                        )}
+                      </td>
 
-                        {/* Position */}
-                        <td className="px-4 py-3.5">
-                          <span className="text-xs font-medium text-text-secondary-light bg-gray-100 px-2 py-0.5 rounded-md">
-                            {emp.positionTitle || "—"}
-                          </span>
-                        </td>
+                      {/* Position */}
+                      <td className="px-4 py-3.5">
+                        <span className="text-xs font-medium text-text-secondary-light bg-gray-100 px-2 py-0.5 rounded-md">
+                          {emp.positionTitle || "—"}
+                        </span>
+                      </td>
 
-                        {/* Date of Joining */}
-                        <td className="px-4 py-3.5 text-text-secondary-light tabular-nums">
-                          {emp.dateOfJoining ? (
-                            new Date(emp.dateOfJoining).toLocaleDateString(
-                              "en-GB",
-                              {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              },
-                            )
-                          ) : (
-                            <span className="text-text-muted-light ">—</span>
-                          )}
-                        </td>
+                      {/* Date of Joining */}
+                      <td className="px-4 py-3.5 text-text-secondary-light tabular-nums">
+                        {emp.dateOfJoining ? (
+                          new Date(emp.dateOfJoining).toLocaleDateString(
+                            "en-GB",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            },
+                          )
+                        ) : (
+                          <span className="text-text-muted-light ">—</span>
+                        )}
+                      </td>
 
-                        {/* Employee Status (TERMINATED / RESIGNED) */}
-                        <td className="px-4 py-3.5">
-                          <EmployeeStatusBadge status={emp.employeeStatus} />
-                        </td>
+                      {/* Employee Status (TERMINATED / RESIGNED) */}
+                      <td className="px-4 py-3.5">
+                        <EmployeeStatusBadge status={emp.employeeStatus} />
+                      </td>
 
-                        {/* Actions */}
-                        <td className="px-4 py-3.5 text-center sticky right-0 bg-surface-light">
-                          <div className="flex items-center justify-center">
-                            <button
-                              onClick={() => setTrackingEmployee(emp)}
-                              title="Theo dõi quá trình Offboarding"
-                              className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary transition-colors cursor-pointer group"
+                      {/* Actions */}
+                      <td className="px-4 py-3.5 text-center sticky right-0 bg-surface-light">
+                        <div className="flex items-center justify-center">
+                          <button
+                            onClick={() => setTrackingEmployee(emp)}
+                            title="Theo dõi quá trình Offboarding"
+                            className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary transition-colors cursor-pointer group"
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="w-4 h-4"
                             >
-                              <svg
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="w-4 h-4"
-                              >
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                              </svg>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </div>
