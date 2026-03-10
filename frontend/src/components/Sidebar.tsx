@@ -472,6 +472,7 @@ const Sidebar: React.FC = () => {
                   {[
                     { label: "Job Requests", path: "/recruitment/job-requests", roles: ["HR", "MANAGER"] as const },
                     { label: "Job Openings", path: "/recruitment/jobs", roles: ["HR"] as const },
+                    { label: "Schedule", path: "/recruitment/schedule", roles: ["HR", "MANAGER"] as const },
                   ]
                     .filter((item) => hasRole(...item.roles))
                     .map((item) => (

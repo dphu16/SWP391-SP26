@@ -16,6 +16,7 @@ const CVListPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [editingStatusId, setEditingStatusId] = useState<string | null>(null);
+    const [statusFilter, setStatusFilter] = useState<string>("APPLIED");
 
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [formMode, setFormMode] = useState<"CREATE" | "UPDATE">("CREATE");
@@ -25,6 +26,31 @@ const CVListPage: React.FC = () => {
     const [applicantPhone, setApplicantPhone] = useState("");
     const [applicantCv, setApplicantCv] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const [selectedApps, setSelectedApps] = useState<string[]>([]);
+    const [isSubmittingNextStage, setIsSubmittingNextStage] = useState(false);
+
+    useEffect(() => {
+        setSelectedApps([]);
+    }, [statusFilter]);
+
+    const handleNextStage = async () => {
+        if (selectedApps.length === 0) return;
+        try {
+            setIsSubmittingNextStage(true);
+            await applicationService.nextStage(selectedApps);
+            toastSuccess("Success", "Moved candidates to next stage successfully");
+            setSelectedApps([]);
+            if (jobId) {
+                const res = await applicationService.getByJobId(jobId, statusFilter);
+                setApplications(res.data);
+            }
+        } catch (err: any) {
+            toastError("Error", err?.response?.data || "Failed to move to next stage");
+        } finally {
+            setIsSubmittingNextStage(false);
+        }
+    };
 
     const handleOpenCreateModal = () => {
         setFormMode("CREATE");
@@ -94,7 +120,7 @@ const CVListPage: React.FC = () => {
             handleCloseModal();
             // Refresh list
             if (jobId) {
-                const res = await applicationService.getByJobId(jobId);
+                const res = await applicationService.getByJobId(jobId, statusFilter);
                 setApplications(res.data);
             }
         } catch (err: any) {
@@ -114,7 +140,7 @@ const CVListPage: React.FC = () => {
         const fetchApplications = async () => {
             try {
                 setLoading(true);
-                const res = await applicationService.getByJobId(jobId);
+                const res = await applicationService.getByJobId(jobId, statusFilter);
                 setApplications(res.data);
             } catch (err) {
                 setError("Failed to fetch candidates/CVs.");
@@ -124,7 +150,7 @@ const CVListPage: React.FC = () => {
         };
 
         fetchApplications();
-    }, [jobId]);
+    }, [jobId, statusFilter]);
 
     const handleUpdateStatus = async (appId: string, newStatus: string) => {
         try {
@@ -134,6 +160,17 @@ const CVListPage: React.FC = () => {
             toastSuccess("Success", `Status updated to ${newStatus} `);
         } catch (err) {
             toastError("Error", "Failed to update status");
+        }
+    };
+
+    const handleLastStage = async (appId: string) => {
+        if (!window.confirm("Are you sure you want to push this candidate to the HIRED stage?")) return;
+        try {
+            await applicationService.lastStage(appId);
+            toastSuccess("Success", "Candidate pushed to last stage successfully");
+            setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: "HIRED" } : a));
+        } catch (err: any) {
+            toastError("Error", err?.response?.data || "Failed to push candidate to last stage");
         }
     };
 
@@ -193,113 +230,198 @@ const CVListPage: React.FC = () => {
             {error && <ErrorMessage message={error} />}
 
             {!error && (
-                <div className="rounded-2xl border border-border-light bg-white overflow-hidden shadow-card">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-gray-100 bg-white">
-                                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Full Name</th>
-                                    <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Phone</th>
-                                    <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">CV URL</th>
-                                    <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Status</th>
-                                    <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50 text-xs">
-                                {applications.filter(app =>
-                                    app.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    app.email.toLowerCase().includes(searchTerm.toLowerCase())
-                                ).length === 0 ? (
-                                    <tr>
-                                        <td colSpan={5} className="px-6 py-12 text-center text-text-secondary-light font-medium">
-                                            No candidates found for this job.
-                                        </td>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex flex-wrap gap-2">
+                            {["APPLIED", "INTERVIEW", "OFFER", "HIRED", "REJECTED"].map(status => (
+                                <button
+                                    key={status}
+                                    onClick={() => setStatusFilter(status)}
+                                    className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors ${statusFilter === status
+                                        ? "bg-primary text-white shadow-sm"
+                                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                        }`}
+                                >
+                                    {status}
+                                </button>
+                            ))}
+                        </div>
+                        {statusFilter === "INTERVIEW" && selectedApps.length > 0 && (
+                            <button
+                                onClick={handleNextStage}
+                                disabled={isSubmittingNextStage}
+                                className="px-6 py-2 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors shadow-sm disabled:opacity-50 text-sm flex items-center gap-2"
+                            >
+                                {isSubmittingNextStage && <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                                Submit to Next Stage ({selectedApps.length})
+                            </button>
+                        )}
+                    </div>
+                    <div className="rounded-2xl border border-border-light bg-white overflow-hidden shadow-card">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-gray-100 bg-white">
+                                        {statusFilter === "INTERVIEW" && (
+                                            <th className="px-4 py-4 w-10">
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                                    checked={
+                                                        applications.length > 0 &&
+                                                        applications.filter(app => app.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || app.email.toLowerCase().includes(searchTerm.toLowerCase())).every(a => selectedApps.includes(a.id))
+                                                    }
+                                                    onChange={(e) => {
+                                                        const visibleApps = applications.filter(app => app.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || app.email.toLowerCase().includes(searchTerm.toLowerCase()));
+                                                        if (e.target.checked) {
+                                                            setSelectedApps(visibleApps.map(a => a.id));
+                                                        } else {
+                                                            setSelectedApps([]);
+                                                        }
+                                                    }}
+                                                />
+                                            </th>
+                                        )}
+                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Full Name</th>
+                                        <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Phone</th>
+                                        <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">CV URL</th>
+                                        <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Status</th>
+                                        <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light text-right">Actions</th>
                                     </tr>
-                                ) : (
-                                    applications.filter(app =>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50 text-xs">
+                                    {applications.filter(app =>
                                         app.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                         app.email.toLowerCase().includes(searchTerm.toLowerCase())
-                                    ).map((app) => (
-                                        <tr key={app.id} className="hover:bg-gray-50/80 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div className="font-semibold text-text-primary-light text-sm mb-0.5">
-                                                    {app.fullName || "Unknown Candidate"}
-                                                </div>
-                                                <div className="text-[10px] text-text-tertiary-light break-all">
-                                                    {app.email}
-                                                </div>
+                                    ).length === 0 ? (
+                                        <tr>
+                                            <td colSpan={statusFilter === "INTERVIEW" ? 6 : 5} className="px-6 py-12 text-center text-text-secondary-light font-medium">
+                                                No candidates found for this job.
                                             </td>
-                                            <td className="px-4 py-4 text-text-secondary-light">
-                                                {app.phone || "-"}
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                {app.cvUrl ? (
-                                                    <a
-                                                        href={`http://localhost:8080${app.cvUrl}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex flex-col gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium transition-all"
-                                                    >
-                                                        <span className="flex items-center gap-1">
-                                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                            </svg>
-                                                            View CV
+                                        </tr>
+                                    ) : (
+                                        applications.filter(app =>
+                                            app.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                            app.email.toLowerCase().includes(searchTerm.toLowerCase())
+                                        ).map((app) => (
+                                            <tr key={app.id} className="hover:bg-gray-50/80 transition-colors">
+                                                {statusFilter === "INTERVIEW" && (
+                                                    <td className="px-4 py-4">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                                            checked={selectedApps.includes(app.id)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setSelectedApps(prev => [...prev, app.id]);
+                                                                } else {
+                                                                    setSelectedApps(prev => prev.filter(id => id !== app.id));
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                )}
+                                                <td className="px-6 py-4">
+                                                    <div className="font-semibold text-text-primary-light text-sm mb-0.5">
+                                                        {app.fullName || "Unknown Candidate"}
+                                                    </div>
+                                                    <div className="text-[10px] text-text-tertiary-light break-all">
+                                                        {app.email}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4 text-text-secondary-light">
+                                                    {app.phone || "-"}
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    {app.cvUrl ? (
+                                                        <a
+                                                            href={`http://localhost:8080${app.cvUrl}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex flex-col gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium transition-all"
+                                                        >
+                                                            <span className="flex items-center gap-1">
+                                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                                </svg>
+                                                                View CV
+                                                            </span>
+                                                        </a >
+                                                    ) : (
+                                                        <span className="text-gray-400 italic">No CV available</span>
+                                                    )}
+                                                </td >
+                                                <td className="px-4 py-4">
+                                                    {editingStatusId === app.id ? (
+                                                        <select
+                                                            className="px-2 py-1 text-xs border rounded-lg focus:outline-none focus:border-primary cursor-pointer bg-white"
+                                                            value={app.status || "APPLIED"}
+                                                            onChange={(e) => handleUpdateStatus(app.id, e.target.value)}
+                                                            onBlur={() => setEditingStatusId(null)}
+                                                            autoFocus
+                                                        >
+                                                            <option value="APPLIED">Applied</option>
+                                                            <option value="INTERVIEW">Interview</option>
+                                                            <option value="OFFER">Offer</option>
+                                                            <option value="HIRED">Hired</option>
+                                                            <option value="REJECTED">Rejected</option>
+                                                        </select>
+                                                    ) : (
+                                                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 tracking-wide uppercase">
+                                                            {app.status || "APPLIED"}
                                                         </span>
-                                                    </a >
-                                                ) : (
-                                                    <span className="text-gray-400 italic">No CV available</span>
-                                                )}
-                                            </td >
-                                            <td className="px-4 py-4">
-                                                {editingStatusId === app.id ? (
-                                                    <select
-                                                        className="px-2 py-1 text-xs border rounded-lg focus:outline-none focus:border-primary cursor-pointer bg-white"
-                                                        value={app.status || "NEW"}
-                                                        onChange={(e) => handleUpdateStatus(app.id, e.target.value)}
-                                                        onBlur={() => setEditingStatusId(null)}
-                                                        autoFocus
-                                                    >
-                                                        <option value="NEW">New</option>
-                                                        <option value="REVIEWING">Reviewing</option>
-                                                        <option value="INTERVIEWING">Interviewing</option>
-                                                        <option value="OFFERED">Offered</option>
-                                                        <option value="HIRED">Hired</option>
-                                                        <option value="REJECTED">Rejected</option>
-                                                    </select>
-                                                ) : (
-                                                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 tracking-wide uppercase">
-                                                        {app.status || "NEW"}
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-2 text-text-tertiary-light">
-                                                    <button
-                                                        onClick={() => handleOpenUpdateModal(app)}
-                                                        className="p-1 text-green-500 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
-                                                        title="Update Candidate Info"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                        </svg>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteApplication(app.id)}
-                                                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                                                        title="Delete CV"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr >
-                                    ))
-                                )}
-                            </tbody >
-                        </table >
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-4 text-right">
+                                                    <div className="flex items-center justify-end gap-2 text-text-tertiary-light">
+                                                        {["APPLIED", "INTERVIEW", "OFFER", "HIRED"].includes(app.status || "APPLIED") && (
+                                                            <Link
+                                                                to={`/recruitment/cvs/${app.id}`}
+                                                                className="px-2 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-100 shadow-sm"
+                                                                title="Review Candidate CV"
+                                                            >
+                                                                Review
+                                                            </Link>
+                                                        )}
+                                                        {app.status === "OFFER" && (
+                                                            <button
+                                                                onClick={() => handleLastStage(app.id)}
+                                                                className="px-2 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-100 shadow-sm"
+                                                                title="Push Candidate to Final Stage"
+                                                            >
+                                                                Confirm
+                                                            </button>
+                                                        )}
+                                                        {!["INTERVIEW", "OFFER", "HIRED"].includes(app.status || "") && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => handleOpenUpdateModal(app)}
+                                                                    className="p-1 text-green-500 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
+                                                                    title="Update Candidate Info"
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                    </svg>
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteApplication(app.id)}
+                                                                    className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                                                    title="Delete CV"
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr >
+                                        ))
+                                    )}
+                                </tbody >
+                            </table >
+                        </div >
                     </div >
                 </div >
             )}

@@ -177,16 +177,24 @@ const JobDetailPage: React.FC = () => {
                                 <p className="text-sm font-mono text-text-primary-light">{job.hrName || "N/A"}</p>
                             </div>
                             <div>
-                                <label className="text-[10px] font-bold text-text-muted-light uppercase">Job Request</label>
-                                <p className="text-sm font-mono text-text-primary-light">
+                                <label className="text-[10px] font-bold text-text-muted-light uppercase mb-1 block">Job Request</label>
+                                <div>
                                     {job.reqId ? (
-                                        <Link to={`/recruitment/job-requests/${job.reqId}`} className="hover:text-primary transition-colors hover:underline font-semibold">
-                                            {job.reqName || job.reqId}
+                                        <Link
+                                            to={`/recruitment/job-requests/${job.reqId}`}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition-colors shadow-sm"
+                                            title={job.reqName || String(job.reqId)}
+                                        >
+                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                            View Request
                                         </Link>
                                     ) : (
-                                        "N/A"
+                                        <span className="text-sm font-mono text-text-muted-light">N/A</span>
                                     )}
-                                </p>
+                                </div>
                             </div>
                         </div>
                     </section>

@@ -27,6 +27,8 @@ import JobRequestListPage from "./components/recruitment/JobRequestListPage";
 import JobRequestDetailPage from "./components/recruitment/JobRequestDetailPage";
 import JobRequestFormPage from "./components/recruitment/JobRequestFormPage";
 import CVListPage from "./components/recruitment/CVListPage";
+import CVReviewPage from "./components/recruitment/CVReviewPage";
+import SchedulePage from "./components/recruitment/SchedulePage";
 // --- Auth ---
 import LoginPage from "./components/auth/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -107,11 +109,13 @@ const AppShell: React.FC = () => {
                             <Route path="/recruitment/jobs/:id" element={<RoleGate allowed={["HR"]}><JobDetailPage /></RoleGate>} />
                             <Route path="/recruitment/jobs/edit/:id" element={<RoleGate allowed={["HR"]}><JobFormPage /></RoleGate>} />
                             <Route path="/recruitment/cvs" element={<RoleGate allowed={["HR"]}><CVListPage /></RoleGate>} />
+                            <Route path="/recruitment/cvs/:id" element={<RoleGate allowed={["HR"]}><CVReviewPage /></RoleGate>} />
 
                             <Route path="/recruitment/job-requests" element={<RoleGate allowed={["HR", "MANAGER"]}><JobRequestListPage /></RoleGate>} />
                             <Route path="/recruitment/job-requests/new" element={<RoleGate allowed={["HR", "MANAGER"]}><JobRequestFormPage /></RoleGate>} />
                             <Route path="/recruitment/job-requests/:id" element={<RoleGate allowed={["HR", "MANAGER"]}><JobRequestDetailPage /></RoleGate>} />
                             <Route path="/recruitment/job-requests/:id/edit" element={<RoleGate allowed={["HR", "MANAGER"]}><JobRequestFormPage /></RoleGate>} />
+                            <Route path="/recruitment/schedule" element={<RoleGate allowed={["HR", "MANAGER"]}><SchedulePage /></RoleGate>} />
                         </Routes>
                     </div>
                 </div>
