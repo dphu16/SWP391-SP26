@@ -2,19 +2,17 @@ package com.project.hrm.module.recruitment.service.impl;
 
 import com.project.hrm.module.corehr.entity.Department;
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.entity.Position;
 import com.project.hrm.module.recruitment.dto.request.JobRequestRequest;
 import com.project.hrm.module.recruitment.dto.response.JobRequestResponse;
 import com.project.hrm.module.recruitment.entity.JobRequest;
 import com.project.hrm.module.recruitment.enums.RequestStatus;
-import com.project.hrm.module.recruitment.repository.JobRequestRepository;
-import com.project.hrm.module.recruitment.repository.RDepartmentRepository;
-import com.project.hrm.module.recruitment.repository.REmployeeRepository;
+import com.project.hrm.module.recruitment.repository.*;
 import com.project.hrm.module.recruitment.service.JobRequestService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,35 +22,16 @@ import java.util.UUID;
 public class JobRequestServiceImpl implements JobRequestService {
 
     private final JobRequestRepository jobRequestRepository;
-    private final RDepartmentRepository departmentRepository;
-    private final REmployeeRepository employeeRepository;
+    private final RDepartmentRepository RDepartmentRepository;
+    private final RPositionRepository RPositionRepository;
+    private final REmployeeRepository REmployeeRepository;
 
     @Override
     public JobRequestResponse create(JobRequestRequest request) {
-        Department department = departmentRepository.findById(request.getDeptId())
-                .orElseThrow(() -> new RuntimeException("Department not found"));
-
-        Employee reviewer = null;
-        if (request.getReportTo() != null) {
-            reviewer = employeeRepository.findById(request.getReportTo())
-                    .orElseThrow(() -> new RuntimeException("Employee not found"));
-        }
 
         JobRequest entity = new JobRequest();
-        entity.setId(UUID.randomUUID());
-        entity.setJobTitle(request.getTitle());
-        entity.setDept(department);
-        entity.setQuantity(request.getQuantity());
-        entity.setLocation(request.getLocation());
-        entity.setEmploymentType(request.getType());
-        entity.setReportsTo(reviewer);
-        entity.setReason(request.getReason());
-        entity.setStatus(RequestStatus.SUBMITTED);
-        entity.setCreatedAt(OffsetDateTime.now());
 
-        jobRequestRepository.save(entity);
-
-        return mapToResponse(entity);
+        return uploadData(entity, request);
     }
 
     @Override
@@ -98,33 +77,7 @@ public class JobRequestServiceImpl implements JobRequestService {
                 .orElseThrow(() ->
                         new RuntimeException("Job request not found with id: " + id));
 
-        if (request.getQuantity() <= 0) {
-            throw new IllegalArgumentException("Quantity must be greater than 0");
-        }
-
-        if (request.getDeptId() != null) {
-            Department department = departmentRepository.findById(request.getDeptId())
-                    .orElseThrow(() ->
-                            new RuntimeException("Department not found"));
-            entity.setDept(department);
-        }
-
-        if (request.getReportTo() != null) {
-            Employee reviewer = employeeRepository.findById(request.getReportTo())
-                    .orElseThrow(() ->
-                            new RuntimeException("Employee not found"));
-            entity.setReportsTo(reviewer);
-        }
-
-        entity.setJobTitle(request.getTitle());
-        entity.setQuantity(request.getQuantity());
-        entity.setLocation(request.getLocation());
-        entity.setEmploymentType(request.getType());
-        entity.setReason(request.getReason());
-
-        JobRequest updated = jobRequestRepository.save(entity);
-
-        return mapToResponse(updated);
+        return uploadData(entity, request);
     }
 
     @Override
@@ -160,20 +113,57 @@ public class JobRequestServiceImpl implements JobRequestService {
         jobRequestRepository.delete(entity);
     }
 
+    private JobRequestResponse uploadData(JobRequest entity, JobRequestRequest request){
+        if (request.getQuantity() <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
+
+        if (request.getDeptId() != null) {
+            Department department = RDepartmentRepository.findById(request.getDeptId())
+                    .orElseThrow(() ->
+                            new RuntimeException("Department not found"));
+            entity.setDept(department);
+        }
+
+        if (request.getPosId() != null) {
+            Position position = RPositionRepository.findById(request.getPosId())
+                    .orElseThrow(() ->
+                            new RuntimeException("Position not found"));
+            entity.setPos(position);
+        }
+
+        if (request.getReportTo() != null) {
+            Employee reviewer = REmployeeRepository.findById(request.getReportTo())
+                    .orElseThrow(() ->
+                            new RuntimeException("Employee not found"));
+            entity.setReportsTo(reviewer);
+        }
+
+        entity.setQuantity(request.getQuantity());
+        entity.setLocation(request.getLocation());
+        entity.setType(request.getType());
+        entity.setReason(request.getReason());
+        entity.setStatus(RequestStatus.SUBMITTED);
+        jobRequestRepository.save(entity);
+
+        return mapToResponse(entity);
+    }
+
     private JobRequestResponse mapToResponse(JobRequest entity) {
 
         JobRequestResponse response = new JobRequestResponse();
 
         response.setId(entity.getId());
-        response.setTitle(entity.getJobTitle());
+        response.setPosId(entity.getPos().getPositionId());
+        response.setPosName(entity.getPos().getTitle());
         response.setDeptId(entity.getDept().getDeptId());
         response.setDeptName(entity.getDept().getDeptName());
         response.setQuantity(entity.getQuantity());
         response.setLocation(entity.getLocation());
 
         // Fix 1: employmentType có thể null trong DB
-        if (entity.getEmploymentType() != null) {
-            response.setType(entity.getEmploymentType());
+        if (entity.getType() != null) {
+            response.setType(entity.getType());
         }
 
         // Fix 2: status có thể null

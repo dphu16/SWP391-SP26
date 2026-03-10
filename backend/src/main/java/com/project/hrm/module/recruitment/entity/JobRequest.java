@@ -2,6 +2,7 @@ package com.project.hrm.module.recruitment.entity;
 
 import com.project.hrm.module.corehr.entity.Department;
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.entity.Position;
 import com.project.hrm.module.recruitment.enums.EmploymentType;
 import com.project.hrm.module.recruitment.enums.RequestStatus;
 import jakarta.persistence.*;
@@ -20,19 +21,19 @@ import java.util.UUID;
 @Table(name = "job_requests")
 public class JobRequest {
     @Id
-    @ColumnDefault("uuid_generate_v4()")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "request_id", nullable = false)
     private UUID id;
-
-    @Size(max = 150)
-    @NotNull
-    @Column(name = "job_title", nullable = false, length = 150)
-    private String jobTitle;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "dept_id", nullable = false)
     private Department dept;
+
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "position_id", nullable = false)
+    private Position pos;
 
     @NotNull
     @Column(name = "quantity", nullable = false)
@@ -44,8 +45,8 @@ public class JobRequest {
     private String location;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "employment_type", nullable = false)
-    private EmploymentType employmentType;
+    @Column(name = "type")
+    private EmploymentType type;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reports_to")

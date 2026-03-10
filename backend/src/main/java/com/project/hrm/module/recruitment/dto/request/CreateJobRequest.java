@@ -13,17 +13,17 @@ import java.util.UUID;
 public class CreateJobRequest {
 
     private UUID requestId;
-    private String title;
+    private UUID posId;
     private String description;
     private String responsibility;
     private String requirement;
     private String benefit;
     private int quantity;
+    private OffsetDateTime postedTime;
     private OffsetDateTime closedTime;
     private JobStatus status;
     private UUID hrId;
     private int maxCv;
-    private String salary;
     private String location;
     private EmploymentType type;
 

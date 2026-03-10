@@ -40,7 +40,7 @@ public class EmailService {
             <p>HR Team</p>
             """.formatted(
                     app.getCandidate().getFullName(),
-                    app.getJob().getTitle(),
+                    app.getJob().getPos().getTitle(),
                     app.getCandidate().getPhone()
             );
 

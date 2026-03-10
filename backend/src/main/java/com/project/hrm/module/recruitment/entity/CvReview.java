@@ -18,7 +18,7 @@ import java.util.UUID;
 @Table(name = "cv_reviews")
 public class CvReview {
     @Id
-    @ColumnDefault("uuid_generate_v4()")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "review_id", nullable = false)
     private UUID id;
 

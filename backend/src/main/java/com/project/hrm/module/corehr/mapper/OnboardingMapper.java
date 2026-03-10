@@ -24,7 +24,7 @@ public class OnboardingMapper {
                 .candidatePhone(candidate != null ? candidate.getPhone() : null)
                 // Job
                 .jobId(job != null ? job.getId() : null)
-                .jobTitle(job != null ? job.getTitle() : null)
+                .jobTitle(job != null ? job.getPos().getTitle() : null)
                 // Application
                 .cvUrl(application.getCvUrl())
                 .status(application.getStatus())
