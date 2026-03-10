@@ -63,6 +63,7 @@ const ManagerPerformance = () => {
     const [reviewLoading, setReviewLoading] = useState(false);
     const [kpiScoreInput, setKpiScoreInput] = useState('');
     const [attitudeScoreInput, setAttitudeScoreInput] = useState('');
+    const [managerNoteInput, setManagerNoteInput] = useState('');
     const [scoreSaving, setScoreSaving] = useState(false);
 
     const activeEmployee = useMemo(() => employees.find(e => e.id === activeEmployeeId), [employees, activeEmployeeId]);
@@ -175,9 +176,11 @@ const ManagerPerformance = () => {
                 setKpiScoreInput(review.kpiScore !== null && review.kpiScore !== undefined ? String(review.kpiScore) : '');
                 // Override with mentor score since it's now managed by Mentor
                 setAttitudeScoreInput(String(mentorScore));
+                setManagerNoteInput(review.rating || '');
             } else {
                 setKpiScoreInput('');
                 setAttitudeScoreInput(String(mentorScore));
+                setManagerNoteInput('');
             }
             setReviewLoading(false);
         };
@@ -259,7 +262,7 @@ const ManagerPerformance = () => {
         if (kpi < 0 || kpi > 100 || att < 0 || att > 100) { alert('Scores must be between 0 and 100.'); return; }
         setScoreSaving(true);
         try {
-            const updated = await kpiService.updateReviewScore(activeReview.reviewId, { kpiScore: kpi, attitudeScore: att });
+            const updated = await kpiService.updateReviewScore(activeReview.reviewId, { kpiScore: kpi, attitudeScore: att, rating: managerNoteInput });
             setActiveReview(updated);
         } catch (e) {
             alert('Failed to save score.');
@@ -276,20 +279,13 @@ const ManagerPerformance = () => {
     const handleFinalize = async () => {
         if (!activeReview) return;
 
-        // Check for evidence requirement
-        const evidenceCount = kpis.filter(k => k.imageUrl).length;
-        if (evidenceCount === 0) {
-            alert('Cannot finalize: No evidence images were found for this employee. Please wait for the employee to upload supporting materials.');
-            return;
-        }
-
         // Save scores first if changed, then finalize
         const kpi = parseFloat(kpiScoreInput);
         const att = parseFloat(attitudeScoreInput);
         if (isNaN(kpi) || isNaN(att)) { alert('Please enter KPI Score and Attitude Score first.'); return; }
         setScoreSaving(true);
         try {
-            await kpiService.updateReviewScore(activeReview.reviewId, { kpiScore: kpi, attitudeScore: att });
+            await kpiService.updateReviewScore(activeReview.reviewId, { kpiScore: kpi, attitudeScore: att, rating: managerNoteInput });
             const finalized = await kpiService.finalizeReview(activeReview.reviewId);
             setActiveReview(finalized);
 
@@ -454,7 +450,7 @@ const ManagerPerformance = () => {
                     {/* Evidence & Decision */}
                     <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col bento-card">
                         <div className="px-5 py-4 border-b border-border-light dark:border-border-dark bg-white dark:bg-surface-dark/40 flex items-center justify-between">
-                            <h2 className="text-lg font-bold font-heading text-text-primary-light">Evidence Review & Final Scoring</h2>
+                            <h2 className="text-lg font-bold font-heading text-text-primary-light">Final Scoring & Notes</h2>
                             {activeReview && (
                                 <span className={`px-3 py-1 text-[10px] font-black rounded-full uppercase border ${activeReview.status === 'SUBMITTED' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-amber-100 text-amber-700 border-amber-200'
                                     }`}>
@@ -467,45 +463,7 @@ const ManagerPerformance = () => {
                             <div className="p-12 text-center text-text-muted-light">Loading analysis...</div>
                         ) : (
                             <div className="flex divide-x divide-border-light dark:divide-border-dark">
-                                {/* Left: Images */}
-                                <div className="flex-[1.2] p-6 flex flex-col min-h-[450px]">
-                                    <h3 className="text-xs font-bold uppercase tracking-widest text-text-primary-light mb-4 flex items-center justify-between">
-                                        Employee Evidence Summary
-                                        <span className="text-[10px] opacity-60">{kpis.filter(k => k.imageUrl).length} Files</span>
-                                    </h3>
-
-                                    <div className="flex-1 flex flex-col justify-center">
-                                        {kpis.filter(k => k.imageUrl).length === 0 ? (
-                                            <div className="p-12 border-2 border-dashed border-border-light rounded-2xl flex flex-col items-center opacity-40">
-                                                {Icons.image}
-                                                <p className="text-xs font-bold mt-2">No Evidence Uploaded</p>
-                                            </div>
-                                        ) : (
-                                            <div className="h-full flex flex-col gap-4">
-                                                <div className="flex-1 relative group rounded-2xl overflow-hidden shadow-2xl bg-black/5 flex items-center justify-center border border-border-light">
-                                                    <img
-                                                        src={kpis.find(k => k.imageUrl)?.imageUrl}
-                                                        className="max-w-full max-h-full object-contain cursor-zoom-in group-hover:scale-105 transition-transform duration-700"
-                                                        onClick={() => window.open(kpis.find(k => k.imageUrl)?.imageUrl, '_blank')}
-                                                    />
-                                                </div>
-                                                {kpis.filter(k => k.imageUrl).length > 1 && (
-                                                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-                                                        {kpis.filter(k => k.imageUrl).map((kpi, idx) => (
-                                                            <div key={idx} className="w-16 h-16 rounded-lg overflow-hidden border-2 border-primary/20 flex-shrink-0 cursor-pointer hover:border-primary">
-                                                                <img src={kpi.imageUrl} className="w-full h-full object-cover" />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-
-
-                                </div>
-
-                                {/* Right: SCORING */}
+                                {/* Left: SCORING */}
                                 <div className="flex-1 p-6 flex flex-col bg-surface-2-light/20">
                                     <div className="flex justify-between items-center mb-6">
                                         <h3 className="text-xs font-black uppercase tracking-widest text-text-primary-light">Final Decision</h3>
@@ -553,9 +511,8 @@ const ManagerPerformance = () => {
                                     <div className="grid grid-cols-1 gap-3 mt-8">
                                         <button
                                             onClick={handleFinalize}
-                                            disabled={scoreSaving || activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED' || kpis.filter(k => k.imageUrl).length === 0}
+                                            disabled={scoreSaving || activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
                                             className="w-full py-3.5 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/30 transition-all active:scale-95 disabled:opacity-30"
-                                            title={kpis.filter(k => k.imageUrl).length === 0 ? "Evidence required to finalize" : ""}
                                         >
                                             {activeReview?.status === 'SUBMITTED' ? '✓ Data Locked' : 'Finalize Performance Record'}
                                         </button>
@@ -567,6 +524,20 @@ const ManagerPerformance = () => {
                                             {scoreSaving ? 'Processing...' : 'Save Draft Snapshot'}
                                         </button>
                                     </div>
+                                </div>
+
+                                {/* Right: Notes */}
+                                <div className="flex-[1.2] p-6 flex flex-col min-h-[450px]">
+                                    <h3 className="text-xs font-bold uppercase tracking-widest text-text-primary-light mb-4">
+                                        Manager's Rating & Notes
+                                    </h3>
+                                    <textarea
+                                        value={managerNoteInput}
+                                        onChange={e => setManagerNoteInput(e.target.value)}
+                                        disabled={activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
+                                        placeholder="Enter your assessment notes, feedback, and developmental goals here..."
+                                        className="w-full flex-1 p-4 bg-surface-2-light dark:bg-surface-2-dark border border-border-light dark:border-border-dark rounded-xl resize-none outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+                                    />
                                 </div>
                             </div>
                         )}

@@ -163,9 +163,14 @@ public class EmployeeGoalService {
         return repository.save(goal);
     }
 
-    // API 10 - Get employee goals
+    // API 10 - Get employee goals (Active Cycle Only)
     public List<EmployeeGoal> getByEmployee(UUID employeeId){
-        return repository.findByEmployee_EmployeeId(employeeId);
+        PerformanceCycles activeCycle = cycleRepository.findFirstByStatusOrderByCreatedAtDesc(com.project.hrm.module.evaluation.enums.CycleStatus.ACTIVE)
+                .orElse(null);
+                
+        if (activeCycle == null) return List.of();
+        
+        return repository.findAllByEmployee_EmployeeIdAndCycle_CycleId(employeeId, activeCycle.getCycleId());
     }
 
     // API 11 - Update status

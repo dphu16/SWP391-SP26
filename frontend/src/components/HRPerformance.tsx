@@ -1,5 +1,5 @@
 import { kpiService } from "../services/kpiService";
-import type { KpiLibrary, Department, KpiDetailDto, PerformanceCycle, CreateCycleRequest } from "../services/kpiService";
+import type { KpiLibrary, Department, KpiDetailDto, PerformanceCycle, CreateCycleRequest, PerformanceReview } from "../services/kpiService";
 
 
 
@@ -94,6 +94,23 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     const [createKpiError, setCreateKpiError] = useState('');
     const [createKpiSuccess, setCreateKpiSuccess] = useState('');
 
+    const [selectedCycleId, setSelectedCycleId] = useState<string | null>(null);
+    const [cycleReviews, setCycleReviews] = useState<PerformanceReview[]>([]);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
+
+    const handleViewCycleResults = async (cycleId: string) => {
+        setSelectedCycleId(cycleId);
+        setReviewsLoading(true);
+        try {
+            const results = await kpiService.getReviewsByCycle(cycleId);
+            setCycleReviews(results);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setReviewsLoading(false);
+        }
+    };
+
     // New KPI Form State
     const KPI_CATEGORIES = ['FINANCIAL', 'CUSTOMER', 'PROCESS'] as const;
     const MEASUREMENT_TYPES: { value: import('../services/kpiService').MeasurementType; label: string; desc: string }[] = [
@@ -146,6 +163,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
             };
             fetchGlobalStats();
         } else if (viewMode === 'cycles') {
+            setSelectedCycleId(null);
             const fetchCycles = async () => {
                 setCyclesLoading(true);
                 const data = await kpiService.getPerformanceCycles();
@@ -261,6 +279,12 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
             setCycleError('Please fill in all required fields.');
             return;
         }
+
+        if (new Date(cycleForm.endDate) < new Date(cycleForm.startDate)) {
+            setCycleError('End Date cannot be before Start Date.');
+            return;
+        }
+
         setCycleSaving(true);
         setCycleError('');
         try {
@@ -801,111 +825,190 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                             <h2 className="text-lg font-bold font-heading text-text-primary-light dark:text-text-primary-dark">Review Cycle Configuration</h2>
                             <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-0.5">Define evaluation periods, deadlines and criteria for structured performance reviews.</p>
                         </div>
-                        <button
-                            onClick={openNewCycleModal}
-                            className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-hover transition-colors shadow-sm"
-                        >
-                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
-                            New Cycle
-                        </button>
+                        {!selectedCycleId && (
+                            <button
+                                onClick={openNewCycleModal}
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-hover transition-colors shadow-sm"
+                            >
+                                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
+                                New Cycle
+                            </button>
+                        )}
                     </div>
 
-                    {/* Stats row */}
-                    <div className="grid grid-cols-3 gap-5">
-                        {[{
-                            label: 'Total Cycles', value: cycles.length, color: 'text-text-primary-light dark:text-text-primary-dark'
-                        }, {
-                            label: 'Active', value: cycles.filter(c => c.status === 'ACTIVE').length, color: 'text-primary'
-                        }, {
-                            label: 'Closed', value: cycles.filter(c => c.status === 'CLOSED').length, color: 'text-text-muted-light dark:text-text-muted-dark'
-                        }].map((s, i) => (
-                            <div key={i} className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm">
-                                <p className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-2">{s.label}</p>
-                                <p className={`text-4xl font-bold font-heading ${s.color}`}>{s.value}</p>
+                    {selectedCycleId ? (
+                        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col">
+                            <div className="px-5 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between bg-surface-light dark:bg-surface-dark gap-3">
+                                <div>
+                                    <h2 className="text-base font-bold text-text-primary-light dark:text-text-primary-dark">
+                                        Employee Results
+                                    </h2>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedCycleId(null)}
+                                    className="px-4 py-2 text-sm font-semibold rounded-lg border border-border-light text-text-secondary-light hover:bg-surface-2-light transition-colors"
+                                >
+                                    Back to Cycles
+                                </button>
                             </div>
-                        ))}
-                    </div>
-
-                    {/* Cycle Status Error */}
-                    {cycleStatusError && (
-                        <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 font-semibold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 shadow-sm">
-                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
-                            {cycleStatusError}
-                        </div>
-                    )}
-
-                    {/* Cycle Table */}
-                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="border-b border-border-light dark:border-border-dark bg-surface-2-light/60 dark:bg-surface-2-dark/60">
-                                    {['Cycle Name', 'Period', 'Status', 'Actions'].map(h => (
-                                        <th key={h} className="px-5 py-3.5 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest">{h}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                                {cyclesLoading ? (
-                                    <tr><td colSpan={4} className="px-5 py-8 text-center text-text-muted-light">Loading cycles...</td></tr>
-                                ) : cycles.length === 0 ? (
-                                    <tr><td colSpan={4} className="px-5 py-10 text-center">
-                                        <div className="text-text-muted-light dark:text-text-muted-dark">
-                                            <svg className="w-10 h-10 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                            <p className="text-sm font-semibold">No review cycles yet.</p>
-                                            <p className="text-xs mt-1">Click "New Cycle" to get started.</p>
-                                        </div>
-                                    </td></tr>
-                                ) : cycles.map(cycle => {
-                                    const statusColors: Record<string, string> = {
-                                        ACTIVE: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-                                        CLOSED: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
-                                    };
-                                    return (
-                                        <tr key={cycle.cycleId} className="hover:bg-surface-2-light/50 dark:hover:bg-surface-2-dark/50 transition-colors">
-                                            <td className="px-5 py-4">
-                                                <p className="font-bold text-sm text-text-primary-light dark:text-text-primary-dark">{cycle.cycleName}</p>
-                                                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">
-                                                    Created {cycle.createdAt ? new Date(cycle.createdAt).toLocaleDateString('vi-VN') : '—'}
-                                                </p>
-                                            </td>
-                                            <td className="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                                                <p className="font-semibold">{cycle.startDate} → {cycle.endDate}</p>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${statusColors[cycle.status] || ''}`}>
-                                                    {cycle.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    {cycle.status === 'ACTIVE' && (
-                                                        <button
-                                                            onClick={() => openEditCycleModal(cycle)}
-                                                            className="p-1.5 rounded-lg hover:bg-primary/10 text-text-muted-light dark:text-text-muted-dark hover:text-primary transition-colors"
-                                                            title="Edit"
-                                                        >
-                                                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" /></svg>
-                                                        </button>
-                                                    )}
-                                                    {cycle.status === 'ACTIVE' && (
-                                                        <button
-                                                            onClick={() => handleCycleStatusChange(cycle, 'CLOSED')}
-                                                            className="px-3 py-1.5 text-[11px] font-bold bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                                                        >
-                                                            Close
-                                                        </button>
-                                                    )}
-                                                    {cycle.status === 'CLOSED' && (
-                                                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark italic">Archived</span>
-                                                    )}
-                                                </div>
-                                            </td>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-border-light bg-surface-2-light/60">
+                                            <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest">Employee</th>
+                                            <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">KPI (70%)</th>
+                                            <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">Attitude (30%)</th>
+                                            <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">Overall</th>
+                                            <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">Status</th>
                                         </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-border-light">
+                                        {reviewsLoading ? (
+                                            <tr>
+                                                <td colSpan={5} className="px-5 py-8 text-center text-text-muted-light">Loading results...</td>
+                                            </tr>
+                                        ) : cycleReviews.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="px-5 py-8 text-center text-text-muted-light">No evaluations submitted for this cycle yet.</td>
+                                            </tr>
+                                        ) : (
+                                            cycleReviews.map((review) => (
+                                                <tr key={review.reviewId} className="hover:bg-surface-2-light/50 transition-colors">
+                                                    <td className="px-5 py-4 font-semibold text-sm text-text-primary-light">
+                                                        {review.employee?.fullName || 'Unknown Employee'}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center font-bold text-text-secondary-light">
+                                                        {review.kpiScore ?? '-'}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center font-bold text-text-secondary-light">
+                                                        {review.attitudeScore ?? '-'}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center">
+                                                        <span className="text-base font-black text-primary">
+                                                            {review.overallScore !== null && review.overallScore !== undefined ? review.overallScore.toFixed(1) : '-'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center">
+                                                        <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${review.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                            {review.status}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+
+                            {/* Stats row */}
+                            <div className="grid grid-cols-3 gap-5">
+                                {[{
+                                    label: 'Total Cycles', value: cycles.length, color: 'text-text-primary-light dark:text-text-primary-dark'
+                                }, {
+                                    label: 'Active', value: cycles.filter(c => c.status === 'ACTIVE').length, color: 'text-primary'
+                                }, {
+                                    label: 'Closed', value: cycles.filter(c => c.status === 'CLOSED').length, color: 'text-text-muted-light dark:text-text-muted-dark'
+                                }].map((s, i) => (
+                                    <div key={i} className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm">
+                                        <p className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-2">{s.label}</p>
+                                        <p className={`text-4xl font-bold font-heading ${s.color}`}>{s.value}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Cycle Status Error */}
+                            {cycleStatusError && (
+                                <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 font-semibold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 shadow-sm">
+                                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+                                    {cycleStatusError}
+                                </div>
+                            )}
+
+                            {/* Cycle Table */}
+                            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden">
+                                <table className="w-full text-left">
+                                    <thead>
+                                        <tr className="border-b border-border-light dark:border-border-dark bg-surface-2-light/60 dark:bg-surface-2-dark/60">
+                                            {['Cycle Name', 'Period', 'Status', 'Manage Status', 'Details'].map(h => (
+                                                <th key={h} className={`px-5 py-3.5 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest ${h === 'Details' ? 'text-right' : ''}`}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                                        {cyclesLoading ? (
+                                            <tr><td colSpan={4} className="px-5 py-8 text-center text-text-muted-light">Loading cycles...</td></tr>
+                                        ) : cycles.length === 0 ? (
+                                            <tr><td colSpan={4} className="px-5 py-10 text-center">
+                                                <div className="text-text-muted-light dark:text-text-muted-dark">
+                                                    <svg className="w-10 h-10 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                    <p className="text-sm font-semibold">No review cycles yet.</p>
+                                                    <p className="text-xs mt-1">Click "New Cycle" to get started.</p>
+                                                </div>
+                                            </td></tr>
+                                        ) : cycles.map(cycle => {
+                                            const statusColors: Record<string, string> = {
+                                                ACTIVE: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                                                CLOSED: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+                                            };
+                                            return (
+                                                <tr key={cycle.cycleId} className="hover:bg-surface-2-light/50 dark:hover:bg-surface-2-dark/50 transition-colors">
+                                                    <td className="px-5 py-4">
+                                                        <p className="font-bold text-sm text-text-primary-light dark:text-text-primary-dark">{cycle.cycleName}</p>
+                                                        <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">
+                                                            Created {cycle.createdAt ? new Date(cycle.createdAt).toLocaleDateString('vi-VN') : '—'}
+                                                        </p>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                                                        <p className="font-semibold">{cycle.startDate} → {cycle.endDate}</p>
+                                                    </td>
+                                                    <td className="px-5 py-4">
+                                                        <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${statusColors[cycle.status] || ''}`}>
+                                                            {cycle.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-4">
+                                                        <div className="flex items-center gap-2">
+                                                            {cycle.status === 'ACTIVE' && (
+                                                                <button
+                                                                    onClick={() => openEditCycleModal(cycle)}
+                                                                    className="p-1.5 rounded-lg hover:bg-primary/10 text-text-muted-light dark:text-text-muted-dark hover:text-primary transition-colors"
+                                                                    title="Edit"
+                                                                >
+                                                                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" /></svg>
+                                                                </button>
+                                                            )}
+                                                            {cycle.status === 'ACTIVE' && (
+                                                                <button
+                                                                    onClick={() => handleCycleStatusChange(cycle, 'CLOSED')}
+                                                                    className="px-3 py-1.5 text-[11px] font-bold bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                                                                >
+                                                                    Close
+                                                                </button>
+                                                            )}
+                                                            {cycle.status === 'CLOSED' && (
+                                                                <span className="text-xs text-text-muted-light dark:text-text-muted-dark italic">Archived</span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-right">
+                                                        <button
+                                                            onClick={() => handleViewCycleResults(cycle.cycleId)}
+                                                            className="px-3 py-1.5 text-[11px] font-bold bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors border border-primary/20"
+                                                        >
+                                                            View Results
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
             {/* Add KPI Modal Overlay */}
@@ -1116,6 +1219,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                     <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1.5">End Date <span className="text-red-500">*</span></label>
                                     <input
                                         type="date"
+                                        min={cycleForm.startDate}
                                         value={cycleForm.endDate}
                                         onChange={e => setCycleForm(f => ({ ...f, endDate: e.target.value }))}
                                         className="w-full px-4 py-2.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/40"
