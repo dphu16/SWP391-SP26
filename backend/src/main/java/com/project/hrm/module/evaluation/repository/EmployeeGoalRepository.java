@@ -16,8 +16,6 @@ public interface EmployeeGoalRepository
 
     List<EmployeeGoal> findByEmployee_EmployeeId(UUID employeeId);
 
-    List<EmployeeGoal> findAllByEmployee_EmployeeIdAndCycle_CycleId(UUID employeeId, UUID cycleId);
-
     @Query("SELECT COUNT(DISTINCT eg.employee.employeeId) FROM EmployeeGoal eg " +
            "WHERE eg.employee.employeeId IN :employeeIds " +
            "AND eg.cycle.cycleId = :cycleId " +

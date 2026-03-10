@@ -87,10 +87,6 @@ public class PerformanceReviewsService {
         return repository.findByEmployee_EmployeeId(employeeId);
     }
 
-    public List<PerformanceReviews> getByCycle(UUID cycleId){
-        return repository.findByCycle_CycleId(cycleId);
-    }
-
     // API 15
     @Transactional
     public PerformanceReviews updateScore(UUID id, ReviewScoreRequest req){
@@ -99,7 +95,6 @@ public class PerformanceReviewsService {
 
         review.setKpiScore(req.getKpiScore());
         review.setAttitudeScore(req.getAttitudeScore());
-        review.setRating(req.getRating());
 
         return repository.save(review);
     }

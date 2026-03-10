@@ -14,8 +14,6 @@ public interface PerformanceReviewsRepository extends JpaRepository<PerformanceR
 
     java.util.Optional<PerformanceReviews> findByEmployee_EmployeeIdAndCycle_CycleId(UUID employeeId, UUID cycleId);
 
-    List<PerformanceReviews> findByCycle_CycleId(UUID cycleId);
-
     /** AVG overallScore for a team in a given cycle (ignores nulls). */
     @Query("SELECT AVG(pr.overallScore) FROM PerformanceReviews pr " +
            "WHERE pr.employee.employeeId IN :employeeIds " +

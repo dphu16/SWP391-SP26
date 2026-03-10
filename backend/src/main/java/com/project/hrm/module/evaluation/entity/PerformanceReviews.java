@@ -40,9 +40,6 @@ public class PerformanceReviews {
     @Column(name = "overall_score")
     private Double overallScore;
 
-    @Column(name = "rating", length = 50)
-    private String rating;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private ReviewStatus status;
