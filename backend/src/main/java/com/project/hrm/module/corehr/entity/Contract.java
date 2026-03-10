@@ -29,19 +29,19 @@ public class Contract {
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    @Column(name = "contract_number", unique = true, nullable = false)
+    @Column(name = "contract_number", unique = true)
     private String contractNumber;
 
-    @Column(name = "contract_type", nullable = false)
+    @Column(name = "contract_type")
     private String contractType;
 
-    @Column(name = "start_date", nullable = false)
+    @Column(name = "start_date")
     private LocalDate startDate;
 
     @Column(name = "end_date")
     private LocalDate endDate;
 
-    @Column(name = "base_salary", precision = 15, scale = 2, nullable = false)
+    @Column(name = "base_salary", precision = 15, scale = 2)
     private BigDecimal baseSalary;
 
     private String status;

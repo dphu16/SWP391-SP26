@@ -2,7 +2,7 @@ package com.project.hrm.module.corehr.controller;
 
 import com.project.hrm.module.corehr.dto.request.DepartmentOptionDTO;
 import com.project.hrm.module.corehr.dto.request.PositionOptionDTO;
-import com.project.hrm.module.corehr.service.lookup.LookupService;
+import com.project.hrm.module.corehr.service.lookup.DropdownService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,9 +16,9 @@ import java.util.List;
 @RequestMapping("/api/lookup")
 public class LookupController {
 
-    private final LookupService lookupService;
+    private final DropdownService lookupService;
 
-    public LookupController(LookupService lookupService) {
+    public LookupController(DropdownService lookupService) {
         this.lookupService = lookupService;
     }
 

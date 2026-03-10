@@ -2,7 +2,8 @@ package com.project.hrm.module.corehr.dto.request;
 
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.Gender;
-import com.project.hrm.module.corehr.enums.UserRole;
+
+import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,6 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.UUID;
 
 @Data
@@ -17,15 +19,10 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 public class EmployeeDetailDTO {
-
-    // === Basic Information ===
     private UUID employeeId;
     private String employeeCode;
     private String avatarUrl;
-
-    // === Personal Information ===
     private String fullName;
-    private String username;
     private String email;
     private String phone;
     private String address;
@@ -34,13 +31,9 @@ public class EmployeeDetailDTO {
     private String taxCode;
     private LocalDate dateOfBirth;
     private LocalDate dateOfJoining;
-
-    // === Job Information ===
-    private UserRole role;
+    private Set<String> roles;
     private String positionTitle;
     private String deptName;
-    private EmployeeStatus statusPos;
-
-    // === Account Status ===
+    private EmployeeStatus statusEmp;
     private UserStatus status;
 }

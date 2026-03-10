@@ -54,7 +54,8 @@ public class RequestService {
                             .employeeName(emp != null ? emp.getFullName() : "Unknown")
                             // Lấy deptName từ quan hệ department trong Entity Employee của Anh
                             .deptName(emp != null && emp.getDepartment() != null
-                                    ? emp.getDepartment().getDeptName() : "N/A")
+                                    ? emp.getDepartment().getDeptName()
+                                    : "N/A")
                             .requestType(req.getRequestType())
                             .status(req.getStatus())
                             .reason(req.getReason())

@@ -1,10 +1,9 @@
-
 package com.project.hrm.module.corehr.dto.response;
 
-import com.project.hrm.module.corehr.enums.EmployeeStatus;
+import com.project.hrm.module.corehr.enums.EmployeeRole;
+import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.enums.Gender;
-import com.project.hrm.module.corehr.enums.UserRole;
-import jakarta.validation.constraints.NotNull;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,7 +11,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Data
@@ -35,8 +33,6 @@ public class NewHireResponseDTO {
 
     private String address;
 
-    private UserRole role;
-
     private String departmentName;
 
     private String positionTitle;
@@ -49,19 +45,14 @@ public class NewHireResponseDTO {
 
     private String avatarUrl;
 
-    private EmployeeStatus status;
+    private EmployeeRole role;
 
-    private OffsetDateTime createdAt;
-
-    private String username;
-
-    private String rawPassword;
+    private ProgressStatus status;
 
     private String dependentName;
 
     private String relationship;
 
-    private BigDecimal baseSalaryMin;
+    private BigDecimal baseSalary;
 
-    private BigDecimal baseSalaryMax;
 }
