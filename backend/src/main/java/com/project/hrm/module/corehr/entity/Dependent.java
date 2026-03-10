@@ -10,7 +10,7 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-
+@Builder
 public class Dependent {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -22,14 +22,20 @@ public class Dependent {
     private Employee employee;
 
     @Column(name = "full_name", length = 100)
-    private String fullName;
+    private String contactName;
 
     @Column(length = 50)
     private String relationship;
 
-    @Column(name = "birth_date")
-    private LocalDate birthDate;
+    @Column(name = "phone", length = 50)
+    private String phone;
 
-    @Column(name = "is_tax_deductible")
-    private Boolean isTaxDeductible = true;
+    @Column(name = "address", length = 100)
+    private String address;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Column(name = "status", length = 20)
+    private String status;
 }

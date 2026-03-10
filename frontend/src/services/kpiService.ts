@@ -173,6 +173,16 @@ export const kpiService = {
         }
     },
 
+    getGoalsByEmployeeAndCycle: async (employeeId: string, cycleId: string): Promise<any[]> => {
+        try {
+            const response = await apiClient.get<any[]>(`/api/employees/${employeeId}/cycles/${cycleId}/goals`);
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching goals for employee in cycle", error);
+            return [];
+        }
+    },
+
     assignEmployeeGoal: async (data: { employeeId: string, cycleId: string, kpiLibraryId: string, targetValue: number, title: string, weight: number }): Promise<any> => {
         const response = await apiClient.post("/api/employee-goals", data);
         return response.data;

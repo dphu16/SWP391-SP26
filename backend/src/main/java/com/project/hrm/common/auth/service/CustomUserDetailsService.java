@@ -1,8 +1,8 @@
 package com.project.hrm.common.auth.service;
 
 import com.project.hrm.module.corehr.entity.User;
-import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -11,35 +11,33 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final UserRepository userRepository;
-
-    public CustomUserDetailsService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
+    private final UserRepository userRepo;
 
     @Override
-    public UserDetails loadUserByUsername(String username)
-            throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String email) {
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Not Found: " + email));
 
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        System.out.println(">>> Password from DB: " + user.getPassword());
+        List<GrantedAuthority> authorities = user.getRoles().stream()
+                .map(r -> new SimpleGrantedAuthority(r.getName().name()))
+                .collect(Collectors.toList());
 
-        boolean isActive = user.getStatus() == UserStatus.ACTIVE;
-
-        List<GrantedAuthority> authorities = List.of(
-                new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+        // Fallback: if user_roles table is empty, use the 'role' column directly
+        if (authorities.isEmpty() && user.getRole() != null) {
+            authorities = List.of(new SimpleGrantedAuthority(user.getRole().name()));
+        }
 
         return new org.springframework.security.core.userdetails.User(
-                user.getUsername(),
-                user.getPassword(),
-                isActive, // enabled
-                true, // accountNonExpired
-                true, // credentialsNonExpired
-                true, // accountNonLocked
-                authorities);
+                user.getEmail(),
+                user.getPassword() == null ? "" : user.getPassword(),
+                authorities
+        );
     }
 }

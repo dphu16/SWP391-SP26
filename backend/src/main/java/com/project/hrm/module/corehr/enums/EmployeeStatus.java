@@ -1,5 +1,5 @@
 package com.project.hrm.module.corehr.enums;
 
 public enum EmployeeStatus {
-    PROBATION, TERMINATED, OFFICIAL, RESIGNED
+    OFFICIAL, TERMINATED, RESIGNED, INTERN, PROBATION, PENDING_OFFBOARD
 }
