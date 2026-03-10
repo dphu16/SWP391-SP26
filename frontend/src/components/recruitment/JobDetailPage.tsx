@@ -46,10 +46,10 @@ const JobDetailPage: React.FC = () => {
                         <span className="mx-1">&gt;</span>
                         <Link to="/recruitment/jobs" className="hover:text-primary transition-colors">Job Postings</Link>
                         <span className="mx-1">&gt;</span>
-                        <span className="text-text-primary-light">{job.title}</span>
+                        <span className="text-text-primary-light">{job.posName}</span>
                     </div>
                     <h1 className="text-3xl font-bold font-heading text-text-primary-light tracking-tight">
-                        {job.title}
+                        {job.posName}
                     </h1>
                     <div className="flex flex-wrap items-center gap-3">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${job.status === "OPEN" ? "bg-emerald-50 text-emerald-700" :
@@ -62,7 +62,7 @@ const JobDetailPage: React.FC = () => {
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            Posted on: {new Date(job.createAt).toLocaleDateString()}
+                            Posted on: {new Date(job.postedAt).toLocaleDateString()}
                         </span>
                         {job.closedTime && (
                             <span className="text-sm text-text-muted-light flex items-center gap-1">
@@ -170,7 +170,7 @@ const JobDetailPage: React.FC = () => {
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-text-muted-light uppercase">Salary</label>
-                                <p className="text-xl font-bold text-emerald-600 truncate" title={job.salary}>{job.salary || "N/A"}</p>
+                                <p className="text-xl font-bold text-emerald-600 truncate" title={`$${job.minSalary} - $${job.maxSalary}`}>${job.minSalary} - ${job.maxSalary}</p>
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-text-muted-light uppercase">HR Manager</label>

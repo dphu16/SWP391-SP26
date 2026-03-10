@@ -65,11 +65,11 @@ const JobRequestDetailPage: React.FC = () => {
                         <span className="mx-1">&gt;</span>
                         <Link to="/recruitment/job-requests" className="hover:text-primary transition-colors">Job Requests</Link>
                         <span className="mx-1">&gt;</span>
-                        <span className="text-text-primary-light">{request.title}</span>
+                        <span className="text-text-primary-light">{request.posName}</span>
                     </div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-black font-heading text-text-primary-light tracking-tight">
-                            {request.title}
+                            {request.posName}
                         </h1>
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${request.status === "SUBMITTED" ? "bg-amber-100 text-amber-700" :
                             request.status === "APPROVED" ? "bg-emerald-100 text-emerald-700" :
@@ -95,11 +95,12 @@ const JobRequestDetailPage: React.FC = () => {
                             onClick={() => navigate(`/recruitment/jobs/new`, {
                                 state: {
                                     requestId: request.id,
-                                    title: request.title,
+                                    posId: request.posId,
                                     quantity: request.quantity,
                                     reportTo: request.reportTo,
                                     type: request.type,
-                                    location: request.location
+                                    location: request.location,
+                                    deptId: request.deptId
                                 }
                             })}
                             className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 cursor-pointer"

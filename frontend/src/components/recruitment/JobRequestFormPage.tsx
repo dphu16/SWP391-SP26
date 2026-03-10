@@ -4,12 +4,9 @@ import { jobRequestService } from "../../services/jobRequestService";
 import type { JobRequestInput } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
 import { useToast } from "../ui/Toast";
-import { departmentService } from "../../services/departmentService";
-import type { Department } from "../../services/departmentService";
-import { hrService } from "../../services/hrService";
-import type { EmployeeNameDto } from "../../services/hrService";
+import { edpService } from "../../services/edpService";
+import type { Position, Department, HrEmployee } from "../../services/edpService";
 import { useAuth } from "../../hooks/useAuth";
-import { employeeService } from "../../services/employeeService";
 
 const inputCls = "w-full px-4 py-2.5 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
 const labelCls = "block text-[11px] font-bold uppercase tracking-wider text-text-secondary-light mb-1.5";
@@ -25,15 +22,16 @@ const JobRequestFormPage: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [departments, setDepartments] = useState<Department[]>([]);
-    const [employees, setEmployees] = useState<EmployeeNameDto[]>([]);
+    const [employees, setEmployees] = useState<HrEmployee[]>([]);
+    const [positions, setPositions] = useState<Position[]>([]);
     const [managerDeptId, setManagerDeptId] = useState<string | null>(null);
 
     const [formData, setFormData] = useState<JobRequestInput>({
-        title: "",
+        posId: "",
         deptId: "",
         quantity: 1,
         location: "",
-        type: "FULL_TIME",
+        type: "OFFICIAL",
         reportTo: "",
         reason: "",
         status: "SUBMITTED",
@@ -45,8 +43,8 @@ const JobRequestFormPage: React.FC = () => {
             try {
                 // Fetch departments and employees
                 const [deptRes, empRes] = await Promise.all([
-                    departmentService.getAll(),
-                    hrService.getEmployeeNames()
+                    edpService.getDepartments(),
+                    edpService.getHr()
                 ]);
                 const depts = deptRes.data;
                 setDepartments(depts);
@@ -54,12 +52,12 @@ const JobRequestFormPage: React.FC = () => {
 
                 let autoDeptId: string | null = null;
                 if (user?.role === "MANAGER" && user.employeeId) {
-                    const empData = await employeeService.getEmployeeDetail(user.employeeId);
-                    const mDeptName = empData.data.deptName;
-                    const matchedDept = depts.find(d => d.deptName === mDeptName);
-                    if (matchedDept) {
-                        autoDeptId = matchedDept.deptId;
+                    try {
+                        const deptData = await edpService.getManagerDepartment(user.employeeId);
+                        autoDeptId = deptData.data.deptId;
                         setManagerDeptId(autoDeptId);
+                    } catch (e) {
+                        console.error("Failed to fetch manager department");
                     }
                 }
 
@@ -79,6 +77,17 @@ const JobRequestFormPage: React.FC = () => {
 
         fetchInitialData();
     }, [id, isEdit, toastError, user]);
+
+    // Fetch positions when department changes
+    useEffect(() => {
+        if (formData.deptId) {
+            edpService.getPositionsByDept(formData.deptId)
+                .then((res: any) => setPositions(res.data))
+                .catch((err: any) => console.error("Failed to load positions", err));
+        } else {
+            setPositions([]);
+        }
+    }, [formData.deptId]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -133,36 +142,6 @@ const JobRequestFormPage: React.FC = () => {
                 <div className="rounded-2xl border border-border-light bg-white shadow-card p-6 md:p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className={labelCls}>Job Title</label>
-                            <input
-                                required
-                                name="title"
-                                value={formData.title}
-                                onChange={handleChange}
-                                placeholder="e.g. Senior Product Designer"
-                                className={inputCls}
-                            />
-                        </div>
-
-                        <div>
-                            <label className={labelCls}>Report To HR</label>
-                            <select
-                                required
-                                name="reportTo"
-                                value={formData.reportTo}
-                                onChange={handleChange}
-                                className={inputCls}
-                            >
-                                <option value="" disabled>Select a HR</option>
-                                {employees.map(emp => (
-                                    <option key={emp.id} value={emp.id}>
-                                        {emp.fullName}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
                             <label className={labelCls}>Department</label>
                             <select
                                 required
@@ -176,6 +155,43 @@ const JobRequestFormPage: React.FC = () => {
                                 {departments.map(dept => (
                                     <option key={dept.deptId} value={dept.deptId}>
                                         {dept.deptName}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className={labelCls}>Position Title</label>
+                            <select
+                                required
+                                name="posId"
+                                value={formData.posId}
+                                onChange={handleChange}
+                                className={inputCls}
+                                disabled={!formData.deptId}
+                            >
+                                <option value="" disabled>Select a position</option>
+                                {positions.map(pos => (
+                                    <option key={pos.posId} value={pos.posId}>
+                                        {pos.posName}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className={labelCls}>Report To HR</label>
+                            <select
+                                required
+                                name="reportTo"
+                                value={formData.reportTo}
+                                onChange={handleChange}
+                                className={inputCls}
+                            >
+                                <option value="" disabled>Select a HR</option>
+                                {employees.map(emp => (
+                                    <option key={emp.empId} value={emp.empId}>
+                                        {emp.empName}
                                     </option>
                                 ))}
                             </select>
@@ -214,10 +230,8 @@ const JobRequestFormPage: React.FC = () => {
                                 onChange={handleChange}
                                 className={inputCls}
                             >
-                                <option value="FULL_TIME">Full-time</option>
-                                <option value="PART_TIME">Part-time</option>
-                                <option value="CONTRACT">Contract</option>
-                                <option value="INTERN">Internship</option>
+                                <option value="OFFICIAL">Official</option>
+                                <option value="PROBATION">Probation</option>
                             </select>
                         </div>
 

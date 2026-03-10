@@ -60,7 +60,7 @@ const PublicJobList: React.FC = () => {
 
     const filteredJobs = useMemo(() => {
         return jobs.filter(job =>
-            job.title.toLowerCase().includes(searchTerm.toLowerCase())
+            job.posName.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [jobs, searchTerm]);
 
@@ -88,7 +88,7 @@ const PublicJobList: React.FC = () => {
                 <div className="relative max-w-xl mx-auto">
                     <input
                         type="text"
-                        placeholder="Search jobs by title"
+                        placeholder="Search jobs by position"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-12 pr-4 py-3 rounded-2xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-gray-900"
@@ -117,7 +117,7 @@ const PublicJobList: React.FC = () => {
                         {paginatedJobs.map((job) => (
                             <div key={job.id} onClick={() => handleApplyClick(job)} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between gap-4 cursor-pointer">
                                 <div className="space-y-3">
-                                    <h2 className="text-xl font-bold text-gray-900">{job.title}</h2>
+                                    <h2 className="text-xl font-bold text-gray-900">{job.posName}</h2>
 
                                     <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
                                         <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded">
@@ -136,7 +136,7 @@ const PublicJobList: React.FC = () => {
                                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
-                                            {job.salary || "Negotiable"}
+                                            {job.minSalary ? `$${job.minSalary} - $${job.maxSalary}` : "Negotiable"}
                                         </div>
                                         <div className="flex items-center gap-1.5 bg-orange-50 text-orange-700 px-2 py-1 rounded">
                                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

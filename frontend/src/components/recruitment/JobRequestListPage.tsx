@@ -90,7 +90,7 @@ const JobRequestListPage: React.FC = () => {
 
     // Filter and Paginate
     const filteredRequests = requests.filter(req =>
-        req.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        req.posName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         req.deptName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (req.reviewer && req.reviewer.toLowerCase().includes(searchTerm.toLowerCase()))
     );
@@ -134,7 +134,7 @@ const JobRequestListPage: React.FC = () => {
                     </span>
                     <input
                         type="text"
-                        placeholder="Search by title, department, or report to..."
+                        placeholder="Search by position, department, or report to..."
                         value={searchTerm}
                         onChange={(e) => {
                             setSearchTerm(e.target.value);
@@ -156,7 +156,7 @@ const JobRequestListPage: React.FC = () => {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-gray-100 bg-white">
-                                        <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-text-secondary-light">Title</th>
+                                        <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-text-secondary-light">Position Title</th>
                                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-text-secondary-light">Department</th>
                                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-text-secondary-light">Report To</th>
                                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-text-secondary-light">Status</th>
@@ -179,7 +179,7 @@ const JobRequestListPage: React.FC = () => {
                                             >
                                                 <td className="px-6 py-4">
                                                     <div className="font-semibold text-text-primary-light">
-                                                        {req.title}
+                                                        {req.posName}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-text-secondary-light">

@@ -5,6 +5,8 @@ import type { JobInput } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
 import { useToast } from "../ui/Toast";
 import { useAuth } from "../../hooks/useAuth";
+import { edpService } from "../../services/edpService";
+import type { Position, Department } from "../../services/edpService";
 
 const inputCls = "w-full px-4 py-2.5 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
 const labelCls = "block text-[11px] font-bold uppercase tracking-wider text-text-secondary-light mb-1.5";
@@ -23,22 +25,42 @@ const JobFormPage: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [positions, setPositions] = useState<Position[]>([]);
+    const [selectedDeptId, setSelectedDeptId] = useState<string>(state?.deptId || "");
+
     const [formData, setFormData] = useState<JobInput>({
         requestId: state?.requestId || "",
-        title: state?.title || "",
+        posId: state?.posId || "",
         description: "",
         responsibility: "",
         requirement: "",
         benefit: "",
         quantity: state?.quantity || 1,
         maxCv: 50,
-        salary: "Negotiable",
-        type: state?.type || "FULL_TIME",
+        type: state?.type === "FULL_TIME" ? "OFFICIAL" : (state?.type || "OFFICIAL"),
         location: state?.location || "",
         status: "DRAFT",
         closedTime: "",
+        postedTime: new Date().toISOString().slice(0, 16),
         hrId: state?.reportTo || user?.employeeId || "",
     });
+
+    useEffect(() => {
+        edpService.getDepartments()
+            .then((res: any) => setDepartments(res.data))
+            .catch((err: any) => console.error("Could not fetch departments", err));
+    }, []);
+
+    useEffect(() => {
+        if (selectedDeptId) {
+            edpService.getPositionsByDept(selectedDeptId)
+                .then((res: any) => setPositions(res.data))
+                .catch((err: any) => console.error("Could not fetch positions", err));
+        } else {
+            setPositions([]);
+        }
+    }, [selectedDeptId]);
 
     useEffect(() => {
         if (isEdit && id) {
@@ -46,20 +68,33 @@ const JobFormPage: React.FC = () => {
                 try {
                     const res = await jobService.getById(id);
                     const job = res.data;
+
+                    if (job.deptName) {
+                        try {
+                            const deptRes = await edpService.getDepartments();
+                            const matchedDept = deptRes.data.find((d: any) => d.deptName === job.deptName);
+                            if (matchedDept) {
+                                setSelectedDeptId(matchedDept.deptId);
+                            }
+                        } catch (err) {
+                            console.error("Could not resolve department name to id", err);
+                        }
+                    }
+
                     setFormData({
                         requestId: job.reqId || "", // reqId map to requestId
-                        title: job.title || "",
+                        posId: job.posId || "",
                         description: job.description || "",
                         responsibility: job.responsibility || "",
                         requirement: job.requirement || "",
                         benefit: job.benefit || "",
                         quantity: job.quantity || 1,
                         maxCv: job.maxCv || 0,
-                        salary: job.salary || "",
-                        type: job.type || "FULL_TIME",
+                        type: job.type || "OFFICIAL",
                         location: job.location || "",
                         status: job.status || "DRAFT",
                         closedTime: job.closedTime ? new Date(job.closedTime).toISOString().slice(0, 16) : "",
+                        postedTime: job.postedAt ? new Date(job.postedAt).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
                         hrId: job.hrId || "",
                     });
                 } catch (err) {
@@ -90,7 +125,8 @@ const JobFormPage: React.FC = () => {
             const payload = {
                 ...formData,
                 status: targetStatus,
-                closedTime: formData.closedTime ? new Date(formData.closedTime).toISOString() : ""
+                closedTime: formData.closedTime ? new Date(formData.closedTime).toISOString() : "",
+                postedTime: formData.postedTime ? new Date(formData.postedTime).toISOString() : new Date().toISOString()
             };
 
             if (isEdit && id) {
@@ -133,13 +169,48 @@ const JobFormPage: React.FC = () => {
                 <div className="rounded-2xl border border-border-light bg-white shadow-card p-6 md:p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className={labelCls}>Job Title</label>
-                            <input
+                            <label className={labelCls}>Department</label>
+                            <select
                                 required
-                                name="title"
-                                value={formData.title}
+                                value={selectedDeptId}
+                                onChange={(e) => setSelectedDeptId(e.target.value)}
+                                className={inputCls}
+                            >
+                                <option value="" disabled>Select a department</option>
+                                {departments.map(dept => (
+                                    <option key={dept.deptId} value={dept.deptId}>
+                                        {dept.deptName}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className={labelCls}>Position Title</label>
+                            <select
+                                required
+                                name="posId"
+                                value={formData.posId}
                                 onChange={handleChange}
-                                placeholder="e.g. Senior Frontend Developer"
+                                className={inputCls}
+                                disabled={!selectedDeptId}
+                            >
+                                <option value="" disabled>Select a position</option>
+                                {positions.map(pos => (
+                                    <option key={pos.posId} value={pos.posId}>
+                                        {pos.posName}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className={labelCls}>Post Time</label>
+                            <input
+                                type="datetime-local"
+                                name="postedTime"
+                                value={formData.postedTime}
+                                onChange={handleChange}
                                 className={inputCls}
                             />
                         </div>
@@ -150,19 +221,6 @@ const JobFormPage: React.FC = () => {
                                 type="datetime-local"
                                 name="closedTime"
                                 value={formData.closedTime}
-                                onChange={handleChange}
-                                className={inputCls}
-                            />
-                        </div>
-
-                        <div>
-                            <label className={labelCls}>Quantity</label>
-                            <input
-                                required
-                                type="number"
-                                min="1"
-                                name="quantity"
-                                value={formData.quantity}
                                 onChange={handleChange}
                                 className={inputCls}
                             />
@@ -190,10 +248,8 @@ const JobFormPage: React.FC = () => {
                                 onChange={handleChange}
                                 className={inputCls}
                             >
-                                <option value="FULL_TIME">Full Time</option>
-                                <option value="PART_TIME">Part Time</option>
-                                <option value="CONTRACT">Contract</option>
-                                <option value="INTERN">Intern</option>
+                                <option value="OFFICIAL">Official</option>
+                                <option value="PROBATION">Probation</option>
                             </select>
                         </div>
 
@@ -209,17 +265,20 @@ const JobFormPage: React.FC = () => {
                             />
                         </div>
 
-                        <div className="md:col-span-2">
-                            <label className={labelCls}>Salary</label>
+                        <div>
+                            <label className={labelCls}>Quantity</label>
                             <input
                                 required
-                                name="salary"
-                                value={formData.salary}
+                                type="number"
+                                min="1"
+                                name="quantity"
+                                value={formData.quantity}
                                 onChange={handleChange}
-                                placeholder="e.g. Negotiable, $1000 - $2000"
                                 className={inputCls}
                             />
                         </div>
+
+
 
                         <div className="md:col-span-2">
                             <label className={labelCls}>Description</label>

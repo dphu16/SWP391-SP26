@@ -71,7 +71,7 @@ const JobListPage: React.FC = () => {
 
     const filteredJobs = useMemo(() => {
         return jobs.filter(job =>
-            job.title.toLowerCase().includes(searchTerm.toLowerCase())
+            job.posName.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [jobs, searchTerm]);
 
@@ -154,7 +154,7 @@ const JobListPage: React.FC = () => {
                                     >
                                         <td className="px-6 py-4">
                                             <div className="font-semibold text-text-primary-light text-sm mb-0.5">
-                                                {job.title}
+                                                {job.posName}
                                             </div>
                                         </td>
                                         <td className="px-4 py-4">
@@ -179,7 +179,7 @@ const JobListPage: React.FC = () => {
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="text-[10px] text-text-tertiary-light w-8">Start:</span>
                                                     <span className="text-text-secondary-light">
-                                                        {job.createAt ? new Date(job.createAt).toLocaleDateString() : "—"}
+                                                        {job.postedAt ? new Date(job.postedAt).toLocaleDateString() : "—"}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-1.5 text-rose-600/80">
