@@ -113,6 +113,25 @@ export const getAllShifts = async (): Promise<ShiftResponse[]> => {
     }
 };
 
+export interface ShiftCreateRequest {
+    name: string;
+    startTime: string; // "HH:mm"
+    endTime: string;   // "HH:mm"
+}
+
+export const createShift = async (req: ShiftCreateRequest): Promise<ShiftResponse> => {
+    const response = await apiClient.post('/api/v1/attendance/work-schedules/shifts', req);
+    return response.data;
+};
+
+export const deleteShift = async (shiftId: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/attendance/work-schedules/shifts/${shiftId}`);
+};
+
+export const deleteSchedule = async (scheduleId: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/attendance/work-schedules/${scheduleId}`);
+};
+
 export interface WorkScheduleRequest {
     employeeId: string;
     date: string; // "YYYY-MM-DD"

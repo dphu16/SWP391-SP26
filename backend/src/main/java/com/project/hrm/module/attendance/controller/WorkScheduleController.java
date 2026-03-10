@@ -2,6 +2,7 @@ package com.project.hrm.module.attendance.controller;
 
 import com.project.hrm.module.attendance.dto.AttendanceEmployeeResponse;
 import com.project.hrm.module.attendance.dto.BulkScheduleRequest;
+import com.project.hrm.module.attendance.dto.ShiftRequest;
 import com.project.hrm.module.attendance.dto.WorkScheduleRequest;
 import com.project.hrm.module.attendance.dto.WorkScheduleResponse;
 import com.project.hrm.module.attendance.dto.ShiftResponse;
@@ -9,7 +10,6 @@ import com.project.hrm.module.attendance.service.WorkScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,7 +28,6 @@ public class WorkScheduleController {
     // 1. LẤY TẤT CẢ LỊCH (DÀNH CHO MANAGER)
     // =========================================================
     @GetMapping
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<WorkScheduleResponse>> getAllSchedules() {
         return ResponseEntity.ok(service.getAllSchedules());
     }
@@ -48,7 +47,6 @@ public class WorkScheduleController {
     // 3. TẠO 1 LỊCH MỚI (THỦ CÔNG)
     // =========================================================
     @PostMapping
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<WorkScheduleResponse> createSchedule(@RequestBody WorkScheduleRequest request) {
         return ResponseEntity.ok(service.createSchedule(request));
     }
@@ -57,7 +55,6 @@ public class WorkScheduleController {
     // 4. TẠO LỊCH HÀNG LOẠT (BULK INSERT)
     // =========================================================
     @PostMapping("/bulk")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<WorkScheduleResponse>> createBulkSchedules(@RequestBody BulkScheduleRequest request) {
         List<WorkScheduleResponse> result = service.createBulkSchedules(
                 request.getEmployeeId(),
@@ -71,7 +68,6 @@ public class WorkScheduleController {
     // 5. SỬA LỊCH (ĐỔI CA LÀM VIỆC)
     // =========================================================
     @PutMapping("/{scheduleId}")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<WorkScheduleResponse> updateSchedule(
             @PathVariable UUID scheduleId,
             @RequestParam UUID newShiftId) {
@@ -82,7 +78,6 @@ public class WorkScheduleController {
     // 6. COPY LỊCH TỪ THÁNG TRƯỚC
     // =========================================================
     @PostMapping("/clone")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<WorkScheduleResponse>> cloneSchedule(
             @RequestParam UUID employeeId,
             @RequestParam int targetMonth,
@@ -94,7 +89,6 @@ public class WorkScheduleController {
     // 7. LẤY DANH SÁCH NHÂN VIÊN (ĐỂ ĐỔ VÀO DROPDOWN FRONTEND)
     // =========================================================
     @GetMapping("/employees")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<Page<AttendanceEmployeeResponse>> getEmployeesForScheduling(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -108,5 +102,31 @@ public class WorkScheduleController {
     @GetMapping("/shifts")
     public ResponseEntity<List<ShiftResponse>> getAllShifts() {
         return ResponseEntity.ok(service.getAllShifts());
+    }
+
+    // =========================================================
+    // 9. TẠO CA LÀM MỚI
+    // =========================================================
+    @PostMapping("/shifts")
+    public ResponseEntity<ShiftResponse> createShift(@RequestBody ShiftRequest request) {
+        return ResponseEntity.ok(service.createShift(request));
+    }
+
+    // =========================================================
+    // 10. XÓA CA LÀM
+    // =========================================================
+    @DeleteMapping("/shifts/{shiftId}")
+    public ResponseEntity<Void> deleteShift(@PathVariable UUID shiftId) {
+        service.deleteShift(shiftId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // =========================================================
+    // 11. XÓA LỊCH LÀM (1 ngày cụ thể)
+    // =========================================================
+    @DeleteMapping("/{scheduleId}")
+    public ResponseEntity<Void> deleteSchedule(@PathVariable UUID scheduleId) {
+        service.deleteSchedule(scheduleId);
+        return ResponseEntity.noContent().build();
     }
 }
