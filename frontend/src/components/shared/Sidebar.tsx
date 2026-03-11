@@ -591,6 +591,7 @@ const Sidebar: React.FC = () => {
                       path: "/recruitment/job-requests",
                     },
                     { label: "Job Openings", path: "/recruitment/jobs" },
+                    { label: "Schedules", path: "/recruitment/schedules" },
                   ].map((item) => (
                     <NavItem
                       key={item.path}
