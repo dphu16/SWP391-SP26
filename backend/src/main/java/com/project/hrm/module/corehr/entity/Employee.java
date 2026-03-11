@@ -70,9 +70,11 @@ public class Employee {
         private Personal personal;
 
         @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+        @Builder.Default
         private List<Contract> contracts = new ArrayList<>();
 
         @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+        @Builder.Default
         private List<Dependent> dependents = new ArrayList<>();
 
         @ManyToOne(fetch = FetchType.LAZY)

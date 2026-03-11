@@ -30,7 +30,7 @@ public class NewHireMapper {
                                 .status("ACTIVE")
                                 .build();
 
-                employee.setContract(contract);
+                employee.getContracts().add(contract);
 
                 Personal personal = Personal.builder()
                                 .employee(employee)
@@ -68,9 +68,11 @@ public class NewHireMapper {
                                 .relationship((e.getDependents() != null && !e.getDependents().isEmpty())
                                                 ? e.getDependents().get(0).getRelationship()
                                                 : null)
-                                .baseSalary((e.getContracts() != null && !e.getContracts().isEmpty())
-                                                ? e.getContracts().get(0).getBaseSalary()
-                                                : (e.getContract() != null ? e.getContract().getBaseSalary() : null))
+                                .baseSalary(e.getContracts().stream()
+                                        .filter(c -> c.getEndDate() == null || c.getEndDate().isAfter(java.time.LocalDate.now()))
+                                        .max(java.util.Comparator.comparing(Contract::getStartDate))
+                                        .map(Contract::getBaseSalary)
+                                        .orElse(null))
                                 .citizenId(e.getPersonal() != null ? e.getPersonal().getCitizenId() : null)
                                 .taxCode(e.getPersonal() != null ? e.getPersonal().getTaxCode() : null)
                                 .dateOfBirth(e.getPersonal() != null ? e.getPersonal().getDateOfBirth() : null)

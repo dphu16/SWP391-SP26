@@ -26,6 +26,10 @@ import JobRequestListPage from "./components/recruitment/JobRequestListPage";
 import JobRequestDetailPage from "./components/recruitment/JobRequestDetailPage";
 import JobRequestFormPage from "./components/recruitment/JobRequestFormPage";
 import CVListPage from "./components/recruitment/CVListPage";
+import CVReviewPage from "./components/recruitment/CVReviewPage";
+import SchedulePage from "./components/recruitment/SchedulePage";
+import PublicJobList from "./components/recruitment/PublicJobList";
+import PublicJobDetail from "./components/recruitment/PublicJobDetail";
 // --- Auth ---
 import LoginPage from "./components/auth/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -111,6 +115,8 @@ const AppShell: React.FC = () => {
                 element={<JobFormPage />}
               />
               <Route path="/recruitment/cvs" element={<CVListPage />} />
+              <Route path="/recruitment/cvs/:id" element={<CVReviewPage />} />
+              <Route path="/recruitment/schedules" element={<SchedulePage />} />
 
               <Route
                 path="/recruitment/job-requests"
@@ -143,6 +149,11 @@ const App: React.FC = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/oauth2/callback" element={<OAuth2Callback />} />
         <Route path="/activation" element={<ActivationPage />} />
+
+        {/* Public Recruitment Routes */}
+        <Route path="/careers" element={<PublicJobList />} />
+        <Route path="/careers/:id" element={<PublicJobDetail />} />
+
         <Route
           path="/*"
           element={

@@ -2,6 +2,9 @@ package com.project.hrm.module.recruitment.entity;
 
 import com.project.hrm.module.corehr.entity.Department;
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.entity.Position;
+import com.project.hrm.module.recruitment.enums.EmploymentType;
+import com.project.hrm.module.recruitment.enums.RequestStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -18,19 +21,19 @@ import java.util.UUID;
 @Table(name = "job_requests")
 public class JobRequest {
     @Id
-    @ColumnDefault("uuid_generate_v4()")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "request_id", nullable = false)
     private UUID id;
-
-    @Size(max = 150)
-    @NotNull
-    @Column(name = "job_title", nullable = false, length = 150)
-    private String jobTitle;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "dept_id", nullable = false)
     private Department dept;
+
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "position_id", nullable = false)
+    private Position pos;
 
     @NotNull
     @Column(name = "quantity", nullable = false)
@@ -41,10 +44,9 @@ public class JobRequest {
     @Column(name = "location", nullable = false, length = 150)
     private String location;
 
-    @Size(max = 20)
-    @NotNull
-    @Column(name = "employment_type", nullable = false, length = 20)
-    private String employmentType;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type")
+    private EmploymentType type;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reports_to")
@@ -54,10 +56,9 @@ public class JobRequest {
     @Column(name = "reason", nullable = false, length = Integer.MAX_VALUE)
     private String reason;
 
-    @Size(max = 20)
-    @ColumnDefault("'SUBMITTED'")
-    @Column(name = "status", length = 20)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private RequestStatus status = RequestStatus.SUBMITTED;
 
     @Column(name = "hr_comment", length = Integer.MAX_VALUE)
     private String hrComment;

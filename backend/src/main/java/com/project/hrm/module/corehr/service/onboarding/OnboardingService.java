@@ -24,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -99,7 +100,9 @@ public class OnboardingService implements IOnboardingService {
         }
 
         Personal personal = employee.getPersonal();
-        Contract contract = employee.getContract();
+        Contract contract = employee.getContracts().stream()
+                .max(Comparator.comparing(Contract::getStartDate))
+                .orElse(null);
 
         CreateNewHireDTO dto = new CreateNewHireDTO();
         dto.setFullName(employee.getFullName());
@@ -168,7 +171,11 @@ public class OnboardingService implements IOnboardingService {
         }
 
         // Update contract info
-        Contract contract = employee.getContract();
+        Contract contract = employee.getContracts().stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "No contract found for employee: " + employee.getEmployeeId()
+                ));
         if (contract != null) {
             contract.setContractNumber(updatedData.getContractNumber());
             contract.setContractType(updatedData.getContractType());

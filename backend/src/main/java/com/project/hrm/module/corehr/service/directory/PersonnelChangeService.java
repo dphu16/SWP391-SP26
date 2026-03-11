@@ -13,6 +13,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -140,9 +141,12 @@ public class PersonnelChangeService {
                 }
             }
             case SALARY_CHANGE -> {
-                if (newValues.containsKey("baseSalary") && employee.getContract() != null) {
+                if (newValues.containsKey("baseSalary") && employee.getContracts() != null) {
                     BigDecimal newSalary = new BigDecimal(newValues.get("baseSalary").toString());
-                    employee.getContract().setBaseSalary(newSalary);
+                    employee.getContracts().stream()
+                            .filter(c -> c.getEndDate() == null || c.getEndDate().isAfter(LocalDate.now()))
+                            .max(Comparator.comparing(Contract::getStartDate))
+                            .ifPresent(c -> c.setBaseSalary(newSalary));
                 }
             }
             case DISCIPLINE, REWARD -> {
@@ -174,9 +178,10 @@ public class PersonnelChangeService {
                 }
             }
             case SALARY_CHANGE -> {
-                if (employee.getContract() != null) {
-                    old.put("baseSalary", employee.getContract().getBaseSalary());
-                }
+                employee.getContracts().stream()
+                        .filter(c -> c.getEndDate() == null || c.getEndDate().isAfter(LocalDate.now()))
+                        .max(Comparator.comparing(Contract::getStartDate))
+                        .ifPresent(c -> old.put("baseSalary", c.getBaseSalary()));
             }
             case DISCIPLINE, REWARD -> {
                 // No old values for these types

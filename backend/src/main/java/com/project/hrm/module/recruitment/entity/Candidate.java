@@ -1,9 +1,6 @@
 package com.project.hrm.module.recruitment.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -19,7 +16,7 @@ import java.util.UUID;
 @Table(name = "candidates")
 public class Candidate {
     @Id
-    @ColumnDefault("uuid_generate_v4()")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "candidate_id", nullable = false)
     private UUID id;
 

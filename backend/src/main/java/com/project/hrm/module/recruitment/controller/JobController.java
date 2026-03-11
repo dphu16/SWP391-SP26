@@ -53,9 +53,16 @@ public class JobController {
     @GetMapping("/candidate/list-job")
     public ResponseEntity<List<JobResponse>> getActiveJob() {
 
-        List<JobResponse> responses = jobService.getJobByStatus("OPEN");
+        List<JobResponse> responses = jobService.getJobByStatus(JobStatus.OPEN);
 
         return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/candidate/list-job/{id}")
+    public ResponseEntity<JobResponse> getJobById(
+            @PathVariable UUID id) {
+
+        return ResponseEntity.ok(jobService.getJobById(id));
     }
 
     @GetMapping("/{id}")
