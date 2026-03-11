@@ -17,7 +17,7 @@ import java.util.UUID;
 @Table(name = "applications")
 public class Application {
     @Id
-    @ColumnDefault("uuid_generate_v4()")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "app_id", nullable = false)
     private UUID id;
 
@@ -36,11 +36,15 @@ public class Application {
     @Column(name = "cv_url", nullable = false)
     private String cvUrl;
 
-    @Size(max = 30)
-    @ColumnDefault("'APPLIED'")
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 30)
-    private ApplicationStatus status;
+    @Column(name = "status", nullable = false)
+    private ApplicationStatus status = ApplicationStatus.APPLIED;
+
+    @Column(name = "end_time")
+    private OffsetDateTime end;
+
+    @Column(name = "start_time")
+    private OffsetDateTime start;
 
     @ColumnDefault("now()")
     @Column(name = "created_at")

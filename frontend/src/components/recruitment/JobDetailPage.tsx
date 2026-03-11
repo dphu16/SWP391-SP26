@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { jobService } from "../../services/jobService";
 import type { Job } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
@@ -41,17 +41,15 @@ const JobDetailPage: React.FC = () => {
             {/* Header section with back button and basic info */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
-                    <button
-                        onClick={() => navigate("/recruitment/jobs")}
-                        className="group flex items-center gap-2 text-sm font-medium text-text-secondary-light hover:text-primary transition-colors mb-2"
-                    >
-                        <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 transition-transform group-hover:-translate-x-1">
-                            <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
-                        </svg>
-                        Back to Job Postings
-                    </button>
+                    <div className="flex items-center gap-2 text-sm font-medium text-text-secondary-light mb-2">
+                        <Link to="/dashboard" className="hover:text-primary transition-colors">Home</Link>
+                        <span className="mx-1">&gt;</span>
+                        <Link to="/recruitment/jobs" className="hover:text-primary transition-colors">Job Postings</Link>
+                        <span className="mx-1">&gt;</span>
+                        <span className="text-text-primary-light">{job.posName}</span>
+                    </div>
                     <h1 className="text-3xl font-bold font-heading text-text-primary-light tracking-tight">
-                        {job.title}
+                        {job.posName}
                     </h1>
                     <div className="flex flex-wrap items-center gap-3">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${job.status === "OPEN" ? "bg-emerald-50 text-emerald-700" :
@@ -64,7 +62,7 @@ const JobDetailPage: React.FC = () => {
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            Posted on: {new Date(job.createAt).toLocaleDateString()}
+                            Posted on: {new Date(job.postedAt).toLocaleDateString()}
                         </span>
                         {job.closedTime && (
                             <span className="text-sm text-text-muted-light flex items-center gap-1">
@@ -76,7 +74,16 @@ const JobDetailPage: React.FC = () => {
                         )}
                     </div>
                 </div>
-                <div>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => navigate(`/recruitment/cvs?jobId=${job.id}`)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 text-indigo-700 text-sm font-semibold hover:bg-indigo-100 transition-colors shadow-sm"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        List Candidate
+                    </button>
                     <button
                         onClick={() => navigate(`/recruitment/jobs/edit/${job.id}`)}
                         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors shadow-sm"
@@ -111,7 +118,7 @@ const JobDetailPage: React.FC = () => {
                             <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                             </svg>
-                            Key Responsibilities
+                            Responsibilities
                         </h2>
                         <div className="prose prose-sm max-w-none text-text-secondary-light whitespace-pre-wrap leading-relaxed">
                             {job.responsibility}
@@ -136,20 +143,58 @@ const JobDetailPage: React.FC = () => {
                 <div className="space-y-6">
                     <section className="p-6 rounded-2xl border border-border-light bg-white shadow-card">
                         <h2 className="text-sm font-bold uppercase tracking-wider text-text-muted-light mb-4">
-                            Recruitment Info
+                            JOB DETAILS
                         </h2>
                         <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted-light uppercase">Quantity</label>
+                                    <p className="text-xl font-bold text-primary">{job.quantity} Position(s)</p>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted-light uppercase">Max CV</label>
+                                    <p className="text-xl font-bold text-emerald-600 truncate" title={String(job.maxCv)}>{job.maxCv || "N/A"}</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted-light uppercase">Work Location</label>
+                                    <p className="text-xl font-bold text-primary truncate" title={job.location}>{job.location || "N/A"}</p>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted-light uppercase">Employment Type</label>
+                                    <div className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-xs font-bold text-text-secondary-light uppercase tracking-wide mt-1">
+                                        {job.type || "FULL_TIME"}
+                                    </div>
+                                </div>
+                            </div>
                             <div>
-                                <label className="text-[10px] font-bold text-text-muted-light uppercase">Number of Openings</label>
-                                <p className="text-xl font-bold text-primary">{job.quantity}</p>
+                                <label className="text-[10px] font-bold text-text-muted-light uppercase">Salary</label>
+                                <p className="text-xl font-bold text-emerald-600 truncate" title={`$${job.minSalary} - $${job.maxSalary}`}>${job.minSalary} - ${job.maxSalary}</p>
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-text-muted-light uppercase">HR Manager</label>
-                                <p className="text-sm font-mono text-text-primary-light">{job.hrId || "N/A"}</p>
+                                <p className="text-sm font-mono text-text-primary-light">{job.hrName || "N/A"}</p>
                             </div>
                             <div>
-                                <label className="text-[10px] font-bold text-text-muted-light uppercase">Job Request ID</label>
-                                <p className="text-sm font-mono text-text-primary-light">{job.reqId}</p>
+                                <label className="text-[10px] font-bold text-text-muted-light uppercase mb-1 block">Job Request</label>
+                                <div>
+                                    {job.reqId ? (
+                                        <Link
+                                            to={`/recruitment/job-requests/${job.reqId}`}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition-colors shadow-sm"
+                                            title={String(job.reqId)}
+                                        >
+                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                            View Request
+                                        </Link>
+                                    ) : (
+                                        <span className="text-sm font-mono text-text-muted-light">N/A</span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </section>

@@ -21,5 +21,7 @@ public class ApplicationResponse {
     private String phone;
     private String cvUrl;
     private ApplicationStatus status;
+    private OffsetDateTime start;
+    private OffsetDateTime end;
 
 }

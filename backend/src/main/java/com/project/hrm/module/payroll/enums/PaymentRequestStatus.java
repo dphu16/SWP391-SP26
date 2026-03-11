@@ -1,8 +1,0 @@
-package com.project.hrm.module.payroll.enums;
-
-public enum PaymentRequestStatus {
-    PENDING,
-    APPROVED,
-    REJECTED,
-    PAID
-}
