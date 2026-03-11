@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from "react";
 import apiClient from "../../services/apiClient";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { getMyRequests, createRequest, updateRequest, deleteRequest, type RequestRecord as RequestRecordApi, type CreateRequestDTO } from "../../services/requestService";
+import { offboardingService, type OffboardingResponse } from "../../services/offboardingService";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type AppStatus = "Pending" | "Approved" | "Rejected";
-type AppType = "Leave" | "OT" | "ChangeShift";
-type ModalType = "Leave" | "OT" | "ChangeShift" | null;
+type AppType = "Leave" | "OT" | "ChangeShift" | "Resignation";
+type ModalType = "Leave" | "OT" | "ChangeShift" | "Resignation" | null;
 
 interface AttendanceEmployee {
     employeeId: string;
@@ -80,12 +81,18 @@ const typeIcon: Record<AppType, React.ReactNode> = {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
         </svg>
     ),
+    Resignation: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+    ),
 };
 
 const typeBg: Record<AppType, string> = {
     Leave: "bg-[#ccfbf1] text-[#0f766e]",
     OT: "bg-[#dcfce7] text-[#15803d]",
     ChangeShift: "bg-[#e0f2fe] text-[#0369a1]",
+    Resignation: "bg-[#fee2e2] text-[#b91c1c]",
 };
 
 const statusBadge: Record<AppStatus, string> = {
@@ -247,8 +254,27 @@ const Applications: React.FC = () => {
         }
         setLoadingRequests(true);
         try {
-            const data = await getMyRequests(currentUser.employeeId);
-            setRequests(data.map(mapApiRequest));
+            const [regularReqs, offboardingReqs] = await Promise.all([
+                getMyRequests(currentUser.employeeId),
+                offboardingService.getActiveRequests().catch(() => ({ data: [] }))
+            ]);
+
+            const mappedRegular = regularReqs.map(mapApiRequest);
+            
+            // Map offboarding requests if they belong to this user
+            const myOffboarding = (offboardingReqs.data || []).filter(
+                (o: OffboardingResponse) => o.employeeId === currentUser.employeeId && o.type === "RESIGNATION"
+            ).map((o: OffboardingResponse): RequestRecord => ({
+                id: o.offboardingId,
+                type: "Resignation",
+                typeLabel: "Resignation",
+                dateRequested: new Date(o.requestDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                datesAffected: o.expectedLastDay ? new Date(o.expectedLastDay).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "N/A",
+                status: (o.status === "PENDING" ? "Pending" : o.status === "CANCELLED" ? "Rejected" : "Approved") as AppStatus,
+                raw: {} as any // Dummy since we are mapping it differently
+            }));
+
+            setRequests([...mappedRegular, ...myOffboarding].sort((a, b) => new Date(b.dateRequested).getTime() - new Date(a.dateRequested).getTime()));
         } catch (error) {
             console.error("Error fetching requests", error);
         } finally {
@@ -307,12 +333,24 @@ const Applications: React.FC = () => {
                     endDate: formData.targetShiftDate,
                     reason: `Swap with ${swapEmployee.fullName} | ${formData.reason}`
                 };
+            } else if (modal === "Resignation") {
+                if (!formData.startDate) throw new Error("Please select an expected last day.");
+                if (!formData.reason) throw new Error("Please specify a reason.");
+                await offboardingService.createResignation(currentUser.employeeId, {
+                    type: "RESIGNATION",
+                    reason: formData.reason,
+                    expectedLastDay: formData.startDate
+                });
+                closeModal();
+                loadRequests();
+                setSubmitting(false);
+                return;
             } else return;
 
             if (editRequestId) {
-                await updateRequest(editRequestId, dto);
+                await updateRequest(editRequestId, dto!);
             } else {
-                await createRequest(dto);
+                await createRequest(dto!);
             }
             closeModal();
             loadRequests();
@@ -323,10 +361,16 @@ const Applications: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: string, status: AppStatus) => {
+    const handleDelete = async (id: string, status: AppStatus, type: AppType) => {
         if (status !== "Pending") return;
         try {
-            await deleteRequest(id);
+            if (type === "Resignation") {
+                const reason = window.prompt("Reason for cancellation:");
+                if (!reason) return;
+                await offboardingService.cancel(id, { cancelReason: reason });
+            } else {
+                await deleteRequest(id);
+            }
             loadRequests();
         } catch (error: any) {
             console.error(error.response?.data?.message || "Failed to delete request.");
@@ -403,8 +447,11 @@ const Applications: React.FC = () => {
                             <button onClick={() => handleDropdownItemClick("OT")} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#0f172a] hover:bg-[#f8fafc] transition-colors border-b border-[#f1f5f9]">
                                 OT Application
                             </button>
-                            <button onClick={() => handleDropdownItemClick("ChangeShift")} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#0f172a] hover:bg-[#f8fafc] transition-colors">
+                            <button onClick={() => handleDropdownItemClick("ChangeShift")} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#0f172a] hover:bg-[#f8fafc] transition-colors border-b border-[#f1f5f9]">
                                 Change Shift
+                            </button>
+                            <button onClick={() => handleDropdownItemClick("Resignation")} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors">
+                                Application for Resignation
                             </button>
                         </div>
                     )}
@@ -454,16 +501,16 @@ const Applications: React.FC = () => {
                                         <div className="flex items-center gap-3">
                                             <button
                                                 onClick={() => handleEdit(r)}
-                                                disabled={r.status !== "Pending"}
-                                                className={`transition-colors ${r.status !== "Pending" ? "text-gray-300 cursor-not-allowed" : "text-[#94a3b8] hover:text-[#0ea5e9]"}`}
-                                                title={r.status === "Pending" ? "Edit request" : "Cannot edit approved/rejected request"}
+                                                disabled={r.status !== "Pending" || r.type === "Resignation"}
+                                                className={`transition-colors ${r.status !== "Pending" || r.type === "Resignation" ? "text-gray-300 cursor-not-allowed" : "text-[#94a3b8] hover:text-[#0ea5e9]"}`}
+                                                title={r.status === "Pending" ? "Edit request" : "Cannot edit request"}
                                             >
                                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                                 </svg>
                                             </button>
                                             <button
-                                                onClick={() => handleDelete(r.id, r.status)}
+                                                onClick={() => handleDelete(r.id, r.status, r.type)}
                                                 disabled={r.status !== "Pending"}
                                                 className={`transition-colors ${r.status !== "Pending" ? "text-gray-300 cursor-not-allowed" : "text-[#94a3b8] hover:text-[#ef4444]"}`}
                                                 title={r.status === "Pending" ? "Delete request" : "Cannot delete approved/rejected request"}
@@ -489,12 +536,13 @@ const Applications: React.FC = () => {
                         <div className="flex justify-between items-center px-6 py-5 border-b border-[#e2e8f0]">
                             <div>
                                 <h3 className="text-lg font-bold text-[#0f172a]">
-                                    {editRequestId ? "Edit" : "New"} {modal === "Leave" ? "Leave Application" : modal === "OT" ? "OT Application" : "Shift Change Request"}
+                                    {editRequestId ? "Edit" : "New"} {modal === "Leave" ? "Leave Application" : modal === "OT" ? "OT Application" : modal === "Resignation" ? "Resignation Request" : "Shift Change Request"}
                                 </h3>
                                 <p className="text-sm text-[#64748b] mt-0.5">
                                     {modal === "Leave" && "Submit a leave request for approval."}
                                     {modal === "OT" && "Register your overtime hours for approval."}
                                     {modal === "ChangeShift" && "Request a shift swap with another employee."}
+                                    {modal === "Resignation" && "Submit your resignation request to HR/Manager."}
                                 </p>
                             </div>
                             <button onClick={closeModal} className="text-[#94a3b8] hover:text-[#64748b] transition-colors">
@@ -647,6 +695,39 @@ const Applications: React.FC = () => {
                                             value={formData.reason}
                                             onChange={e => setFormData({ ...formData, reason: e.target.value })}
                                             placeholder="Reason for the shift change..."
+                                            className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+                                        />
+                                    </div>
+                                </>
+                            )}
+                            {modal === "Resignation" && (
+                                <>
+                                    <div className="bg-red-50 p-4 rounded-xl border border-red-100 flex items-start gap-3">
+                                        <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        <div className="text-sm text-red-800">
+                                            <p className="font-semibold">Notice regarding resignation</p>
+                                            <p className="mt-1 opacity-90">Please ensure you have communicated with your direct manager before submitting this official request in the system.</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-[#334155] mb-1.5">Expected Last Day</label>
+                                        <input
+                                            type="date"
+                                            value={formData.startDate}
+                                            onChange={e => setFormData({ ...formData, startDate: e.target.value })}
+                                            min={new Date().toISOString().split("T")[0]}
+                                            className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-[#334155] mb-1.5">Reason for Resignation</label>
+                                        <textarea
+                                            rows={4}
+                                            value={formData.reason}
+                                            onChange={e => setFormData({ ...formData, reason: e.target.value })}
+                                            placeholder="Please describe your reason..."
                                             className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
                                         />
                                     </div>

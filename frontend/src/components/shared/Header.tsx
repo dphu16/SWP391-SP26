@@ -179,7 +179,7 @@ const Header: React.FC = () => {
 
  return (
  <>
- <header className="h-16 flex-shrink-0 bg-surface-light border-b border-border-light flex items-center justify-between px-6 z-30">
+ <header className="relative h-16 flex-shrink-0 bg-surface-light border-b border-border-light flex items-center justify-between px-6 z-30">
  {/* ── Left: Breadcrumb ── */}
  <nav aria-label="Breadcrumb">
  <ol className="flex items-center gap-1.5 text-sm">

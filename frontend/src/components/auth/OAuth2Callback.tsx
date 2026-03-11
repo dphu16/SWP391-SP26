@@ -3,16 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { saveToken } from "../../services/authService";
 import { decodeJwt } from "../../utils/jwtDecode";
 
-/**
- * OAuth2 Callback Page
- *
- * After Google login, the Spring Boot backend redirects here with a JWT token
- * in the URL query string, e.g.:
- *   /oauth2/callback?token=<jwt>
- *
- * This component extracts the token, validates it, saves it to localStorage,
- * and then redirects the user to the dashboard.
- */
 const OAuth2Callback: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();

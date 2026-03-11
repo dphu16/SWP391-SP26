@@ -52,37 +52,37 @@ export const offboardingService = {
   createResignation: (employeeId: string, data: OffboardingRequestPayload) =>
     apiClient.post<OffboardingResponse>(
       `/api/offboarding/resign/${employeeId}`,
-      data
+      data,
     ),
 
   // BRD 3.1: Quản lý đề xuất sa thải / hết HĐ
   createManagerProposal: (
     employeeId: string,
-    data: OffboardingRequestPayload
+    data: OffboardingRequestPayload,
   ) =>
     apiClient.post<OffboardingResponse>(
       `/api/offboarding/propose/${employeeId}`,
-      data
+      data,
     ),
 
   // BRD 3.1: Quản lý duyệt
   managerApprove: (offboardingId: string) =>
     apiClient.put<OffboardingResponse>(
-      `/api/offboarding/${offboardingId}/manager-approve`
+      `/api/offboarding/${offboardingId}/manager-approve`,
     ),
 
   // BRD 3.1 + 3.4: HR xác nhận
   hrConfirm: (offboardingId: string, data: HRConfirmPayload) =>
     apiClient.put<OffboardingResponse>(
       `/api/offboarding/${offboardingId}/hr-confirm`,
-      data
+      data,
     ),
 
   // BRD 3.2: Hủy yêu cầu
   cancel: (offboardingId: string, data: CancelOffboardingPayload) =>
     apiClient.put<OffboardingResponse>(
       `/api/offboarding/${offboardingId}/cancel`,
-      data
+      data,
     ),
 
   // Query
@@ -96,8 +96,7 @@ export const offboardingService = {
     apiClient.get<OffboardingResponse>(`/api/offboarding/${offboardingId}`),
 
   // Legacy
-  getInactiveEmployees: () =>
-    apiClient.get("/api/employees/inactive"),
+  getInactiveEmployees: () => apiClient.get("/api/employees/inactive"),
 
   terminateEmployee: (id: string) =>
     apiClient.put(`/api/employees/${id}/terminate`),
