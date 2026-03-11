@@ -183,7 +183,7 @@ const JobDetailPage: React.FC = () => {
                                         <Link
                                             to={`/recruitment/job-requests/${job.reqId}`}
                                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition-colors shadow-sm"
-                                            title={job.reqName || String(job.reqId)}
+                                            title={String(job.reqId)}
                                         >
                                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

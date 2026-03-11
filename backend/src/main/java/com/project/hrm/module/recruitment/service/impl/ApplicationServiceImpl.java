@@ -91,6 +91,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         List<Application> applications =
                 applicationRepository.findByJob_IdAndStatus(id, status);
 
+
         return applications.stream()
                 .map(this::mapToResponse)
                 .toList();
