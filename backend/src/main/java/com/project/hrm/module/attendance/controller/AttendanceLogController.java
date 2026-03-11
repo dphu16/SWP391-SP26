@@ -8,6 +8,7 @@ import com.project.hrm.module.attendance.dto.DepartmentDTO;
 import com.project.hrm.module.corehr.repository.DepartmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,18 +36,20 @@ public class AttendanceLogController {
 
     // 3. Xem tất cả chấm công (Manager)
     @GetMapping("/logs")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<AttendanceLog>> getAllLogs() {
         return ResponseEntity.ok(service.getAllLogs());
     }
 
     // 4. Sửa công (Manager)
     @PutMapping("/logs/{id}")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<AttendanceLog> updateLog(@PathVariable UUID id, @RequestBody AttendanceRequest req) {
         return ResponseEntity.ok(service.updateLog(id, req));
     }
 
-    // Đặt trong class Controller của bạn
     @GetMapping("/summary")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<AttendanceSummaryDTO>> getSummaryReport(
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year,
@@ -56,6 +59,7 @@ public class AttendanceLogController {
         List<AttendanceSummaryDTO> result = service.getAttendanceSummaryReport(month, year, departmentId, employeeId);
         return ResponseEntity.ok(result);
     }
+
     private final DepartmentRepository departmentRepository;
 
     @GetMapping

@@ -1,6 +1,6 @@
 package com.project.hrm.module.recruitment.controller;
 
-import com.project.hrm.module.corehr.enums.UserRole;
+import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.recruitment.dto.response.DepartmentResponse;
 import com.project.hrm.module.recruitment.dto.response.EmployeeResponse;
 import com.project.hrm.module.recruitment.dto.response.PositionResponse;
@@ -22,7 +22,7 @@ public class EDPController {
     @GetMapping("/hr")
     public ResponseEntity<List<EmployeeResponse>> getAllHr() {
 
-        List<EmployeeResponse> responses = edpService.getEmployeeByRole(UserRole.HR);
+        List<EmployeeResponse> responses = edpService.getEmployeeByRole(EmployeeRole.ROLE_HR);
 
         return ResponseEntity.ok(responses);
     }

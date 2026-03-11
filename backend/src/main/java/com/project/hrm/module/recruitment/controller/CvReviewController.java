@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -18,6 +19,7 @@ import java.util.UUID;
 public class CvReviewController {
     private final CvReviewService cvReviewService;
     @PostMapping
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<CvReviewResponse> create(
             @Valid @RequestBody CvReviewRequest request) {
 
@@ -27,6 +29,7 @@ public class CvReviewController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<CvReviewResponse> getCvReviewById(
             @PathVariable UUID id) {
 

@@ -1,6 +1,9 @@
 
 package com.project.hrm.module.corehr.dto.request;
 
+import com.project.hrm.module.corehr.enums.EmployeeRole;
+import com.project.hrm.module.corehr.enums.EmployeeStatus;
+import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.enums.Gender;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -17,43 +20,37 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CreateNewHireDTO {
+
     @NotBlank
     private String fullName;
-
     private String phone;
-
     @Email
     private String email;
-
     private Gender gender;
-
     private String address;
-
     @NotNull
     private UUID departmentId;
-
     @NotNull
     private UUID positionId;
-
     private String citizenId;
-
     private String taxCode;
-
     private LocalDate dateOfBirth;
-
     private String avatarUrl;
-
     private UUID sourceApplicationId;
-
-    private UUID managerId;
-
-    private String dependentName;
-
-    private String relationship;
+    private UUID mentorId;
+    private LocalDate dateOfJoining;
 
     @NotNull
-    private BigDecimal baseSalaryMin;
+    private EmployeeRole role;
 
     @NotNull
-    private BigDecimal baseSalaryMax;
+    private EmployeeStatus status;
+
+    @NotNull
+    private BigDecimal baseSalary;
+
+    private String contractNumber;
+    private String contractType;
+    private LocalDate startDate;
+    private LocalDate endDate;
 }

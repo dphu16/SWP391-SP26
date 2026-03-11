@@ -1,6 +1,7 @@
 package com.project.hrm.module.corehr.repository.specification;
 
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.enums.EmployeeRole;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
 import jakarta.persistence.criteria.*;
@@ -50,7 +51,7 @@ public class EmployeeSpecification {
                 }
 
                 try {
-                    com.project.hrm.module.corehr.enums.UserRole parsedRole = com.project.hrm.module.corehr.enums.UserRole
+                    EmployeeRole parsedRole = EmployeeRole
                             .valueOf(roleEnumStr);
                     predicate = criteriaBuilder.and(predicate,
                             criteriaBuilder.equal(userJoin.get("role"), parsedRole));

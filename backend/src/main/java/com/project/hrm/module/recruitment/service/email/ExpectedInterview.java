@@ -13,8 +13,7 @@ public class ExpectedInterview {
     private final JavaMailSender mailSender;
 
     @Async
-    public void sendEmail(Application app) {
-        String title = app.getJob().getPos().getTitle();
+    public void sendEmail(Application app, String title) {
 
         String subject = "Interview Invitation - " + title;
 

@@ -36,24 +36,10 @@ public class KpiLibraryController {
     }
 
     @GetMapping
-    public ResponseEntity<List<KpiLibraryResponse>> getAll(){
-        return ResponseEntity.ok(service.getAll());
+    public ResponseEntity<List<KpiLibraryResponse>> getAll(@RequestParam(required = false) UUID departmentId){
+        return ResponseEntity.ok(service.getAll(departmentId));
     }
 
-    @GetMapping("/{kpiId}")
-    public ResponseEntity<KpiLibraryResponse> getById(@PathVariable UUID kpiId){
-        return ResponseEntity.ok(service.getById(kpiId));
-    }
 
-    @PutMapping("/{kpiId}")
-    public ResponseEntity<KpiLibraryResponse> update(@PathVariable UUID kpiId, @Valid @RequestBody KpiLibraryRequest req){
-        return ResponseEntity.ok(service.updateKpi(kpiId, req));
-    }
-
-    @DeleteMapping("/{kpiId}")
-    public ResponseEntity<Void> delete(@PathVariable UUID kpiId){
-        service.delete(kpiId);
-        return ResponseEntity.noContent().build();
-    }
 
 }

@@ -3,7 +3,7 @@ package com.project.hrm.module.recruitment.service.impl;
 import com.project.hrm.module.corehr.entity.Department;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.entity.Position;
-import com.project.hrm.module.corehr.enums.UserRole;
+import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.recruitment.dto.response.DepartmentResponse;
 import com.project.hrm.module.recruitment.dto.response.EmployeeResponse;
 import com.project.hrm.module.recruitment.dto.response.PositionResponse;
@@ -27,7 +27,7 @@ public class EDPServiceImpl implements EDPService {
     private final RPositionRepository RPositionRepository;
 
     @Override
-    public List<EmployeeResponse> getEmployeeByRole(UserRole role) {
+    public List<EmployeeResponse> getEmployeeByRole(EmployeeRole role) {
         List<Employee> employees = REmployeeRepository.findByUser_Role(role);
 
         return employees.stream()

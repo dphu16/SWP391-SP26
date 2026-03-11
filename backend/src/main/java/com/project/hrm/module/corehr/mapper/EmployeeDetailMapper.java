@@ -6,6 +6,9 @@ import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.entity.Position;
 import com.project.hrm.module.corehr.entity.User;
 
+import java.util.Collections;
+import java.util.stream.Collectors;
+
 public class EmployeeDetailMapper {
 
     public static EmployeeDetailDTO toDTO(Employee employee) {
@@ -18,7 +21,6 @@ public class EmployeeDetailMapper {
                 .employeeCode(employee.getEmployeeCode())
                 .avatarUrl(employee.getPersonal().getAvatar())
                 .fullName(employee.getFullName())
-                .username(user != null ? user.getUsername() : null)
                 .email(user != null ? user.getEmail() : employee.getPersonal().getEmail())
                 .phone(employee.getPersonal().getPhone())
                 .address(employee.getPersonal().getAddress())
@@ -27,10 +29,12 @@ public class EmployeeDetailMapper {
                 .taxCode(employee.getPersonal().getTaxCode())
                 .dateOfBirth(employee.getPersonal().getDateOfBirth())
                 .dateOfJoining(employee.getDateOfJoining())
-                .role(user != null ? user.getRole() : null)
+                .roles(user != null ? user.getRoles().stream()
+                        .map(r -> r.getName().name())
+                        .collect(Collectors.toSet()) : Collections.emptySet())
                 .positionTitle(position != null ? position.getTitle() : null)
                 .deptName(department != null ? department.getDeptName() : null)
-                .statusPos(employee.getEmpStatus())
+                .statusEmp(employee.getStatus())
                 .status(user != null ? user.getStatus() : null)
                 .build();
     }

@@ -64,7 +64,7 @@ public class JobServiceImpl implements JobService {
     }
 
     @Override
-    public List<JobResponse> getJobByStatus(String status) {
+    public List<JobResponse> getJobByStatus(JobStatus status) {
         List<Job> responses = jobRepository.findByStatus(status);
         return responses.stream()
                 .map(this::mapToResponse)

@@ -1,10 +1,11 @@
 package com.project.hrm.module.corehr.dto.request;
 
-import com.project.hrm.module.corehr.enums.UserRole;
+import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.util.Set;
 import java.util.UUID;
 
 @Data
@@ -16,7 +17,7 @@ public class EmployeeDTO {
     private String fullName;
     private String phone;
     private String positionTitle;
-    private UserRole role;
+    private Set<String> roles;
     private String deptName;
-    private UserStatus statusRole;
+    private EmployeeStatus statusEmp;
 }

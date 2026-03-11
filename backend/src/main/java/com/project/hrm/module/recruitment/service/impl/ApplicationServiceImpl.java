@@ -117,7 +117,8 @@ public class ApplicationServiceImpl implements ApplicationService {
         app.setStart(request.getStart());
         app.setEnd(request.getEnd());
         applicationRepository.save(app);
-        expectedInterview.sendEmail(app);
+        String title = app.getJob().getPos().getTitle();
+        expectedInterview.sendEmail(app, title);
 
         return mapToResponse(app);
     }

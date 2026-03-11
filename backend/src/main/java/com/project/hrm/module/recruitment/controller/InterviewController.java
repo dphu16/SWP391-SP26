@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.UUID;
 public class InterviewController {
     private final InterviewService interviewService;
     @PostMapping
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<InterviewResponse> createSchedule(
             @Valid @RequestBody InterviewRequest request) {
 
@@ -28,6 +30,7 @@ public class InterviewController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<InterviewResponse> getInterviewById(
             @PathVariable UUID id) {
 
@@ -35,6 +38,7 @@ public class InterviewController {
     }
 
     @PatchMapping("/{id}/result")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<InterviewResponse> inputResult(
             @PathVariable UUID id,
             @RequestBody InterviewRequest request) {
@@ -45,6 +49,7 @@ public class InterviewController {
     }
 
     @GetMapping("/list/{id}")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<InterviewResponse>> getInterviewByHr(@PathVariable UUID id) {
         List<InterviewResponse> responses = interviewService.getInterviewByHr(id);
         return ResponseEntity.ok(responses);
