@@ -40,7 +40,7 @@ const PublicJobDetail: React.FC = () => {
         const fetchJob = async () => {
             try {
                 setLoading(true);
-                const res = await jobService.getById(id);
+                const res = await jobService.getPublicJobById(id);
                 setJob(res.data);
             } catch (err: any) {
                 toastError("Error", "Could not fetch job details.");
@@ -70,7 +70,7 @@ const PublicJobDetail: React.FC = () => {
             formData.append("phone", applicantPhone);
             formData.append("cvUrl", applicantCv);
 
-            await applicationService.applyJob(formData);
+            await applicationService.applyJobCandidate(formData);
 
             toastSuccess("Success", "Your application has been submitted successfully!");
             // Reset form

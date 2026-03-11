@@ -7,8 +7,15 @@ export const applicationService = {
     // Status can be updated via PUT /api/applications/{id}/status 
     updateStatus: (id: string, status: string) => apiClient.put<Application>(`/api/applications/${id}/status`, null, { params: { status } }),
 
-    // Upload CV
+    // Upload CV (Internal / HR)
     applyJob: (formData: FormData) => apiClient.post(`/api/app`, formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        }
+    }),
+
+    // Upload CV (Public Candidate)
+    applyJobCandidate: (formData: FormData) => apiClient.post(`/api/app/candidate`, formData, {
         headers: {
             "Content-Type": "multipart/form-data",
         }

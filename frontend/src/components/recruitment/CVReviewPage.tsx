@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { applicationService } from "../../services/applicationService";
-import type { Application } from "../../types";
+import type { Application } from "../coreHR/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
 import { useToast } from "../ui/Toast";
 import { getToken } from "../../services/authService";
@@ -222,12 +222,12 @@ const CVReviewPage: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
                             <label className="text-[10px] font-bold text-text-muted-light uppercase">Full Name</label>
-                            <p className="font-semibold text-text-primary-light text-lg">{app.fullName}</p>
+                            <p className="font-semibold text-text-primary-light text-lg">{app.candidateName}</p>
                         </div>
                         <div>
                             <label className="text-[10px] font-bold text-text-muted-light uppercase">Contact Info</label>
-                            <p className="text-text-secondary-light">{app.email}</p>
-                            <p className="text-text-secondary-light">{app.phone}</p>
+                            <p className="text-text-secondary-light">{app.candidateEmail}</p>
+                            <p className="text-text-secondary-light">{app.candidatePhone}</p>
                         </div>
                     </div>
 

@@ -32,15 +32,14 @@ const PublicJobList: React.FC = () => {
     const fetchJobs = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await jobService.getAll();
+            const res = await jobService.getActiveJobs();
             const now = new Date();
-            // Filter and process only OPEN jobs
+            // Filter out any expired jobs from the list returned by backend
             const openJobs = res.data.filter(job => {
-                let currentStatus = job.status;
-                if (currentStatus !== "CLOSED" && job.closedTime && new Date(job.closedTime) < now) {
-                    currentStatus = "CLOSED";
+                if (job.closedTime && new Date(job.closedTime) < now) {
+                    return false;
                 }
-                return currentStatus === "OPEN";
+                return true;
             });
             setJobs(openJobs);
         } catch (err: any) {
@@ -60,7 +59,7 @@ const PublicJobList: React.FC = () => {
 
     const filteredJobs = useMemo(() => {
         return jobs.filter(job =>
-            job.posName.toLowerCase().includes(searchTerm.toLowerCase())
+            (job.posName || "").toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [jobs, searchTerm]);
 

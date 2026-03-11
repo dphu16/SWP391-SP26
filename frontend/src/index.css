@@ -221,3 +221,41 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  /* Hide sidebar and top header */
+  aside, 
+  header, 
+  nav, 
+  button {
+    display: none !important;
+  }
+  
+  /* Reset background and remove shadows */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  /* Make main content take full width */
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Target the specific print container */
+  .print-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    page-break-inside: avoid;
+  }
+  
+  .bento-card, .shadow-card {
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+}

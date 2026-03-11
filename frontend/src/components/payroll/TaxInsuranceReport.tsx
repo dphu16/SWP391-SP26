@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { getBatches, getBatchDetailsForReview, type PayrollBatchDTO, type PayrollReviewDTO } from "../../services/payrollService";
-
-// ─── Helpers ───────────────────────────────────────────────────────────────────
+import { getBatches, getTaxInsuranceReport, type PayrollBatchDTO, type TaxInsuranceDTO } from "../../services/payrollService";// ─── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n?: number | null) =>
     n != null ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n) : "—";
 
@@ -11,42 +9,7 @@ const fmtPeriod = (period?: string | null) => {
     return `Month ${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 };
 
-// Calculate progressive PIT (Personal Income Tax) in VN
-function calcPIT(gross: number): number {
-    const ins = gross * 0.105;
-    const taxable = gross - ins;
-    const assess = taxable - 11_000_000;
-    if (assess <= 0) return 0;
-    let tax = 0;
-    if (assess <= 5_000_000) tax = assess * 0.05;
-    else if (assess <= 10_000_000) tax = assess * 0.10 - 250_000;
-    else if (assess <= 18_000_000) tax = assess * 0.15 - 750_000;
-    else if (assess <= 32_000_000) tax = assess * 0.20 - 1_650_000;
-    else if (assess <= 52_000_000) tax = assess * 0.25 - 3_250_000;
-    else if (assess <= 80_000_000) tax = assess * 0.30 - 5_850_000;
-    else tax = assess * 0.35 - 9_850_000;
-    return Math.max(tax, 0);
-}
 
-// Insurance rates
-const INS_RATE = 0.105; // 8% BHXH + 1.5% BHYT + 1% BHTN
-const BHXH_RATE = 0.08;
-const BHYT_RATE = 0.015;
-const BHTN_RATE = 0.01;
-
-interface TaxRow {
-    name: string;
-    dept: string;
-    gross: number;
-    baseSalary: number;
-    bhxh: number;
-    bhyt: number;
-    bhtn: number;
-    totalIns: number;
-    pit: number;
-    totalDeduct: number;
-    net: number;
-}
 
 // ─── Icons ─────────────────────────────────────────────────────────────────────
 const IcReport = () => (
@@ -95,10 +58,12 @@ const IcUsers = () => (
 // ─── Confirm Modal ─────────────────────────────────────────────────────────────
 const ConfirmModal: React.FC<{
     batch: PayrollBatchDTO;
-    rows: TaxRow[];
+    rows: TaxInsuranceDTO[];
     onSend: () => void;
     onClose: () => void;
-}> = ({ batch, rows, onSend, onClose }) => {
+    sending: boolean;
+    sent: boolean;
+}> = ({ batch, rows, onSend, onClose, sending, sent }) => {
     const totalPIT = rows.reduce((s, r) => s + r.pit, 0);
     const totalIns = rows.reduce((s, r) => s + r.totalIns, 0);
     const totalBHXH = rows.reduce((s, r) => s + r.bhxh, 0);
@@ -112,54 +77,84 @@ const ConfirmModal: React.FC<{
                 {/* Header */}
                 <div className="px-6 py-5 bg-gradient-to-r from-indigo-600 to-violet-700 flex items-center gap-3">
                     <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-white flex-shrink-0">
-                        <IcSend />
+                        {sent ? <IcCheck /> : <IcSend />}
                     </div>
                     <div>
-                        <h3 className="text-base font-bold text-white">Confirm Send Report</h3>
+                        <h3 className="text-base font-bold text-white">
+                            {sent ? "Report Sent" : "Confirm Send Report"}
+                        </h3>
                         <p className="text-xs text-white/70">{fmtPeriod(batch.period)} · {rows.length} employees</p>
                     </div>
                 </div>
 
-                {/* Summary */}
-                <div className="px-6 py-5 space-y-3">
-                    <p className="text-sm text-slate-600">The Personal Income Tax and Insurance report will be sent to the Finance - Accounting department:</p>
+                {/* Body */}
+                {!sent ? (
+                    <>
+                        {/* Summary */}
+                        <div className="px-6 py-5 space-y-3">
+                            <p className="text-sm text-slate-600">The Personal Income Tax and Insurance report will be sent to the Finance - Accounting department:</p>
 
-                    <div className="rounded-xl bg-indigo-50 border border-indigo-100 divide-y divide-indigo-100">
-                        {[
-                            { label: "Total PIT", value: fmt(totalPIT), color: "text-indigo-700" },
-                            { label: "Total Social Insurance (8%)", value: fmt(totalBHXH), color: "text-slate-700" },
-                            { label: "Total Health Insurance (1.5%)", value: fmt(totalBHYT), color: "text-slate-700" },
-                            { label: "Total Unemployment Insurance (1%)", value: fmt(totalBHtn), color: "text-slate-700" },
-                            { label: "Total Insurances", value: fmt(totalIns), color: "text-violet-700 font-bold" },
-                        ].map((r, i) => (
-                            <div key={i} className="flex items-center justify-between px-4 py-2.5">
-                                <span className="text-sm text-slate-600">{r.label}</span>
-                                <span className={`text-sm font-semibold ${r.color}`}>{r.value}</span>
+                            <div className="rounded-xl bg-indigo-50 border border-indigo-100 divide-y divide-indigo-100">
+                                {[
+                                    { label: "Total PIT", value: fmt(totalPIT), color: "text-indigo-700" },
+                                    { label: "Total Social Insurance (8%)", value: fmt(totalBHXH), color: "text-slate-700" },
+                                    { label: "Total Health Insurance (1.5%)", value: fmt(totalBHYT), color: "text-slate-700" },
+                                    { label: "Total Unemployment Insurance (1%)", value: fmt(totalBHtn), color: "text-slate-700" },
+                                    { label: "Total Insurances", value: fmt(totalIns), color: "text-violet-700 font-bold" },
+                                ].map((r: { label: string, value: string, color: string }, i: number) => (
+                                    <div key={i} className="flex items-center justify-between px-4 py-2.5">
+                                        <span className="text-sm text-slate-600">{r.label}</span>
+                                        <span className={`text-sm font-semibold ${r.color}`}>{r.value}</span>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
 
-                    <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5">
-                            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                            <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-                        </svg>
-                        <p className="text-xs text-amber-700">Once sent, the data will be transferred to the accounting system. Please review carefully before confirming.</p>
-                    </div>
-                </div>
+                            <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                                    <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+                                </svg>
+                                <p className="text-xs text-amber-700">Once sent, the data will be transferred to the accounting system. Please review carefully before confirming.</p>
+                            </div>
+                        </div>
 
-                <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-                    <button onClick={onClose} className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-white cursor-pointer">Cancel</button>
-                    <button onClick={onSend}
-                        className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700 cursor-pointer shadow-sm">
-                        <IcSend /> Confirm & Send
-                    </button>
-                </div>
+                        {/* Actions */}
+                        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+                            <button onClick={onClose} disabled={sending} className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-white cursor-pointer disabled:opacity-50">Cancel</button>
+                            <button onClick={onSend} disabled={sending}
+                                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700 cursor-pointer shadow-sm disabled:opacity-75">
+                                <span className={sending ? "animate-spin" : ""}>
+                                    {sending ? <IcRefresh /> : <IcSend />}
+                                </span>
+                                {sending ? "Sending..." : "Confirm & Send"}
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex flex-col items-center justify-center p-10 py-14 text-center animate-in fade-in zoom-in duration-500">
+                            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-5 shadow-inner ring-4 ring-emerald-50">
+                                <svg className="w-10 h-10 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-800 mb-2">Report Sent Successfully!</h3>
+                            <p className="text-sm text-slate-500 max-w-[280px] leading-relaxed mx-auto">
+                                The system has saved the status and notified the Finance department to proceed with the review.
+                            </p>
+                        </div>
+                        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-center">
+                            <button onClick={onClose}
+                                className="w-full sm:w-auto px-10 py-2.5 rounded-xl text-sm font-bold bg-slate-800 text-white hover:bg-slate-900 transition-all cursor-pointer shadow-sm">
+                                Done
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
 };
-
 // ─── Success Toast Notification ────────────────────────────────────────────────
 const SuccessToast: React.FC<{ period: string; onClose: () => void }> = ({ period, onClose }) => (
     <div className="fixed bottom-6 right-6 z-50 animate-[slideUp_0.3s_ease]">
@@ -181,6 +176,7 @@ const SuccessToast: React.FC<{ period: string; onClose: () => void }> = ({ perio
     </div>
 );
 
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN: Tax & Insurance Report Page
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -188,7 +184,7 @@ const TaxInsuranceReport: React.FC = () => {
     const [batches, setBatches] = useState<PayrollBatchDTO[]>([]);
     const [selId, setSelId] = useState("");
     const [batchLoad, setBatchLoad] = useState(true);
-    const [rows, setRows] = useState<PayrollReviewDTO[]>([]);
+    const [taxRows, setTaxRows] = useState<TaxInsuranceDTO[]>([]);
     const [loading, setLoading] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [sending, setSending] = useState(false);
@@ -211,46 +207,36 @@ const TaxInsuranceReport: React.FC = () => {
     useEffect(() => {
         if (!selId) return;
         setLoading(true);
-        setRows([]);
-        getBatchDetailsForReview(selId)
-            .then(setRows)
-            .catch(() => setRows([]))
+        setTaxRows([]);
+        getTaxInsuranceReport(selId)
+            .then(setTaxRows)
+            .catch(() => setTaxRows([]))
             .finally(() => setLoading(false));
     }, [selId]);
 
-    // Build tax rows
-    const taxRows: TaxRow[] = rows.map(r => {
-        const gross = r.grossSalary ?? 0;
-        const base = r.baseSalary ?? 0;
-        const bhxh = base * BHXH_RATE;
-        const bhyt = base * BHYT_RATE;
-        const bhtn = base * BHTN_RATE;
-        const totalIns = base * INS_RATE;
-        const pit = calcPIT(gross);
-        const totalDeduct = totalIns + pit;
-        const net = Math.max(gross - totalDeduct, 0);
-        return {
-            name: r.employeeName, dept: r.department, gross, baseSalary: base,
-            bhxh, bhyt, bhtn, totalIns, pit, totalDeduct, net
-        };
-    });
+    const totalGross = taxRows.reduce((s, r) => s + (r.grossSalary ?? 0), 0);
+    const totalPIT = taxRows.reduce((s, r) => s + (r.pit ?? 0), 0);
+    const totalIns = taxRows.reduce((s, r) => s + (r.totalIns ?? 0), 0);
+    const totalBHXH = taxRows.reduce((s, r) => s + (r.bhxh ?? 0), 0);
+    const totalBHYT = taxRows.reduce((s, r) => s + (r.bhyt ?? 0), 0);
+    const totalNet = taxRows.reduce((s, r) => s + (r.netSalary ?? 0), 0);
 
-    const totalGross = taxRows.reduce((s, r) => s + r.gross, 0);
-    const totalPIT = taxRows.reduce((s, r) => s + r.pit, 0);
-    const totalIns = taxRows.reduce((s, r) => s + r.totalIns, 0);
-    const totalBHXH = taxRows.reduce((s, r) => s + r.bhxh, 0);
-    const totalBHYT = taxRows.reduce((s, r) => s + r.bhyt, 0);
-    const totalNet = taxRows.reduce((s, r) => s + r.net, 0);
     const selBatch = batches.find(b => b.batchId === selId);
     const period = fmtPeriod(selBatch?.period);
     const alreadySent = sentPeriods.has(selId);
 
     const handleSend = async () => {
         setSending(true);
-        setShowConfirm(false);
-        await new Promise(r => setTimeout(r, 1200));
-        setSending(false);
+
+        // Simulate network communication to finance subsystem
+        await new Promise(r => setTimeout(r, 1000));
+
+        // Mark tax report as sent locally so Finance can see it
+        localStorage.setItem(`tax_report_sent_${selId}`, "true");
         setSentPeriods(prev => new Set([...prev, selId]));
+
+        setShowConfirm(false);
+        setSending(false);
         setShowToast(true);
         setTimeout(() => setShowToast(false), 4500);
     };
@@ -292,7 +278,7 @@ const TaxInsuranceReport: React.FC = () => {
                         <div className="relative">
                             <select value={selId} onChange={e => { setSelId(e.target.value); }}
                                 className="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer">
-                                {batches.map(b => (
+                                {batches.map((b: PayrollBatchDTO) => (
                                     <option key={b.batchId} value={b.batchId}>
                                         {fmtPeriod(b.period)} — {b.status}
                                     </option>
@@ -319,7 +305,7 @@ const TaxInsuranceReport: React.FC = () => {
                         { label: "Total Gross", value: fmt(totalGross), icon: <IcReport />, from: "from-violet-500", to: "to-purple-600" },
                         { label: "Total PIT", value: fmt(totalPIT), icon: <IcTax />, from: "from-rose-500", to: "to-pink-600" },
                         { label: "Total Ins (10.5%)", value: fmt(totalIns), icon: <IcShield />, from: "from-emerald-500", to: "to-teal-600" },
-                    ].map((c, i) => (
+                    ].map((c: { label: string, value: string, icon: React.ReactNode, from: string, to: string }, i: number) => (
                         <div key={i} className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
                             <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${c.from} ${c.to} flex items-center justify-center text-white flex-shrink-0 shadow-sm`}>
                                 {c.icon}
@@ -390,19 +376,19 @@ const TaxInsuranceReport: React.FC = () => {
                                     <p className="text-xs text-slate-400 mt-1">Please select a calculated batch or go to Payroll Management (HR) to calculate payroll.</p>
                                 </td></tr>
                             ) : (
-                                taxRows.map((r, idx) => (
+                                taxRows.map((r: TaxInsuranceDTO, idx: number) => (
                                     <tr key={idx} className="hover:bg-indigo-50/20 transition-colors">
                                         <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{String(idx + 1).padStart(2, "0")}</td>
                                         <td className="px-4 py-3.5">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                                    {r.name?.charAt(0).toUpperCase()}
+                                                    {r.employeeName?.charAt(0).toUpperCase()}
                                                 </div>
-                                                <span className="font-semibold text-slate-800 whitespace-nowrap">{r.name}</span>
+                                                <span className="font-semibold text-slate-800 whitespace-nowrap">{r.employeeName}</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3.5 text-slate-500 text-xs whitespace-nowrap">{r.dept || "—"}</td>
-                                        <td className="px-4 py-3.5 font-semibold text-slate-800 whitespace-nowrap">{fmt(r.gross)}</td>
+                                        <td className="px-4 py-3.5 text-slate-500 text-xs whitespace-nowrap">{r.department || "—"}</td>
+                                        <td className="px-4 py-3.5 font-semibold text-slate-800 whitespace-nowrap">{fmt(r.grossSalary)}</td>
                                         <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">{fmt(r.baseSalary)}</td>
                                         <td className="px-4 py-3.5 text-blue-700 whitespace-nowrap">-{fmt(r.bhxh)}</td>
                                         <td className="px-4 py-3.5 text-green-700 whitespace-nowrap">-{fmt(r.bhyt)}</td>
@@ -410,7 +396,7 @@ const TaxInsuranceReport: React.FC = () => {
                                         <td className="px-4 py-3.5 font-semibold text-emerald-700 whitespace-nowrap">-{fmt(r.totalIns)}</td>
                                         <td className="px-4 py-3.5 font-semibold text-rose-600 whitespace-nowrap">-{fmt(r.pit)}</td>
                                         <td className="px-4 py-3.5">
-                                            <span className="font-bold text-violet-700 whitespace-nowrap">{fmt(r.net)}</span>
+                                            <span className="font-bold text-violet-700 whitespace-nowrap">{fmt(r.netSalary)}</span>
                                         </td>
                                     </tr>
                                 ))
@@ -424,7 +410,7 @@ const TaxInsuranceReport: React.FC = () => {
                                     <td className="px-4 py-3" />
                                     <td className="px-4 py-3 font-bold text-blue-700 whitespace-nowrap">-{fmt(totalBHXH)}</td>
                                     <td className="px-4 py-3 font-bold text-green-700 whitespace-nowrap">-{fmt(totalBHYT)}</td>
-                                    <td className="px-4 py-3 font-bold text-amber-700 whitespace-nowrap">-{fmt(taxRows.reduce((s, r) => s + r.bhtn, 0))}</td>
+                                    <td className="px-4 py-3 font-bold text-amber-700 whitespace-nowrap">-{fmt(taxRows.reduce((s: number, r: TaxInsuranceDTO) => s + (r.bhtn ?? 0), 0))}</td>
                                     <td className="px-4 py-3 font-bold text-emerald-700 whitespace-nowrap">-{fmt(totalIns)}</td>
                                     <td className="px-4 py-3 font-bold text-rose-600 whitespace-nowrap">-{fmt(totalPIT)}</td>
                                     <td className="px-4 py-3 font-bold text-violet-700 text-base whitespace-nowrap">{fmt(totalNet)}</td>
@@ -456,24 +442,33 @@ const TaxInsuranceReport: React.FC = () => {
                                         </svg>
                                         Print
                                     </button>
-                                    <button onClick={() => setShowConfirm(true)} disabled={sending}
-                                        className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${sending
-                                            ? "bg-indigo-400 text-white cursor-wait"
-                                            : "bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700 cursor-pointer"
+                                    <button onClick={() => setShowConfirm(true)} disabled={sending || selBatch?.status !== "LOCKED"}
+                                        className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${sending ? "bg-indigo-400 text-white cursor-wait" :
+                                            selBatch?.status !== "LOCKED" ? "bg-slate-200 text-slate-500 cursor-not-allowed" :
+                                                "bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700 cursor-pointer"
                                             }`}>
-                                        <span className={sending ? "animate-spin" : ""}>{sending ? <IcRefresh /> : <IcSend />}</span>
-                                        {sending ? "Sending..." : "Send Report"}
+                                        <span className={sending ? "animate-spin" : ""}>
+                                            {selBatch?.status !== "LOCKED" ? <IcShield /> : sending ? <IcRefresh /> : <IcSend />}
+                                        </span>
+                                        {selBatch?.status !== "LOCKED" ? "Require Payroll Locked" : sending ? "Sending..." : "Send Report"}
                                     </button>
                                 </>
                             )}
                         </div>
                     </div>
                 )}
+                {/* Notice if not locked */}
+                {taxRows.length > 0 && selBatch && selBatch.status !== "LOCKED" && !alreadySent && (
+                    <div className="px-6 py-3 bg-amber-50 border-t border-amber-100 flex items-center justify-center gap-2 text-xs text-amber-700 font-medium">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                        Nút gửi báo cáo thuế chỉ khả dụng sau khi đợt lương này đã được khoá (HR bấm Send Report bên Payroll Management)
+                    </div>
+                )}
             </div>
 
             {/* Modals */}
             {showConfirm && selBatch && (
-                <ConfirmModal batch={selBatch} rows={taxRows} onSend={handleSend} onClose={() => setShowConfirm(false)} />
+                <ConfirmModal batch={selBatch} rows={taxRows} onSend={handleSend} onClose={() => setShowConfirm(false)} sending={sending} sent={sentPeriods.has(selBatch.batchId)} />
             )}
             {showToast && <SuccessToast period={period} onClose={() => setShowToast(false)} />}
         </div>

@@ -97,6 +97,22 @@ export interface PayrollReviewDTO {
     warningMessage: string;
 }
 
+// --- TaxInsuranceDTO ---
+export interface TaxInsuranceDTO {
+    employeeId: string;
+    employeeName: string;
+    department: string;
+    grossSalary: number;
+    baseSalary: number;
+    bhxh: number;
+    bhyt: number;
+    bhtn: number;
+    totalIns: number;
+    pit: number;
+    totalDeduct: number;
+    netSalary: number;
+}
+
 // --- UpdatePayrollDetailRequest ---
 export interface UpdatePayrollDetailRequest {
     totalOtHours?: number;
@@ -226,6 +242,22 @@ export async function updatePayrollDetail(
 export async function approveBatch(batchId: string) {
     const res = await apiClient.post<string>(
         `/api/v1/hr/payroll-review/${batchId}/approve`
+    );
+    return res.data;
+}
+
+/** POST /api/v1/hr/payroll-review/:batchId/send-report — Gửi báo cáo */
+export async function sendPayrollReport(batchId: string) {
+    const res = await apiClient.post<string>(
+        `/api/v1/hr/payroll-review/${batchId}/send-report`
+    );
+    return res.data;
+}
+
+/** GET /api/v1/hr/payroll-review/:batchId/tax-insurance — Dữ liệu Thuế & Bảo hiểm */
+export async function getTaxInsuranceReport(batchId: string) {
+    const res = await apiClient.get<TaxInsuranceDTO[]>(
+        `/api/v1/hr/payroll-review/${batchId}/tax-insurance`
     );
     return res.data;
 }
