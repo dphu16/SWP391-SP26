@@ -1,5 +1,5 @@
 import { kpiService } from "../services/kpiService";
-import type { KpiLibrary, Department, KpiDetailDto, PerformanceCycle, CreateCycleRequest } from "../services/kpiService";
+import type { KpiLibrary, Department, KpiDetailDto, PerformanceCycle, CreateCycleRequest, PerformanceReview } from "../services/kpiService";
 
 
 
@@ -65,6 +65,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     const [departments, setDepartments] = useState<Department[]>([]);
     const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
     const [allKpis, setAllKpis] = useState<KpiLibrary[]>([]);
+    const [globalKpis, setGlobalKpis] = useState<KpiLibrary[]>([]);
     const [structureDetails, setStructureDetails] = useState<KpiDetailDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAddKpiModalOpen, setIsAddKpiModalOpen] = useState(false);
@@ -87,13 +88,68 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     });
     const [cycleSaving, setCycleSaving] = useState(false);
     const [cycleError, setCycleError] = useState('');
+    const [cycleStatusError, setCycleStatusError] = useState('');
+    const [publishError, setPublishError] = useState('');
+    const [publishSuccess, setPublishSuccess] = useState('');
+    const [createKpiError, setCreateKpiError] = useState('');
+    const [createKpiSuccess, setCreateKpiSuccess] = useState('');
+
+    const [selectedCycleId, setSelectedCycleId] = useState<string | null>(null);
+    const [cycleReviews, setCycleReviews] = useState<PerformanceReview[]>([]);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
+
+    // Employee KPI Detail state
+    const [selectedEmployeeReview, setSelectedEmployeeReview] = useState<PerformanceReview | null>(null);
+    const [employeeGoals, setEmployeeGoals] = useState<any[]>([]);
+    const [goalsLoading, setGoalsLoading] = useState(false);
+
+    const handleViewCycleResults = async (cycleId: string) => {
+        setSelectedCycleId(cycleId);
+        setSelectedEmployeeReview(null);
+        setReviewsLoading(true);
+        try {
+            const results = await kpiService.getReviewsByCycle(cycleId);
+            setCycleReviews(results);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setReviewsLoading(false);
+        }
+    };
+
+    const handleViewEmployeeKpis = async (review: PerformanceReview) => {
+        if (!selectedCycleId || !review.employee?.employeeId) return;
+        setSelectedEmployeeReview(review);
+        setGoalsLoading(true);
+        try {
+            const goals = await kpiService.getGoalsByEmployeeAndCycle(review.employee.employeeId, selectedCycleId);
+            setEmployeeGoals(goals);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setGoalsLoading(false);
+        }
+    };
 
     // New KPI Form State
-    const KPI_CATEGORIES = ['EVALUATION', 'BEHAVIORAL', 'FINANCIAL', 'OPERATIONAL'] as const;
-    const [newKpi, setNewKpi] = useState({
+    const KPI_CATEGORIES = ['FINANCIAL', 'CUSTOMER', 'PROCESS'] as const;
+    const MEASUREMENT_TYPES: { value: import('../services/kpiService').MeasurementType; label: string; desc: string }[] = [
+        { value: 'NUMERIC', label: 'Numeric', desc: '' },
+        { value: 'PERCENTAGE', label: 'Percentage', desc: '' },
+        { value: 'BOOLEAN', label: 'Yes / No', desc: '' },
+        { value: 'RATING', label: 'Rating', desc: '' },
+    ];
+    const [newKpi, setNewKpi] = useState<{
+        name: string;
+        category: string;
+        defaultWeight: number;
+        measurementType: import('../services/kpiService').MeasurementType;
+        description: string;
+    }>({
         name: '',
-        category: 'EVALUATION' as string,
+        category: 'FINANCIAL',
         defaultWeight: 10,
+        measurementType: 'NUMERIC',
         description: ''
     });
 
@@ -104,13 +160,12 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
 
     useEffect(() => {
         const fetchInitialData = async () => {
+            setLoading(true);
             const [deptsData, kpisData] = await Promise.all([
                 kpiService.getAllDepartments(),
-                kpiService.getAllKpiLibraries()
+                kpiService.getAllKpiLibraries(selectedDeptId || undefined)
             ]);
-
             if (kpisData) setAllKpis(kpisData);
-
             if (deptsData && deptsData.length > 0) {
                 setDepartments(deptsData);
                 setSelectedDeptId(deptsData[0].id);
@@ -120,7 +175,6 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
         fetchInitialData();
     }, []);
 
-    // Fetch global stats or cycles when viewMode changes
     useEffect(() => {
         if (viewMode === 'global') {
             const fetchGlobalStats = async () => {
@@ -129,6 +183,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
             };
             fetchGlobalStats();
         } else if (viewMode === 'cycles') {
+            setSelectedCycleId(null);
             const fetchCycles = async () => {
                 setCyclesLoading(true);
                 const data = await kpiService.getPerformanceCycles();
@@ -140,20 +195,38 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     }, [viewMode]);
 
     useEffect(() => {
+        if (isAddKpiModalOpen && modalTab === 'library') {
+            const fetchGlobal = async () => {
+                const data = await kpiService.getAllKpiLibraries();
+                setGlobalKpis(data);
+            };
+            fetchGlobal();
+        }
+    }, [isAddKpiModalOpen, modalTab]);
+
+    useEffect(() => {
         if (selectedDeptId) {
-            const fetchStructure = async () => {
-                const details = await kpiService.getKpisByDepartment(selectedDeptId);
+            const fetchStructureAndKpis = async () => {
+                setLoading(true);
+                const [details, kpis] = await Promise.all([
+                    kpiService.getKpisByDepartment(selectedDeptId),
+                    kpiService.getAllKpiLibraries(selectedDeptId)
+                ]);
+                setAllKpis(kpis || []);
                 if (details && details.length > 0) {
                     setStructureDetails(details);
                 } else {
                     setStructureDetails([]);
                 }
+                setLoading(false);
             };
-            fetchStructure();
+            fetchStructureAndKpis();
         }
     }, [selectedDeptId]);
 
     const handleWeightChange = (libraryId: string, newWeight: number) => {
+        setPublishError('');
+        setPublishSuccess('');
         setStructureDetails(prev => prev.map(d =>
             d.kpiLibraryId === libraryId ? { ...d, weight: newWeight } : d
         ));
@@ -161,36 +234,44 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
 
     const handleSave = async () => {
         if (!selectedDeptId) return;
-        if (currentTotalWeight > 100) {
-            alert(`Cannot publish! Total weight is ${currentTotalWeight}% — it must equal exactly 100%. Please adjust the weights before publishing.`);
+        setPublishError('');
+        setPublishSuccess('');
+
+        if (currentTotalWeight !== 100) {
+            setPublishError(`Total weight is ${currentTotalWeight}% — must equal exactly 100% before publishing.`);
             return;
         }
-        if (currentTotalWeight < 100) {
-            const confirm = window.confirm(`Total weight is only ${currentTotalWeight}%. It is recommended to reach exactly 100% for optimal evaluation. Publish anyway?`);
-            if (!confirm) return;
+
+        const hasInvalidWeight = structureDetails.some(d => (d.weight || 0) <= 0);
+        if (hasInvalidWeight) {
+            setPublishError('Each KPI must have a weight greater than 0%. Please review your entries.');
+            return;
         }
+
         try {
             await kpiService.assignKpisToDepartment({
                 departmentId: selectedDeptId,
                 details: structureDetails
             });
-            alert("Published KPI Structure to all employees successfully!");
+            setPublishSuccess('KPI Structure published successfully to all employees in this department!');
         } catch (e) {
-            alert("Error publishing KPI Structure");
+            setPublishError('Failed to publish. Please try again.');
         }
     };
 
     // Save Draft: only saves the structure template, does NOT publish to employee goals.
     const handleSaveDraft = async () => {
         if (!selectedDeptId) return;
+        setPublishError('');
+        setPublishSuccess('');
         try {
             await kpiService.saveDraftKpiStructure({
                 departmentId: selectedDeptId,
                 details: structureDetails
             });
-            alert("Draft saved! KPI structure saved for this department (not yet published to employees).");
+            setPublishSuccess('Draft saved! Structure has not been published to employees yet.');
         } catch (e) {
-            alert("Error saving draft");
+            setPublishError('Failed to save draft. Please try again.');
         }
     };
 
@@ -218,6 +299,12 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
             setCycleError('Please fill in all required fields.');
             return;
         }
+
+        if (new Date(cycleForm.endDate) < new Date(cycleForm.startDate)) {
+            setCycleError('End Date cannot be before Start Date.');
+            return;
+        }
+
         setCycleSaving(true);
         setCycleError('');
         try {
@@ -237,11 +324,12 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     };
 
     const handleCycleStatusChange = async (cycle: PerformanceCycle, newStatus: string) => {
+        setCycleStatusError('');
         try {
             const updated = await kpiService.updateCycleStatus(cycle.cycleId, newStatus);
             setCycles(prev => prev.map(c => c.cycleId === updated.cycleId ? updated : c));
         } catch (e: any) {
-            alert(e?.response?.data?.error || 'Cannot update status.');
+            setCycleStatusError(e?.response?.data?.error || 'Cannot update status.');
         }
     };
 
@@ -269,8 +357,8 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     }, [structureDetails, allKpis]);
 
     const availableKpis = useMemo(() => {
-        return allKpis.filter(k => !structureDetails.some(d => d.kpiLibraryId === k.libId));
-    }, [allKpis, structureDetails]);
+        return globalKpis.filter(k => !structureDetails.some(d => d.kpiLibraryId === k.libId));
+    }, [globalKpis, structureDetails]);
 
     // Filtered displayKpis based on search
     const filteredDisplayKpis = useMemo(() => {
@@ -296,22 +384,36 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     };
 
     const handleCreateAndAddKpi = async () => {
+        setCreateKpiError('');
+        setCreateKpiSuccess('');
         // Check for duplicate name
         const trimmedName = newKpi.name.trim();
         const isDuplicateName = allKpis.some(k => k.name.trim().toLowerCase() === trimmedName.toLowerCase());
         if (isDuplicateName) {
-            alert(`A KPI named "${trimmedName}" already exists in the library. Please use a different name.`);
+            setCreateKpiError(`A KPI named "${trimmedName}" already exists in the department/library. Please use a different name.`);
+            return;
+        }
+        if (newKpi.defaultWeight <= 0) {
+            setCreateKpiError("Default weight must be greater than 0%.");
             return;
         }
         try {
-            const created = await kpiService.createKpiLibrary({ ...newKpi, name: trimmedName });
+            const created = await kpiService.createKpiLibrary({
+                ...newKpi,
+                name: trimmedName,
+                measurementType: newKpi.measurementType as import('../services/kpiService').MeasurementType,
+                departmentId: selectedDeptId || undefined
+            });
             setAllKpis(prev => [...prev, created]);
             handleAddKpi(created);
-            setIsAddKpiModalOpen(false);
-            setNewKpi({ name: '', category: 'EVALUATION', defaultWeight: 10, description: '' });
-            alert("New KPI created and added!");
+            setCreateKpiSuccess("New KPI created and added to department!");
+            setTimeout(() => {
+                setIsAddKpiModalOpen(false);
+                setCreateKpiSuccess('');
+                setNewKpi({ name: '', category: 'FINANCIAL', defaultWeight: 10, measurementType: 'NUMERIC', description: '' });
+            }, 1000);
         } catch (e) {
-            alert("Failed to create new KPI");
+            setCreateKpiError("Failed to create new KPI");
         }
     };
 
@@ -321,7 +423,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                        Performance Module
+                        Performance
                     </h1>
                     <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
                         Global KPI Structure Definition & Cross-department Review
@@ -359,26 +461,6 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                         </button>
                     </div>
 
-                    <div className="flex items-center bg-surface-light dark:bg-surface-dark p-1 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
-                        <button
-                            onClick={() => setActiveTab("hr")}
-                            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === "hr"
-                                ? "bg-primary text-white shadow-sm"
-                                : "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light"
-                                }`}
-                        >
-                            HR Config
-                        </button>
-                        <button
-                            onClick={() => setActiveTab("manager")}
-                            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === "manager"
-                                ? "bg-surface-light dark:bg-surface-dark text-text-primary-light shadow-sm"
-                                : "text-text-secondary-light dark:text-text-secondary-dark hover:bg-surface-2-light dark:hover:bg-surface-2-dark"
-                                }`}
-                        >
-                            Manager Console
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -664,25 +746,40 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                         </div>{/* close KPI structure card */}
 
                         {/* Action Bar */}
-                        <div className="pt-2 flex justify-center gap-4">
-                            <button
-                                onClick={handleSaveDraft}
-                                className="px-6 py-2.5 rounded-lg text-sm font-bold border border-primary text-primary hover:bg-primary/5 transition-colors shadow-sm bg-surface-light dark:bg-surface-dark"
-                            >
-                                Save Draft
-                            </button>
+                        <div className="pt-2 flex flex-col items-center gap-3">
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={handleSaveDraft}
+                                    className="px-6 py-2.5 rounded-lg text-sm font-bold border border-primary text-primary hover:bg-primary/5 transition-colors shadow-sm bg-surface-light dark:bg-surface-dark"
+                                >
+                                    Save Draft
+                                </button>
 
-                            <button
-                                onClick={handleSave}
-                                disabled={currentTotalWeight > 100}
-                                title={currentTotalWeight > 100 ? `Total weight is ${currentTotalWeight}% — must be ≤ 100%` : ''}
-                                className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm ${currentTotalWeight > 100
-                                    ? 'bg-red-500 text-white cursor-not-allowed opacity-70'
-                                    : 'bg-primary text-white hover:bg-primary-hover'
-                                    }`}
-                            >
-                                {currentTotalWeight > 100 ? `Weight ${currentTotalWeight}% — Fix before Publish` : 'Publish to Employees'}
-                            </button>
+                                <button
+                                    onClick={handleSave}
+                                    className="px-6 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm bg-primary text-white hover:bg-primary-hover"
+                                >
+                                    Publish to Employees
+                                </button>
+                            </div>
+
+                            {/* Inline error / success feedback */}
+                            {publishError && (
+                                <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 font-semibold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2.5 w-full max-w-lg">
+                                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                                    </svg>
+                                    {publishError}
+                                </div>
+                            )}
+                            {publishSuccess && (
+                                <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg px-4 py-2.5 w-full max-w-lg">
+                                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                                    </svg>
+                                    {publishSuccess}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -748,103 +845,323 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                             <h2 className="text-lg font-bold font-heading text-text-primary-light dark:text-text-primary-dark">Review Cycle Configuration</h2>
                             <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-0.5">Define evaluation periods, deadlines and criteria for structured performance reviews.</p>
                         </div>
-                        <button
-                            onClick={openNewCycleModal}
-                            className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-hover transition-colors shadow-sm"
-                        >
-                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
-                            New Cycle
-                        </button>
+                        {!selectedCycleId && (
+                            <button
+                                onClick={openNewCycleModal}
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-hover transition-colors shadow-sm"
+                            >
+                                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
+                                New Cycle
+                            </button>
+                        )}
                     </div>
 
-                    {/* Stats row */}
-                    <div className="grid grid-cols-3 gap-5">
-                        {[{
-                            label: 'Total Cycles', value: cycles.length, color: 'text-text-primary-light dark:text-text-primary-dark'
-                        }, {
-                            label: 'Active', value: cycles.filter(c => c.status === 'ACTIVE').length, color: 'text-primary'
-                        }, {
-                            label: 'Closed', value: cycles.filter(c => c.status === 'CLOSED').length, color: 'text-text-muted-light dark:text-text-muted-dark'
-                        }].map((s, i) => (
-                            <div key={i} className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm">
-                                <p className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-2">{s.label}</p>
-                                <p className={`text-4xl font-bold font-heading ${s.color}`}>{s.value}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Cycle Table */}
-                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="border-b border-border-light dark:border-border-dark bg-surface-2-light/60 dark:bg-surface-2-dark/60">
-                                    {['Cycle Name', 'Period', 'Status', 'Actions'].map(h => (
-                                        <th key={h} className="px-5 py-3.5 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest">{h}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                                {cyclesLoading ? (
-                                    <tr><td colSpan={4} className="px-5 py-8 text-center text-text-muted-light">Loading cycles...</td></tr>
-                                ) : cycles.length === 0 ? (
-                                    <tr><td colSpan={4} className="px-5 py-10 text-center">
-                                        <div className="text-text-muted-light dark:text-text-muted-dark">
-                                            <svg className="w-10 h-10 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                            <p className="text-sm font-semibold">No review cycles yet.</p>
-                                            <p className="text-xs mt-1">Click "New Cycle" to get started.</p>
+                    {selectedCycleId ? (
+                        selectedEmployeeReview ? (
+                            /* ─── EMPLOYEE KPI DETAIL VIEW ─────────────────────────── */
+                            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col animate-fade-in">
+                                <div className="px-5 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between bg-surface-light dark:bg-surface-dark gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-base">
+                                            {(selectedEmployeeReview.employee?.fullName || 'U')[0]}
                                         </div>
-                                    </td></tr>
-                                ) : cycles.map(cycle => {
-                                    const statusColors: Record<string, string> = {
-                                        ACTIVE: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-                                        CLOSED: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
-                                    };
-                                    return (
-                                        <tr key={cycle.cycleId} className="hover:bg-surface-2-light/50 dark:hover:bg-surface-2-dark/50 transition-colors">
-                                            <td className="px-5 py-4">
-                                                <p className="font-bold text-sm text-text-primary-light dark:text-text-primary-dark">{cycle.cycleName}</p>
-                                                <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">
-                                                    Created {cycle.createdAt ? new Date(cycle.createdAt).toLocaleDateString('vi-VN') : '—'}
-                                                </p>
-                                            </td>
-                                            <td className="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                                                <p className="font-semibold">{cycle.startDate} → {cycle.endDate}</p>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${statusColors[cycle.status] || ''}`}>
-                                                    {cycle.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    {cycle.status === 'ACTIVE' && (
-                                                        <button
-                                                            onClick={() => openEditCycleModal(cycle)}
-                                                            className="p-1.5 rounded-lg hover:bg-primary/10 text-text-muted-light dark:text-text-muted-dark hover:text-primary transition-colors"
-                                                            title="Edit"
-                                                        >
-                                                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" /></svg>
-                                                        </button>
-                                                    )}
-                                                    {cycle.status === 'ACTIVE' && (
-                                                        <button
-                                                            onClick={() => handleCycleStatusChange(cycle, 'CLOSED')}
-                                                            className="px-3 py-1.5 text-[11px] font-bold bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                                                        >
-                                                            Close
-                                                        </button>
-                                                    )}
-                                                    {cycle.status === 'CLOSED' && (
-                                                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark italic">Archived</span>
-                                                    )}
-                                                </div>
-                                            </td>
+                                        <div>
+                                            <h2 className="text-base font-bold text-text-primary-light dark:text-text-primary-dark">
+                                                {selectedEmployeeReview.employee?.fullName || 'Unknown'}
+                                            </h2>
+                                            <p className="text-xs text-text-muted-light dark:text-text-muted-dark">KPI Breakdown Detail</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setSelectedEmployeeReview(null)}
+                                        className="px-4 py-2 text-sm font-semibold rounded-lg border border-border-light text-text-secondary-light hover:bg-surface-2-light transition-colors"
+                                    >
+                                        ← Back to Results
+                                    </button>
+                                </div>
+
+                                {/* Score Summary Cards */}
+                                <div className="grid grid-cols-3 gap-4 p-5">
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                                        <p className="text-[11px] font-bold text-blue-500 uppercase tracking-widest mb-1">KPI Score (70%)</p>
+                                        <p className="text-2xl font-black text-blue-600 dark:text-blue-400">{selectedEmployeeReview.kpiScore ?? '-'}</p>
+                                    </div>
+                                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                                        <p className="text-[11px] font-bold text-amber-500 uppercase tracking-widest mb-1">Attitude (30%)</p>
+                                        <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{selectedEmployeeReview.attitudeScore ?? '-'}</p>
+                                    </div>
+                                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                                        <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-1">Overall</p>
+                                        <p className="text-2xl font-black text-primary">{selectedEmployeeReview.overallScore !== null && selectedEmployeeReview.overallScore !== undefined ? selectedEmployeeReview.overallScore.toFixed(1) : '-'}</p>
+                                    </div>
+                                </div>
+
+                                {/* KPI Goals Table */}
+                                <div className="px-5 pb-2">
+                                    <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-3">Individual KPI Goals</h3>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-y border-border-light dark:border-border-dark bg-surface-2-light/60 dark:bg-surface-2-dark/60">
+                                                <th className="px-5 py-3 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest">KPI Name</th>
+                                                <th className="px-5 py-3 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-center">Weight</th>
+                                                <th className="px-5 py-3 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-center">Target</th>
+                                                <th className="px-5 py-3 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-center">Actual</th>
+                                                <th className="px-5 py-3 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-center">Completion</th>
+                                                <th className="px-5 py-3 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest text-center">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                                            {goalsLoading ? (
+                                                <tr><td colSpan={6} className="px-5 py-8 text-center text-text-muted-light dark:text-text-muted-dark">Loading KPI details...</td></tr>
+                                            ) : employeeGoals.length === 0 ? (
+                                                <tr><td colSpan={6} className="px-5 py-8 text-center text-text-muted-light dark:text-text-muted-dark">No KPI goals assigned for this employee in this cycle.</td></tr>
+                                            ) : (
+                                                employeeGoals.map((goal: any) => {
+                                                    const target = goal.targetValue || 0;
+                                                    const current = goal.currentValue || 0;
+                                                    const completion = target > 0 ? Math.min(Math.round((current / target) * 100), 100) : 0;
+                                                    const goalStatusColors: Record<string, string> = {
+                                                        ASSIGNED: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+                                                        ACKNOWLEDGED: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+                                                        SUBMITTED: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                                                        COMPLETED: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                                                    };
+                                                    return (
+                                                        <tr key={goal.goalId} className="hover:bg-surface-2-light/50 dark:hover:bg-surface-2-dark/50 transition-colors">
+                                                            <td className="px-5 py-4">
+                                                                <div className="font-semibold text-sm text-text-primary-light dark:text-text-primary-dark">
+                                                                    {goal.kpiLibrary?.name || goal.title || 'Unnamed KPI'}
+                                                                </div>
+                                                                {goal.kpiLibrary?.category && (
+                                                                    <div className="text-[11px] text-text-muted-light dark:text-text-muted-dark mt-0.5">{goal.kpiLibrary.category}</div>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-5 py-4 text-center font-bold text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                                                                {goal.weight != null ? `${goal.weight}%` : '-'}
+                                                            </td>
+                                                            <td className="px-5 py-4 text-center font-bold text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                                                                {target}
+                                                            </td>
+                                                            <td className="px-5 py-4 text-center font-bold text-sm text-text-primary-light dark:text-text-primary-dark">
+                                                                {current}
+                                                            </td>
+                                                            <td className="px-5 py-4 text-center">
+                                                                <div className="flex items-center gap-2 justify-center">
+                                                                    <div className="w-16 h-2 bg-surface-2-light dark:bg-surface-2-dark rounded-full overflow-hidden">
+                                                                        <div
+                                                                            className={`h-full rounded-full transition-all duration-500 ${completion >= 100 ? 'bg-emerald-500' : completion >= 50 ? 'bg-primary' : 'bg-amber-500'}`}
+                                                                            style={{ width: `${completion}%` }}
+                                                                        />
+                                                                    </div>
+                                                                    <span className={`text-xs font-bold ${completion >= 100 ? 'text-emerald-600' : completion >= 50 ? 'text-primary' : 'text-amber-600'}`}>
+                                                                        {completion}%
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-5 py-4 text-center">
+                                                                <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${goalStatusColors[goal.status] || 'bg-gray-100 text-gray-600'}`}>
+                                                                    {goal.status}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ) : (
+                            /* ─── EMPLOYEE RESULTS LIST ─────────────────────────── */
+                            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden flex flex-col">
+                                <div className="px-5 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between bg-surface-light dark:bg-surface-dark gap-3">
+                                    <div>
+                                        <h2 className="text-base font-bold text-text-primary-light dark:text-text-primary-dark">
+                                            Employee Results
+                                        </h2>
+                                        <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">Click on an employee to view KPI breakdown</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setSelectedCycleId(null)}
+                                        className="px-4 py-2 text-sm font-semibold rounded-lg border border-border-light text-text-secondary-light hover:bg-surface-2-light transition-colors"
+                                    >
+                                        Back to Cycles
+                                    </button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-border-light bg-surface-2-light/60">
+                                                <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest">Employee</th>
+                                                <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">KPI (70%)</th>
+                                                <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">Attitude (30%)</th>
+                                                <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">Overall</th>
+                                                <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light uppercase tracking-widest text-center">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border-light">
+                                            {reviewsLoading ? (
+                                                <tr>
+                                                    <td colSpan={5} className="px-5 py-8 text-center text-text-muted-light">Loading results...</td>
+                                                </tr>
+                                            ) : cycleReviews.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={5} className="px-5 py-8 text-center text-text-muted-light">No evaluations submitted for this cycle yet.</td>
+                                                </tr>
+                                            ) : (
+                                                cycleReviews.map((review) => (
+                                                    <tr
+                                                        key={review.reviewId}
+                                                        onClick={() => handleViewEmployeeKpis(review)}
+                                                        className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors cursor-pointer group"
+                                                    >
+                                                        <td className="px-5 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-surface-2-light dark:bg-surface-2-dark flex items-center justify-center text-xs font-bold text-text-muted-light dark:text-text-muted-dark group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                                                    {(review.employee?.fullName || 'U')[0]}
+                                                                </div>
+                                                                <div>
+                                                                    <span className="font-semibold text-sm text-text-primary-light dark:text-text-primary-dark group-hover:text-primary transition-colors">
+                                                                        {review.employee?.fullName || 'Unknown Employee'}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-5 py-4 text-center font-bold text-text-secondary-light">
+                                                            {review.kpiScore ?? '-'}
+                                                        </td>
+                                                        <td className="px-5 py-4 text-center font-bold text-text-secondary-light">
+                                                            {review.attitudeScore ?? '-'}
+                                                        </td>
+                                                        <td className="px-5 py-4 text-center">
+                                                            <span className="text-base font-black text-primary">
+                                                                {review.overallScore !== null && review.overallScore !== undefined ? review.overallScore.toFixed(1) : '-'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4 text-center">
+                                                            <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${review.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : review.status === 'SUBMITTED' ? 'bg-amber-100 text-amber-700' : review.status === 'DRAFT' ? 'bg-gray-100 text-gray-500' : 'bg-blue-100 text-blue-700'}`}>
+                                                                {review.status}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )
+                    ) : (
+                        <>
+
+                            {/* Stats row */}
+                            <div className="grid grid-cols-3 gap-5">
+                                {[{
+                                    label: 'Total Cycles', value: cycles.length, color: 'text-text-primary-light dark:text-text-primary-dark'
+                                }, {
+                                    label: 'Active', value: cycles.filter(c => c.status === 'ACTIVE').length, color: 'text-primary'
+                                }, {
+                                    label: 'Closed', value: cycles.filter(c => c.status === 'CLOSED').length, color: 'text-text-muted-light dark:text-text-muted-dark'
+                                }].map((s, i) => (
+                                    <div key={i} className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm">
+                                        <p className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-2">{s.label}</p>
+                                        <p className={`text-4xl font-bold font-heading ${s.color}`}>{s.value}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Cycle Status Error */}
+                            {cycleStatusError && (
+                                <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 font-semibold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 shadow-sm">
+                                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+                                    {cycleStatusError}
+                                </div>
+                            )}
+
+                            {/* Cycle Table */}
+                            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden">
+                                <table className="w-full text-left">
+                                    <thead>
+                                        <tr className="border-b border-border-light dark:border-border-dark bg-surface-2-light/60 dark:bg-surface-2-dark/60">
+                                            {['Cycle Name', 'Period', 'Status', 'Manage Status', 'Details'].map(h => (
+                                                <th key={h} className={`px-5 py-3.5 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest ${h === 'Details' ? 'text-right' : ''}`}>{h}</th>
+                                            ))}
                                         </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                                        {cyclesLoading ? (
+                                            <tr><td colSpan={4} className="px-5 py-8 text-center text-text-muted-light">Loading cycles...</td></tr>
+                                        ) : cycles.length === 0 ? (
+                                            <tr><td colSpan={4} className="px-5 py-10 text-center">
+                                                <div className="text-text-muted-light dark:text-text-muted-dark">
+                                                    <svg className="w-10 h-10 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                    <p className="text-sm font-semibold">No review cycles yet.</p>
+                                                    <p className="text-xs mt-1">Click "New Cycle" to get started.</p>
+                                                </div>
+                                            </td></tr>
+                                        ) : cycles.map(cycle => {
+                                            const statusColors: Record<string, string> = {
+                                                ACTIVE: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                                                CLOSED: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+                                            };
+                                            return (
+                                                <tr key={cycle.cycleId} className="hover:bg-surface-2-light/50 dark:hover:bg-surface-2-dark/50 transition-colors">
+                                                    <td className="px-5 py-4">
+                                                        <p className="font-bold text-sm text-text-primary-light dark:text-text-primary-dark">{cycle.cycleName}</p>
+                                                        <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">
+                                                            Created {cycle.createdAt ? new Date(cycle.createdAt).toLocaleDateString('vi-VN') : '—'}
+                                                        </p>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                                                        <p className="font-semibold">{cycle.startDate} → {cycle.endDate}</p>
+                                                    </td>
+                                                    <td className="px-5 py-4">
+                                                        <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${statusColors[cycle.status] || ''}`}>
+                                                            {cycle.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-4">
+                                                        <div className="flex items-center gap-2">
+                                                            {cycle.status === 'ACTIVE' && (
+                                                                <button
+                                                                    onClick={() => openEditCycleModal(cycle)}
+                                                                    className="p-1.5 rounded-lg hover:bg-primary/10 text-text-muted-light dark:text-text-muted-dark hover:text-primary transition-colors"
+                                                                    title="Edit"
+                                                                >
+                                                                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" /></svg>
+                                                                </button>
+                                                            )}
+                                                            {cycle.status === 'ACTIVE' && (
+                                                                <button
+                                                                    onClick={() => handleCycleStatusChange(cycle, 'CLOSED')}
+                                                                    className="px-3 py-1.5 text-[11px] font-bold bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                                                                >
+                                                                    Close
+                                                                </button>
+                                                            )}
+                                                            {cycle.status === 'CLOSED' && (
+                                                                <span className="text-xs text-text-muted-light dark:text-text-muted-dark italic">Archived</span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-right">
+                                                        <button
+                                                            onClick={() => handleViewCycleResults(cycle.cycleId)}
+                                                            className="px-3 py-1.5 text-[11px] font-bold bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors border border-primary/20"
+                                                        >
+                                                            View Results
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
             {/* Add KPI Modal Overlay */}
@@ -943,15 +1260,47 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                             />
                                         </div>
                                     </div>
+                                    {/* Measurement Type */}
+                                    <div>
+                                        <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-2">Measurement Type</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {MEASUREMENT_TYPES.map(mt => (
+                                                <button
+                                                    key={mt.value}
+                                                    type="button"
+                                                    onClick={() => setNewKpi({ ...newKpi, measurementType: mt.value })}
+                                                    className={`text-left px-3 py-2.5 rounded-lg border transition-all ${newKpi.measurementType === mt.value
+                                                        ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                                                        : 'border-border-light dark:border-border-dark hover:bg-surface-2-light dark:hover:bg-surface-2-dark'
+                                                        }`}
+                                                >
+                                                    <div className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark">{mt.label}</div>
+                                                    <div className="text-[11px] text-text-muted-light dark:text-text-muted-dark mt-0.5">{mt.desc}</div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                     <div>
                                         <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1">Description (Optional)</label>
                                         <textarea
                                             value={newKpi.description}
                                             onChange={e => setNewKpi({ ...newKpi, description: e.target.value })}
                                             className="w-full px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus-ring"
-                                            rows={3}
+                                            rows={2}
                                         />
                                     </div>
+                                    {createKpiError && (
+                                        <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 font-semibold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2 mt-2">
+                                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+                                            {createKpiError}
+                                        </div>
+                                    )}
+                                    {createKpiSuccess && (
+                                        <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg px-4 py-2 mt-2">
+                                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
+                                            {createKpiSuccess}
+                                        </div>
+                                    )}
                                     <div className="pt-2 flex justify-end">
                                         <button
                                             onClick={handleCreateAndAddKpi}
@@ -1023,6 +1372,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                     <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1.5">End Date <span className="text-red-500">*</span></label>
                                     <input
                                         type="date"
+                                        min={cycleForm.startDate}
                                         value={cycleForm.endDate}
                                         onChange={e => setCycleForm(f => ({ ...f, endDate: e.target.value }))}
                                         className="w-full px-4 py-2.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/40"

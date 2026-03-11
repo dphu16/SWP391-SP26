@@ -27,7 +27,7 @@ public class DependentController {
     @GetMapping("/{employeeId}/dependents")
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<DependentDTO>> getDependents(
-            @PathVariable UUID employeeId) {
+            @PathVariable("employeeId") UUID employeeId) {
         List<DependentDTO> dependents = dependentService.getDependentsByEmployeeId(employeeId);
         return ResponseEntity.ok(dependents);
     }

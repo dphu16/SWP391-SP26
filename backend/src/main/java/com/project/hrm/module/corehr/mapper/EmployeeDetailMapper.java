@@ -1,12 +1,11 @@
 package com.project.hrm.module.corehr.mapper;
 
 import com.project.hrm.module.corehr.dto.request.EmployeeDetailDTO;
-import com.project.hrm.module.corehr.entity.Department;
-import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.module.corehr.entity.Position;
-import com.project.hrm.module.corehr.entity.User;
+import com.project.hrm.module.corehr.dto.response.ContractResponseDTO;
+import com.project.hrm.module.corehr.entity.*;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class EmployeeDetailMapper {
@@ -15,6 +14,21 @@ public class EmployeeDetailMapper {
         User user = employee.getUser();
         Department department = employee.getDepartment();
         Position position = employee.getPosition();
+
+        List<ContractResponseDTO> contractDTOs = null;
+        if (employee.getContracts() != null && !employee.getContracts().isEmpty()) {
+            contractDTOs = employee.getContracts().stream()
+                    .map(c -> ContractResponseDTO.builder()
+                            .contractId(c.getContractId())
+                            .contractNumber(c.getContractNumber())
+                            .contractType(c.getContractType())
+                            .startDate(c.getStartDate())
+                            .endDate(c.getEndDate())
+                            .baseSalary(c.getBaseSalary())
+                            .status(c.getStatus())
+                            .build())
+                    .collect(Collectors.toList());
+        }
 
         return EmployeeDetailDTO.builder()
                 .employeeId(employee.getEmployeeId())
@@ -36,6 +50,7 @@ public class EmployeeDetailMapper {
                 .deptName(department != null ? department.getDeptName() : null)
                 .statusEmp(employee.getStatus())
                 .status(user != null ? user.getStatus() : null)
+                .contracts(contractDTOs)
                 .build();
     }
 }

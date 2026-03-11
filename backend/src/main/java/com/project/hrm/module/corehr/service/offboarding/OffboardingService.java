@@ -23,12 +23,14 @@ public class OffboardingService implements IOffboardingService {
     }
 
     @Override
-    public OffboardingResponseDTO createResignationRequest(UUID employeeId, OffboardingRequestDTO dto, UUID requestedBy) {
+    public OffboardingResponseDTO createResignationRequest(UUID employeeId, OffboardingRequestDTO dto,
+            UUID requestedBy) {
         return commandService.createResignationRequest(employeeId, dto, requestedBy);
     }
 
     @Override
-    public OffboardingResponseDTO createManagerProposedRequest(UUID employeeId, OffboardingRequestDTO dto, UUID managerId) {
+    public OffboardingResponseDTO createManagerProposedRequest(UUID employeeId, OffboardingRequestDTO dto,
+            UUID managerId) {
         return commandService.createManagerProposedRequest(employeeId, dto, managerId);
     }
 

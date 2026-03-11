@@ -6,7 +6,7 @@
 
 ---
 
-**Project:** HRM Pro
+**Project:** HRM
 **Generated:** 2026-02-19 01:38:44
 **Category:** Micro SaaS
 

@@ -1,14 +1,12 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Sidebar from "./components/shared/Sidebar";
+import Sidebar from "./components/shared/sidebar";
 import Header from "./components/shared/Header";
 import HRDashboard from "./components/coreHR/HRDashboard";
 import EmployeeDetail from "./components/coreHR/EmployeeDetail";
 import EmployeeOnboarding from "./components/coreHR/EmployeeOnboarding";
 import HiredApplications from "./components/coreHR/HiredApplications";
-import EmployeeOffboarding from "./components/coreHR/EmployeeOffboarding";
 import OffboardingRequests from "./components/coreHR/OffboardingRequests";
-import OffboardingApproval from "./components/coreHR/OffboardingApproval";
 import CandidateProfileCompletion from "./components/coreHR/CandidateProfileCompletion";
 import EmployeeDirectory from "./components/coreHR/EmployeeDirectory";
 
@@ -68,10 +66,14 @@ const AppShell: React.FC = () => {
                 path="/onboarding/:applicationId/profile"
                 element={<CandidateProfileCompletion />}
               />
-              <Route path="/offboarding" element={<Navigate to="/offboarding/requests" replace />} />
-              <Route path="/offboarding/requests" element={<OffboardingRequests />} />
-              <Route path="/offboarding/approval" element={<OffboardingApproval />} />
-              <Route path="/offboarding/history" element={<EmployeeOffboarding />} />
+              <Route
+                path="/offboarding"
+                element={<Navigate to="/offboarding/requests" replace />}
+              />
+              <Route
+                path="/offboarding/requests"
+                element={<OffboardingRequests />}
+              />
 
               {/* --- Các Route Attendance của bạn --- */}
               <Route
@@ -93,17 +95,11 @@ const AppShell: React.FC = () => {
                 element={<AttendanceSummary />}
               />
 
-              {/* Payroll routes — PayrollModule handles /payroll, /payroll/employee, /payroll/hr */}
-              <Route path="/payroll" element={<PayrollModule />} />
-              <Route path="/payroll/employee" element={<PayrollModule />} />
-              <Route path="/payroll/hr" element={<PayrollModule />} />
-              <Route path="/payroll/tax-report" element={<PayrollModule />} />
+              {/* Payroll — single wildcard route, PayrollModule handles sub-routes internally */}
+              <Route path="/payroll/*" element={<PayrollModule />} />
 
               {/* Performance */}
               <Route path="/performance" element={<PerformanceModule />} />
-
-              {/* Payroll Module */}
-              <Route path="/payroll/*" element={<PayrollModule />} />
 
               <Route path="/employee/:id" element={<EmployeeDetail />} />
               <Route path="/profile" element={<EmployeeDetail />} />

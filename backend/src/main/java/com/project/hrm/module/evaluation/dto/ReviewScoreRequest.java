@@ -6,4 +6,5 @@ import lombok.Data;
 public class ReviewScoreRequest {
     private Double kpiScore;
     private Double attitudeScore;
+    private String rating;
 }

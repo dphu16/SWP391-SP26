@@ -1,11 +1,15 @@
 import apiClient from "./apiClient";
 
+export type MeasurementType = 'NUMERIC' | 'PERCENTAGE' | 'BOOLEAN' | 'RATING';
+
 export interface KpiLibrary {
     libId: string;
     name: string;
     description: string;
     category: string;
     defaultWeight: number;
+    measurementType?: MeasurementType;
+    departmentId?: string;
 }
 
 export interface Department {
@@ -44,6 +48,7 @@ export interface PerformanceReview {
     kpiScore: number | null;
     attitudeScore: number | null;
     overallScore: number | null;
+    rating?: string;
     status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'PENDING';
     createdAt?: string;
     cycle?: { cycleId: string; cycleName: string };
@@ -53,6 +58,7 @@ export interface PerformanceReview {
 export interface UpdateReviewScoreRequest {
     kpiScore: number;
     attitudeScore: number;
+    rating?: string;
 }
 
 export interface TeamStats {
@@ -85,10 +91,11 @@ export const kpiService = {
         }
     },
 
-    getAllKpiLibraries: async (): Promise<KpiLibrary[]> => {
+    getAllKpiLibraries: async (departmentId?: string): Promise<KpiLibrary[]> => {
         try {
-            // Use local default fallback in development if no backend running, or actually call API
-            const response = await apiClient.get<KpiLibrary[]>("/api/kpi-libraries");
+            const response = await apiClient.get<KpiLibrary[]>("/api/kpi-libraries", {
+                params: { departmentId }
+            });
             return response.data;
         } catch (error) {
             console.error("Error fetching KPI Libraries", error);
@@ -166,6 +173,16 @@ export const kpiService = {
         }
     },
 
+    getGoalsByEmployeeAndCycle: async (employeeId: string, cycleId: string): Promise<any[]> => {
+        try {
+            const response = await apiClient.get<any[]>(`/api/employees/${employeeId}/cycles/${cycleId}/goals`);
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching goals for employee in cycle", error);
+            return [];
+        }
+    },
+
     assignEmployeeGoal: async (data: { employeeId: string, cycleId: string, kpiLibraryId: string, targetValue: number, title: string, weight: number }): Promise<any> => {
         const response = await apiClient.post("/api/employee-goals", data);
         return response.data;
@@ -207,6 +224,16 @@ export const kpiService = {
         }
     },
 
+    getReviewsByCycle: async (cycleId: string): Promise<PerformanceReview[]> => {
+        try {
+            const response = await apiClient.get<PerformanceReview[]>(`/api/performance-cycles/${cycleId}/reviews`);
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching reviews by cycle', error);
+            return [];
+        }
+    },
+
     updateReviewScore: async (reviewId: string, data: UpdateReviewScoreRequest): Promise<PerformanceReview> => {
         const response = await apiClient.put<PerformanceReview>(`/api/performance-reviews/${reviewId}`, data);
         return response.data;
@@ -218,14 +245,64 @@ export const kpiService = {
     },
 
     getMentorAttitudeScore: async (employeeId: string): Promise<number> => {
-        // TODO: Replace with actual backend endpoint for Mentor evaluations when available
-        return new Promise(resolve => {
-            setTimeout(() => {
-                // Return a pseudo-random but consistent mock score between 80-98 based on ID
-                const charCodeSum = Array.from(employeeId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                const score = 80 + (charCodeSum % 19);
-                resolve(score);
-            }, 300);
+        try {
+            const review = await kpiService.getActiveReview(employeeId);
+            if (review) {
+                const res = await apiClient.get(`/api/mentor/review/${review.reviewId}/assessment`);
+                return res.data?.averageScore || 0;
+            }
+            return 0;
+        } catch {
+            return 0;
+        }
+    },
+
+    // Mentor specific actions
+    getMentees: async (mentorId: string): Promise<any[]> => {
+        const response = await apiClient.get(`/api/mentor/mentees/${mentorId}`);
+        return response.data;
+    },
+
+    getGoalEvidences: async (goalId: string): Promise<any[]> => {
+        const response = await apiClient.get(`/api/mentor/goal/${goalId}/evidences`);
+        return response.data;
+    },
+
+    updateEvidenceStatus: async (evidenceId: string, status: 'APPROVED' | 'REJECTED', comment?: string): Promise<any> => {
+        const response = await apiClient.patch(`/api/mentor/evidence/${evidenceId}/status`, { status, comment });
+        return response.data;
+    },
+
+    submitMentorAssessment: async (mentorId: string, data: { employeeId: string, cycleId: string, teamworkScore: number, communicationScore: number, technicalScore: number, adaptabilityScore: number }): Promise<any> => {
+        const response = await apiClient.post(`/api/mentor/assess/${mentorId}`, data);
+        return response.data;
+    },
+
+
+    // Employee actions
+    acknowledgeGoal: async (goalId: string): Promise<any> => {
+        const response = await apiClient.patch(`/api/employee-goals/${goalId}`, { status: 'ACTIVE' });
+        return response.data;
+    },
+
+    updateGoalProgress: async (goalId: string, data: { actualValue: number, comment?: string, imageUrl?: string }): Promise<any> => {
+        const response = await apiClient.patch(`/api/employee-goals/${goalId}/progress`, data);
+        return response.data;
+    },
+
+    updateEmployeeGoalStatus: async (goalId: string, status: string): Promise<any> => {
+        const response = await apiClient.patch(`/api/employee-goals/${goalId}`, { status });
+        return response.data;
+    },
+
+    uploadFile: async (file: File): Promise<string> => {
+        const formData = new FormData();
+        formData.append("file", file);
+        const response = await apiClient.post("/api/files/upload", formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
         });
+        return response.data; // This is the public URL string
     },
 };

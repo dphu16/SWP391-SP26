@@ -1,5 +1,7 @@
 package com.project.hrm.common.auth.security;
 
+import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -26,6 +28,12 @@ public class JwtUtil {
     @Value("${app.jwt.access-token-expiry}")
     private long expirationMs;
 
+    private final EmployeeRepository employeeRepository;
+
+    public JwtUtil(EmployeeRepository employeeRepository) {
+        this.employeeRepository = employeeRepository;
+    }
+
     private SecretKey key() {
         byte[] keyBytes = Decoders.BASE64.decode(secret);
         return Keys.hmacShaKeyFor(keyBytes);
@@ -42,6 +50,10 @@ public class JwtUtil {
         if (fullName != null && !fullName.isBlank()) {
             claims.put("fullName", fullName);
         }
+
+        // Add employeeId to JWT
+        employeeRepository.findByUser_Email(userDetails.getUsername())
+                .ifPresent(emp -> claims.put("employeeId", emp.getEmployeeId().toString()));
 
         return Jwts.builder()
                 .setClaims(claims)
