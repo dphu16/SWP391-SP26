@@ -23,7 +23,7 @@ public class ApprovalRequestController {
     }
 
     @PostMapping("/{employeeId}/approval-request")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<ApprovalRequestResponseDTO> createApprovalRequest(
             @PathVariable("employeeId") UUID employeeId) {
 

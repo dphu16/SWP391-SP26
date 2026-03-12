@@ -18,52 +18,52 @@ import java.util.UUID;
 @Service
 public class OffboardingQueryService {
 
-    private final EmployeeRepository employeeRepository;
-    private final OffboardingRepository offboardingRepository;
+        private final EmployeeRepository employeeRepository;
+        private final OffboardingRepository offboardingRepository;
 
-    public OffboardingQueryService(EmployeeRepository employeeRepository,
-                                   OffboardingRepository offboardingRepository) {
-        this.employeeRepository = employeeRepository;
-        this.offboardingRepository = offboardingRepository;
-    }
+        public OffboardingQueryService(EmployeeRepository employeeRepository,
+                        OffboardingRepository offboardingRepository) {
+                this.employeeRepository = employeeRepository;
+                this.offboardingRepository = offboardingRepository;
+        }
 
-    public List<InactiveEmployeeResponseDTO> getInactiveEmployees() {
-        List<EmployeeStatus> inactiveStatuses = List.of(
-                EmployeeStatus.TERMINATED,
-                EmployeeStatus.RESIGNED,
-                EmployeeStatus.PENDING_OFFBOARD);
+        public List<InactiveEmployeeResponseDTO> getInactiveEmployees() {
+                List<EmployeeStatus> inactiveStatuses = List.of(
+                                EmployeeStatus.TERMINATED,
+                                EmployeeStatus.RESIGNED,
+                                EmployeeStatus.PENDING_OFFBOARD);
 
-        return employeeRepository.findByStatusIn(inactiveStatuses)
-                .stream()
-                .map(InactiveEmployeeMapper::toDTO)
-                .toList();
-    }
+                return employeeRepository.findByStatusIn(inactiveStatuses)
+                                .stream()
+                                .map(InactiveEmployeeMapper::toDTO)
+                                .toList();
+        }
 
-    /** Lấy tất cả request đang active (PENDING, MANAGER_APPROVED, HR_CONFIRMED) */
-    public List<OffboardingResponseDTO> getActiveRequests() {
-        List<OffboardingStatus> activeStatuses = List.of(
-                OffboardingStatus.PENDING,
-                OffboardingStatus.MANAGER_APPROVED,
-                OffboardingStatus.HR_CONFIRMED);
+        /** Lấy tất cả request đang active (PENDING, MANAGER_APPROVED, HR_CONFIRMED) */
+        public List<OffboardingResponseDTO> getActiveRequests() {
+                List<OffboardingStatus> activeStatuses = List.of(
+                                OffboardingStatus.PENDING,
+                                OffboardingStatus.MANAGER_APPROVED,
+                                OffboardingStatus.HR_CONFIRMED);
 
-        return offboardingRepository.findByStatusIn(activeStatuses)
-                .stream()
-                .map(o -> OffboardingMapper.toDTO(o, employeeRepository))
-                .toList();
-    }
+                return offboardingRepository.findByStatusIn(activeStatuses)
+                                .stream()
+                                .map(o -> OffboardingMapper.toDTO(o, employeeRepository))
+                                .toList();
+        }
 
-    /** Lấy chỉ request PENDING (chờ Manager duyệt) */
-    public List<OffboardingResponseDTO> getPendingRequests() {
-        return offboardingRepository.findByStatusIn(List.of(OffboardingStatus.PENDING))
-                .stream()
-                .map(o -> OffboardingMapper.toDTO(o, employeeRepository))
-                .toList();
-    }
+        /** Lấy chỉ request PENDING (chờ Manager duyệt) */
+        public List<OffboardingResponseDTO> getPendingRequests() {
+                return offboardingRepository.findByStatusIn(List.of(OffboardingStatus.PENDING))
+                                .stream()
+                                .map(o -> OffboardingMapper.toDTO(o, employeeRepository))
+                                .toList();
+        }
 
-    public OffboardingResponseDTO getOffboardingById(UUID offboardingId) {
-        return offboardingRepository.findByOffboardingId(offboardingId)
-                .map(o -> OffboardingMapper.toDTO(o, employeeRepository))
-                .orElseThrow(() -> new BusinessRuleException(ErrorCode.OFFBOARDING_NOT_FOUND,
-                        "Offboarding request not found: " + offboardingId));
-    }
+        public OffboardingResponseDTO getOffboardingById(UUID offboardingId) {
+                return offboardingRepository.findByOffboardingId(offboardingId)
+                                .map(o -> OffboardingMapper.toDTO(o, employeeRepository))
+                                .orElseThrow(() -> new BusinessRuleException(ErrorCode.OFFBOARDING_NOT_FOUND,
+                                                "Offboarding request not found: " + offboardingId));
+        }
 }

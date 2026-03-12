@@ -8,7 +8,9 @@ import {
     createShift,
     deleteShift,
     deleteSchedule,
+    deleteSchedulesByMonth,
     getMySchedules,
+    updateSchedule,
     type ShiftResponse,
     type WorkScheduleResponse,
 } from "../../services/attendanceService";
@@ -226,16 +228,14 @@ const EmployeeMultiSelector: React.FC<EmployeeMultiSelectorProps> = ({ selectedI
 
 // ─── Shift Card ────────────────────────────────────────────────────────────────
 const ShiftCard: React.FC<{ shift: ShiftResponse; selected: boolean; onClick: () => void }> = ({ shift, selected, onClick }) => {
-    const isMorning = parseInt(shift.startTime.slice(0, 2), 10) < 12;
     return (
         <button type="button" onClick={onClick}
             className={`w-full text-left p-3 rounded-xl border-2 transition-all cursor-pointer
  ${selected
-                    ? isMorning ? "border-[#f59e0b] bg-[#fef9c3]" : "border-[#0d9488] bg-[#ccfbf1]"
+                    ? "border-[#0d9488] bg-[#ccfbf1]"
                     : "border-[#e2e8f0] bg-white hover:border-[#cbd5e1]"}`}
         >
             <div className="flex items-center gap-2 mb-0.5">
-                <span>{isMorning ? "☀️" : "🌙"}</span>
                 <span className="font-bold text-[13px] text-[#0f172a]">{shift.name}</span>
                 {selected && (
                     <span className="ml-auto w-4 h-4 rounded-full bg-[#0d9488] flex items-center justify-center flex-shrink-0">
@@ -352,7 +352,6 @@ const CreateShiftModal: React.FC<CreateShiftModalProps> = ({ onClose, onCreated 
                 {/* Preview */}
                 {name && startTime && endTime && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-[#f0fdf4] border border-[#86efac] rounded-xl">
-                        <span>{parseInt(startTime.slice(0, 2), 10) < 12 ? "☀️" : "🌙"}</span>
                         <span className="text-sm font-semibold text-[#15803d]">{name}</span>
                         <span className="ml-auto text-xs text-[#64748b] font-medium">{startTime} – {endTime}</span>
                     </div>
@@ -432,6 +431,10 @@ const CreateSchedule: React.FC = () => {
     const [manageLoading, setManageLoading] = useState(false);
     const [manageError, setManageError] = useState<string | null>(null);
     const [deletingScheduleId, setDeletingScheduleId] = useState<string | null>(null);
+    const [deletingAll, setDeletingAll] = useState(false);
+    const [updatingScheduleId, setUpdatingScheduleId] = useState<string | null>(null);
+    const [updatingShiftId, setUpdatingShiftId] = useState<string>("");
+    const [updatingLoading, setUpdatingLoading] = useState(false);
 
     useEffect(() => {
         getAllShifts()
@@ -549,6 +552,42 @@ const CreateSchedule: React.FC = () => {
         }
     };
 
+    // ── Update schedule
+    const handleUpdateSchedule = async (scheduleId: string) => {
+        if (!updatingShiftId) return;
+        setUpdatingLoading(true);
+        setManageError(null);
+        try {
+            const updated = await updateSchedule(scheduleId, updatingShiftId);
+            setManageSchedules(prev => prev.map(s => s.id === scheduleId ? updated : s));
+            setUpdatingScheduleId(null);
+        } catch (err: any) {
+            setManageError(err?.response?.data?.message ?? err.message ?? "Failed to update schedule.");
+        } finally {
+            setUpdatingLoading(false);
+        }
+    };
+
+    // ── Delete ALL schedules for the current month
+    const handleDeleteAllSchedules = async () => {
+        if (!manageEmployee) return;
+        const confirmed = window.confirm(
+            `Are you sure you want to delete ALL ${manageSchedules.length} schedule(s) for ${manageEmployee.fullName} in ${MONTH_NAMES[manageMonth - 1]} ${manageYear}?`
+        );
+        if (!confirmed) return;
+
+        setDeletingAll(true);
+        setManageError(null);
+        try {
+            await deleteSchedulesByMonth(manageEmployee.id, manageMonth, manageYear);
+            setManageSchedules([]);
+        } catch (err: any) {
+            setManageError(err?.response?.data?.message ?? err.message ?? "Failed to delete all schedules.");
+        } finally {
+            setDeletingAll(false);
+        }
+    };
+
     const tabBtn = (id: Tab, label: string, icon: string) => (
         <button onClick={() => { setTab(id); setError(null); setSuccessCount(null); setShiftDeleteError(null); setManageError(null); }}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all
@@ -579,14 +618,6 @@ const CreateSchedule: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-[28px] font-bold text-[#1a1c21] tracking-tight">Create Schedule</h1>
-                <button
-                    type="button"
-                    onClick={() => setShowCreateShiftModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#e2e8f0] shadow-sm hover:shadow-md hover:border-[#0d9488] text-[#0d9488] font-semibold text-sm transition-all group"
-                >
-                    <span className="w-5 h-5 flex items-center justify-center rounded-full bg-[#0d9488] text-white text-xs font-bold group-hover:scale-110 transition-transform">+</span>
-                    Create Shift
-                </button>
             </div>
 
             {/* Modal */}
@@ -757,13 +788,11 @@ const CreateSchedule: React.FC = () => {
                                 ? <div className="text-center py-8 text-[#94a3b8] text-sm">No shifts yet. Create one above.</div>
                                 : <div className="flex flex-col gap-2">
                                     {shifts.map(sh => {
-                                        const isMorning = parseInt(sh.startTime.slice(0, 2), 10) < 12;
                                         const isDeleting = deletingShiftId === sh.id;
                                         return (
                                             <div key={sh.id}
                                                 className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#e2e8f0] bg-white hover:border-[#cbd5e1] transition-colors"
                                             >
-                                                <span className="text-base flex-shrink-0">{isMorning ? "☀️" : "🌙"}</span>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-semibold text-sm text-[#0f172a]">{sh.name}</p>
                                                     <p className="text-xs text-[#64748b]">{formatTime(sh.startTime)} – {formatTime(sh.endTime)}</p>
@@ -841,11 +870,24 @@ const CreateSchedule: React.FC = () => {
                                                 {MONTH_NAMES[manageMonth - 1]} {manageYear}
                                                 <span className="ml-2 text-xs font-normal text-[#94a3b8]">({manageSchedules.length} schedule{manageSchedules.length !== 1 ? "s" : ""})</span>
                                             </p>
+                                            <button
+                                                type="button"
+                                                onClick={handleDeleteAllSchedules}
+                                                disabled={deletingAll || manageSchedules.length === 0}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                                            >
+                                                {deletingAll ? (
+                                                    <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                                    </svg>
+                                                ) : "🗑️"}
+                                                {deletingAll ? "Deleting..." : "Delete All"}
+                                            </button>
                                         </div>
                                         <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
                                             {manageSchedules.map(sch => {
                                                 if (!sch.shift) return null;
-                                                const isMorning = parseInt(sch.shift.startTime.slice(0, 2), 10) < 12;
                                                 const isDeleting = deletingScheduleId === sch.id;
                                                 const dateObj = new Date(sch.date + "T00:00:00");
                                                 const dayName = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dateObj.getDay()];
@@ -860,24 +902,74 @@ const CreateSchedule: React.FC = () => {
                                                         </div>
                                                         <div className="w-px h-8 bg-[#e2e8f0] flex-shrink-0" />
                                                         {/* Shift info */}
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="font-semibold text-sm text-[#0f172a] flex items-center gap-1.5">
-                                                                <span>{isMorning ? "☀️" : "🌙"}</span>
-                                                                {sch.shift.name}
-                                                            </p>
-                                                            <p className="text-xs text-[#64748b]">{formatTime(sch.shift.startTime)} – {formatTime(sch.shift.endTime)}</p>
+                                                        {updatingScheduleId === sch.id ? (
+                                                            <div className="flex-1 min-w-0 pr-4">
+                                                                <select
+                                                                    value={updatingShiftId}
+                                                                    onChange={e => setUpdatingShiftId(e.target.value)}
+                                                                    className="w-full px-2 py-1 flex-1 rounded-lg border border-[#e2e8f0] text-[#0f172a] text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/40 transition-all bg-white"
+                                                                >
+                                                                    <option value="" disabled>Select Shift</option>
+                                                                    {shifts.map(sh => (
+                                                                        <option key={sh.id} value={sh.id}>{sh.name} ({formatTime(sh.startTime)}-{formatTime(sh.endTime)})</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="font-semibold text-sm text-[#0f172a] flex items-center gap-1.5">
+                                                                    {sch.shift.name}
+                                                                </p>
+                                                                <p className="text-xs text-[#64748b]">{formatTime(sch.shift.startTime)} – {formatTime(sch.shift.endTime)}</p>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Actions */}
+                                                        <div className="flex items-center gap-1 flex-shrink-0">
+                                                            {updatingScheduleId === sch.id ? (
+                                                                <>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleUpdateSchedule(sch.id)}
+                                                                        disabled={updatingLoading || !updatingShiftId}
+                                                                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-[#0d9488] hover:bg-[#0f766e] disabled:opacity-50 transition-all"
+                                                                    >
+                                                                        {updatingLoading ? "..." : "Save"}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setUpdatingScheduleId(null)}
+                                                                        disabled={updatingLoading}
+                                                                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#64748b] border border-[#e2e8f0] hover:bg-[#f1f5f9] disabled:opacity-50 transition-all"
+                                                                    >
+                                                                        Cancel
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setUpdatingScheduleId(sch.id);
+                                                                            setUpdatingShiftId(sch.shift.id);
+                                                                        }}
+                                                                        disabled={isDeleting}
+                                                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#0d9488] border border-[#0d9488]/30 hover:bg-[#0d9488]/10 disabled:opacity-50 transition-all"
+                                                                        title="Change Shift"
+                                                                    >
+                                                                        ✏️
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleDeleteSchedule(sch.id)}
+                                                                        disabled={isDeleting}
+                                                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-500 border border-red-200 hover:bg-red-50 disabled:opacity-50 transition-all"
+                                                                    >
+                                                                        {isDeleting ? <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg> : "🗑️"}
+                                                                    </button>
+                                                                </>
+                                                            )}
                                                         </div>
-                                                        {/* Delete */}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDeleteSchedule(sch.id)}
-                                                            disabled={isDeleting}
-                                                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-500 border border-red-200 hover:bg-red-50 disabled:opacity-50 transition-all flex-shrink-0"
-                                                        >
-                                                            {isDeleting
-                                                                ? <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
-                                                                : "🗑️"}
-                                                        </button>
                                                     </div>
                                                 );
                                             })}

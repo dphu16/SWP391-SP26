@@ -1,5 +1,7 @@
 package com.project.hrm.module.attendance.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,8 +15,15 @@ import java.util.Map;
 @RestControllerAdvice(basePackages = "com.project.hrm.module.attendance")
 public class AttendanceExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(AttendanceExceptionHandler.class);
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
+        // Re-throw security exceptions — let Spring Security handle them (403)
+        if (ex instanceof org.springframework.security.access.AccessDeniedException) {
+            throw ex;
+        }
+        log.error("[AttendanceExceptionHandler] RuntimeException caught: {}", ex.getMessage(), ex);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", OffsetDateTime.now().toString());
         body.put("message", ex.getMessage());

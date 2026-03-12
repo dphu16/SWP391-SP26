@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { getToken } from "../../services/authService";
+import { decodeJwt } from "../../utils/jwtDecode";
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 const Icons = {
@@ -120,10 +122,9 @@ const NavItem: React.FC<NavItemProps> = ({
     title={isCollapsed ? label : undefined}
     className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring group
       ${indent && !isCollapsed ? "pl-10" : ""}
-      ${
-        isActive
-          ? "bg-primary/10 text-primary"
-          : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
+      ${isActive
+        ? "bg-primary/10 text-primary"
+        : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
       }
       ${isCollapsed ? "justify-center" : ""}
     `}
@@ -158,7 +159,10 @@ const SectionLabel: React.FC<{ label: string; isCollapsed: boolean }> = ({
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const hasRole = (..._args: any[]) => true; // Auth removed
+  const token = getToken();
+  const payload = useMemo(() => decodeJwt(token), [token]);
+  const userRoles = useMemo(() => payload?.roles?.map(r => r.replace(/^ROLE_/, "")) ?? [], [payload]);
+  const hasRole = (...roles: string[]) => roles.some(r => userRoles.includes(r));
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [employeesExpanded, setEmployeesExpanded] = useState(true);
   const [requestExpanded, setRequestExpanded] = useState(true);
@@ -259,15 +263,14 @@ const Sidebar: React.FC = () => {
               title={isCollapsed ? "Employees" : undefined}
               className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
               ${isCollapsed ? "justify-center" : ""}
-              ${
-                isPath("/employees") ||
-                isPath("/onboarding/progress") ||
-                isPath("/offboarding/requests") ||
-                isPath("/offboarding/approval") ||
-                isPath("/offboarding/history")
+              ${isPath("/employees") ||
+                  isPath("/onboarding/progress") ||
+                  isPath("/offboarding/requests") ||
+                  isPath("/offboarding/approval") ||
+                  isPath("/offboarding/history")
                   ? "text-primary bg-primary/10"
                   : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
-              }
+                }
             `}
             >
               <span className="flex-shrink-0">{Icons.people}</span>
@@ -341,12 +344,11 @@ const Sidebar: React.FC = () => {
             title={isCollapsed ? "Request" : undefined}
             className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
               ${isCollapsed ? "justify-center" : ""}
-              ${
-                isPath("/requests") ||
+              ${isPath("/requests") ||
                 isPath("/attendance/applications") ||
                 isPath("/attendance/review")
-                  ? "text-primary bg-primary/10"
-                  : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
+                ? "text-primary bg-primary/10"
+                : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
               }
             `}
           >
@@ -369,20 +371,22 @@ const Sidebar: React.FC = () => {
               {[
                 { label: "My Requests", path: "/requests/my-requests" },
                 { label: "Create Request", path: "/attendance/applications" },
-                { label: "Review Request", path: "/attendance/review" },
-              ].map((item) => (
-                <NavItem
-                  key={item.path}
-                  icon={
-                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />
-                  }
-                  label={item.label}
-                  isActive={location.pathname === item.path}
-                  isCollapsed={false}
-                  indent
-                  onClick={() => navigate(item.path)}
-                />
-              ))}
+                { label: "Review Request", path: "/attendance/review", roles: ["MANAGER"] as const },
+              ]
+                .filter((item) => !("roles" in item) || !item.roles || hasRole(...item.roles))
+                .map((item) => (
+                  <NavItem
+                    key={item.path}
+                    icon={
+                      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />
+                    }
+                    label={item.label}
+                    isActive={location.pathname === item.path}
+                    isCollapsed={false}
+                    indent
+                    onClick={() => navigate(item.path)}
+                  />
+                ))}
             </div>
           )}
         </div>
@@ -404,13 +408,12 @@ const Sidebar: React.FC = () => {
             title={isCollapsed ? "Attendance" : undefined}
             className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
               ${isCollapsed ? "justify-center" : ""}
-              ${
-                isPath("/attendance") &&
+              ${isPath("/attendance") &&
                 !isPath("/attendance/applications") &&
                 !isPath("/attendance/review") &&
                 !isPath("/attendance/check-in-out")
-                  ? "text-primary bg-primary/10"
-                  : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
+                ? "text-primary bg-primary/10"
+                : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
               }
             `}
           >
@@ -435,33 +438,28 @@ const Sidebar: React.FC = () => {
                 {
                   label: "Create Schedule",
                   path: "/attendance/create-schedule",
+                  roles: ["MANAGER"] as const,
                 },
-                { label: "Attendance Summary", path: "/attendance/summary" },
-              ].map((item) => (
-                <NavItem
-                  key={item.path}
-                  icon={
-                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />
-                  }
-                  label={item.label}
-                  isActive={location.pathname === item.path}
-                  isCollapsed={false}
-                  indent
-                  onClick={() => navigate(item.path)}
-                />
-              ))}
+                { label: "Attendance Summary", path: "/attendance/summary", roles: ["MANAGER"] as const },
+              ]
+                .filter((item) => !("roles" in item) || !item.roles || hasRole(...item.roles))
+                .map((item) => (
+                  <NavItem
+                    key={item.path}
+                    icon={
+                      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />
+                    }
+                    label={item.label}
+                    isActive={location.pathname === item.path}
+                    isCollapsed={false}
+                    indent
+                    onClick={() => navigate(item.path)}
+                  />
+                ))}
             </div>
           )}
         </div>
 
-        <NavItem
-          icon={Icons.timeoff}
-          label="Check-in/Out"
-          isActive={isPath("/attendance/check-in-out")}
-          isCollapsed={isCollapsed}
-          badge={3}
-          onClick={() => navigate("/attendance/check-in-out")}
-        />
 
         {/* Payroll with submenu */}
         {hasRole("HR", "FINANCE") && (
@@ -478,10 +476,9 @@ const Sidebar: React.FC = () => {
               title={isCollapsed ? "Payroll" : undefined}
               className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
                 ${isCollapsed ? "justify-center" : ""}
-                ${
-                  isPath("/payroll")
-                    ? "text-primary bg-primary/10"
-                    : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
+                ${isPath("/payroll")
+                  ? "text-primary bg-primary/10"
+                  : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
                 }
               `}
             >
@@ -546,10 +543,9 @@ const Sidebar: React.FC = () => {
             title={isCollapsed ? "Payroll" : undefined}
             className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
               ${isCollapsed ? "justify-center" : ""}
-              ${
-                isPath("/payroll")
-                  ? "text-primary bg-primary/10"
-                  : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
+              ${isPath("/payroll")
+                ? "text-primary bg-primary/10"
+                : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
               }
             `}
           >
@@ -605,7 +601,6 @@ const Sidebar: React.FC = () => {
             label: "Check-in/Out",
             icon: Icons.timeoff,
             path: "/attendance/check-in-out",
-            badge: 3,
           },
           {
             label: "Performance",
@@ -622,7 +617,6 @@ const Sidebar: React.FC = () => {
               label={item.label}
               isActive={item.path ? isPath(item.path) : false}
               isCollapsed={isCollapsed}
-              badge={item.badge}
               onClick={item.path ? () => navigate(item.path) : undefined}
             />
           ))}
@@ -645,11 +639,10 @@ const Sidebar: React.FC = () => {
                 title={isCollapsed ? "Recruitment" : undefined}
                 className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
                 ${isCollapsed ? "justify-center" : ""}
-                ${
-                  isPath("/recruitment")
+                ${isPath("/recruitment")
                     ? "text-primary bg-primary/10"
                     : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
-                }
+                  }
               `}
               >
                 <span className="flex-shrink-0">{Icons.recruitment}</span>

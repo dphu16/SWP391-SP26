@@ -17,22 +17,21 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final UserRepository userRepo;
+        private final UserRepository userRepo;
 
-    @Override
-    public UserDetails loadUserByUsername(String email) {
-        User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Not Found: " + email));
+        @Override
+        public UserDetails loadUserByUsername(String email) {
+                User user = userRepo.findByEmail(email)
+                                .orElseThrow(() -> new UsernameNotFoundException("Not Found: " + email));
 
-        System.out.println(">>> Password from DB: " + user.getPassword());
-        List<GrantedAuthority> authorities = user.getRoles().stream()
-                .map(r -> new SimpleGrantedAuthority(r.getName().name()))
-                .collect(Collectors.toList());
+                System.out.println(">>> Password from DB: " + user.getPassword());
+                List<GrantedAuthority> authorities = user.getRoles().stream()
+                                .map(r -> new SimpleGrantedAuthority(r.getName().name()))
+                                .collect(Collectors.toList());
 
-        return new org.springframework.security.core.userdetails.User(
-                user.getEmail(),
-                user.getPassword() == null ? "" : user.getPassword(),
-                authorities
-        );
-    }
+                return new org.springframework.security.core.userdetails.User(
+                                user.getEmail(),
+                                user.getPassword() == null ? "" : user.getPassword(),
+                                authorities);
+        }
 }

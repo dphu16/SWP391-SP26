@@ -29,7 +29,7 @@ public class AttendanceLogController {
 
     // 2. Xem lịch sử cá nhân (Employee)
     @GetMapping("/logs/my-history")
-    public ResponseEntity<List<AttendanceLog>> getMyHistory(@RequestParam UUID employeeId) {
+    public ResponseEntity<List<AttendanceLog>> getMyHistory(@RequestParam("employeeId") UUID employeeId) {
         return ResponseEntity.ok(service.getMyHistory(employeeId));
     }
 
@@ -41,21 +41,22 @@ public class AttendanceLogController {
 
     // 4. Sửa công (Manager)
     @PutMapping("/logs/{id}")
-    public ResponseEntity<AttendanceLog> updateLog(@PathVariable UUID id, @RequestBody AttendanceRequest req) {
+    public ResponseEntity<AttendanceLog> updateLog(@PathVariable("id") UUID id, @RequestBody AttendanceRequest req) {
         return ResponseEntity.ok(service.updateLog(id, req));
     }
 
     // Đặt trong class Controller của bạn
     @GetMapping("/summary")
     public ResponseEntity<List<AttendanceSummaryDTO>> getSummaryReport(
-            @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) UUID departmentId,
-            @RequestParam(required = false) UUID employeeId) {
+            @RequestParam(value = "month", required = false) Integer month,
+            @RequestParam(value = "year", required = false) Integer year,
+            @RequestParam(value = "departmentId", required = false) UUID departmentId,
+            @RequestParam(value = "employeeId", required = false) UUID employeeId) {
 
         List<AttendanceSummaryDTO> result = service.getAttendanceSummaryReport(month, year, departmentId, employeeId);
         return ResponseEntity.ok(result);
     }
+
     private final DepartmentRepository departmentRepository;
 
     @GetMapping

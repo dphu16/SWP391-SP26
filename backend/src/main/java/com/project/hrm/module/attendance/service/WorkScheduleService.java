@@ -1,6 +1,7 @@
 package com.project.hrm.module.attendance.service;
 
 import com.project.hrm.module.attendance.dto.AttendanceEmployeeResponse;
+import com.project.hrm.module.attendance.repository.AttendanceLogRepository;
 import com.project.hrm.module.attendance.dto.ShiftRequest;
 import com.project.hrm.module.attendance.dto.ShiftResponse;
 import com.project.hrm.module.attendance.dto.WorkScheduleRequest;
@@ -35,6 +36,7 @@ public class WorkScheduleService {
     private final WorkScheduleRepository workScheduleRepository;
     private final ShiftRepository shiftRepository;
     private final EmployeeRepository employeeRepository;
+    private final AttendanceLogRepository attendanceLogRepository;
 
     // =========================================================
     // 1. GET EMPLOYEES FOR SCHEDULING (DROPDOWN)
@@ -323,11 +325,39 @@ public class WorkScheduleService {
     // =========================================================
     // 11. DELETE SCHEDULE
     // =========================================================
+    @Transactional
     public void deleteSchedule(UUID scheduleId) {
         if (!workScheduleRepository.existsById(scheduleId)) {
             throw new RuntimeException("Work schedule not found: " + scheduleId);
         }
+        // Xóa attendance logs liên quan trước (tránh FK constraint)
+        attendanceLogRepository.deleteAll(
+                attendanceLogRepository.findByWorkSchedule_ScheduleId(scheduleId));
         workScheduleRepository.deleteById(scheduleId);
+    }
+
+    // =========================================================
+    // 12. DELETE ALL SCHEDULES IN A MONTH FOR AN EMPLOYEE
+    // =========================================================
+    @Transactional
+    public void deleteSchedulesByMonth(UUID employeeId, int month, int year) {
+        LocalDate startDate = LocalDate.of(year, month, 1);
+        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+
+        List<WorkSchedule> schedulesToDelete = workScheduleRepository
+                .findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId, startDate, endDate);
+
+        if (schedulesToDelete.isEmpty()) {
+            throw new RuntimeException("No schedules found for this employee in "
+                    + startDate.getMonth() + " " + year + ".");
+        }
+
+        for (WorkSchedule ws : schedulesToDelete) {
+            attendanceLogRepository.deleteAll(
+                    attendanceLogRepository.findByWorkSchedule_ScheduleId(ws.getScheduleId()));
+        }
+
+        workScheduleRepository.deleteAll(schedulesToDelete);
     }
 
     // =========================================================

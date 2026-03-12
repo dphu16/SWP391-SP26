@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.UUID;
 
 public interface RDepartmentRepository extends JpaRepository<Department, UUID> {
-
+    Department findByManager_EmployeeId(UUID id);
 }

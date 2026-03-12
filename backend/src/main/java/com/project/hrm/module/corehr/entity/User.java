@@ -25,6 +25,10 @@ public class User {
     @Column(name = "user_id")
     private UUID userId;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id", unique = true)
+    private Employee employee;
+
     @Column(name = "password_hash")
     private String password;
 
@@ -43,11 +47,8 @@ public class User {
     private UserStatus status;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "provider" ,nullable = false)
     private AuthProvider provider = AuthProvider.LOCAL;
-
-    @Column(name = "provider_id")
-    private String providerId;
 
     @Column(name = "full_name", length = 100)
     private String fullName;

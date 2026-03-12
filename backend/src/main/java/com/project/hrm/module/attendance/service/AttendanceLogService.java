@@ -172,11 +172,14 @@ public class AttendanceLogService {
             List<AttendanceLog> logs = logRepo.findLogsByMonthAndYear(emp.getEmployeeId(), targetMonth, targetYear);
 
             BigDecimal totalHours = BigDecimal.ZERO;
+            BigDecimal totalOt = BigDecimal.ZERO;
             int lateDays = 0, earlyLeaveDays = 0, missingPunchDays = 0;
 
             for (AttendanceLog log : logs) {
                 if (log.getWorkingHours() != null)
                     totalHours = totalHours.add(log.getWorkingHours());
+                if (log.getOtHours() != null)
+                    totalOt = totalOt.add(log.getOtHours());
                 if (AttendanceStatus.LATE.equals(log.getStatus()))
                     lateDays++;
                 if (AttendanceStatus.EARLY_LEAVE.equals(log.getStatus()))
@@ -195,6 +198,7 @@ public class AttendanceLogService {
                     .month(targetMonth)
                     .year(targetYear)
                     .totalWorkingHours(totalHours)
+                    .totalOtHours(totalOt)
                     .totalLateDays(lateDays)
                     .totalEarlyLeaveDays(earlyLeaveDays)
                     .totalMissingPunchDays(missingPunchDays)

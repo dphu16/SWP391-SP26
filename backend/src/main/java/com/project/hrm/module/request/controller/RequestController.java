@@ -2,6 +2,7 @@ package com.project.hrm.module.request.controller;
 
 import com.project.hrm.module.request.dto.RequestDTO;
 import com.project.hrm.module.request.dto.RequestResponseDTO;
+import com.project.hrm.module.request.entity.LeaveBalance;
 import com.project.hrm.module.request.entity.Request;
 import com.project.hrm.module.request.service.RequestService;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,6 @@ public class RequestController {
     private final RequestService service;
 
     // --- 1. LẤY TẤT CẢ ĐƠN (MANAGER) ---
-    // Endpoint này trả về RequestResponseDTO đã có sẵn employeeName và deptName
     @GetMapping("/all")
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<RequestResponseDTO>> getAllRequests() {
@@ -32,7 +32,7 @@ public class RequestController {
     @PutMapping("/{id}/approve")
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<Request> approveRequest(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody(required = false) RequestDTO dto) {
         return ResponseEntity.ok(service.approveRequest(id, dto));
     }
@@ -41,7 +41,7 @@ public class RequestController {
     @PutMapping("/{id}/reject")
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<Request> rejectRequest(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody(required = false) RequestDTO dto) {
         return ResponseEntity.ok(service.rejectRequest(id, dto));
     }
@@ -54,7 +54,22 @@ public class RequestController {
 
     // --- 5. XEM ĐƠN CÁ NHÂN (EMPLOYEE) ---
     @GetMapping("/my-requests")
-    public ResponseEntity<List<Request>> getMyRequests(@RequestParam UUID employeeId) {
+    public ResponseEntity<List<Request>> getMyRequests(@RequestParam("employeeId") UUID employeeId) {
         return ResponseEntity.ok(service.getMyRequests(employeeId));
+    }
+
+    // --- 6. XÓA ĐƠN (EMPLOYEE) ---
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteRequest(@PathVariable("id") UUID id) {
+        service.deleteRequest(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- 7. XEM LEAVE BALANCE CỦA NHÂN VIÊN ---
+    @GetMapping("/leave-balance")
+    public ResponseEntity<LeaveBalance> getLeaveBalance(
+            @RequestParam("employeeId") UUID employeeId,
+            @RequestParam("year") int year) {
+        return ResponseEntity.ok(service.getLeaveBalance(employeeId, year).orElse(null));
     }
 }

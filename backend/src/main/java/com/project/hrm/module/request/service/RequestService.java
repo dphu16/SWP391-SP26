@@ -1,18 +1,30 @@
 package com.project.hrm.module.request.service;
 
+import com.project.hrm.module.attendance.entity.AttendanceLog;
+import com.project.hrm.module.attendance.repository.AttendanceLogRepository;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.request.dto.RequestDTO;
 import com.project.hrm.module.request.dto.RequestResponseDTO;
+import com.project.hrm.module.request.entity.LeaveBalance;
 import com.project.hrm.module.request.entity.Request;
 import com.project.hrm.module.request.enums.RequestStatus;
+import com.project.hrm.module.request.enums.RequestType;
+
+import com.project.hrm.module.request.repository.LeaveBalanceRepository;
 import com.project.hrm.module.request.repository.RequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.format.DateTimeFormatter;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -22,10 +34,17 @@ public class RequestService {
 
     private final RequestRepository requestRepo;
     private final EmployeeRepository employeeRepo;
+    private final LeaveBalanceRepository leaveBalanceRepo;
+    private final AttendanceLogRepository attendanceLogRepo;
 
     // --- 1. TẠO YÊU CẦU MỚI (EMPLOYEE) ---
     @Transactional
     public Request createRequest(RequestDTO dto) {
+        // Validate leave balance when creating a LEAVE request
+        if (dto.getRequestType() == RequestType.LEAVE) {
+            validateLeaveBalance(dto.getEmployeeId(), dto.getStartDate(), dto.getEndDate(), dto.getReason());
+        }
+
         Request req = new Request();
         req.setEmployeeId(dto.getEmployeeId());
         req.setRequestType(dto.getRequestType());
@@ -46,13 +65,11 @@ public class RequestService {
     public List<RequestResponseDTO> getAllRequestsForReview() {
         return requestRepo.findAllByOrderByCreatedAtDesc().stream()
                 .map(req -> {
-                    // Dùng repo của Anh để tìm nhân viên
                     Employee emp = employeeRepo.findById(req.getEmployeeId()).orElse(null);
 
                     return RequestResponseDTO.builder()
                             .requestId(req.getRequestId())
                             .employeeName(emp != null ? emp.getFullName() : "Unknown")
-                            // Lấy deptName từ quan hệ department trong Entity Employee của Anh
                             .deptName(emp != null && emp.getDepartment() != null
                                     ? emp.getDepartment().getDeptName()
                                     : "N/A")
@@ -70,8 +87,23 @@ public class RequestService {
     @Transactional
     public Request approveRequest(UUID requestId, RequestDTO dto) {
         Request req = requestRepo.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu ID: " + requestId));
+                .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
 
+        if (req.getStatus() != RequestStatus.PENDING) {
+            throw new RuntimeException("Can only approve requests with PENDING status.");
+        }
+
+        // Deduct leave balance if this is a LEAVE request
+        if (req.getRequestType() == RequestType.LEAVE) {
+            deductLeaveBalance(req);
+        }
+
+        // Record OT hours into AttendanceLog if this is an OT request
+        if (req.getRequestType() == RequestType.OT) {
+            recordOtHours(req);
+        }
+
+        // Other request types (like OTHER) do not need secondary processing currently
         req.setStatus(RequestStatus.APPROVED);
         if (dto != null && dto.getManagerComment() != null) {
             req.setManagerComment(dto.getManagerComment());
@@ -83,7 +115,7 @@ public class RequestService {
     @Transactional
     public Request rejectRequest(UUID requestId, RequestDTO dto) {
         Request req = requestRepo.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu ID: " + requestId));
+                .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
 
         req.setStatus(RequestStatus.REJECTED);
         if (dto != null && dto.getManagerComment() != null) {
@@ -92,15 +124,14 @@ public class RequestService {
         return requestRepo.save(req);
     }
 
-    // --- 6. CẬP NHẬT YÊU CẦU (Hàm cũ của Anh) ---
+    // --- 6. CẬP NHẬT YÊU CẦU ---
     @Transactional
     public Request updateRequest(UUID requestId, RequestDTO dto) {
         Request req = requestRepo.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu ID: " + requestId));
+                .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
 
-        // Chỉ cho phép sửa khi đơn đang chờ duyệt
         if (req.getStatus() != RequestStatus.PENDING) {
-            throw new RuntimeException("Chỉ có thể cập nhật đơn đang ở trạng thái PENDING.");
+            throw new RuntimeException("Can only update requests with PENDING status.");
         }
 
         req.setRequestType(dto.getRequestType());
@@ -111,23 +142,165 @@ public class RequestService {
         return requestRepo.save(req);
     }
 
-    // --- 7. XÓA YÊU CẦU (Hàm cũ của Anh) ---
+    // --- 7. XÓA YÊU CẦU ---
     @Transactional
     public void deleteRequest(UUID requestId) {
         Request req = requestRepo.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu ID: " + requestId));
+                .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
 
-        // Chỉ cho phép xóa khi đơn đang chờ duyệt
         if (req.getStatus() != RequestStatus.PENDING) {
-            throw new RuntimeException("Chỉ có thể xóa đơn đang ở trạng thái PENDING.");
+            throw new RuntimeException("Can only delete requests with PENDING status.");
         }
 
         requestRepo.delete(req);
     }
 
-    // --- 8. XEM ĐƠN CÁ NHÂN FORMATTED (Hàm cũ của Anh) ---
+    // --- 8. XEM ĐƠN CÁ NHÂN FORMATTED ---
     @Transactional(readOnly = true)
     public List<Request> getMyRequestsFormatted(UUID empId) {
         return requestRepo.findByEmployeeIdOrderByCreatedAtDesc(empId);
     }
+
+    // --- 9. XEM LEAVE BALANCE CỦA NHÂN VIÊN ---
+    @Transactional(readOnly = true)
+    public Optional<LeaveBalance> getLeaveBalance(UUID employeeId, int year) {
+        return leaveBalanceRepo.findByEmployeeIdAndYear(employeeId, year);
+    }
+
+    // =========================================================
+    // PRIVATE HELPERS
+    // =========================================================
+
+    /**
+     * Calculate number of leave days (startDate to endDate inclusive).
+     */
+    private int calculateLeaveDays(LocalDate startDate, LocalDate endDate) {
+        if (endDate == null || endDate.isBefore(startDate)) {
+            return 1; // single day leave
+        }
+        return (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
+    }
+
+    /**
+     * Check if reason indicates sick leave (format: "[Sick Leave] ...")
+     */
+    private boolean isSickLeave(String reason) {
+        return reason != null && reason.startsWith("[Sick Leave]");
+    }
+
+    /**
+     * Validate that the employee has enough leave balance before creating a
+     * request.
+     */
+    private void validateLeaveBalance(UUID employeeId, LocalDate startDate, LocalDate endDate, String reason) {
+        if (startDate == null)
+            return;
+
+        int year = startDate.getYear();
+        int leaveDays = calculateLeaveDays(startDate, endDate);
+
+        LeaveBalance balance = leaveBalanceRepo.findByEmployeeIdAndYear(employeeId, year)
+                .orElse(null);
+
+        if (balance == null) {
+            throw new RuntimeException("No leave balance record found for year " + year
+                    + ". Please contact HR.");
+        }
+
+        if (isSickLeave(reason)) {
+            // Sick leave: no hard limit but we track it
+            return;
+        }
+
+        // Annual leave: check remaining
+        int remaining = balance.getRemainingAnnualLeave();
+        if (leaveDays > remaining) {
+            throw new RuntimeException("Insufficient annual leave balance. "
+                    + "Requesting " + leaveDays + " day(s) but only " + remaining
+                    + " day(s) remaining for " + year + ".");
+        }
+    }
+
+    /**
+     * Deduct leave days from the employee's balance when a LEAVE request is
+     * approved.
+     */
+    private void deductLeaveBalance(Request req) {
+        if (req.getStartDate() == null)
+            return;
+
+        int year = req.getStartDate().getYear();
+        int leaveDays = calculateLeaveDays(req.getStartDate(), req.getEndDate());
+
+        LeaveBalance balance = leaveBalanceRepo.findByEmployeeIdAndYear(req.getEmployeeId(), year)
+                .orElseThrow(() -> new RuntimeException(
+                        "No leave balance record found for employee in year " + year + "."));
+
+        if (isSickLeave(req.getReason())) {
+            // Sick leave: just increment used counter
+            balance.setSickLeaveUsed(balance.getSickLeaveUsed() + leaveDays);
+        } else {
+            // Annual leave: validate then deduct
+            int remaining = balance.getRemainingAnnualLeave();
+            if (leaveDays > remaining) {
+                throw new RuntimeException("Cannot approve: insufficient annual leave balance. "
+                        + "Requesting " + leaveDays + " day(s) but only " + remaining
+                        + " day(s) remaining for " + year + ".");
+            }
+            balance.setAnnualLeaveUsed(balance.getAnnualLeaveUsed() + leaveDays);
+        }
+
+        leaveBalanceRepo.save(balance);
+    }
+
+    /**
+     * Record OT hours into AttendanceLog when an OT request is approved.
+     * Parses the OT time range from reason (format: "HH:mm - HH:mm | reason text")
+     * and writes otHours to the attendance log for that date.
+     */
+    private void recordOtHours(Request req) {
+        if (req.getStartDate() == null || req.getReason() == null)
+            return;
+
+        // Parse OT time range from reason: "18:00 - 21:00 | reason text"
+        String reason = req.getReason().trim();
+        String timePart = reason.contains("|") ? reason.split("\\|")[0].trim() : reason;
+        String[] times = timePart.split("-");
+        if (times.length != 2)
+            return;
+
+        try {
+            LocalTime otStart = LocalTime.parse(times[0].trim());
+            LocalTime otEnd = LocalTime.parse(times[1].trim());
+            long otMinutes = Duration.between(otStart, otEnd).toMinutes();
+            if (otMinutes <= 0)
+                return;
+
+            BigDecimal otHours = BigDecimal.valueOf(otMinutes)
+                    .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+
+            // Find attendance log for that employee on the OT date
+            Optional<AttendanceLog> logOpt = attendanceLogRepo
+                    .findByEmployeeIdAndDate(req.getEmployeeId(), req.getStartDate());
+
+            if (logOpt.isPresent()) {
+                // Update existing log
+                AttendanceLog log = logOpt.get();
+                log.setOtHours(otHours);
+                attendanceLogRepo.save(log);
+            } else {
+                // Create a new log entry for the OT day (employee may not have checked in)
+                AttendanceLog newLog = new AttendanceLog();
+                newLog.setEmployeeId(req.getEmployeeId());
+                newLog.setDate(req.getStartDate());
+                newLog.setOtHours(otHours);
+                newLog.setWorkingHours(BigDecimal.ZERO);
+                attendanceLogRepo.save(newLog);
+            }
+        } catch (Exception e) {
+            // If parsing fails, log but don't block the approval
+            System.err.println("Failed to parse OT hours from reason: " + reason + " - " + e.getMessage());
+        }
+    }
+
 }
