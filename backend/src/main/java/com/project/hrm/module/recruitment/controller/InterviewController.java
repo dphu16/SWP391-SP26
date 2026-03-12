@@ -1,5 +1,6 @@
 package com.project.hrm.module.recruitment.controller;
 
+import com.project.hrm.module.corehr.enums.UserRole;
 import com.project.hrm.module.recruitment.dto.request.InterviewRequest;
 import com.project.hrm.module.recruitment.dto.response.InterviewResponse;
 import com.project.hrm.module.recruitment.service.InterviewService;
@@ -31,14 +32,13 @@ public class InterviewController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('HR')")
-    public ResponseEntity<InterviewResponse> getInterviewById(
+    public ResponseEntity<List<InterviewResponse>> getInterviewById(
             @PathVariable UUID id) {
 
         return ResponseEntity.ok(interviewService.getInterviewById(id));
     }
 
     @PatchMapping("/{id}/result")
-    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<InterviewResponse> inputResult(
             @PathVariable UUID id,
             @RequestBody InterviewRequest request) {
@@ -48,10 +48,17 @@ public class InterviewController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/list/{id}")
+    @PostMapping("/send/{deptId}")
     @PreAuthorize("hasRole('HR')")
-    public ResponseEntity<List<InterviewResponse>> getInterviewByHr(@PathVariable UUID id) {
-        List<InterviewResponse> responses = interviewService.getInterviewByHr(id);
+    public ResponseEntity<List<InterviewResponse>> sendInterviewList(@PathVariable UUID deptId, @RequestBody List<UUID> ids) {
+        List<InterviewResponse> responses = interviewService.sendInterviewList(ids, deptId);
+        return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/list/{id}")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
+    public ResponseEntity<List<InterviewResponse>> getInterviewList(@PathVariable UUID id) {
+        List<InterviewResponse> responses = interviewService.getInterviewList(id);
         return ResponseEntity.ok(responses);
     }
 

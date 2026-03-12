@@ -8,6 +8,7 @@ import { useToast } from "../ui/Toast";
 const CVListPage: React.FC = () => {
     const [searchParams] = useSearchParams();
     const jobId = searchParams.get("jobId");
+    const deptId = searchParams.get("deptId");
 
     const { error: toastError, success: toastSuccess } = useToast();
 
@@ -29,6 +30,7 @@ const CVListPage: React.FC = () => {
 
     const [selectedApps, setSelectedApps] = useState<string[]>([]);
     const [isSubmittingNextStage, setIsSubmittingNextStage] = useState(false);
+    const [isSubmittingSendList, setIsSubmittingSendList] = useState(false);
 
     useEffect(() => {
         setSelectedApps([]);
@@ -49,6 +51,27 @@ const CVListPage: React.FC = () => {
             toastError("Error", err?.response?.data || "Failed to move to next stage");
         } finally {
             setIsSubmittingNextStage(false);
+        }
+    };
+
+    const handleSendList = async () => {
+        if (!deptId) {
+            toastError("Error", "Missing Department ID.");
+            return;
+        }
+        if (selectedApps.length === 0) {
+            toastError("Error", "No candidates selected.");
+            return;
+        }
+        try {
+            setIsSubmittingSendList(true);
+            await applicationService.sendList(deptId, selectedApps);
+            toastSuccess("Success", "List sent successfully");
+            setSelectedApps([]);
+        } catch (err: any) {
+            toastError("Error", err?.response?.data || "Failed to send list");
+        } finally {
+            setIsSubmittingSendList(false);
         }
     };
 
@@ -247,14 +270,24 @@ const CVListPage: React.FC = () => {
                             ))}
                         </div>
                         {statusFilter === "INTERVIEW" && selectedApps.length > 0 && (
-                            <button
-                                onClick={handleNextStage}
-                                disabled={isSubmittingNextStage}
-                                className="px-6 py-2 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors shadow-sm disabled:opacity-50 text-sm flex items-center gap-2"
-                            >
-                                {isSubmittingNextStage && <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                                Submit to Next Stage ({selectedApps.length})
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleSendList}
+                                    disabled={isSubmittingSendList}
+                                    className="px-6 py-2 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 transition-colors shadow-sm disabled:opacity-50 text-sm flex items-center gap-2"
+                                >
+                                    {isSubmittingSendList && <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                                    Send List ({selectedApps.length})
+                                </button>
+                                <button
+                                    onClick={handleNextStage}
+                                    disabled={isSubmittingNextStage}
+                                    className="px-6 py-2 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors shadow-sm disabled:opacity-50 text-sm flex items-center gap-2"
+                                >
+                                    {isSubmittingNextStage && <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                                    Next Stage ({selectedApps.length})
+                                </button>
+                            </div>
                         )}
                     </div>
                     <div className="rounded-2xl border border-border-light bg-white overflow-hidden shadow-card">
@@ -286,6 +319,7 @@ const CVListPage: React.FC = () => {
                                         <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Phone</th>
                                         <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">CV URL</th>
                                         <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Status</th>
+                                        <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Score</th>
                                         <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -295,7 +329,7 @@ const CVListPage: React.FC = () => {
                                         app.email.toLowerCase().includes(searchTerm.toLowerCase())
                                     ).length === 0 ? (
                                         <tr>
-                                            <td colSpan={statusFilter === "INTERVIEW" ? 6 : 5} className="px-6 py-12 text-center text-text-secondary-light font-medium">
+                                            <td colSpan={statusFilter === "INTERVIEW" ? 7 : 6} className="px-6 py-12 text-center text-text-secondary-light font-medium">
                                                 No candidates found for this job.
                                             </td>
                                         </tr>
@@ -371,6 +405,11 @@ const CVListPage: React.FC = () => {
                                                             {app.status || "APPLIED"}
                                                         </span>
                                                     )}
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <div className="text-sm font-semibold text-gray-900 bg-gray-50/50 px-2.5 py-1 rounded-lg border border-gray-100 inline-block">
+                                                        {app.score !== undefined && app.score !== null ? `${app.score}/10` : '-'}
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-2 text-text-tertiary-light">

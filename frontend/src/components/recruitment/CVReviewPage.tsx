@@ -41,11 +41,14 @@ const CVReviewPage: React.FC = () => {
         feedback: string | null;
         score: number | null;
     }
-    const [interviewData, setInterviewData] = useState<InterviewData | null>(null);
-    const [interviewFeedback, setInterviewFeedback] = useState("");
-    const [interviewScore, setInterviewScore] = useState<number | "">("");
-    const [interviewStatus, setInterviewStatus] = useState("SCHEDULED");
-    const [isUpdatingInterview, setIsUpdatingInterview] = useState(false);
+    const [interviews, setInterviews] = useState<InterviewData[]>([]);
+    const [expandedFeedbackIds, setExpandedFeedbackIds] = useState<string[]>([]);
+
+    const toggleFeedback = (id: string) => {
+        setExpandedFeedbackIds(prev =>
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+    };
 
     const fetchApp = useCallback(async () => {
         if (!id) return;
@@ -63,10 +66,7 @@ const CVReviewPage: React.FC = () => {
 
                 try {
                     const intRes = await applicationService.getInterview(id);
-                    setInterviewData(intRes.data);
-                    setInterviewFeedback(intRes.data.feedback || "");
-                    setInterviewScore(intRes.data.score || "");
-                    setInterviewStatus(intRes.data.status || "SCHEDULED");
+                    setInterviews(intRes.data);
                 } catch (e) {
                     console.error("Could not fetch interview info", e);
                 }
@@ -164,34 +164,7 @@ const CVReviewPage: React.FC = () => {
         }
     };
 
-    const handleUpdateInterview = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!interviewData?.id || !id) return;
-        try {
-            setIsUpdatingInterview(true);
-            await applicationService.updateInterviewResult(interviewData.id, {
-                appId: interviewData.appId,
-                interviewerId: interviewData.interviewerId,
-                scheduleTime: interviewData.scheduleTime,
-                feedback: interviewFeedback,
-                score: Number(interviewScore) || 0,
-                status: interviewStatus
-            });
 
-            const updatedRes = await applicationService.getInterview(id);
-            setInterviewData(updatedRes.data);
-            setInterviewFeedback(updatedRes.data.feedback || "");
-            setInterviewScore(updatedRes.data.score || "");
-            setInterviewStatus(updatedRes.data.status || "SCHEDULED");
-
-            toastSuccess("Success", "Interview details updated successfully");
-            fetchApp(); // fetch full application again just in case status changed
-        } catch (err: any) {
-            toastError("Error", err?.response?.data || "Failed to update interview");
-        } finally {
-            setIsUpdatingInterview(false);
-        }
-    };
 
     if (loading) return <LoadingSpinner />;
     if (error || !app) return <ErrorMessage message={error || "Application not found"} />;
@@ -361,72 +334,75 @@ const CVReviewPage: React.FC = () => {
                 ) : (
                     <div className="space-y-6">
                         {/* Interview Details Block */}
-                        {interviewData && (
+                        {/* Interview Details Block */}
+                        {interviews.length > 0 && (
                             <section className="p-6 rounded-2xl border border-blue-200 bg-blue-50/30 shadow-card animate-slide-up">
                                 <h2 className="text-lg font-bold mb-4 text-blue-800 flex items-center gap-2">
                                     <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                                    Interview Record
+                                    Interview Records
                                 </h2>
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-blue-100 flex flex-col gap-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 border-b border-gray-100">
-                                        <div>
-                                            <label className="text-[10px] font-bold text-gray-500 uppercase">Interviewer</label>
-                                            <p className="text-sm font-semibold text-gray-800">{interviewData.interviewerName}</p>
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] font-bold text-gray-500 uppercase">Schedule Time</label>
-                                            <p className="text-sm font-semibold text-gray-800">{new Date(interviewData.scheduleTime).toLocaleString()}</p>
-                                        </div>
+                                <div className="bg-white rounded-xl shadow-sm border border-blue-100 overflow-hidden">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-gray-100 bg-gray-50/50">
+                                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500">Interviewer</th>
+                                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500">Scheduled Time</th>
+                                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500">Status</th>
+                                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500">Score</th>
+                                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500">Feedback</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50">
+                                                {interviews.map(int => {
+                                                    const isExpanded = expandedFeedbackIds.includes(int.id);
+                                                    return (
+                                                        <React.Fragment key={int.id}>
+                                                            <tr className="hover:bg-gray-50/80 transition-colors">
+                                                                <td className="px-6 py-4 text-sm font-semibold text-gray-900">{int.interviewerName}</td>
+                                                                <td className="px-6 py-4"><span className="text-sm text-gray-800 font-medium">{new Date(int.scheduleTime).toLocaleString()}</span></td>
+                                                                <td className="px-6 py-4">
+                                                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${int.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' : int.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}`}>
+                                                                        {int.status}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-sm font-bold text-gray-900">{int.score !== null ? `${int.score}/10` : '-'}</td>
+                                                                <td className="px-6 py-4">
+                                                                    {int.feedback ? (
+                                                                        <button
+                                                                            onClick={() => toggleFeedback(int.id)}
+                                                                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isExpanded ? 'bg-indigo-600 text-white shadow-sm' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'}`}
+                                                                        >
+                                                                            <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                                            </svg>
+                                                                            {isExpanded ? 'Hide Feedback' : 'View Feedback'}
+                                                                        </button>
+                                                                    ) : (
+                                                                        <span className="text-xs text-gray-400 italic">No feedback</span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                            {isExpanded && int.feedback && (
+                                                                <tr className="bg-indigo-50/30 animate-slide-down">
+                                                                    <td colSpan={5} className="px-6 py-4">
+                                                                        <div className="flex gap-3">
+                                                                            <div className="pt-1 text-indigo-400">
+                                                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16L19.017 16C20.1216 16 21.017 16.8954 21.017 18L21.017 21L14.017 21ZM14.017 21C12.9124 21 12.017 20.1046 12.017 19L12.017 18C12.017 15.7909 13.8079 14 16.017 14L19.017 14C21.2261 14 23.017 15.7909 23.017 18L23.017 19C23.017 20.1046 22.1216 21 21.017 21L14.017 21ZM3 21L3 18C3 16.8954 3.89543 16 5 16L8 16C9.10457 16 10 16.8954 10 18L10 21L3 21ZM3 21C1.89543 21 1 20.1046 1 19L1 18C1 15.7909 2.79086 14 5 14L8 14C10.2091 14 12 15.7909 12 18L12 19C12 20.1046 11.1046 21 10 21L3 21ZM16.017 14C13.8079 14 12.017 15.7909 12.017 18L12.017 19C12.017 20.1046 12.9124 21 14.017 21L21.017 21C22.1216 21 23.017 20.1046 23.017 19L23.017 18C23.017 15.7909 21.2261 14 19.017 14L16.017 14Z" /></svg>
+                                                                            </div>
+                                                                            <p className="text-sm text-gray-700 italic whitespace-pre-wrap leading-relaxed">
+                                                                                {int.feedback}
+                                                                            </p>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <form onSubmit={handleUpdateInterview} className="space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-900 mb-1">Status</label>
-                                                <select
-                                                    value={interviewStatus}
-                                                    onChange={e => setInterviewStatus(e.target.value)}
-                                                    className="w-full px-4 py-2 rounded-xl border border-blue-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
-                                                >
-                                                    <option value="SCHEDULED">SCHEDULED</option>
-                                                    <option value="COMPLETED">COMPLETED</option>
-                                                    <option value="CANCELLED">CANCELLED</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-900 mb-1">Score</label>
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={interviewScore}
-                                                    onChange={e => setInterviewScore(e.target.value ? Number(e.target.value) : "")}
-                                                    className="w-full px-4 py-2 rounded-xl border border-blue-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
-                                                    placeholder="0.00 to 10.00"
-                                                    min="0"
-                                                    max="10"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-blue-900 mb-1">Feedback</label>
-                                            <textarea
-                                                className="w-full px-4 py-3 rounded-xl border border-blue-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm resize-none"
-                                                rows={4}
-                                                placeholder="Add interview feedback here..."
-                                                value={interviewFeedback}
-                                                onChange={e => setInterviewFeedback(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="flex justify-end pt-2">
-                                            <button
-                                                type="submit"
-                                                disabled={isUpdatingInterview}
-                                                className="px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
-                                            >
-                                                {isUpdatingInterview && <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                                                Update Interview Record
-                                            </button>
-                                        </div>
-                                    </form>
                                 </div>
                             </section>
                         )}

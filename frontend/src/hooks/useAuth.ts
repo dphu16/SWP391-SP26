@@ -19,7 +19,7 @@ export function useAuth() {
 
         return {
             username: payload.sub,
-            role: (payload.role as UserRole) ?? "EMPLOYEE",
+            role: (payload.role as UserRole) ?? "ROLE_EMPLOYEE",
             fullName: payload.fullName,
             employeeId: payload.employeeId,
             avatarUrl: payload.avatarUrl,

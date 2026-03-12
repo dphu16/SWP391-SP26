@@ -16,6 +16,7 @@ public class JobResponse {
     private UUID id;
     private UUID reqId;
     private UUID posId;
+    private UUID deptId;
     private String deptName;
     private String posName;
     private BigDecimal minSalary;

@@ -50,6 +50,7 @@ export interface Application {
     status: string;
     onboardingStatus?: "PENDING" | "IN_PROGRESS" | "COMPLETED";
     createdAt?: string;
+    score: number;
 }
 
 // DTO để tạo nhân viên mới (POST /api/employees/new)

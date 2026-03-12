@@ -1,5 +1,6 @@
 package com.project.hrm.module.recruitment.service;
 
+import com.project.hrm.module.corehr.enums.UserRole;
 import com.project.hrm.module.recruitment.dto.request.InterviewRequest;
 import com.project.hrm.module.recruitment.dto.response.InterviewResponse;
 import com.project.hrm.module.recruitment.enums.InterviewStatus;
@@ -10,8 +11,10 @@ import java.util.UUID;
 public interface InterviewService {
 
     InterviewResponse createSchedule(InterviewRequest request);
-    InterviewResponse getInterviewById(UUID id);
+    List<InterviewResponse> getInterviewById(UUID id);
     InterviewResponse inputResult(UUID id, InterviewRequest request);
-    List<InterviewResponse> getInterviewByHr(UUID interviewer);
+    List<InterviewResponse> getInterviewList(UUID interviewer);
+    List<InterviewResponse> sendInterviewList(List<UUID> ids, UUID deptId);
+
 
 }

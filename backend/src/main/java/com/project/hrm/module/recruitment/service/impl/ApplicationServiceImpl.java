@@ -1,8 +1,6 @@
 package com.project.hrm.module.recruitment.service.impl;
 
-import com.project.hrm.module.recruitment.entity.Interview;
-import com.project.hrm.module.recruitment.enums.InterviewStatus;
-import com.project.hrm.module.recruitment.repository.InterviewRepository;
+import com.project.hrm.module.recruitment.dto.request.EmailRequest;
 import com.project.hrm.module.recruitment.service.email.ExpectedInterview;
 import com.project.hrm.module.recruitment.service.email.OfferEmail;
 import com.project.hrm.module.recruitment.service.email.UploadCV;
@@ -21,6 +19,7 @@ import com.project.hrm.module.recruitment.service.FileService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -36,7 +35,6 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final ApplicationRepository applicationRepository;
     private final FileService fileService;
     private final OfferEmail offerEmail;
-    private final InterviewRepository interviewRepository;
 
     @Override
     public ApplicationResponse create(ApplicationRequest request) {
@@ -62,7 +60,8 @@ public class ApplicationServiceImpl implements ApplicationService {
         app.setStatus(ApplicationStatus.APPLIED);
         app.setCreatedAt(OffsetDateTime.now());
         applicationRepository.save(app);
-        uploadCV.sendEmail(app);
+        EmailRequest emailRequest = sendCV(app,job);
+        uploadCV.sendEmail(emailRequest);
         return mapToResponse(app);
     }
 
@@ -73,17 +72,6 @@ public class ApplicationServiceImpl implements ApplicationService {
                 .orElseThrow(() -> new RuntimeException("Application not found"));
 
         return mapToResponse(application);
-    }
-
-    @Override
-    public List<ApplicationResponse> getApplicationByJobId(UUID id) {
-
-        List<Application> applications =
-                applicationRepository.findByJob_Id(id);
-
-        return applications.stream()
-                .map(this::mapToResponse)
-                .toList();
     }
 
     @Override
@@ -106,7 +94,10 @@ public class ApplicationServiceImpl implements ApplicationService {
             String cvUrl = fileService.inputPDF(request.getCvUrl());
             app.setCvUrl(cvUrl);
         }
-        uploadCV.sendEmail(app);
+        Job job = jobRepository.findById(request.getJobId())
+                .orElseThrow(() -> new RuntimeException("Not found job."));
+        EmailRequest emailRequest = sendCV(app,job);
+        uploadCV.sendEmail(emailRequest);
         return mapToResponse(app);
     }
 
@@ -117,8 +108,10 @@ public class ApplicationServiceImpl implements ApplicationService {
         app.setStart(request.getStart());
         app.setEnd(request.getEnd());
         applicationRepository.save(app);
-        String title = app.getJob().getPos().getTitle();
-        expectedInterview.sendEmail(app, title);
+        Job job = jobRepository.findById(app.getJob().getId())
+                .orElseThrow(() -> new RuntimeException("Not found job."));
+        EmailRequest emailRequest = expectedDay(app,job);
+        expectedInterview.sendEmail(emailRequest);
 
         return mapToResponse(app);
     }
@@ -136,21 +129,16 @@ public class ApplicationServiceImpl implements ApplicationService {
             throw new RuntimeException("Applications not found");
         }
 
-        List<Interview> interviews = interviewRepository.findAllByApp_IdIn(ids);
-
-        for (Interview interview : interviews) {
-            interview.setStatus(InterviewStatus.COMPLETED);
-        }
-
         for (Application app : applications) {
             app.setStatus(ApplicationStatus.OFFER);
         }
 
-        interviewRepository.saveAll(interviews);
         applicationRepository.saveAll(applications);
-
+        Job job = jobRepository.findById(applications.get(0).getJob().getId())
+                .orElseThrow(() -> new RuntimeException("Not found job."));
         for (Application app : applications) {
-            offerEmail.sendEmail(app);
+            EmailRequest emailRequest = offerGmail(app,job);
+            offerEmail.sendEmail(emailRequest);
         }
 
         return applications.stream()
@@ -183,6 +171,36 @@ public class ApplicationServiceImpl implements ApplicationService {
         candidateRepository.save(candidate);
     }
 
+    private EmailRequest sendCV(Application app, Job job){
+        EmailRequest request = new EmailRequest();
+        request.setTitle(job.getPos().getTitle());
+        request.setCandidateName(app.getCandidate().getFullName());
+        request.setCanEmail(app.getCandidate().getEmail());
+        request.setCanPhone(app.getCandidate().getPhone());
+        request.setCvUrl(app.getCvUrl());
+        return request;
+    }
+
+    private EmailRequest expectedDay(Application app, Job job){
+        EmailRequest request = new EmailRequest();
+        request.setTitle(job.getPos().getTitle());
+        request.setCandidateName(app.getCandidate().getFullName());
+        request.setCanEmail(app.getCandidate().getEmail());
+        request.setStart(app.getStart());
+        request.setEnd(app.getEnd());
+        request.setHrName(job.getEmployee().getFullName());
+        return request;
+    }
+
+    private EmailRequest offerGmail(Application app, Job job){
+        EmailRequest request = new EmailRequest();
+        request.setTitle(job.getPos().getTitle());
+        request.setCandidateName(app.getCandidate().getFullName());
+        request.setCanEmail(app.getCandidate().getEmail());
+        request.setHrName(job.getEmployee().getFullName());
+        return request;
+    }
+
     private ApplicationResponse mapToResponse(Application entity) {
         ApplicationResponse app = new ApplicationResponse();
         app.setId(entity.getId());
@@ -195,6 +213,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         app.setPhone(entity.getCandidate().getPhone());
         app.setCvUrl(entity.getCvUrl());
         app.setStatus(entity.getStatus());
+        app.setScore(entity.getScore());
         if(entity.getStart()!=null){
             app.setStart(entity.getStart());
         }

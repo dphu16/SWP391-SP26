@@ -169,6 +169,7 @@ public class JobServiceImpl implements JobService {
         response.setType(jobDetail.getType());
         response.setLocation(jobDetail.getLocation());
         Position position = entity.getPos();
+        response.setDeptId(position.getDepartment().getDeptId());
         response.setDeptName(position.getDepartment().getDeptName());
         response.setPosId(position.getPositionId());
         response.setPosName(position.getTitle());

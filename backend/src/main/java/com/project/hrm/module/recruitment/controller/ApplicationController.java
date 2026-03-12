@@ -3,11 +3,13 @@ package com.project.hrm.module.recruitment.controller;
 import com.project.hrm.module.recruitment.dto.request.ApplicationRequest;
 import com.project.hrm.module.recruitment.dto.request.DateLimitRequest;
 import com.project.hrm.module.recruitment.dto.response.ApplicationResponse;
-import com.project.hrm.module.recruitment.dto.response.InterviewResponse;
 import com.project.hrm.module.recruitment.enums.ApplicationStatus;
 import com.project.hrm.module.recruitment.service.ApplicationService;
+import com.project.hrm.module.recruitment.service.FileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +25,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ApplicationController {
     private final ApplicationService applicationService;
+    private final FileService fileService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('HR')")
@@ -42,7 +45,6 @@ public class ApplicationController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<ApplicationResponse> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(applicationService.getApplicationById(id));
     }
@@ -95,7 +97,5 @@ public class ApplicationController {
         List<ApplicationResponse> responses = applicationService.nextStage(ids);
         return ResponseEntity.ok(responses);
     }
-
-
 
 }
