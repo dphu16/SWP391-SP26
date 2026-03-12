@@ -22,6 +22,7 @@ public class AttendanceSummaryDTO {
     private int year;
 
     private BigDecimal totalWorkingHours;
+    private BigDecimal totalOtHours;
     private int totalLateDays;
     private int totalEarlyLeaveDays;
     private int totalMissingPunchDays;

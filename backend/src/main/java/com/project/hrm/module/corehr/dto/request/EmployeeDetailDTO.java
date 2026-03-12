@@ -1,5 +1,7 @@
 package com.project.hrm.module.corehr.dto.request;
 
+import com.project.hrm.module.corehr.dto.response.ContractResponseDTO;
+import com.project.hrm.module.corehr.entity.Contract;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.Gender;
 
@@ -11,6 +13,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -36,4 +39,8 @@ public class EmployeeDetailDTO {
     private String deptName;
     private EmployeeStatus statusEmp;
     private UserStatus status;
+    private String contractNumber;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private String contractStatus;
 }

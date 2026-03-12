@@ -21,7 +21,7 @@ interface ReviewEntry {
 const parseRequest = (dto: RequestResponseDTO): ReviewEntry => {
     let appType = "Annual Leave";
     if (dto.requestType === "OT") appType = "Overtime";
-    if (dto.requestType === "SHIFT_CHANGE") appType = "Change Shift";
+    if (dto.requestType === "OTHER") appType = "Other Request";
     if (dto.requestType === "APPROVAL") appType = "Onboarding Approval";
 
     let status: AppStatus = "Pending";
@@ -60,17 +60,10 @@ const parseRequest = (dto: RequestResponseDTO): ReviewEntry => {
             sub = rawReason;
             details = dStart.toLocaleDateString("en-US", { month: "short", day: "numeric" });
         }
-    } else if (dto.requestType === "SHIFT_CHANGE") {
+    } else if (dto.requestType === "OTHER") {
         const dStart = dto.startDate ? new Date(dto.startDate) : new Date();
-        const dEnd = dto.endDate ? new Date(dto.endDate) : new Date();
-        const match = rawReason.match(/^Swap with (.*?) \| (.*)$/);
-        if (match) {
-            details = `${dStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} 🔄 ${dEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-            sub = `Swap with ${match[1]} | ${match[2]}`;
-        } else {
-            sub = rawReason;
-            details = dStart.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-        }
+        details = dStart.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        sub = rawReason || "Other Request";
     } else if (dto.requestType === "APPROVAL") {
         details = "New Employee Onboarding";
         sub = "Review and approve profile setup";
@@ -123,10 +116,10 @@ const typeIcon: Record<string, React.ReactNode> = {
             </svg>
         </span>
     ),
-    "Change Shift": (
+    "Other Request": (
         <span className="w-8 h-8 rounded-lg bg-[#e0f2fe] text-[#0369a1] flex items-center justify-center flex-shrink-0">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
             </svg>
         </span>
     ),
@@ -144,6 +137,10 @@ const ReviewRequests: React.FC = () => {
     const [entries, setEntries] = useState<ReviewEntry[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const ITEMS_PER_PAGE = 5;
+    const [currentPage, setCurrentPage] = useState(1);
+    const [selectedDetail, setSelectedDetail] = useState<ReviewEntry | null>(null);
+
     const loadData = async () => {
         setLoading(true);
         try {
@@ -160,8 +157,15 @@ const ReviewRequests: React.FC = () => {
         loadData();
     }, []);
 
-    const displayed = entries.filter(e => e.status === activeTab);
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab]);
+
+    const displayedAll = entries.filter(e => e.status === activeTab);
     const pendingCount = entries.filter(e => e.status === "Pending").length;
+
+    const totalPages = Math.ceil(displayedAll.length / ITEMS_PER_PAGE) || 1;
+    const displayed = displayedAll.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     const approve = async (entry: ReviewEntry) => {
         try {
@@ -206,15 +210,8 @@ const ReviewRequests: React.FC = () => {
             {/* Header */}
             <div className="flex justify-between items-start">
                 <div>
-                    <h1 className="text-[28px] font-bold text-[#1a1c21] tracking-tight">Application Review</h1>
-                    <p className="text-[#64748b] text-[15px] mt-1">Review, approve, or reject incoming employee requests.</p>
+                    <h1 className="text-[28px] font-bold text-[#1a1c21] tracking-tight">Request Review</h1>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-[#e2e8f0] rounded-lg text-sm font-medium text-[#334155] hover:bg-gray-50 shadow-sm transition-all">
-                    <svg className="w-4 h-4 text-[#64748b]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    History
-                </button>
             </div>
 
             {/* Panel */}
@@ -246,7 +243,7 @@ const ReviewRequests: React.FC = () => {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="border-b border-[#e2e8f0]">
-                                {["Employee Name", "Application Type", "Date Requested", "Details", "Action"].map(h => (
+                                {["Employee Name", "Request Type", "Date Requested", "Details", "Action"].map(h => (
                                     <th key={h} className="px-5 py-3 text-xs font-bold text-[#94a3b8] uppercase tracking-wider">{h}</th>
                                 ))}
                             </tr>
@@ -295,8 +292,12 @@ const ReviewRequests: React.FC = () => {
 
                                     {/* Details */}
                                     <td className="px-5 py-4">
-                                        <p className="text-sm font-semibold text-[#1e293b]">{entry.details}</p>
-                                        <p className="text-xs text-[#94a3b8]">{entry.sub}</p>
+                                        <button
+                                            onClick={() => setSelectedDetail(entry)}
+                                            className="px-3 py-1.5 text-xs font-bold text-[#0d9488] bg-[#f0fdf4] border border-[#86efac] hover:bg-[#dcfce7] rounded-lg transition-colors"
+                                        >
+                                            View Details
+                                        </button>
                                     </td>
 
                                     {/* Action */}
@@ -338,16 +339,67 @@ const ReviewRequests: React.FC = () => {
                 {/* Footer */}
                 <div className="flex justify-between items-center px-5 py-4 border-t border-[#f1f5f9]">
                     <p className="text-sm text-[#64748b]">
-                        Showing <span className="font-bold text-[#0f172a]">1</span> to{" "}
-                        <span className="font-bold text-[#0f172a]">{displayed.length}</span> of{" "}
-                        <span className="font-bold text-[#0f172a]">{displayed.length}</span> {activeTab.toLowerCase()} requests
+                        Showing <span className="font-bold text-[#0f172a]">{displayedAll.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to{" "}
+                        <span className="font-bold text-[#0f172a]">{Math.min(currentPage * ITEMS_PER_PAGE, displayedAll.length)}</span> of{" "}
+                        <span className="font-bold text-[#0f172a]">{displayedAll.length}</span> {activeTab.toLowerCase()} requests
                     </p>
                     <div className="flex gap-2">
-                        <button disabled className="px-3 py-1.5 rounded-lg border border-[#e2e8f0] text-sm text-[#94a3b8] cursor-not-allowed">Previous</button>
-                        <button disabled className="px-3 py-1.5 rounded-lg border border-[#e2e8f0] text-sm text-[#94a3b8] cursor-not-allowed">Next</button>
+                        <button
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            className="px-3 py-1.5 rounded-lg border border-[#e2e8f0] text-sm text-[#334155] hover:bg-gray-50 disabled:text-[#94a3b8] disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+                        >
+                            Previous
+                        </button>
+                        <div className="flex items-center px-2 text-sm font-medium text-[#64748b]">
+                            Page {currentPage} of {totalPages}
+                        </div>
+                        <button
+                            disabled={currentPage === totalPages || totalPages === 0}
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            className="px-3 py-1.5 rounded-lg border border-[#e2e8f0] text-sm text-[#334155] hover:bg-gray-50 disabled:text-[#94a3b8] disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+                        >
+                            Next
+                        </button>
                     </div>
                 </div>
             </div>
+
+            {/* Details Modal */}
+            {selectedDetail && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+                        <div className="flex justify-between items-center px-6 py-5 border-b border-[#e2e8f0]">
+                            <h3 className="text-lg font-bold text-[#0f172a]">Request Details</h3>
+                            <button onClick={() => setSelectedDetail(null)} className="text-[#94a3b8] hover:text-[#64748b] transition-colors">
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="px-6 py-5 space-y-4">
+                            <div>
+                                <h4 className="text-sm font-bold text-[#334155] mb-1">{selectedDetail.appType}</h4>
+                                <p className="text-sm text-[#0f172a] font-medium">{selectedDetail.details}</p>
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-[#334155] mb-1">Reason / Description</h4>
+                                <div className="p-3 bg-[#f8fafc] rounded-lg border border-[#e2e8f0]">
+                                    <p className="text-sm text-[#475569] whitespace-pre-wrap">{selectedDetail.sub || "No reason provided."}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex justify-end px-6 py-4 bg-[#f8fafc] border-t border-[#e2e8f0]">
+                            <button
+                                onClick={() => setSelectedDetail(null)}
+                                className="px-5 py-2 rounded-lg bg-[#0d9488] hover:bg-[#0f766e] text-white text-sm font-semibold shadow-sm transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

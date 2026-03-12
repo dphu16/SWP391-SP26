@@ -36,11 +36,17 @@ public class OnboardingMapper {
         User user = employee.getUser();
         Personal personal = employee.getPersonal();
         Position position = employee.getPosition();
+        String resolvedEmail = null;
+        if (personal != null && personal.getEmail() != null && !personal.getEmail().isBlank()) {
+            resolvedEmail = personal.getEmail();
+        } else if (user != null) {
+            resolvedEmail = user.getEmail();
+        }
 
         return OnboardingResponseDTO.builder()
                 .id(employee.getEmployeeId())
                 .candidateName(employee.getFullName())
-                .candidateEmail(user != null ? user.getEmail() : null)
+                .candidateEmail(resolvedEmail)
                 .candidatePhone(personal != null ? personal.getPhone() : null)
                 .jobTitle(position != null ? position.getTitle() : null)
                 .status(null)

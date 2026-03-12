@@ -30,7 +30,6 @@ public class DependentService {
      */
     @Transactional(readOnly = true)
     public List<DependentDTO> getDependentsByEmployeeId(UUID employeeId) {
-        // Kiểm tra employee tồn tại trước khi truy vấn dependents
         if (!employeeRepository.existsById(employeeId)) {
             throw new BusinessRuleException(ErrorCode.EMPLOYEE_NOT_FOUND,
                     "Employee not found with id: " + employeeId);
@@ -47,11 +46,9 @@ public class DependentService {
         return DependentDTO.builder()
                 .id(entity.getDependentId())
                 .fullName(entity.getContactName())
-                .dateOfBirth(entity.getDateOfBirth())
                 .relationship(entity.getRelationship())
                 .phone(entity.getPhone())
                 .address(entity.getAddress())
-                .status(entity.getStatus())
                 .build();
     }
 }
