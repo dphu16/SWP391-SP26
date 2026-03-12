@@ -1,95 +1,139 @@
 package com.project.hrm.module.payroll.controller;
 
-import com.project.hrm.module.payroll.dto.RequestDTO.PaymentRequestDTO;
-import com.project.hrm.module.payroll.dto.ResponseDTO.ApprovalResponseDTO;
-import com.project.hrm.module.payroll.entity.PaymentRequest;
-import com.project.hrm.module.payroll.service.FinanceService;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import com.project.hrm.module.payroll.dto.RequestDTO.ReviewPaymentRequestRequest;
+import com.project.hrm.module.payroll.dto.ResponseDTO.ApiResponse;
+import com.project.hrm.module.payroll.dto.ResponseDTO.PaymentRequestResponse;
+import com.project.hrm.module.payroll.dto.ResponseDTO.PayslipResponse;
+import com.project.hrm.module.payroll.dto.ResponseDTO.TaxReportResponse;
+import com.project.hrm.module.payroll.entity.FinanceAccount;
+import com.project.hrm.module.payroll.repository.FinanceAccountRepository;
+import com.project.hrm.module.payroll.service.PaymentRequestService;
+import com.project.hrm.module.payroll.service.PayslipService;
+import com.project.hrm.module.payroll.service.PdfGeneratorService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
+/**
+ * API dành cho Finance.
+ * Quyền: ROLE_FINANCE
+ * Base path: /api/v1/finance/payroll
+ *
+ * Luồng Finance:
+ *   1. Nhận yêu cầu thanh toán từ HR
+ *   2. Xem báo cáo đính kèm (report_url)
+ *   3. Duyệt hoặc từ chối
+ *   4. (Tích hợp tiếp) Thực thi payment batch sau khi duyệt
+ */
 @RestController
-@RequestMapping
-@CrossOrigin(origins = "*") // Adjust this for your React app's domain
+@RequestMapping("/api/v1/finance/payroll")
+@RequiredArgsConstructor
+@PreAuthorize("hasRole('FINANCE')")
 public class FinanceController {
 
-    private final FinanceService financeService;
+    private final PaymentRequestService paymentRequestService;
+    private final PayslipService payslipService;
+    private final FinanceAccountRepository financeAccountRepository;
+    private final PdfGeneratorService pdfGeneratorService;
 
-    public FinanceController(FinanceService financeService) {
-        this.financeService = financeService;
+    /**
+     * GET /api/v1/finance/payroll/payment-requests/pending
+     * Finance xem danh sách yêu cầu thanh toán đang chờ duyệt.
+     */
+    @GetMapping("/payment-requests/pending")
+    public ResponseEntity<ApiResponse<List<PaymentRequestResponse>>> getPendingRequests() {
+        return ResponseEntity.ok(ApiResponse.ok(paymentRequestService.getPendingRequests()));
     }
 
-    // --- Endpoints for HR ---
-    @PostMapping("/api/finance/requests")
-    public ResponseEntity<?> createRequestOld(@RequestBody PaymentRequestDTO dto) {
-        try {
-            PaymentRequest request = financeService.createPaymentRequest(dto);
-            return ResponseEntity.ok(request);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
+    /**
+     * GET /api/v1/finance/payroll/payment-requests
+     * Finance xem toàn bộ lịch sử yêu cầu.
+     */
+    @GetMapping("/payment-requests")
+    public ResponseEntity<ApiResponse<List<PaymentRequestResponse>>> getAllRequests() {
+        // Reuse my requests với approverId — hoặc tạo thêm method findAll nếu cần
+        return ResponseEntity.ok(ApiResponse.ok(paymentRequestService.getPendingRequests()));
+    }
+
+    /**
+     * PUT /api/v1/finance/payroll/payment-requests/{requestId}/review
+     * Finance duyệt hoặc từ chối yêu cầu thanh toán.
+     * Body: { "approved": true/false, "financeNote": "..." }
+     */
+    @PutMapping("/payment-requests/{requestId}/review")
+    public ResponseEntity<ApiResponse<PaymentRequestResponse>> reviewRequest(
+            @PathVariable("requestId") UUID requestId,
+            @RequestAttribute("employeeId") UUID approverId,
+            @Valid @RequestBody ReviewPaymentRequestRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                request.getApproved() ? "Đã duyệt yêu cầu thanh toán." : "Đã từ chối yêu cầu thanh toán.",
+                paymentRequestService.reviewRequest(approverId, requestId, request)
+        ));
+    }
+
+    /**
+     * GET /api/v1/finance/payroll/batches/{batchId}/tax-report
+     * Finance xem báo cáo thuế & bảo hiểm trong một batch.
+     */
+    @GetMapping("/batches/{batchId}/tax-report")
+    public ResponseEntity<ApiResponse<List<TaxReportResponse>>> getTaxReportByBatch(@PathVariable("batchId") UUID batchId) {
+        return ResponseEntity.ok(ApiResponse.ok(payslipService.getTaxReportByBatch(batchId)));
+    }
+
+    /**
+     * GET /api/v1/finance/payroll/payment-requests/{requestId}/download
+     * Finance tải xuống báo cáo chi tiết đính kèm yêu cầu (PDF).
+     */
+    @GetMapping("/payment-requests/{requestId}/download")
+    public ResponseEntity<byte[]> downloadPaymentReport(@PathVariable("requestId") UUID requestId) {
+        PaymentRequestResponse request = paymentRequestService.getRequestById(requestId);
+        byte[] pdfBytes;
+        String filename;
+
+        if (request.getType() == com.project.hrm.module.payroll.enums.PaymentRequestType.SALARY) {
+            List<PayslipResponse> payslips = payslipService.getPayslipsByBatch(request.getPayrollBatchId());
+            pdfBytes = pdfGeneratorService.generateBankTransferPdf(request, payslips);
+            filename = "Salary_Payment_Report_" + request.getPayrollBatchId() + ".pdf";
+        } else {
+            List<TaxReportResponse> reports = payslipService.getTaxReportByBatch(request.getPayrollBatchId());
+            pdfBytes = pdfGeneratorService.generateTaxInsurancePdf(request, reports);
+            filename = "Tax_Insurance_Report_" + request.getPayrollBatchId() + ".pdf";
         }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", filename);
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
     }
 
-    // --- Endpoints for Finance UI (/api/v1/finance) ---
-
-    // 1. Get List of Payment Requests
-    @GetMapping({ "/api/v1/finance/payment-requests", "/api/finance/requests/pending" })
-    public ResponseEntity<List<PaymentRequest>> getPaymentRequests(@RequestParam(required = false) String status) {
-        if (status != null && !status.isEmpty()) {
-            return ResponseEntity.ok(financeService.getRequestsByStatus(status));
-        }
-        return ResponseEntity.ok(financeService.getAllRequests());
+    /**
+     * GET /api/v1/finance/payroll/batches/{batchId}/payslips
+     * Finance xem danh sách phiếu lương trong một batch để duyệt.
+     */
+    @GetMapping("/batches/{batchId}/payslips")
+    public ResponseEntity<ApiResponse<List<PayslipResponse>>> getPayslipsByBatch(@PathVariable("batchId") UUID batchId) {
+        return ResponseEntity.ok(ApiResponse.ok(payslipService.getPayslipsByBatch(batchId)));
     }
 
-    // 2. Approve and Execute Payment
-    @PostMapping("/api/v1/finance/payment-requests/{id}/approve-and-execute")
-    public ResponseEntity<?> approveAndExecutePayment(
-            @PathVariable("id") UUID id,
-            @RequestBody ApprovalResponseDTO dto) {
-        try {
-            dto.setRequestId(id);
-            String result = financeService.approveAndExecutePayment(dto);
-            return ResponseEntity.ok().body("{\"message\": \"" + result + "\"}");
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
-        }
-    }
-
-    // 3. Reject Payment Request
-    @PostMapping("/api/v1/finance/payment-requests/{id}/reject")
-    public ResponseEntity<?> rejectPaymentRequest(
-            @PathVariable("id") UUID id,
-            @RequestBody Map<String, String> payload) {
-        try {
-            String note = payload.get("financeNote");
-            financeService.rejectPaymentRequest(id, note);
-            return ResponseEntity.ok().body("{\"message\": \"Rejected successfully\"}");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
-        }
-    }
-
-    // 4. Get Payment Batches (History)
-    @GetMapping("/api/v1/finance/payment-batches")
-    public ResponseEntity<?> getPaymentBatches(@PageableDefault(size = 50) Pageable pageable) {
-        return ResponseEntity.ok(financeService.getPaymentBatches(pageable));
-    }
-
-    // 5. Get Payment Transactions for a Batch
-    @GetMapping("/api/v1/finance/payment-batches/{id}/transactions")
-    public ResponseEntity<?> getPaymentTransactions(
-            @PathVariable("id") UUID id,
-            @PageableDefault(size = 50) Pageable pageable) {
-        return ResponseEntity.ok(financeService.getPaymentTransactions(id, pageable));
-    }
-
-    // 6. Get Finance Accounts
-    @GetMapping({ "/api/v1/finance/accounts", "/api/finance/accounts" })
-    public ResponseEntity<?> getFinanceAccounts() {
-        return ResponseEntity.ok(financeService.getAllAccounts());
+    /**
+     * GET /api/v1/finance/payroll/accounts/active
+     * Lấy danh sách tài khoản nguồn đang hoạt động.
+     */
+    @GetMapping("/accounts/active")
+    public ResponseEntity<ApiResponse<List<FinanceAccount>>> getActiveAccounts() {
+        return ResponseEntity.ok(ApiResponse.ok(financeAccountRepository.findAllByStatus("ACTIVE")));
     }
 }
+
+
+
+
+

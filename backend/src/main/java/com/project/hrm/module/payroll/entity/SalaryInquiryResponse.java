@@ -1,46 +1,54 @@
 package com.project.hrm.module.payroll.entity;
 
+import com.project.hrm.module.corehr.entity.Employee;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "salary_inquiry_responses")
-@Data
+@EntityListeners(AuditingEntityListener.class)
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class SalaryInquiryResponse {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "response_id")
     private UUID responseId;
 
-    @Column(name = "inquiry_id", nullable = false, unique = true)
-    private UUID inquiryId;
+    /** 1-1: Mỗi inquiry chỉ có đúng 1 response chính thức */
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "inquiry_id", nullable = false, unique = true)
+    private SalaryInquiry inquiry;
 
-    @Column(name = "responder_id", nullable = false)
-    private UUID responderId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "responder_id", nullable = false)
+    private Employee responder;
 
     @Column(name = "official_response", nullable = false, columnDefinition = "TEXT")
     private String officialResponse;
 
+    /** Ghi chú nội bộ HR — không hiển thị cho nhân viên */
     @Column(name = "internal_note", columnDefinition = "TEXT")
     private String internalNote;
 
     @Column(name = "attachment_url")
     private String attachmentUrl;
 
-    @CreationTimestamp
+    @CreatedDate
     @Column(name = "created_at", updatable = false)
-    private ZonedDateTime createdAt;
+    private OffsetDateTime createdAt;
 
-    @UpdateTimestamp
+    @LastModifiedDate
     @Column(name = "updated_at")
-    private ZonedDateTime updatedAt;
+    private OffsetDateTime updatedAt;
 }

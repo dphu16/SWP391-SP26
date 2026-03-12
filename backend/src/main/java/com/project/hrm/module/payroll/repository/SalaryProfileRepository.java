@@ -1,7 +1,5 @@
 package com.project.hrm.module.payroll.repository;
 
-
-
 import com.project.hrm.module.payroll.entity.SalaryProfile;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,16 +11,17 @@ import java.util.UUID;
 
 public interface SalaryProfileRepository extends JpaRepository<SalaryProfile, UUID> {
 
-    // Tìm Salary Profile có hiệu lực tại thời điểm tính lương
-    // Logic: effective_from <= ngày cuối tháng VÀ (effective_to NULL hoặc >= ngày đầu tháng)
-    @Query("SELECT s FROM SalaryProfile s " +
-            "WHERE s.employee.employeeId = :employeeId " +
-            "AND s.effectiveFrom <= :endDate " +
-            "AND (s.effectiveTo IS NULL OR s.effectiveTo >= :startDate) " +
-            "ORDER BY s.effectiveFrom DESC LIMIT 1")
-    Optional<SalaryProfile> findActiveProfileForPeriod(
+    /** Lấy hồ sơ lương đang có hiệu lực tại một ngày cụ thể */
+    @Query("""
+        SELECT sp FROM SalaryProfile sp
+        WHERE sp.employee.employeeId = :employeeId
+          AND sp.effectiveFrom <= :date
+          AND (sp.effectiveTo IS NULL OR sp.effectiveTo >= :date)
+        ORDER BY sp.effectiveFrom DESC
+        LIMIT 1
+    """)
+    Optional<SalaryProfile> findActiveByEmployeeIdAndDate(
             @Param("employeeId") UUID employeeId,
-            @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate
+            @Param("date") LocalDate date
     );
 }

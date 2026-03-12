@@ -4,17 +4,20 @@ import com.project.hrm.module.payroll.entity.TaxConfig;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
-@Repository
 public interface TaxConfigRepository extends JpaRepository<TaxConfig, UUID> {
 
-    @Query("SELECT t FROM TaxConfig t WHERE t.taxCode = :code " +
-            "AND t.effectiveFrom <= :calcDate " +
-            "AND (t.effectiveTo IS NULL OR t.effectiveTo >= :calcDate)")
-    Optional<TaxConfig> findActiveConfig(@Param("code") String code, @Param("calcDate") LocalDate calcDate);
+    @Query("""
+        SELECT t FROM TaxConfig t
+        WHERE t.taxCode = :code
+          AND t.effectiveFrom <= :date
+          AND (t.effectiveTo IS NULL OR t.effectiveTo >= :date)
+        ORDER BY t.effectiveFrom DESC
+        LIMIT 1
+    """)
+    Optional<TaxConfig> findActiveByCodeAndDate(@Param("code") String code, @Param("date") LocalDate date);
 }

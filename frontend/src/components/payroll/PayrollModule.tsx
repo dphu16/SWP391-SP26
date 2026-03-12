@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 import EmployeePayrollView from "./EmployeePayrollView";
 import HRPayrollView from "./HRPayrollView";
 import TaxInsuranceReport from "./TaxInsuranceReport";
@@ -53,15 +54,23 @@ export const Icon = {
     calendar: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
     shield: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
     trendUp: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>,
+    eye: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>,
 };
 
 // ─── Page Header dùng chung ────────────────────────────────────────────────────
 export const PayrollHeader: React.FC<{
     title: string;
     subtitle: string;
-    activeTab: "employee" | "hr";
-}> = ({ title, subtitle, activeTab }) => {
+    activeTab?: "employee" | "hr";
+    roleLabel?: string;
+    roleIcon?: React.ReactNode;
+}> = ({ title, subtitle, activeTab, roleLabel, roleIcon }) => {
     const navigate = useNavigate();
+    const { hasRole } = useAuth();
+
+    // HR, MANAGER có thể xem HR tab
+    const canViewHR = hasRole("HR", "MANAGER");
+
     return (
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-6 shadow-lg mb-5">
             <div className="absolute top-0 right-0 w-72 h-72 bg-emerald-500/5 rounded-full -translate-y-1/3 translate-x-1/4 pointer-events-none" />
@@ -81,19 +90,30 @@ export const PayrollHeader: React.FC<{
                     </div>
                 </div>
 
-                {/* Toggle */}
-                <div className="flex items-center bg-white/5 backdrop-blur-sm rounded-xl p-1 border border-white/10 self-start sm:self-auto gap-1">
-                    <button onClick={() => navigate("/payroll/employee")}
-                        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${activeTab === "employee" ? "bg-emerald-500 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-white/5"
-                            }`}>
-                        {Icon.user} Employee
-                    </button>
-                    <button onClick={() => navigate("/payroll/hr")}
-                        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${activeTab === "hr" ? "bg-emerald-500 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-white/5"
-                            }`}>
-                        {Icon.users} HR Manager
-                    </button>
-                </div>
+                {/* Right side: role badge OR tab switcher */}
+                {roleLabel ? (
+                    // Static role badge (for Tax Report, Finance)
+                    <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-semibold shadow-md self-start sm:self-auto flex-shrink-0">
+                        <span className="text-white">{roleIcon ?? Icon.user}</span>
+                        {roleLabel}
+                    </div>
+                ) : (
+                    // Tab switcher (for Employee / HR)
+                    <div className="flex items-center bg-white/5 backdrop-blur-sm rounded-xl p-1 border border-white/10 self-start sm:self-auto gap-1">
+                        <button onClick={() => navigate("/payroll/employee")}
+                            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${activeTab === "employee" ? "bg-emerald-500 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-white/5"
+                                }`}>
+                            {Icon.user} Employee
+                        </button>
+                        {canViewHR && (
+                            <button onClick={() => navigate("/payroll/hr")}
+                                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${activeTab === "hr" ? "bg-emerald-500 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-white/5"
+                                    }`}>
+                                {Icon.users} HR Manager
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -103,26 +123,69 @@ export const PayrollHeader: React.FC<{
 const PayrollModule: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { hasRole, user } = useAuth();
+    
+    const canViewHR = hasRole("HR", "MANAGER");
+    const canViewFinance = hasRole("FINANCE");
 
-    // Redirect /payroll → /payroll/employee
-    React.useEffect(() => {
-        if (location.pathname === "/payroll") {
-            navigate("/payroll/employee", { replace: true });
-        }
-    }, [location.pathname, navigate]);
-
-    // Render both views with their own header based on current path
     const isHR = location.pathname.startsWith("/payroll/hr");
     const isTaxReport = location.pathname.startsWith("/payroll/tax-report");
     const isFinance = location.pathname.startsWith("/payroll/finance");
 
-    if (isTaxReport) {
-        return <TaxInsuranceReport />;
+    // Redirect dựa trên quyền và pathname
+    useEffect(() => {
+        // Auto redirect base path
+        if (location.pathname === "/payroll") {
+            if (canViewFinance && !user?.role.includes("HR") && !user?.role.includes("EMPLOYEE")) {
+                navigate("/payroll/finance", { replace: true });
+            } else {
+                navigate("/payroll/employee", { replace: true });
+            }
+            return;
+        }
+
+        // Chặn quyền truy cập sai trang
+        if (isHR && !canViewHR) {
+            navigate("/payroll/employee", { replace: true });
+        }
+        if (isTaxReport && !canViewHR) {
+            navigate("/payroll/employee", { replace: true });
+        }
+        if (isFinance && !canViewFinance) {
+            navigate("/payroll/employee", { replace: true });
+        }
+    }, [location.pathname, navigate, canViewHR, canViewFinance, isHR, isTaxReport, isFinance, user]);
+
+    if (isTaxReport && canViewHR) {
+        return (
+            <div className="space-y-0">
+                <PayrollHeader
+                    title="Tax & Insurance Report"
+                    subtitle="Tổng hợp thuế TNCN & bảo hiểm — Gửi tờ khai cho Finance"
+                    roleLabel="HR Manager"
+                    roleIcon={Icon.users}
+                />
+                <TaxInsuranceReport />
+            </div>
+        );
     }
 
-    if (isFinance) {
-        return <FinancePayrollView />;
+    if (isFinance && canViewFinance) {
+        return (
+            <div className="space-y-0">
+                <PayrollHeader
+                    title="Finance Payment"
+                    subtitle="Xét duyệt và giải ngân lương & thuế — Chỉ đọc và in báo cáo"
+                    roleLabel="Finance"
+                    roleIcon={Icon.wallet}
+                />
+                <FinancePayrollView />
+            </div>
+        );
     }
+
+    // Nếu không có quyền xem HR nhưng đang ở path HR (sẽ bị redirect ngay sau đó)
+    if (isHR && !canViewHR) return null;
 
     return (
         <div className="space-y-0">

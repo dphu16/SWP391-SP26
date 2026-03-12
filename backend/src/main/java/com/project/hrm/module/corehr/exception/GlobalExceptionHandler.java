@@ -1,10 +1,14 @@
 package com.project.hrm.module.corehr.exception;
 
+import com.project.hrm.module.payroll.dto.ResponseDTO.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import com.project.hrm.module.payroll.exception.PayrollException;
+import com.project.hrm.module.payroll.exception.ResourceNotFoundException;
+import com.project.hrm.module.payroll.exception.AccessDeniedException;
 
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
@@ -68,5 +72,21 @@ public class GlobalExceptionHandler {
         body.put("message", ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
+
+
+    @ExceptionHandler(PayrollException.class)
+    public ResponseEntity<?> handlePayrollException(PayrollException ex) {
+        return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<?> handleNotFound(ResourceNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<?> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(ex.getMessage()));
     }
 }

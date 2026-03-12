@@ -2,23 +2,29 @@ package com.project.hrm.module.payroll.entity;
 
 
 
+import com.project.hrm.module.payroll.enums.SalaryInquiryStatus;
 import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.module.payroll.enums.InquiryStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "salary_inquiries", schema = "public")
+@Table(name = "salary_inquiries")
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class SalaryInquiry {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id")
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -26,22 +32,27 @@ public class SalaryInquiry {
     private Employee employee;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "payslip_id")
+    @JoinColumn(name = "payslip_id", nullable = false)
     private Payslip payslip;
 
+    @Column(name = "subject", nullable = false, length = 255)
     private String subject;
 
+    @Column(name = "message", nullable = false, columnDefinition = "TEXT")
     private String message;
 
     @Enumerated(EnumType.STRING)
-    private InquiryStatus status;
+    @Column(name = "status", nullable = false)
+    @Builder.Default
+    private SalaryInquiryStatus status = SalaryInquiryStatus.OPEN;
 
-    @Column(name = "hr_response")
-    private String hrResponse;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @CreatedDate
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
 
     @Column(name = "resolved_at")
-    private LocalDateTime resolvedAt;
+    private OffsetDateTime resolvedAt;
+
+    @OneToOne(mappedBy = "inquiry", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private SalaryInquiryResponse response;
 }

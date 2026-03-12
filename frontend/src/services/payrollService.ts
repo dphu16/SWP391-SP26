@@ -1,414 +1,366 @@
 /**
  * Payroll Service — Frontend API layer
  * Maps 1:1 to backend controllers:
- *   - EmployeePayslipController  → /api/v1/employee/payslips
- *   - EmployeeInquiryController  → /api/v1/employee/inquiries
- *   - HrPayrollController        → /api/v1/hr/payroll
- *   - PayrollReviewController    → /api/v1/hr/payroll-review
+ *   - HRPayrollController        → /api/v1/hr/payroll
+ *   - EmployeePayrollController  → /api/v1/my
+ *   - FinanceController          → /api/v1/finance/payroll
  */
 import apiClient from "./apiClient";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TYPES — mirrors backend DTOs exactly
+// ENUMS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// --- Enums (from backend enums/) ---
 export type PayslipStatus = "DRAFT" | "CONFIRMED" | "PAID" | "CANCELLED";
 export type InquiryStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "REJECTED";
+export type PeriodStatus = "OPEN" | "PAID" | "CLOSED";
 export type BatchStatus = "DRAFT" | "VALIDATED" | "PROCESSED" | "LOCKED";
+export type PaymentRequestStatus = "PENDING" | "APPROVED" | "PAID" | "REJECTED";
+export type PaymentRequestType = "SALARY" | "TAX_INSURANCE";
 
-// --- PayslipSummaryDTO ---
-export interface PayslipSummaryDTO {
-    payslipId: string;
-    period: string;       // "02/2026"
-    netSalary: number;
-    status: PayslipStatus;
-    paidAt: string | null; // ISO date
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// RESPONSE DTOs — mirrors backend ResponseDTO exactly
+// ═══════════════════════════════════════════════════════════════════════════════
 
-// --- PayslipDetailDTO ---
-export interface PayslipItemDTO {
-    itemName: string;
-    amount: number;
-    type: "INCOME" | "DEDUCTION";
-}
-
-export interface PayslipDetailDTO {
-    payslipId: string;
+/** PayrollPeriodResponse */
+export interface PayrollPeriodResponse {
+    periodId: string;
+    batchId: string | null;  // UUID of the batch created alongside this period
     month: number;
     year: number;
     startDate: string;
     endDate: string;
+    status: PeriodStatus;
+    batchStatus: BatchStatus | null;
+    createdAt: string | null;
+}
+
+/** PayslipResponse.DetailItem */
+export interface PayslipDetailItem {
+    itemName: string;
+    amount: number;
+    type: "ALLOWANCE" | "DEDUCTION" | "BASE";
+}
+
+/** PayslipResponse */
+export interface PayslipResponse {
+    payslipId: string;
+    employeeId: string;
+    employeeName: string;
+    departmentName: string;
+    batchId: string;
+    periodId: string;
+    month: number;
+    year: number;
+    // Chấm công
+    totalOtHours: number;
+    totalAbsentDays: number;
+    totalWorkDays: number;
+    // Lương
     baseSalary: number;
+    otPay: number;
+    absentDeduction: number;
     totalAllowances: number;
     grossSalary: number;
     taxAmount: number;
     insuranceAmount: number;
     totalDeductions: number;
     netSalary: number;
+    // Trạng thái
     status: PayslipStatus;
+    details: PayslipDetailItem[];
+    confirmedAt: string | null;
     paidAt: string | null;
-    items: PayslipItemDTO[];
+    createdAt: string | null;
 }
 
-// --- CreateInquiryRequest ---
-export interface CreateInquiryRequest {
+/** TaxReportResponse */
+export interface TaxReportResponse {
+    employeeId: string;
+    employeeCode: string;
+    employeeName: string;
+    department: string | null;
+    position: string | null;
+    month: number;
+    year: number;
+    baseSalary: number;
+    grossSalary: number;
+    taxAmount: number;
+    insuranceAmount: number;
+    totalDeductions: number;
+    netSalary: number;
+}
+
+/** SalaryInquiryDto.HrResponseDetail */
+export interface HrResponseDetail {
+    responseId: string;
+    responderName: string;
+    officialResponse: string;
+    attachmentUrl: string | null;
+    createdAt: string | null;
+}
+
+/** SalaryInquiryDto */
+export interface SalaryInquiryDto {
+    id: string;
+    employeeId: string;
+    employeeName: string;
+    payslipId: string | null;
+    subject: string;
+    message: string;
+    status: InquiryStatus;
+    createdAt: string;
+    resolvedAt: string | null;
+    hrResponse: HrResponseDetail | null;
+}
+
+/** PaymentRequestResponse */
+export interface PaymentRequestResponse {
+    requestId: string;
+    payrollBatchId: string;
+    requesterId: string;
+    requesterName: string;
+    sourceAccountId: string | null;
+    sourceAccountName: string | null;
+    totalAmountRequested: number;
+    status: PaymentRequestStatus;
+    hrNote: string | null;
+    financeNote: string | null;
+    reportUrl: string | null;
+    type: PaymentRequestType;
+    approvedAt: string | null;
+    createdAt: string | null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUEST DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface CreatePayrollPeriodRequest {
+    month: number;
+    year: number;
+}
+
+export interface CreatePayrollBatchRequest {
+    periodId: string;
+    note?: string;
+}
+
+export interface CreatePaymentRequestRequest {
+    payrollBatchId: string;
+    sourceAccountId?: string;
+    hrNote?: string;
+    reportUrl?: string;
+    type: PaymentRequestType;
+}
+
+export interface CreateSalaryInquiryRequest {
     payslipId?: string | null;
     subject: string;
     message: string;
 }
 
-// --- InquiryResponseDTO ---
-export interface InquiryResponseDTO {
-    id: string;
-    subject: string;
-    message: string;
-    status: InquiryStatus;
-    hrResponse: string | null;
-    createdAt: string;
-    resolvedAt: string | null;
-    payslipId: string | null;
-    payslipPeriod: string | null;
-    employeeId: string | null;
-    employeeName: string | null;
-}
-
-export interface CreateInquiryResponseDTO {
+export interface RespondToInquiryRequest {
     inquiryId: string;
-    responderId: string;
     officialResponse: string;
     internalNote?: string;
+    attachmentUrl?: string;
 }
 
-// --- PayrollBatchDTO ---
-export interface PayrollBatchDTO {
-    batchId: string;
-    period: string;        // "2026-02-01"
-    status: string;        // "DRAFT" | "PROCESSED" | "VALIDATED" | "LOCKED"
-    createdAt: string | null;
-    processedAt: string | null;
-    label: string;         // from backend computed method
-}
-
-// --- PayrollReviewDTO ---
-export interface PayrollReviewDTO {
-    detailId: string;
-    employeeId: string;
-    employeeName: string;
-    department: string;
-    baseSalary: number;
-    totalOtHours: number;
-    otPay: number;
-    totalAbsentDays: number;
-    absentDeduction: number;
-    grossSalary: number;
-    hasWarning: boolean;
-    warningMessage: string;
-}
-
-// --- TaxInsuranceDTO ---
-export interface TaxInsuranceDTO {
-    employeeId: string;
-    employeeName: string;
-    department: string;
-    grossSalary: number;
-    baseSalary: number;
-    bhxh: number;
-    bhyt: number;
-    bhtn: number;
-    totalIns: number;
-    pit: number;
-    totalDeduct: number;
-    netSalary: number;
-}
-
-// --- UpdatePayrollDetailRequest ---
-export interface UpdatePayrollDetailRequest {
-    totalOtHours?: number;
-    totalAbsentDays?: number;
-    grossSalaryAdjustment?: number;
-}
-
-// --- Spring Boot Page<T> response ---
-export interface PageResponse<T> {
-    content: T[];
-    totalElements: number;
-    totalPages: number;
-    size: number;
-    number: number;
-    first: boolean;
-    last: boolean;
-    empty: boolean;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// API FUNCTIONS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Employee Payslip APIs (EmployeePayslipController)
-// ──────────────────────────────────────────────────────────────────────────────
-
-/** GET /api/v1/employee/payslips — Lịch sử lương (phân trang) */
-export async function getMyPayslips(page = 0, size = 10) {
-    const res = await apiClient.get<PageResponse<PayslipSummaryDTO>>(
-        "/api/v1/employee/payslips",
-        { params: { page, size } }
-    );
-    return res.data;
-}
-
-/** GET /api/v1/employee/payslips/:id — Chi tiết 1 phiếu lương */
-export async function getPayslipDetail(payslipId: string) {
-    const res = await apiClient.get<PayslipDetailDTO>(
-        `/api/v1/employee/payslips/${payslipId}`
-    );
-    return res.data;
-}
-
-/** Lấy file PDF từ Server (dưới dạng BLOB binary data) */
-export async function downloadPayslipPdf(payslipId: string) {
-    const res = await apiClient.get(
-        `/api/v1/employee/payslips/${payslipId}/pdf`,
-        {
-            responseType: 'blob' // Lấy dữ liệu dạng file thay vì text
-        }
-    );
-    return res.data;
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Employee Inquiry APIs (EmployeeInquiryController)
-// ──────────────────────────────────────────────────────────────────────────────
-
-/** POST /api/v1/employee/inquiries — Gửi thắc mắc mới */
-export async function createInquiry(request: CreateInquiryRequest) {
-    const res = await apiClient.post<InquiryResponseDTO>(
-        "/api/v1/employee/inquiries",
-        request
-    );
-    return res.data;
-}
-
-/** GET /api/v1/employee/inquiries — Lịch sử thắc mắc (phân trang) */
-export async function getMyInquiries(page = 0, size = 10) {
-    const res = await apiClient.get<PageResponse<InquiryResponseDTO>>(
-        "/api/v1/employee/inquiries",
-        { params: { page, size } }
-    );
-    return res.data;
-}
-
-/** GET /api/v1/hr/payroll/inquiries — Lấy toàn bộ danh sách thắc mắc (HR view) */
-export async function getAllInquiries(page = 0, size = 20) {
-    const res = await apiClient.get<PageResponse<InquiryResponseDTO>>(
-        "/api/v1/hr/payroll/inquiries",
-        { params: { page, size } }
-    );
-    return res.data;
-}
-
-/** POST /api/v1/salary-inquiries/responses — Phản hồi thắc mắc */
-export async function replyInquiry(data: CreateInquiryResponseDTO) {
-    const res = await apiClient.post(
-        "/api/v1/salary-inquiries/responses",
-        data
-    );
-    return res.data;
-}
-
-/** PUT /api/v1/hr/payroll/inquiries/:id/status?status=... — Cập nhật trạng thái thắc mắc */
-export async function updateInquiryStatus(inquiryId: string, status: string) {
-    const res = await apiClient.put<InquiryResponseDTO>(
-        `/api/v1/hr/payroll/inquiries/${inquiryId}/status`,
-        null,
-        { params: { status } }
-    );
-    return res.data;
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// HR Payroll Batch Management APIs (HrPayrollController)
-// ──────────────────────────────────────────────────────────────────────────────
-
-/** GET /api/v1/hr/payroll/batches — Lấy danh sách tất cả batch, mới nhất đầu */
-export async function getBatches() {
-    const res = await apiClient.get<PayrollBatchDTO[]>("/api/v1/hr/payroll/batches");
-    return res.data;
-}
-
-/** POST /api/v1/hr/payroll/batches — Tạo batch mới cho tháng/năm */
-export async function createBatch(month: number, year: number) {
-    const res = await apiClient.post<PayrollBatchDTO>("/api/v1/hr/payroll/batches", { month, year });
-    return res.data;
-}
-
-/** POST /api/v1/hr/payroll/calculate/:batchId — Kích hoạt tính lương */
-export async function calculatePayroll(batchId: string) {
-    const res = await apiClient.post<string>(
-        `/api/v1/hr/payroll/calculate/${batchId}`
-    );
-    return res.data;
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// HR Payroll Review APIs (PayrollReviewController)
-// ──────────────────────────────────────────────────────────────────────────────
-
-/** GET /api/v1/hr/payroll-review/:batchId — Dữ liệu review của 1 batch */
-export async function getBatchDetailsForReview(batchId: string) {
-    const res = await apiClient.get<PayrollReviewDTO[]>(
-        `/api/v1/hr/payroll-review/${batchId}`
-    );
-    return res.data;
-}
-
-/** PUT /api/v1/hr/payroll-review/details/:detailId — Sửa 1 dòng lương */
-export async function updatePayrollDetail(
-    detailId: string,
-    request: UpdatePayrollDetailRequest
-) {
-    const res = await apiClient.put<string>(
-        `/api/v1/hr/payroll-review/details/${detailId}`,
-        request
-    );
-    return res.data;
-}
-
-/** POST /api/v1/hr/payroll-review/:batchId/approve — Validate & Approve batch */
-export async function approveBatch(batchId: string) {
-    const res = await apiClient.post<string>(
-        `/api/v1/hr/payroll-review/${batchId}/approve`
-    );
-    return res.data;
-}
-
-/** POST /api/v1/hr/payroll-review/:batchId/send-report — Gửi báo cáo */
-export async function sendPayrollReport(batchId: string) {
-    const res = await apiClient.post<string>(
-        `/api/v1/hr/payroll-review/${batchId}/send-report`
-    );
-    return res.data;
-}
-
-/** POST /api/v1/hr/payroll-review/:batchId/send-tax-report — Gửi báo cáo Thuế & Bảo Hiểm */
-export async function sendTaxReport(batchId: string) {
-    const res = await apiClient.post<string>(
-        `/api/v1/hr/payroll-review/${batchId}/send-tax-report`
-    );
-    return res.data;
-}
-
-/** GET /api/v1/hr/payroll-review/:batchId/tax-insurance — Dữ liệu Thuế & Bảo hiểm */
-export async function getTaxInsuranceReport(batchId: string) {
-    const res = await apiClient.get<TaxInsuranceDTO[]>(
-        `/api/v1/hr/payroll-review/${batchId}/tax-insurance`
-    );
-    return res.data;
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Finance Payment DTOs
-// ──────────────────────────────────────────────────────────────────────────────
-
-export interface PaymentRequestDTO {
-    requestId: string;
-    payrollBatchId: string;
-    requesterId: string;
-    approverId: string | null;
-    totalAmountRequested: number;
-    status: string;
-    hrNote: string | null;
-    financeNote: string | null;
-    createdAt: string | null;
-    updatedAt: string | null;
-}
-
-export interface PaymentBatchHistoryDTO {
-    paymentBatchId: string;
-    payrollBatchId: string;
-    month: number;
-    year: number;
-    totalAmount: number;
-    totalTransactions: number;
-    successTransactions: number;
-    failedTransactions: number;
-    status: string;
-    createdAt: string | null;
-    completedAt: string | null;
-}
-
-export interface PaymentTransactionHistoryDTO {
-    transactionId: string;
-    paymentBatchId: string;
-    employeeId: string;
-    employeeName: string;
-    amount: number;
-    bankResponseCode: string | null;
-    status: string;
-    createdAt: string | null;
-}
-
-export interface FinanceAccountDTO {
-    accountId: string;
-    accountName: string;
-    bankName: string;
-    accountNumber: string;
-    currentBalance: number;
-    status: string;
-}
-
-export interface ApprovePaymentRequest {
-    requestId: string;
-    sourceAccountId: string;
-    bankRefCode: string;
+export interface ReviewPaymentRequestRequest {
+    approved: boolean;
     financeNote?: string;
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Finance Payment APIs
-// ──────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// ApiResponse wrapper (từ backend)
+// ═══════════════════════════════════════════════════════════════════════════════
+interface ApiResponse<T> {
+    success: boolean;
+    message?: string;
+    data: T;
+    timestamp?: string;
+}
 
-/** GET /api/v1/finance/payment-requests — Lấy danh sách yêu cầu thanh toán */
-export async function getFinanceRequests(status?: string) {
-    const res = await apiClient.get<PaymentRequestDTO[]>(
-        "/api/v1/finance/payment-requests",
-        { params: status ? { status } : undefined }
-    );
+// Helper để unwrap ApiResponse
+async function unwrap<T>(promise: Promise<{ data: ApiResponse<T> }>): Promise<T> {
+    const res = await promise;
+    return res.data.data;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HR PAYROLL — PERIOD APIs
+// Base: /api/v1/hr/payroll/periods
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** POST /api/v1/hr/payroll/periods — Tạo kỳ lương mới */
+export async function createPeriod(request: CreatePayrollPeriodRequest): Promise<PayrollPeriodResponse> {
+    return unwrap(apiClient.post<ApiResponse<PayrollPeriodResponse>>("/api/v1/hr/payroll/periods", request));
+}
+
+/** GET /api/v1/hr/payroll/periods — Danh sách tất cả kỳ lương */
+export async function getAllPeriods(): Promise<PayrollPeriodResponse[]> {
+    return unwrap(apiClient.get<ApiResponse<PayrollPeriodResponse[]>>("/api/v1/hr/payroll/periods"));
+}
+
+/** GET /api/v1/hr/payroll/periods/:id */
+export async function getPeriod(periodId: string): Promise<PayrollPeriodResponse> {
+    return unwrap(apiClient.get<ApiResponse<PayrollPeriodResponse>>(`/api/v1/hr/payroll/periods/${periodId}`));
+}
+
+/** PUT /api/v1/hr/payroll/periods/:id/close — Đóng kỳ lương */
+export async function closePeriod(periodId: string): Promise<PayrollPeriodResponse> {
+    return unwrap(apiClient.put<ApiResponse<PayrollPeriodResponse>>(`/api/v1/hr/payroll/periods/${periodId}/close`));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HR PAYROLL — BATCH & PAYSLIP APIs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** GET /api/v1/hr/payroll/batches/:batchId/payslips — Danh sách payslip trong batch */
+export async function getPayslipsByBatch(batchId: string): Promise<PayslipResponse[]> {
+    return unwrap(apiClient.get<ApiResponse<PayslipResponse[]>>(`/api/v1/hr/payroll/batches/${batchId}/payslips`));
+}
+
+/** POST /api/v1/hr/payroll/batches/:batchId/calculate — Chạy máy tính lương */
+export async function calculatePayslips(batchId: string): Promise<PayslipResponse[]> {
+    return unwrap(apiClient.post<ApiResponse<PayslipResponse[]>>(`/api/v1/hr/payroll/batches/${batchId}/calculate`));
+}
+
+/** PUT /api/v1/hr/payroll/batches/:batchId/validate-all — Xác nhận tất cả payslip trong batch */
+export async function validateAllInBatch(batchId: string): Promise<PayslipResponse[]> {
+    return unwrap(apiClient.put<ApiResponse<PayslipResponse[]>>(`/api/v1/hr/payroll/batches/${batchId}/validate-all`));
+}
+
+/** GET /api/v1/hr/payroll/batches/:batchId/tax-report — Danh sách Tax Report trong batch */
+export async function getTaxReportByBatch(batchId: string): Promise<TaxReportResponse[]> {
+    return unwrap(apiClient.get<ApiResponse<TaxReportResponse[]>>(`/api/v1/hr/payroll/batches/${batchId}/tax-report`));
+}
+
+/** PUT /api/v1/hr/payroll/payslips/:id/confirm — Xác nhận phiếu lương */
+export async function confirmPayslip(payslipId: string): Promise<PayslipResponse> {
+    return unwrap(apiClient.put<ApiResponse<PayslipResponse>>(`/api/v1/hr/payroll/payslips/${payslipId}/confirm`));
+}
+
+/** PUT /api/v1/hr/payroll/payslips/:id/cancel — Huỷ phiếu lương */
+export async function cancelPayslip(payslipId: string): Promise<PayslipResponse> {
+    return unwrap(apiClient.put<ApiResponse<PayslipResponse>>(`/api/v1/hr/payroll/payslips/${payslipId}/cancel`));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HR PAYROLL — PAYMENT REQUEST APIs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** POST /api/v1/hr/payroll/payment-requests — HR gửi yêu cầu thanh toán sang Finance */
+export async function createPaymentRequest(request: CreatePaymentRequestRequest): Promise<PaymentRequestResponse> {
+    return unwrap(apiClient.post<ApiResponse<PaymentRequestResponse>>("/api/v1/hr/payroll/payment-requests", request));
+}
+
+/** GET /api/v1/hr/payroll/payment-requests/my — Lịch sử yêu cầu HR đã gửi */
+export async function getMyPaymentRequests(): Promise<PaymentRequestResponse[]> {
+    return unwrap(apiClient.get<ApiResponse<PaymentRequestResponse[]>>("/api/v1/hr/payroll/payment-requests/my"));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HR PAYROLL — INQUIRY APIs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** GET /api/v1/hr/payroll/inquiries — Tất cả các ticket */
+export async function getAllInquiries(): Promise<SalaryInquiryDto[]> {
+    return unwrap(apiClient.get<ApiResponse<SalaryInquiryDto[]>>("/api/v1/hr/payroll/inquiries"));
+}
+
+/** PUT /api/v1/hr/payroll/inquiries/:id/in-progress */
+export async function markInquiryInProgress(inquiryId: string): Promise<SalaryInquiryDto> {
+    return unwrap(apiClient.put<ApiResponse<SalaryInquiryDto>>(`/api/v1/hr/payroll/inquiries/${inquiryId}/in-progress`));
+}
+
+/** POST /api/v1/hr/payroll/inquiries/respond — HR phản hồi thắc mắc */
+export async function respondToInquiry(request: RespondToInquiryRequest): Promise<SalaryInquiryDto> {
+    return unwrap(apiClient.post<ApiResponse<SalaryInquiryDto>>("/api/v1/hr/payroll/inquiries/respond", request));
+}
+
+/** PUT /api/v1/hr/payroll/inquiries/:id/reject — Từ chối thắc mắc */
+export async function rejectInquiry(inquiryId: string, reason: string): Promise<SalaryInquiryDto> {
+    return unwrap(apiClient.put<ApiResponse<SalaryInquiryDto>>(`/api/v1/hr/payroll/inquiries/${inquiryId}/reject?reason=${encodeURIComponent(reason)}`));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EMPLOYEE PAYROLL — /api/v1/my
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** GET /api/v1/my/payslips — Danh sách phiếu lương của mình */
+export async function getMyPayslips(): Promise<PayslipResponse[]> {
+    return unwrap(apiClient.get<ApiResponse<PayslipResponse[]>>("/api/v1/my/payslips"));
+}
+
+/** GET /api/v1/my/payslips/:id — Chi tiết 1 phiếu lương */
+export async function getMyPayslipDetail(payslipId: string): Promise<PayslipResponse> {
+    return unwrap(apiClient.get<ApiResponse<PayslipResponse>>(`/api/v1/my/payslips/${payslipId}`));
+}
+
+/** GET /api/v1/my/payslips/:id/pdf — Tải PDF phiếu lương */
+export async function downloadPayslipPdf(payslipId: string): Promise<Blob> {
+    const res = await apiClient.get(`/api/v1/my/payslips/${payslipId}/pdf`, {
+        responseType: "blob",
+    });
     return res.data;
 }
 
-/** POST /api/v1/finance/payment-requests/:id/approve-and-execute — Duyệt & thực hiện chi trả */
-export async function approveAndExecutePayment(payload: ApprovePaymentRequest) {
-    const res = await apiClient.post<string>(
-        `/api/v1/finance/payment-requests/${payload.requestId}/approve-and-execute`,
-        payload
-    );
-    return res.data;
+/** GET /api/v1/my/inquiries — Danh sách thắc mắc đã gửi */
+export async function getMyInquiries(): Promise<SalaryInquiryDto[]> {
+    return unwrap(apiClient.get<ApiResponse<SalaryInquiryDto[]>>("/api/v1/my/inquiries"));
 }
 
-/** POST /api/v1/finance/payment-requests/:id/reject — Từ chối yêu cầu */
-export async function rejectPaymentRequest(requestId: string, note: string) {
-    const res = await apiClient.post<string>(
-        `/api/v1/finance/payment-requests/${requestId}/reject`,
-        { financeNote: note }
-    );
-    return res.data;
+/** POST /api/v1/my/inquiries — Tạo thắc mắc mới */
+export async function createInquiry(request: CreateSalaryInquiryRequest): Promise<SalaryInquiryDto> {
+    return unwrap(apiClient.post<ApiResponse<SalaryInquiryDto>>("/api/v1/my/inquiries", request));
 }
 
-/** GET /api/v1/finance/payment-batches — Lịch sử batch thanh toán */
-export async function getPaymentBatches(page = 0, size = 50) {
-    const res = await apiClient.get<PageResponse<PaymentBatchHistoryDTO>>(
-        "/api/v1/finance/payment-batches",
-        { params: { page, size } }
-    );
-    return res.data;
+// ═══════════════════════════════════════════════════════════════════════════════
+// FINANCE — /api/v1/finance/payroll
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** GET /api/v1/finance/payroll/payment-requests/pending — Danh sách yêu cầu chờ duyệt */
+export async function getFinancePendingRequests(): Promise<PaymentRequestResponse[]> {
+    return unwrap(apiClient.get<ApiResponse<PaymentRequestResponse[]>>("/api/v1/finance/payroll/payment-requests/pending"));
 }
 
-/** GET /api/v1/finance/payment-batches/:id/transactions — Giao dịch chi tiết của 1 batch */
-export async function getPaymentTransactions(paymentBatchId: string) {
-    const res = await apiClient.get<PageResponse<PaymentTransactionHistoryDTO>>(
-        `/api/v1/finance/payment-batches/${paymentBatchId}/transactions`
-    );
+/** GET /api/v1/finance/payroll/payment-requests — Toàn bộ lịch sử yêu cầu */
+export async function getFinanceAllRequests(): Promise<PaymentRequestResponse[]> {
+    return unwrap(apiClient.get<ApiResponse<PaymentRequestResponse[]>>("/api/v1/finance/payroll/payment-requests"));
+}
+
+/** GET /api/v1/finance/payroll/batches/:batchId/payslips — Xem payslips detail */
+export async function getFinanceBatchPayslips(batchId: string): Promise<PayslipResponse[]> {
+    return unwrap(apiClient.get<ApiResponse<PayslipResponse[]>>(`/api/v1/finance/payroll/batches/${batchId}/payslips`));
+}
+
+/** PUT /api/v1/finance/payroll/payment-requests/:id/review — Duyệt hoặc từ chối */
+export async function reviewPaymentRequest(
+    requestId: string,
+    request: ReviewPaymentRequestRequest
+): Promise<PaymentRequestResponse> {
+    return unwrap(apiClient.put<ApiResponse<PaymentRequestResponse>>(
+        `/api/v1/finance/payroll/payment-requests/${requestId}/review`,
+        request
+    ));
+}
+
+/** GET /api/v1/finance/payroll/accounts/active — Lấy danh sách tài khoản nguồn đang hoạt động */
+export async function getActiveFinanceAccounts(): Promise<any[]> {
+    return unwrap(apiClient.get<ApiResponse<any[]>>("/api/v1/finance/payroll/accounts/active"));
+}
+
+/** GET /api/v1/finance/payroll/batches/:batchId/tax-report — Xem chi tiết Thuế & Bảo hiểm */
+export async function getFinanceTaxReport(batchId: string): Promise<TaxReportResponse[]> {
+    return unwrap(apiClient.get<ApiResponse<TaxReportResponse[]>>(`/api/v1/finance/payroll/batches/${batchId}/tax-report`));
+}
+
+/** GET /api/v1/finance/payroll/payment-requests/:id/download — Tải PDF báo cáo */
+export async function downloadPaymentReport(requestId: string): Promise<Blob> {
+    const res = await apiClient.get(`/api/v1/finance/payroll/payment-requests/${requestId}/download`, {
+        responseType: "blob",
+    });
     return res.data;
 }

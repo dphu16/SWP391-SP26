@@ -55,6 +55,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     authToken.setDetails(
                             new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    
+                    // Inject claims vào request attribute
+                    String employeeId = jwtUtil.extractClaim(token, claims -> claims.get("employeeId", String.class));
+                    if (employeeId != null && !employeeId.isBlank()) {
+                        try {
+                            request.setAttribute("employeeId", java.util.UUID.fromString(employeeId));
+                        } catch (IllegalArgumentException ignored) {}
+                    }
+                    String role = jwtUtil.extractRole(token);
+                    if (role != null) {
+                        request.setAttribute("role", role);
+                    }
                 }
             }
         } catch (Exception e) {

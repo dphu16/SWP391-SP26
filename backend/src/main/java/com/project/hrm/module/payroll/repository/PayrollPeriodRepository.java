@@ -1,13 +1,18 @@
 package com.project.hrm.module.payroll.repository;
 
 import com.project.hrm.module.payroll.entity.PayrollPeriod;
+import com.project.hrm.module.payroll.enums.PayrollPeriodStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-@Repository
 public interface PayrollPeriodRepository extends JpaRepository<PayrollPeriod, UUID> {
-    Optional<PayrollPeriod> findByMonthAndYear(Integer month, Integer year);
+
+    boolean existsByMonthAndYear(int month, int year);
+
+    Optional<PayrollPeriod> findByMonthAndYear(int month, int year);
+
+    List<PayrollPeriod> findAllByStatusOrderByYearDescMonthDesc(PayrollPeriodStatus status);
 }

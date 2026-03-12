@@ -4,17 +4,18 @@ package com.project.hrm.module.payroll.entity;
 import com.project.hrm.module.corehr.entity.Employee;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Map;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "salary_profiles", schema = "public")
+@Table(name = "salary_profiles")
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,7 +28,6 @@ public class SalaryProfile {
     @Column(name = "profile_id")
     private UUID profileId;
 
-    // Giả định có Entity Employee
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
@@ -35,17 +35,17 @@ public class SalaryProfile {
     @Column(name = "base_salary", nullable = false, precision = 15, scale = 2)
     private BigDecimal baseSalary;
 
-    // Mapping JSONB sang Map hoặc Custom Class
-    @JdbcTypeCode(SqlTypes.JSON)
+    /**
+     * Lưu dạng JSON: [{"name":"Ăn trưa","amount":500000}, {"name":"Xăng xe","amount":300000}]
+     * Tầng application parse/serialize thủ công hoặc dùng @Type của Hibernate.
+     */
     @Column(name = "allowances", columnDefinition = "jsonb")
-    private Map<String, Object> allowances;
+    private String allowances;
 
-    // Giả định có Entity TaxConfig
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tax_code", referencedColumnName = "tax_code")
-    private TaxConfig taxConfig;
+    @Column(name = "tax_code")
+    private String taxCode;
 
-    @Column(name = "insurance_code", unique = true)
+    @Column(name = "insurance_code")
     private String insuranceCode;
 
     @Column(name = "effective_from", nullable = false)
@@ -54,20 +54,11 @@ public class SalaryProfile {
     @Column(name = "effective_to")
     private LocalDate effectiveTo;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @CreatedDate
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
 
+    @LastModifiedDate
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
+    private OffsetDateTime updatedAt;
 }

@@ -1,18 +1,21 @@
 package com.project.hrm.module.payroll.entity;
 
 
+import com.project.hrm.module.payroll.enums.PayslipDetailType;
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "payslip_details", schema = "public")
+@Table(name = "payslip_details")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class PayslipDetail {
 
     @Id
@@ -21,19 +24,19 @@ public class PayslipDetail {
     private UUID detailId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "payslip_id")
+    @JoinColumn(name = "payslip_id", nullable = false)
     private Payslip payslip;
 
-    @Column(name = "item_name")
+    @Column(name = "item_name", nullable = false, length = 100)
     private String itemName;
 
-    @Column(precision = 15, scale = 2)
+    @Column(name = "amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
-    // Type: 1 = Income, 2 = Deduction
-    @Column(nullable = false)
-    private Short type;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
+    private PayslipDetailType type;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
 }
