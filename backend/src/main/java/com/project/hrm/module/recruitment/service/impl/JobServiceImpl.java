@@ -74,8 +74,7 @@ public class JobServiceImpl implements JobService {
     @Override
     public JobResponse update(UUID id, CreateJobRequest request) {
         Job entity = jobRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Job not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
         JobDetail jobDetail = entity.getJobDetail();
         createJobDetail(jobDetail, request);
         entity.setJobDetail(jobDetail);
@@ -87,8 +86,7 @@ public class JobServiceImpl implements JobService {
     public JobResponse updateStatus(UUID id, JobStatus status) {
 
         Job entity = jobRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Job not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
 
         if (entity.getStatus().equals(JobStatus.CLOSED)) {
             throw new RuntimeException("Cannot update status of closed job");
@@ -106,13 +104,12 @@ public class JobServiceImpl implements JobService {
     @Override
     public void delete(UUID id) {
         Job entity = jobRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Job not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
 
         jobRepository.delete(entity);
     }
 
-    private void createJobDetail(JobDetail entity, CreateJobRequest request){
+    private void createJobDetail(JobDetail entity, CreateJobRequest request) {
         entity.setQuantity(request.getQuantity());
         entity.setMaxCv(request.getMaxCv());
         entity.setLocation(request.getLocation());
@@ -128,13 +125,12 @@ public class JobServiceImpl implements JobService {
     private void addJobFromRequest(Job entity, CreateJobRequest request) {
         if (request.getRequestId() != null) {
             JobRequest jobRequest = jobRequestRepository.findById(request.getRequestId())
-                    .orElseThrow(() ->
-                            new RuntimeException("Job Request not found"));
+                    .orElseThrow(() -> new RuntimeException("Job Request not found"));
 
             entity.setRequest(jobRequest);
             entity.setPos(jobRequest.getPos());
             entity.setEmployee(jobRequest.getReportsTo());
-        } else{
+        } else {
             Employee employee = REmployeeRepository.findById(request.getHrId())
                     .orElseThrow(() -> new RuntimeException("Employee not found"));
             Position position = RPositionRepository.findById(request.getPosId())
@@ -148,10 +144,10 @@ public class JobServiceImpl implements JobService {
         jobRepository.save(entity);
     }
 
-    private JobResponse mapToResponse(Job entity){
+    private JobResponse mapToResponse(Job entity) {
         JobResponse response = new JobResponse();
         response.setId(entity.getId());
-        if(entity.getRequest()!=null) {
+        if (entity.getRequest() != null) {
             response.setReqId(entity.getRequest().getId());
         }
         JobDetail jobDetail = entity.getJobDetail();
@@ -169,11 +165,16 @@ public class JobServiceImpl implements JobService {
         response.setType(jobDetail.getType());
         response.setLocation(jobDetail.getLocation());
         Position position = entity.getPos();
-        response.setDeptName(position.getDepartment().getDeptName());
-        response.setPosId(position.getPositionId());
-        response.setPosName(position.getTitle());
-        response.setMinSalary(position.getBaseSalaryMin());
-        response.setMaxSalary(position.getBaseSalaryMax());
+        if (position != null) {
+            if (position.getDepartment() != null) {
+                response.setDeptId(position.getDepartment().getDeptId());
+                response.setDeptName(position.getDepartment().getDeptName());
+            }
+            response.setPosId(position.getPositionId());
+            response.setPosName(position.getTitle());
+            response.setMinSalary(position.getBaseSalaryMin());
+            response.setMaxSalary(position.getBaseSalaryMax());
+        }
         return response;
     }
 }

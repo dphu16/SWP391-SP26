@@ -141,12 +141,12 @@ public class PersonnelChangeService {
                 }
             }
             case SALARY_CHANGE -> {
-                if (newValues.containsKey("baseSalary") && employee.getContracts() != null) {
+                if (newValues.containsKey("baseSalary") && employee.getContract() != null) {
                     BigDecimal newSalary = new BigDecimal(newValues.get("baseSalary").toString());
-                    employee.getContracts().stream()
-                            .filter(c -> c.getEndDate() == null || c.getEndDate().isAfter(LocalDate.now()))
-                            .max(Comparator.comparing(Contract::getStartDate))
-                            .ifPresent(c -> c.setBaseSalary(newSalary));
+                    Contract contract = employee.getContract();
+                    if (contract.getEndDate() == null || contract.getEndDate().isAfter(LocalDate.now())) {
+                        contract.setBaseSalary(newSalary);
+                    }
                 }
             }
             case DISCIPLINE, REWARD -> {
@@ -178,10 +178,12 @@ public class PersonnelChangeService {
                 }
             }
             case SALARY_CHANGE -> {
-                employee.getContracts().stream()
-                        .filter(c -> c.getEndDate() == null || c.getEndDate().isAfter(LocalDate.now()))
-                        .max(Comparator.comparing(Contract::getStartDate))
-                        .ifPresent(c -> old.put("baseSalary", c.getBaseSalary()));
+                if (employee.getContract() != null) {
+                    Contract contract = employee.getContract();
+                    if (contract.getEndDate() == null || contract.getEndDate().isAfter(LocalDate.now())) {
+                        old.put("baseSalary", contract.getBaseSalary());
+                    }
+                }
             }
             case DISCIPLINE, REWARD -> {
                 // No old values for these types

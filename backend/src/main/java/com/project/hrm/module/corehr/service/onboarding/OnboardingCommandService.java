@@ -57,7 +57,7 @@ public class OnboardingCommandService {
 
         if (request.getMentorId() != null) {
             Employee mentor = employeeHelper.findEmployeeOrThrow(request.getMentorId());
-            employee.setMentor(mentor);
+            employee.setManager(mentor);
         }
 
         if (request.getEmail() != null && !request.getEmail().isEmpty()) {
@@ -77,6 +77,7 @@ public class OnboardingCommandService {
                 });
             }
 
+            newUser.setEmployee(employee);
             userRepository.save(newUser);
             employee.setUser(newUser);
         }

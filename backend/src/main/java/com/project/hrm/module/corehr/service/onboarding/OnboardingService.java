@@ -100,9 +100,7 @@ public class OnboardingService implements IOnboardingService {
         }
 
         Personal personal = employee.getPersonal();
-        Contract contract = employee.getContracts().stream()
-                .max(Comparator.comparing(Contract::getStartDate))
-                .orElse(null);
+        Contract contract = employee.getContract();
 
         CreateNewHireDTO dto = new CreateNewHireDTO();
         dto.setFullName(employee.getFullName());
@@ -116,7 +114,7 @@ public class OnboardingService implements IOnboardingService {
         dto.setAvatarUrl(personal != null ? personal.getAvatar() : null);
         dto.setDepartmentId(employee.getDepartment() != null ? employee.getDepartment().getDeptId() : null);
         dto.setPositionId(employee.getPosition() != null ? employee.getPosition().getPositionId() : null);
-        dto.setMentorId(employee.getMentor() != null ? employee.getMentor().getEmployeeId() : null);
+        dto.setMentorId(employee.getManager() != null ? employee.getManager().getEmployeeId() : null);
         dto.setDateOfJoining(employee.getDateOfJoining());
         dto.setRole(employee.getRole());
         dto.setStatus(employee.getStatus());
@@ -152,7 +150,7 @@ public class OnboardingService implements IOnboardingService {
             employee.setPosition(employeeHelper.findPositionOrThrow(updatedData.getPositionId()));
         }
         if (updatedData.getMentorId() != null) {
-            employee.setMentor(employeeHelper.findEmployeeOrThrow(updatedData.getMentorId()));
+            employee.setManager(employeeHelper.findEmployeeOrThrow(updatedData.getMentorId()));
         }
         employee.setRole(updatedData.getRole());
         employee.setDateOfJoining(updatedData.getDateOfJoining());
@@ -171,11 +169,7 @@ public class OnboardingService implements IOnboardingService {
         }
 
         // Update contract info
-        Contract contract = employee.getContracts().stream()
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException(
-                        "No contract found for employee: " + employee.getEmployeeId()
-                ));
+        Contract contract = employee.getContract();
         if (contract != null) {
             contract.setContractNumber(updatedData.getContractNumber());
             contract.setContractType(updatedData.getContractType());

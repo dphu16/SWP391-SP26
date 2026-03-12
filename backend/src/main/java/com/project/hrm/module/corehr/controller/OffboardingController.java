@@ -46,7 +46,7 @@ public class OffboardingController {
 
     // ── BRD 3.1: Quản lý đề xuất sa thải / hết HĐ / không vào làm ──
     @PostMapping("/offboarding/propose/{employeeId}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<OffboardingResponseDTO> createManagerProposedRequest(
             @PathVariable("employeeId") UUID employeeId,
             @Valid @RequestBody OffboardingRequestDTO dto) {

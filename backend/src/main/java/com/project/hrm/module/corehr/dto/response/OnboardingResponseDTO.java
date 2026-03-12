@@ -20,6 +20,7 @@ public class OnboardingResponseDTO {
     private String candidateName;
     private String candidateEmail;
     private String candidatePhone;
+    private UUID jobId;
     private String jobTitle;
     private ApplicationStatus status;
     private ProgressStatus progressStatus;
