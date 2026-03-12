@@ -9,7 +9,7 @@ interface FilterBarProps {
 
 const STATIC_ROLES = ["Manager", "HR", "Employee", "Finance", "Mentor"];
 
-const FilterBar: React.FC<FilterBarProps> = ({ onSearch, onFilterChange }) => {
+const FilterBar: React.FC<FilterBarProps> = ({ onSearch, onFilterChange, onAddEmployee }) => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("department");
   const [value, setValue] = useState("All Departments");
@@ -146,6 +146,19 @@ const FilterBar: React.FC<FilterBarProps> = ({ onSearch, onFilterChange }) => {
 
         {/* Divider */}
         <div className="hidden lg:block w-px h-8 bg-border-light mx-1" />
+
+        {/* 4. Add Employee Button */}
+        {onAddEmployee && (
+          <button
+            onClick={onAddEmployee}
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-primary/20 active:scale-[0.98] cursor-pointer"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M5 12h14m-7-7v14" />
+            </svg>
+            <span className="hidden sm:inline">Add Employee</span>
+          </button>
+        )}
       </div>
     </div>
   );

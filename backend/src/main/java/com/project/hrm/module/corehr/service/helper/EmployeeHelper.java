@@ -15,13 +15,12 @@ public class EmployeeHelper {
     private final EmployeeRepository employeeRepository;
     private final DepartmentRepository departmentRepository;
     private final PositionRepository positionRepository;
-    private final DependentRepository dependentRepository;
 
-    public EmployeeHelper(EmployeeRepository employeeRepository, DepartmentRepository departmentRepository, PositionRepository positionRepository, DependentRepository dependentRepository) {
+    public EmployeeHelper(EmployeeRepository employeeRepository, DepartmentRepository departmentRepository,
+            PositionRepository positionRepository) {
         this.employeeRepository = employeeRepository;
         this.departmentRepository = departmentRepository;
         this.positionRepository = positionRepository;
-        this.dependentRepository = dependentRepository;
     }
 
     public Employee save(Employee employee) {
@@ -41,10 +40,5 @@ public class EmployeeHelper {
     public Position findPositionOrThrow(UUID id) {
         return positionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Position not avaiable: " + id));
-    }
-
-    public Dependent findDependentOrThrow(UUID id) {
-        return dependentRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Dependent not avaiable: " + id));
     }
 }

@@ -1,6 +1,9 @@
 package com.project.hrm.module.recruitment.entity;
 
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.entity.Position;
+import com.project.hrm.module.recruitment.enums.EmploymentType;
+import com.project.hrm.module.recruitment.enums.JobStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -17,7 +20,7 @@ import java.util.UUID;
 @Table(name = "jobs")
 public class Job {
     @Id
-    @ColumnDefault("uuid_generate_v4()")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "job_id", nullable = false)
     private UUID id;
 
@@ -25,34 +28,9 @@ public class Job {
     @JoinColumn(name = "request_id")
     private JobRequest request;
 
-    @Size(max = 100)
-    @NotNull
-    @Column(name = "title", nullable = false, length = 100)
-    private String title;
-
-    @NotNull
-    @Column(name = "description", nullable = false, length = Integer.MAX_VALUE)
-    private String description;
-
-    @NotNull
-    @Column(name = "responsibilities", nullable = false, length = Integer.MAX_VALUE)
-    private String responsibilities;
-
-    @NotNull
-    @Column(name = "requirements", nullable = false, length = Integer.MAX_VALUE)
-    private String requirements;
-
-    @Column(name = "benefits", length = Integer.MAX_VALUE)
-    private String benefits;
-
-    @ColumnDefault("1")
-    @Column(name = "quantity")
-    private Integer quantity;
-
-    @Size(max = 20)
-    @ColumnDefault("'OPEN'")
-    @Column(name = "status", length = 20)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private JobStatus status = JobStatus.OPEN;
 
     @ColumnDefault("now()")
     @Column(name = "posted_at")
@@ -65,5 +43,14 @@ public class Job {
     @JoinColumn(name = "hr_id")
     private Employee employee;
 
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "position_id", nullable = false)
+    private Position pos;
+
+    @NotNull
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "job_detail_id", nullable = false, unique = true)
+    private JobDetail jobDetail;
 
 }

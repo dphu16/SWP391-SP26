@@ -1,15 +1,17 @@
 package com.project.hrm.module.corehr.repository.specification;
 
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.enums.EmployeeRole;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
+import jakarta.persistence.criteria.*;
 
 public class EmployeeSpecification {
 
     public static Specification<Employee> filterEmployees(String fullName, String employeeCode, String phoneNumber,
             String department, String position, String role, String status) {
         return (root, query, criteriaBuilder) -> {
-            var predicate = criteriaBuilder.conjunction();
+            Predicate predicate = criteriaBuilder.conjunction();
 
             if (StringUtils.hasText(fullName)) {
                 predicate = criteriaBuilder.and(predicate,
@@ -23,25 +25,25 @@ public class EmployeeSpecification {
             }
 
             if (StringUtils.hasText(phoneNumber)) {
-                var personalJoin = root.join("personal");
+                Join<Object, Object> personalJoin = root.join("personal");
                 predicate = criteriaBuilder.and(predicate,
                         criteriaBuilder.like(personalJoin.get("phone"), "%" + phoneNumber.trim() + "%"));
             }
 
             if (StringUtils.hasText(department)) {
-                var deptJoin = root.join("department");
+                Join<Object, Object> deptJoin = root.join("department");
                 predicate = criteriaBuilder.and(predicate,
                         criteriaBuilder.equal(deptJoin.get("deptName"), department.trim()));
             }
 
             if (StringUtils.hasText(position)) {
-                var posJoin = root.join("position");
+                Join<Object, Object> posJoin = root.join("position");
                 predicate = criteriaBuilder.and(predicate,
                         criteriaBuilder.equal(posJoin.get("title"), position.trim()));
             }
 
             if (StringUtils.hasText(role)) {
-                var userJoin = root.join("user");
+                Join<Object, Object> userJoin = root.join("user");
 
                 String roleEnumStr = role.trim().toUpperCase();
                 if (roleEnumStr.equals("HR MANAGER") || roleEnumStr.equals("HR")) {
@@ -49,7 +51,7 @@ public class EmployeeSpecification {
                 }
 
                 try {
-                    com.project.hrm.module.corehr.enums.UserRole parsedRole = com.project.hrm.module.corehr.enums.UserRole
+                    EmployeeRole parsedRole = EmployeeRole
                             .valueOf(roleEnumStr);
                     predicate = criteriaBuilder.and(predicate,
                             criteriaBuilder.equal(userJoin.get("role"), parsedRole));
@@ -59,13 +61,28 @@ public class EmployeeSpecification {
             }
 
             if (StringUtils.hasText(status)) {
+                String statusStr = status.trim().toUpperCase();
+                boolean parsed = false;
                 try {
                     com.project.hrm.module.corehr.enums.EmployeeStatus parsedStatus = com.project.hrm.module.corehr.enums.EmployeeStatus
-                            .valueOf(status.trim().toUpperCase());
+                            .valueOf(statusStr);
                     predicate = criteriaBuilder.and(predicate,
                             criteriaBuilder.equal(root.get("empStatus"), parsedStatus));
+                    parsed = true;
                 } catch (IllegalArgumentException e) {
                     // Ignore Invalid status string
+                }
+
+                if (!parsed) {
+                    try {
+                        com.project.hrm.module.corehr.enums.UserStatus parsedUserStatus = com.project.hrm.module.corehr.enums.UserStatus
+                                .valueOf(statusStr);
+                        Join<Object, Object> userJoinForStatus = root.join("user");
+                        predicate = criteriaBuilder.and(predicate,
+                                criteriaBuilder.equal(userJoinForStatus.get("status"), parsedUserStatus));
+                    } catch (IllegalArgumentException e) {
+                        // Ignore Invalid status string
+                    }
                 }
             }
 

@@ -3,6 +3,8 @@ package com.project.hrm.module.corehr.mapper;
 import com.project.hrm.module.corehr.dto.request.EmployeeDTO;
 import com.project.hrm.module.corehr.entity.Employee;
 
+import java.util.stream.Collectors;
+
 public class EmployeeMapper {
 
     private EmployeeMapper() {
@@ -17,8 +19,10 @@ public class EmployeeMapper {
                 employee.getFullName(),
                 employee.getPersonal().getPhone(),
                 employee.getPosition() != null ? employee.getPosition().getTitle() : null,
-                employee.getUser() != null ? employee.getUser().getRole() : null,
+                employee.getUser() != null ? employee.getUser().getRoles().stream()
+                        .map(role -> role.getName().name())
+                        .collect(Collectors.toSet()) : null,
                 employee.getDepartment() != null ? employee.getDepartment().getDeptName() : null,
-                employee.getUser() != null ? employee.getUser().getStatus() : null);
+                employee.getUser() != null ? employee.getStatus() : null);
     }
 }

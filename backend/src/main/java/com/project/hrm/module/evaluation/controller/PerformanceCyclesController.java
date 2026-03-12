@@ -48,4 +48,10 @@ public class PerformanceCyclesController {
             @RequestBody CycleStatusRequest request){
         return ResponseEntity.ok(service.updateStatus(id, request));
     }
+
+    // Handle RuntimeExceptions to return 400 Bad Request instead of 500
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<java.util.Map<String, String>> handleRuntimeException(RuntimeException ex) {
+        return ResponseEntity.badRequest().body(java.util.Map.of("error", ex.getMessage()));
+    }
 }

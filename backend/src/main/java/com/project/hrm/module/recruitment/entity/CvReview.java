@@ -1,6 +1,8 @@
 package com.project.hrm.module.recruitment.entity;
 
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.recruitment.enums.ApplicationStatus;
+import com.project.hrm.module.recruitment.enums.ResultStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -18,7 +20,7 @@ import java.util.UUID;
 @Table(name = "cv_reviews")
 public class CvReview {
     @Id
-    @ColumnDefault("uuid_generate_v4()")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "review_id", nullable = false)
     private UUID id;
 
@@ -32,18 +34,12 @@ public class CvReview {
     @JoinColumn(name = "reviewer_id", nullable = false)
     private Employee reviewer;
 
-    @Column(name = "ai_score", precision = 5, scale = 2)
-    private BigDecimal aiScore;
-
-    @Column(name = "interview_score", precision = 4, scale = 2)
-    private BigDecimal interviewScore;
-
     @Column(name = "comment", length = Integer.MAX_VALUE)
     private String comment;
 
-    @Size(max = 20)
-    @Column(name = "result", length = 20)
-    private String result;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "result", nullable = false)
+    private ResultStatus result = ResultStatus.FAILED;
 
     @ColumnDefault("now()")
     @Column(name = "created_at")

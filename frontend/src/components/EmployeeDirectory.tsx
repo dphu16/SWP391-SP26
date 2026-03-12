@@ -11,7 +11,7 @@ const EmployeeDirectory: React.FC = () => {
         const handler = setTimeout(() => {
             setDebouncedSearch(searchTerm);
         }, 500);
-        
+
         return () => {
             clearTimeout(handler);
         };
@@ -31,14 +31,14 @@ const EmployeeDirectory: React.FC = () => {
                     Manage and view all employee profiles within your organization.
                 </p>
             </div>
-            
-            <FilterBar 
-                onSearch={setSearchTerm} 
+
+            <FilterBar
+                onSearch={setSearchTerm}
                 onFilterChange={handleFilterChange}
             />
-            
-            <EmployeeTable 
-                searchQuery={debouncedSearch} 
+
+            <EmployeeTable
+                searchQuery={debouncedSearch}
                 filterCategory={filter.category}
                 filterValue={filter.value}
             />
