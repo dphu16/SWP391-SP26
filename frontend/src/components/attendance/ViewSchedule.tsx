@@ -153,19 +153,13 @@ const ViewSchedule: React.FC = () => {
                                     </span>
                                     {daySchedules.map((sch) => {
                                         if (!sch.shift) return null;
-                                        const startHour = parseInt(sch.shift.startTime.slice(0, 2), 10);
-                                        const isMorning = startHour < 12;
                                         return (
                                             <div
                                                 key={sch.id}
                                                 title={sch.shift.name}
-                                                className={`text-[10px] font-bold py-1 px-1.5 rounded-md flex flex-col items-center justify-center text-center leading-tight mx-0.5
- ${isMorning
-                                                        ? "bg-[#fef9c3] text-[#854d0e]" /* sáng: vàng nhạt */
-                                                        : "bg-[#ccfbf1] text-[#0f766e]" /* chiều: xanh lá */
-                                                    }`}
+                                                className="text-[10px] font-bold py-1 px-1.5 rounded-md flex flex-col items-center justify-center text-center leading-tight mx-0.5 bg-[#ccfbf1] text-[#0f766e]"
                                             >
-                                                <span className="opacity-70 text-[9px] font-semibold">{isMorning ? "☀️" : "🌙"} {sch.shift.name}</span>
+                                                <span className="opacity-70 text-[9px] font-semibold">{sch.shift.name}</span>
                                                 <span>{sch.shift.startTime.slice(0, 5)} – {sch.shift.endTime.slice(0, 5)}</span>
                                             </div>
                                         );

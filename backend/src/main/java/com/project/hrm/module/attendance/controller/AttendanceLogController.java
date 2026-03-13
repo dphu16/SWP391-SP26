@@ -8,7 +8,6 @@ import com.project.hrm.module.attendance.dto.DepartmentDTO;
 import com.project.hrm.module.corehr.repository.DepartmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,31 +29,29 @@ public class AttendanceLogController {
 
     // 2. Xem lịch sử cá nhân (Employee)
     @GetMapping("/logs/my-history")
-    public ResponseEntity<List<AttendanceLog>> getMyHistory(@RequestParam UUID employeeId) {
+    public ResponseEntity<List<AttendanceLog>> getMyHistory(@RequestParam("employeeId") UUID employeeId) {
         return ResponseEntity.ok(service.getMyHistory(employeeId));
     }
 
     // 3. Xem tất cả chấm công (Manager)
     @GetMapping("/logs")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<AttendanceLog>> getAllLogs() {
         return ResponseEntity.ok(service.getAllLogs());
     }
 
     // 4. Sửa công (Manager)
     @PutMapping("/logs/{id}")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
-    public ResponseEntity<AttendanceLog> updateLog(@PathVariable UUID id, @RequestBody AttendanceRequest req) {
+    public ResponseEntity<AttendanceLog> updateLog(@PathVariable("id") UUID id, @RequestBody AttendanceRequest req) {
         return ResponseEntity.ok(service.updateLog(id, req));
     }
 
+    // Đặt trong class Controller của bạn
     @GetMapping("/summary")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<AttendanceSummaryDTO>> getSummaryReport(
-            @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) UUID departmentId,
-            @RequestParam(required = false) UUID employeeId) {
+            @RequestParam(value = "month", required = false) Integer month,
+            @RequestParam(value = "year", required = false) Integer year,
+            @RequestParam(value = "departmentId", required = false) UUID departmentId,
+            @RequestParam(value = "employeeId", required = false) UUID employeeId) {
 
         List<AttendanceSummaryDTO> result = service.getAttendanceSummaryReport(month, year, departmentId, employeeId);
         return ResponseEntity.ok(result);
