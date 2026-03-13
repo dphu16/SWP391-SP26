@@ -10,7 +10,6 @@ import com.project.hrm.module.recruitment.enums.ResultStatus;
 import com.project.hrm.module.recruitment.repository.ApplicationRepository;
 import com.project.hrm.module.recruitment.repository.CvReviewRepository;
 import com.project.hrm.module.recruitment.repository.REmployeeRepository;
-import com.project.hrm.module.recruitment.service.ApplicationService;
 import com.project.hrm.module.recruitment.service.CvReviewService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;

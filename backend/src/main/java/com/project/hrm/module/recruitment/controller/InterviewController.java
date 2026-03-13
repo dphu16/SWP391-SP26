@@ -1,6 +1,5 @@
 package com.project.hrm.module.recruitment.controller;
 
-import com.project.hrm.module.corehr.enums.UserRole;
 import com.project.hrm.module.recruitment.dto.request.InterviewRequest;
 import com.project.hrm.module.recruitment.dto.response.InterviewResponse;
 import com.project.hrm.module.recruitment.service.InterviewService;
