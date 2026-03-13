@@ -77,7 +77,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     @Override
     public List<ApplicationResponse> getAppByJobIdAndStatus(UUID id, ApplicationStatus status) {
         List<Application> applications =
-                applicationRepository.findByJob_IdAndStatus(id, status);
+                applicationRepository.findByJob_IdAndStatusOrderByScore(id, status);
 
 
         return applications.stream()

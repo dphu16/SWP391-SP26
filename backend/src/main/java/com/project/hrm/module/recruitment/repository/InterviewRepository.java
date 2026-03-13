@@ -12,7 +12,6 @@ public interface InterviewRepository extends JpaRepository<Interview, UUID> {
     Interview findByApp_Id(UUID id);
     List<Interview> findAllByApp_IdIn(List<UUID> ids);
     List<Interview> findByInterviewer_EmployeeIdAndStatusOrderByScheduleTime(UUID id, InterviewStatus status);
-    boolean existsByApp_Id(UUID appId);
     boolean existsByApp_IdAndInterviewer_User_Role(UUID appId, EmployeeRole role);
     List<Interview> findAllByApp_Id(UUID appId);
 }

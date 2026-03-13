@@ -1,5 +1,8 @@
-import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { applicationService } from "../../services/applicationService";
+import { getToken } from "../../services/authService";
+import { decodeJwt } from "../../utils/jwtDecode";
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 const Icons = {
@@ -164,6 +167,30 @@ const Sidebar: React.FC = () => {
   const [recruitmentExpanded, setRecruitmentExpanded] = useState(true);
   const [attendanceExpanded, setAttendanceExpanded] = useState(true);
   const [payrollExpanded, setPayrollExpanded] = useState(true);
+  const [interviewCount, setInterviewCount] = useState(0);
+
+  useEffect(() => {
+    const fetchInterviewCount = async () => {
+      try {
+        const token = getToken();
+        const payload = token ? decodeJwt(token) : null;
+        const employeeId = payload?.employeeId;
+        if (!employeeId) return;
+
+        const res = await applicationService.getInterviewByHr(employeeId);
+        // Only count 'SCHEDULED' interviews
+        const activeInterviews = res.data.filter(int => int.status === 'SCHEDULED');
+        setInterviewCount(activeInterviews.length);
+      } catch (err) {
+        console.error("Failed to fetch interview count for sidebar", err);
+      }
+    };
+
+    fetchInterviewCount();
+    // Refresh count every 5 minutes to keep it updated
+    const interval = setInterval(fetchInterviewCount, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const isPath = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
@@ -591,8 +618,12 @@ const Sidebar: React.FC = () => {
                       path: "/recruitment/job-requests",
                     },
                     { label: "Job Openings", path: "/recruitment/jobs" },
-                    { label: "Schedules", path: "/recruitment/schedules" },
-                  ].map((item) => (
+                    {
+                      label: "Schedules",
+                      path: "/recruitment/schedules",
+                      badge: interviewCount,
+                    },
+                  ].map((item: any) => (
                     <NavItem
                       key={item.path}
                       icon={
@@ -602,6 +633,7 @@ const Sidebar: React.FC = () => {
                       isActive={location.pathname === item.path}
                       isCollapsed={false}
                       indent
+                      badge={item.badge}
                       onClick={() => navigate(item.path)}
                     />
                   ))}

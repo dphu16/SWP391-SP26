@@ -108,7 +108,7 @@ const SchedulePage: React.FC = () => {
     if (loading) return <LoadingSpinner />;
 
     return (
-        <div className="space-y-6 animate-fade-in pb-10 max-w-6xl mx-auto">
+        <div className="space-y-6 animate-fade-in pb-10 max-w-[1600px] mx-auto px-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-bold font-heading text-text-primary-light tracking-tight">
@@ -172,15 +172,15 @@ const SchedulePage: React.FC = () => {
                                                 </tr>
                                                 {isActive && (
                                                     <tr className="bg-white border-b border-gray-100">
-                                                        <td colSpan={4} className="px-6 py-8">
+                                                        <td colSpan={5} className="px-6 py-8">
                                                             {loadingApp ? (
                                                                 <div className="flex justify-center py-10">
                                                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                                                                 </div>
                                                             ) : appDetail ? (
-                                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in">
-                                                                    {/* Left Area: Information & Form */}
-                                                                    <div className="space-y-8">
+                                                                <div className="grid grid-cols-1 lg:grid-cols-10 gap-8 animate-fade-in">
+                                                                    {/* Left Area: Information & Form (40%) */}
+                                                                    <div className="lg:col-span-4 space-y-8">
                                                                         {/* Candidate Info Card */}
                                                                         <div>
                                                                             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -229,11 +229,11 @@ const SchedulePage: React.FC = () => {
                                                                                 <div>
                                                                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5 ml-1">Detailed Feedback</label>
                                                                                     <textarea
-                                                                                        rows={4}
+                                                                                        rows={12}
                                                                                         value={feedbackText}
                                                                                         onChange={(e) => setFeedbackText(e.target.value)}
                                                                                         className="w-full px-4 py-3 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition-all resize-none italic"
-                                                                                        placeholder="Share your thoughts on the candidate..."
+                                                                                        placeholder="Share your thoughts on the candidate"
                                                                                         disabled={isSubmitting || interview.status !== 'SCHEDULED'}
                                                                                     />
                                                                                 </div>
@@ -264,8 +264,8 @@ const SchedulePage: React.FC = () => {
                                                                         </div>
                                                                     </div>
 
-                                                                    {/* Right Area: PDF Viewer */}
-                                                                    <div className="space-y-4">
+                                                                    {/* Right Area: PDF Viewer (60%) */}
+                                                                    <div className="lg:col-span-6 space-y-4">
                                                                         <div className="flex items-center justify-between mb-0">
                                                                             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -282,13 +282,12 @@ const SchedulePage: React.FC = () => {
                                                                             </a>
                                                                         </div>
 
-                                                                        <div className="w-full h-[650px] bg-gray-100 rounded-2xl overflow-hidden border border-gray-200 shadow-inner relative group">
+                                                                        <div className="w-full bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm relative group aspect-[1/1.414]">
                                                                             <iframe
-                                                                                src={`http://localhost:8080${appDetail.cvUrl}#toolbar=0`}
-                                                                                className="w-full h-full border-none"
+                                                                                src={`http://localhost:8080${appDetail.cvUrl}#toolbar=0&navpanes=0&view=FitH`}
+                                                                                className="absolute top-0 left-0 w-full h-full border-none"
                                                                                 title="Candidate CV Viewer"
                                                                             />
-                                                                            <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/20 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
