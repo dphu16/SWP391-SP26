@@ -22,7 +22,7 @@ public class OnboardingMapper {
                 .candidateName(candidate != null ? candidate.getFullName() : null)
                 .candidateEmail(candidate != null ? candidate.getEmail() : null)
                 .candidatePhone(candidate != null ? candidate.getPhone() : null)
-                .jobId(job != null ? job.getId() : null)
+                .id(job != null ? job.getId() : null)
                 .jobTitle(job != null ? job.getPos().getTitle() : null)
                 .status(application.getStatus())
                 .progressStatus(application.getStatus() == ApplicationStatus.HIRED ? ProgressStatus.NEW : null)

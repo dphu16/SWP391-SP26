@@ -555,8 +555,8 @@ const Sidebar: React.FC = () => {
             />
           ))}
 
-        {/* Growth — HR only */}
-        {hasRole("HR") && (
+        {/* Growth — HR and MANAGER */}
+        {hasRole("HR", "MANAGER") && (
           <>
             <SectionLabel label="Growth" isCollapsed={isCollapsed} />
 
@@ -599,21 +599,34 @@ const Sidebar: React.FC = () => {
                     {
                       label: "Job Requests",
                       path: "/recruitment/job-requests",
+                      roles: ["HR", "MANAGER"],
                     },
-                    { label: "Job Openings", path: "/recruitment/jobs" },
-                  ].map((item) => (
-                    <NavItem
-                      key={item.path}
-                      icon={
-                        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />
-                      }
-                      label={item.label}
-                      isActive={location.pathname === item.path}
-                      isCollapsed={false}
-                      indent
-                      onClick={() => navigate(item.path)}
-                    />
-                  ))}
+                    {
+                      label: "Job Openings",
+                      path: "/recruitment/jobs",
+                      roles: ["HR"],
+                    },
+                    {
+                      label: "Schedules",
+                      path: "/recruitment/schedules",
+                      roles: ["HR", "MANAGER"],
+                    },
+                  ]
+                    .filter((item) => hasRole(...(item.roles as string[])))
+                    .map((item: any) => (
+                      <NavItem
+                        key={item.path}
+                        icon={
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />
+                        }
+                        label={item.label}
+                        isActive={location.pathname === item.path}
+                        isCollapsed={false}
+                        indent
+                        badge={item.badge}
+                        onClick={() => navigate(item.path)}
+                      />
+                    ))}
                 </div>
               )}
             </div>

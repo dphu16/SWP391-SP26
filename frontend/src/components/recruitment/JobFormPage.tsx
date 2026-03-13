@@ -250,6 +250,7 @@ const JobFormPage: React.FC = () => {
                             >
                                 <option value="OFFICIAL">Official</option>
                                 <option value="PROBATION">Probation</option>
+                                <option value="INTERN">Intern</option>
                             </select>
                         </div>
 

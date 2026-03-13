@@ -3,7 +3,6 @@ package com.project.hrm.module.recruitment.controller;
 import com.project.hrm.module.recruitment.dto.request.ApplicationRequest;
 import com.project.hrm.module.recruitment.dto.request.DateLimitRequest;
 import com.project.hrm.module.recruitment.dto.response.ApplicationResponse;
-import com.project.hrm.module.recruitment.dto.response.InterviewResponse;
 import com.project.hrm.module.recruitment.enums.ApplicationStatus;
 import com.project.hrm.module.recruitment.service.ApplicationService;
 import jakarta.validation.Valid;
@@ -42,7 +41,6 @@ public class ApplicationController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<ApplicationResponse> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(applicationService.getApplicationById(id));
     }
@@ -95,7 +93,5 @@ public class ApplicationController {
         List<ApplicationResponse> responses = applicationService.nextStage(ids);
         return ResponseEntity.ok(responses);
     }
-
-
 
 }

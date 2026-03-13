@@ -45,7 +45,8 @@ public class JobRequestServiceImpl implements JobRequestService {
 
     @Override
     public List<JobRequestResponse> getRequestByDepartmentName(String name) {
-        List<JobRequest> entities = jobRequestRepository.findByDept_DeptName(name);
+        List<JobRequest> entities =
+                jobRequestRepository.findByDept_DeptName(name);
 
         return entities.stream()
                 .map(this::mapToResponse)
@@ -54,7 +55,8 @@ public class JobRequestServiceImpl implements JobRequestService {
 
     @Override
     public List<JobRequestResponse> getRequestByReportTo(UUID id) {
-        List<JobRequest> entities = jobRequestRepository.findByReportsTo_EmployeeId(id);
+        List<JobRequest> entities =
+                jobRequestRepository.findByReportsTo_EmployeeId(id);
 
         return entities.stream()
                 .map(this::mapToResponse)
@@ -72,7 +74,8 @@ public class JobRequestServiceImpl implements JobRequestService {
     @Override
     public JobRequestResponse update(UUID id, JobRequestRequest request) {
         JobRequest entity = jobRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job request not found with id: " + id));
+                .orElseThrow(() ->
+                        new RuntimeException("Job request not found with id: " + id));
 
         return uploadData(entity, request);
     }
@@ -80,7 +83,8 @@ public class JobRequestServiceImpl implements JobRequestService {
     @Override
     public JobRequestResponse updateStatus(UUID id, RequestStatus status, String comment) {
         JobRequest entity = jobRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job request not found with id: " + id));
+                .orElseThrow(() ->
+                        new RuntimeException("Job request not found with id: " + id));
         if (entity.getStatus().equals(RequestStatus.APPROVED) ||
                 entity.getStatus().equals(RequestStatus.REJECTED)) {
 
@@ -103,31 +107,35 @@ public class JobRequestServiceImpl implements JobRequestService {
     @Override
     public void delete(UUID id) {
         JobRequest entity = jobRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job request not found with id: " + id));
+                .orElseThrow(() ->
+                        new RuntimeException("Job request not found with id: " + id));
 
         jobRequestRepository.delete(entity);
     }
 
-    private JobRequestResponse uploadData(JobRequest entity, JobRequestRequest request) {
+    private JobRequestResponse uploadData(JobRequest entity, JobRequestRequest request){
         if (request.getQuantity() <= 0) {
             throw new IllegalArgumentException("Quantity must be greater than 0");
         }
 
         if (request.getDeptId() != null) {
             Department department = RDepartmentRepository.findById(request.getDeptId())
-                    .orElseThrow(() -> new RuntimeException("Department not found"));
+                    .orElseThrow(() ->
+                            new RuntimeException("Department not found"));
             entity.setDept(department);
         }
 
         if (request.getPosId() != null) {
             Position position = RPositionRepository.findById(request.getPosId())
-                    .orElseThrow(() -> new RuntimeException("Position not found"));
+                    .orElseThrow(() ->
+                            new RuntimeException("Position not found"));
             entity.setPos(position);
         }
 
         if (request.getReportTo() != null) {
             Employee reviewer = REmployeeRepository.findById(request.getReportTo())
-                    .orElseThrow(() -> new RuntimeException("Employee not found"));
+                    .orElseThrow(() ->
+                            new RuntimeException("Employee not found"));
             entity.setReportsTo(reviewer);
         }
 

@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useRef} from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { jobRequestService } from "../../services/jobRequestService";
 import type { JobRequest } from "../ui/types";
@@ -10,11 +10,6 @@ import { employeeService } from "../../services/employeeService";
 const JobRequestListPage: React.FC = () => {
     const navigate = useNavigate();
     const { error: toastError, success: toastSuccess } = useToast();
-    const toastErrorRef = useRef(toastError);
-    const toastSuccessRef = useRef(toastSuccess);
-
-    useEffect(() => { toastErrorRef.current = toastError; }, [toastError]);
-    useEffect(() => { toastSuccessRef.current = toastSuccess; }, [toastSuccess]);
     const { user } = useAuth();
 
     const [searchTerm, setSearchTerm] = useState("");
@@ -56,11 +51,11 @@ const JobRequestListPage: React.FC = () => {
             }
         } catch (err: any) {
             setError("Failed to load job requests. Please try again later.");
-            toastErrorRef.current("Error", "Could not fetch job requests.");
+            toastError("Error", "Could not fetch job requests.");
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [toastError, user]);
 
     useEffect(() => {
         fetchRequests();

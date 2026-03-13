@@ -48,6 +48,7 @@ export interface Application {
   phone: string;
   cvUrl: string;
   status: string;
+  score: number | null;
   onboardingStatus?: "PENDING" | "IN_PROGRESS" | "COMPLETED";
   createdAt?: string;
 }

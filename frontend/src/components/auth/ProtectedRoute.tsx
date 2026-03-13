@@ -3,7 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { getToken, removeToken } from "../../services/authService";
 import { decodeJwt } from "../../utils/jwtDecode";
 import type { UserRole } from "../../hooks/useAuth";
-import { canAccessPath } from "../shared/sidebar";
+import { canAccessPath } from "../shared/sidebar/roleCapabilities";
 
 /**
  * Subscribe to localStorage changes so ProtectedRoute re-renders
