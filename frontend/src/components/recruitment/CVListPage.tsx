@@ -48,7 +48,7 @@ const CVListPage: React.FC = () => {
                 setApplications(res.data);
             }
         } catch (err: any) {
-            toastError("Error", err?.response?.data || "Failed to move to next stage");
+            toastError("Error", err?.response?.data?.message || err?.response?.data || "Failed to move to next stage");
         } finally {
             setIsSubmittingNextStage(false);
         }
@@ -69,7 +69,7 @@ const CVListPage: React.FC = () => {
             toastSuccess("Success", "List sent successfully");
             setSelectedApps([]);
         } catch (err: any) {
-            toastError("Error", err?.response?.data || "Failed to send list");
+            toastError("Error", err?.response?.data?.message || err?.response?.data || "Failed to send list");
         } finally {
             setIsSubmittingSendList(false);
         }
@@ -147,7 +147,7 @@ const CVListPage: React.FC = () => {
                 setApplications(res.data);
             }
         } catch (err: any) {
-            toastError("Error", "Could not submit candidate data.");
+            toastError("Error", err?.response?.data?.message || "Could not submit candidate data.");
         } finally {
             setIsSubmitting(false);
         }
@@ -165,8 +165,8 @@ const CVListPage: React.FC = () => {
                 setLoading(true);
                 const res = await applicationService.getByJobId(jobId, statusFilter);
                 setApplications(res.data);
-            } catch (err) {
-                setError("Failed to fetch candidates/CVs.");
+            } catch (err: any) {
+                setError(err?.response?.data?.message || "Failed to fetch candidates/CVs.");
             } finally {
                 setLoading(false);
             }
@@ -181,8 +181,8 @@ const CVListPage: React.FC = () => {
             setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: newStatus } : a));
             setEditingStatusId(null);
             toastSuccess("Success", `Status updated to ${newStatus} `);
-        } catch (err) {
-            toastError("Error", "Failed to update status");
+        } catch (err: any) {
+            toastError("Error", err?.response?.data?.message || "Failed to update status");
         }
     };
 
@@ -193,7 +193,7 @@ const CVListPage: React.FC = () => {
             toastSuccess("Success", "Candidate pushed to last stage successfully");
             setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: "HIRED" } : a));
         } catch (err: any) {
-            toastError("Error", err?.response?.data || "Failed to push candidate to last stage");
+            toastError("Error", err?.response?.data?.message || err?.response?.data || "Failed to push candidate to last stage");
         }
     };
 
@@ -203,8 +203,8 @@ const CVListPage: React.FC = () => {
             await applicationService.deleteApplication(appId);
             setApplications(prev => prev.filter(a => a.id !== appId));
             toastSuccess("Success", "CV deleted successfully");
-        } catch (err) {
-            toastError("Error", "Failed to delete CV");
+        } catch (err: any) {
+            toastError("Error", err?.response?.data?.message || "Failed to delete CV");
         }
     };
 

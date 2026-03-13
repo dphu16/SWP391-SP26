@@ -50,7 +50,7 @@ const SchedulePage: React.FC = () => {
             const sortedInterviews = res.data.sort((a, b) => new Date(a.scheduleTime).getTime() - new Date(b.scheduleTime).getTime());
             setInterviews(sortedInterviews);
         } catch (err: any) {
-            setError("Failed to load interview schedule.");
+            setError(err?.response?.data?.message || "Failed to load interview schedule.");
         } finally {
             setLoading(false);
         }
@@ -98,8 +98,8 @@ const SchedulePage: React.FC = () => {
             setAppDetail(null);
             setResultText("");
             setFeedbackText("");
-        } catch (err) {
-            alert("Failed to update interview result.");
+        } catch (err: any) {
+            alert(err?.response?.data?.message || "Failed to update interview result.");
         } finally {
             setIsSubmitting(false);
         }

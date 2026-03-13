@@ -2,13 +2,10 @@ package com.project.hrm.module.recruitment.entity;
 
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.recruitment.enums.InterviewStatus;
-import com.project.hrm.module.recruitment.enums.ResultStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -43,7 +40,7 @@ public class Interview {
     @Column(name = "feedback", length = Integer.MAX_VALUE)
     private String feedback;
 
-    @Column(name = "score", precision = 3, scale = 2)
+    @Column(name = "score", precision = 4, scale = 2)
     private BigDecimal score;
 
 

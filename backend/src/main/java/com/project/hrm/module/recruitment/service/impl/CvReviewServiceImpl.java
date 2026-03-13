@@ -51,6 +51,13 @@ public class CvReviewServiceImpl implements CvReviewService {
         return mapToResponse(entity);
     }
 
+    @Override
+    public void deleteReview(UUID appId) {
+        Application app = applicationRepository.findById(appId)
+                .orElseThrow(() -> new RuntimeException("Not found application!"));
+        cvReviewRepository.deleteByApp_Id(appId);
+    }
+
     private CvReviewResponse mapToResponse(CvReview entity){
         CvReviewResponse response = new CvReviewResponse();
         response.setId(entity.getId());

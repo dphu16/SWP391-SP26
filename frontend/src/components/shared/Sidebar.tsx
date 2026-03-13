@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getToken } from "../../services/authService";
+import { applicationService } from "../../services/applicationService";
 import { decodeJwt } from "../../utils/jwtDecode";
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
@@ -169,6 +170,27 @@ const Sidebar: React.FC = () => {
   const [recruitmentExpanded, setRecruitmentExpanded] = useState(true);
   const [attendanceExpanded, setAttendanceExpanded] = useState(true);
   const [payrollExpanded, setPayrollExpanded] = useState(true);
+  const [scheduleCount, setScheduleCount] = useState(0);
+
+  useEffect(() => {
+    const fetchScheduleCount = async () => {
+      if (payload?.employeeId && hasRole("HR", "MANAGER")) {
+        try {
+          const res = await applicationService.getInterviewByHr(payload.employeeId);
+          // Only count interviews with status "SCHEDULED"
+          const pendingCount = res.data.filter(item => item.status === "SCHEDULED").length;
+          setScheduleCount(pendingCount);
+        } catch (err) {
+          console.error("Failed to fetch schedule count", err);
+        }
+      }
+    };
+
+    fetchScheduleCount();
+    // Optional: Refresh periodically or on some events
+    const interval = setInterval(fetchScheduleCount, 60000); // refresh every minute
+    return () => clearInterval(interval);
+  }, [payload?.employeeId, userRoles]);
 
   const isPath = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
@@ -610,6 +632,7 @@ const Sidebar: React.FC = () => {
                       label: "Schedules",
                       path: "/recruitment/schedules",
                       roles: ["HR", "MANAGER"],
+                      badge: scheduleCount > 0 ? scheduleCount : undefined,
                     },
                   ]
                     .filter((item) => hasRole(...(item.roles as string[])))

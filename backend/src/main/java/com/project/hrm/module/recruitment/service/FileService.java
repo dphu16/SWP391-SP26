@@ -4,4 +4,5 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface FileService {
     String inputPDF(MultipartFile file);
+    void deletePDF(String fileName);
 }

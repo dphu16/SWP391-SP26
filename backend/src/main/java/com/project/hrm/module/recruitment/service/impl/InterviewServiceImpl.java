@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -49,8 +50,14 @@ public class InterviewServiceImpl implements InterviewService {
             entity = new Interview();
             entity.setApp(app);
         }
+        OffsetDateTime start = app.getStart();
+        OffsetDateTime end = app.getEnd();
+        OffsetDateTime time = request.getScheduleTime();
+        if (start.isAfter(time) || end.isBefore(time)) {
+            throw new RuntimeException("The interview must take place within the announced dates!");
+        }
         entity.setInterviewer(employee);
-        entity.setScheduleTime(request.getScheduleTime());
+        entity.setScheduleTime(time);
         entity.setStatus(InterviewStatus.SCHEDULED);
         interviewRepository.save(entity);
         if(check){
@@ -82,26 +89,33 @@ public class InterviewServiceImpl implements InterviewService {
         if(request.getStatus().equals(InterviewStatus.CANCELLED)){
             entity.getApp().setStatus(ApplicationStatus.REJECTED);
         } else {
-
+            if(request.getScore() == null){
+                throw new RuntimeException("Score is not empty!");
+            }
+            if(request.getScore().doubleValue()<=0
+                    || request.getScore().doubleValue()>10
+            ){
+                throw new RuntimeException("Score must be between 0 and 10!");
+            }
             entity.setScore(request.getScore());
 
-            BigDecimal weight;
-            if (employee.getUser().getRole().equals(EmployeeRole.ROLE_HR)) {
-                weight = new BigDecimal("0.3");
-            } else if (employee.getUser().getRole().equals(EmployeeRole.ROLE_MANAGER)) {
-                weight = new BigDecimal("0.7");
+            if(entity.getApp().getScore() == null){
+                entity.getApp().setScore(request.getScore());
             } else {
-                weight = BigDecimal.ZERO;
+                double weight;
+                double appScore = entity.getApp().getScore().doubleValue();
+                double score = request.getScore().doubleValue();
+                if (employee.getUser().getRole().equals(EmployeeRole.ROLE_HR)) {
+                    weight = 0.3;
+                } else {
+                    weight = 0.7;
+                }
+                double total = score*weight+appScore*(1-weight);
+
+                BigDecimal totalScore = BigDecimal.valueOf(total);
+
+                entity.getApp().setScore(totalScore);
             }
-
-            BigDecimal weightedScore = request.getScore().multiply(weight);
-
-            BigDecimal currentScore = entity.getApp().getScore();
-            if (currentScore == null) {
-                currentScore = BigDecimal.ZERO;
-            }
-
-            entity.getApp().setScore(currentScore.add(weightedScore));
         }
         entity.setFeedback(request.getFeedback());
         interviewRepository.save(entity);
@@ -112,6 +126,10 @@ public class InterviewServiceImpl implements InterviewService {
     @Override
     public List<InterviewResponse> getInterviewList(UUID interviewer) {
         List<Interview> interviews = interviewRepository.findByInterviewer_EmployeeIdAndStatusOrderByScheduleTime(interviewer, InterviewStatus.SCHEDULED);
+        for(Interview i: interviews){
+            boolean check = i.getApp().getStatus().equals(ApplicationStatus.OFFER);
+            if(check) interviewRepository.deleteById(i.getId());
+        }
         return interviews.stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -126,8 +144,13 @@ public class InterviewServiceImpl implements InterviewService {
         boolean check;
         EmployeeRole role = EmployeeRole.ROLE_MANAGER;
         for(Interview i: list){
+            if(i.getScheduleTime() == null){
+                throw new RuntimeException(i.getApp().getCandidate().getFullName()+" hasn't interview day!");
+            }
             check = interviewRepository.existsByApp_IdAndInterviewer_User_Role(i.getApp().getId(), role);
-            if(check) continue;
+            if(check) {
+                throw new RuntimeException("This app has name "+i.getApp().getCandidate().getFullName()+" is existed!");
+            };
             Interview entity = new Interview();
             entity.setApp(i.getApp());
             entity.setInterviewer(dept.getManager());
@@ -139,6 +162,13 @@ public class InterviewServiceImpl implements InterviewService {
         return sendList.stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    @Override
+    public void deleteInterview(UUID appId) {
+        Application application = applicationRepository.findById(appId)
+                        .orElseThrow(() -> new RuntimeException("Not found application"));
+        interviewRepository.deleteAllByApp_Id(appId);
     }
 
     private EmailRequest realDay(Application app, Job job, Interview interview){

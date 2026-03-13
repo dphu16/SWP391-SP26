@@ -13,6 +13,7 @@ public interface InterviewService {
     InterviewResponse inputResult(UUID id, InterviewRequest request);
     List<InterviewResponse> getInterviewList(UUID interviewer);
     List<InterviewResponse> sendInterviewList(List<UUID> ids, UUID deptId);
+    void deleteInterview(UUID appId);
 
 
 }

@@ -10,4 +10,5 @@ export const jobService = {
     update: (id: string, data: Partial<JobInput>) => apiClient.put<Job>(`/api/jobs/${id}`, data),
     updateStatus: (id: string, status: string) => apiClient.patch<Job>(`/api/jobs/${id}/status`, null, { params: { status } }),
     delete: (id: string) => apiClient.delete(`/api/jobs/${id}`),
+    getByHR: (hrId: string) => apiClient.get<Job[]>(`/api/jobs/hr/${hrId}`),
 };

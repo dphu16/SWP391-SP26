@@ -5,7 +5,7 @@ import type { JobRequestInput } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
 import { useToast } from "../ui/Toast";
 import { edpService } from "../../services/edpService";
-import type { Position, Department, HrEmployee } from "../../services/edpService";
+import type { Position, Department } from "../../services/edpService";
 import { useAuth } from "../../hooks/useAuth";
 
 const inputCls = "w-full px-4 py-2.5 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
@@ -22,7 +22,6 @@ const JobRequestFormPage: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [departments, setDepartments] = useState<Department[]>([]);
-    const [employees, setEmployees] = useState<HrEmployee[]>([]);
     const [positions, setPositions] = useState<Position[]>([]);
     const [managerDeptId, setManagerDeptId] = useState<string | null>(null);
 
@@ -41,14 +40,10 @@ const JobRequestFormPage: React.FC = () => {
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
-                // Fetch departments and employees
-                const [deptRes, empRes] = await Promise.all([
-                    edpService.getDepartments(),
-                    edpService.getHr()
-                ]);
+                // Fetch departments
+                const deptRes = await edpService.getDepartments();
                 const depts = deptRes.data;
                 setDepartments(depts);
-                setEmployees(empRes.data);
 
                 let autoDeptId: string | null = null;
                 if (user?.role === "MANAGER" && user.employeeId) {
@@ -180,21 +175,15 @@ const JobRequestFormPage: React.FC = () => {
                         </div>
 
                         <div>
-                            <label className={labelCls}>Report To HR</label>
-                            <select
+                            <label className={labelCls}>Work Location</label>
+                            <input
                                 required
-                                name="reportTo"
-                                value={formData.reportTo}
+                                name="location"
+                                value={formData.location}
                                 onChange={handleChange}
+                                placeholder="e.g. Hanoi"
                                 className={inputCls}
-                            >
-                                <option value="" disabled>Select a HR</option>
-                                {employees.map(emp => (
-                                    <option key={emp.empId} value={emp.empId}>
-                                        {emp.empName}
-                                    </option>
-                                ))}
-                            </select>
+                            />
                         </div>
 
                         <div>
@@ -206,18 +195,6 @@ const JobRequestFormPage: React.FC = () => {
                                 name="quantity"
                                 value={formData.quantity}
                                 onChange={handleChange}
-                                className={inputCls}
-                            />
-                        </div>
-
-                        <div>
-                            <label className={labelCls}>Work Location</label>
-                            <input
-                                required
-                                name="location"
-                                value={formData.location}
-                                onChange={handleChange}
-                                placeholder="e.g. Hanoi"
                                 className={inputCls}
                             />
                         </div>

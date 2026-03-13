@@ -11,8 +11,10 @@ public interface JobRequestService {
 
     JobRequestResponse create(JobRequestRequest request); //Manager uses
     List<JobRequestResponse> getAllRequest();
-    List<JobRequestResponse> getRequestByDepartmentName(String name); //Manager uses
-    List<JobRequestResponse> getRequestByReportTo(UUID id); //HR uses
+    List<JobRequestResponse> getRequestByDepartmentName(String name, RequestStatus status); //Manager uses
+    List<JobRequestResponse> getRequestByReportTo(UUID id, RequestStatus status); //HR uses
+    List<JobRequestResponse> getRequestByHr();
+    List<JobRequestResponse> choiceHr(UUID employeeId, List<UUID> ids);
     JobRequestResponse getRequestById(UUID id); //Watch detail request
     JobRequestResponse update(UUID id, JobRequestRequest request); //Manager uses before HR review
     JobRequestResponse updateStatus(UUID id, RequestStatus status, String comment); //HR reviews

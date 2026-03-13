@@ -42,7 +42,8 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public List<JobResponse> getAllJob() {
-        List<Job> responses = jobRepository.findAll();
+        List<Job> responses = jobRepository.
+                findByStatusIsNotOrderByPostedAtDesc(JobStatus.DRAFT);
         return responses.stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -50,7 +51,7 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public List<JobResponse> getJobByEmployeeId(UUID id) {
-        List<Job> responses = jobRepository.findByEmployee_EmployeeId(id);
+        List<Job> responses = jobRepository.findByEmployee_EmployeeIdOrderByPostedAtDesc(id);
         return responses.stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -108,7 +109,11 @@ public class JobServiceImpl implements JobService {
         Job entity = jobRepository.findById(id)
                 .orElseThrow(() ->
                         new RuntimeException("Job not found with id: " + id));
-
+        UUID job = entity.getJobDetail().getJobDetailId();
+        JobDetail jobDetail = jobDetailRepository.findById(job)
+                .orElseThrow(() ->
+                        new RuntimeException("Job not found with id: " + job));
+        jobDetailRepository.delete(jobDetail);
         jobRepository.delete(entity);
     }
 
@@ -142,8 +147,13 @@ public class JobServiceImpl implements JobService {
             entity.setEmployee(employee);
             entity.setPos(position);
         }
-        entity.setClosedAt(request.getClosedTime());
-        entity.setPostedAt(request.getPostedTime());
+        OffsetDateTime start = request.getPostedTime();
+        OffsetDateTime end = request.getClosedTime();
+        if (!start.isBefore(end.minusDays(1))) {
+            throw new RuntimeException("Start date must be at least 1 day before end date");
+        }
+        entity.setClosedAt(end);
+        entity.setPostedAt(start);
         entity.setStatus(request.getStatus());
         jobRepository.save(entity);
     }

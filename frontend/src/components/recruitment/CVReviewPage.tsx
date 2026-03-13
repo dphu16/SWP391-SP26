@@ -71,8 +71,8 @@ const CVReviewPage: React.FC = () => {
                     console.error("Could not fetch interview info", e);
                 }
             }
-        } catch (err) {
-            setError("Failed to fetch application details.");
+        } catch (err: any) {
+            setError(err?.response?.data?.message || "Failed to fetch application details.");
         } finally {
             setLoading(false);
         }
@@ -110,7 +110,7 @@ const CVReviewPage: React.FC = () => {
                 navigate(-1);
             }
         } catch (err: any) {
-            toastError("Error", err?.response?.data || "Failed to submit review");
+            toastError("Error", err?.response?.data?.message || err?.response?.data || "Failed to submit review");
         } finally {
             setIsReviewing(false);
         }
@@ -119,17 +119,33 @@ const CVReviewPage: React.FC = () => {
     const handleSaveDates = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!id || !startTime || !endTime) return;
+
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        const diffTime = end.getTime() - start.getTime();
+        const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+        if (start >= end) {
+            toastError("Validation Error", "Start time must be before end time.");
+            return;
+        }
+
+        if (diffDays < 7) {
+            toastError("Validation Error", "The interview timeline must be at least 7 days apart.");
+            return;
+        }
+
         try {
             setIsSavingDates(true);
             await applicationService.setDateLimit({
                 applicationId: id,
-                startTime: new Date(startTime).toISOString(),
-                endTime: new Date(endTime).toISOString()
+                startTime: start.toISOString(),
+                endTime: end.toISOString()
             });
             toastSuccess("Success", "Date limits saved successfully");
             navigate(-1);
         } catch (err: any) {
-            toastError("Error", err?.response?.data || "Failed to save date limits");
+            toastError("Error", err?.response?.data?.message || err?.response?.data || "Failed to save date limits");
         } finally {
             setIsSavingDates(false);
         }
@@ -158,7 +174,7 @@ const CVReviewPage: React.FC = () => {
             setInterviewTime("");
             fetchApp(); // Reload to fetch the newly created interview
         } catch (err: any) {
-            toastError("Error", err?.response?.data || "Failed to schedule interview");
+            toastError("Error", err?.response?.data?.message || "Failed to schedule interview");
         } finally {
             setIsScheduling(false);
         }

@@ -11,8 +11,10 @@ import com.project.hrm.module.recruitment.repository.*;
 import com.project.hrm.module.recruitment.service.JobRequestService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,9 +46,10 @@ public class JobRequestServiceImpl implements JobRequestService {
     }
 
     @Override
-    public List<JobRequestResponse> getRequestByDepartmentName(String name) {
+    public List<JobRequestResponse> getRequestByDepartmentName(String name, RequestStatus status) {
+        Sort sort = Sort.by(Sort.Order.desc("createdAt"));
         List<JobRequest> entities =
-                jobRequestRepository.findByDept_DeptName(name);
+                jobRequestRepository.findByDept_DeptNameAndStatus(name, status, sort);
 
         return entities.stream()
                 .map(this::mapToResponse)
@@ -54,11 +57,35 @@ public class JobRequestServiceImpl implements JobRequestService {
     }
 
     @Override
-    public List<JobRequestResponse> getRequestByReportTo(UUID id) {
+    public List<JobRequestResponse> getRequestByReportTo(UUID id, RequestStatus status) {
+        Sort sort = Sort.by(Sort.Order.desc("createdAt"));
         List<JobRequest> entities =
-                jobRequestRepository.findByReportsTo_EmployeeId(id);
+                jobRequestRepository.findByReportsTo_EmployeeIdAndStatus(id, status, sort);
 
         return entities.stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
+    public List<JobRequestResponse> getRequestByHr() {
+        List<JobRequest> list = jobRequestRepository
+                .findByStatusAndReportsToIsNull(RequestStatus.SUBMITTED);
+        if (list.isEmpty()) return List.of();
+        return list.stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
+    public List<JobRequestResponse> choiceHr(UUID employeeId, List<UUID> ids) {
+        List<JobRequest> list = jobRequestRepository.findAllById(ids);
+        Employee employee = REmployeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Job request not found with id: " + employeeId));
+        for(JobRequest i: list){
+            i.setReportsTo(employee);
+        }
+        return list.stream()
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -132,18 +159,12 @@ public class JobRequestServiceImpl implements JobRequestService {
             entity.setPos(position);
         }
 
-        if (request.getReportTo() != null) {
-            Employee reviewer = REmployeeRepository.findById(request.getReportTo())
-                    .orElseThrow(() ->
-                            new RuntimeException("Employee not found"));
-            entity.setReportsTo(reviewer);
-        }
-
         entity.setQuantity(request.getQuantity());
         entity.setLocation(request.getLocation());
         entity.setType(request.getType());
         entity.setReason(request.getReason());
         entity.setStatus(RequestStatus.SUBMITTED);
+        entity.setCreatedAt(OffsetDateTime.now());
         jobRequestRepository.save(entity);
 
         return mapToResponse(entity);

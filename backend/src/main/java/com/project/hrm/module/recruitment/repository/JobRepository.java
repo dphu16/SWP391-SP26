@@ -11,6 +11,10 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
 
     List<Job> findByEmployee_EmployeeId(UUID employeeId);
 
+    List<Job> findByStatusIsNotOrderByPostedAtDesc(JobStatus status);
+
     List<Job> findByStatus(JobStatus status);
+
+    List<Job> findByEmployee_EmployeeIdOrderByPostedAtDesc(UUID employeeId);
 
 }

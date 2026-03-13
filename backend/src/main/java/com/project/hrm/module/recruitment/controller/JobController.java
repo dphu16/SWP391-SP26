@@ -40,12 +40,12 @@ public class JobController {
         return ResponseEntity.ok(responses);
     }
 
-    @GetMapping("/hr/{id}")
+    @GetMapping("/hr/{hrId}")
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<JobResponse>> getJobByHrId(
-            @PathVariable UUID id) {
+            @PathVariable UUID hrId) {
 
-        List<JobResponse> responses = jobService.getJobByEmployeeId(id);
+        List<JobResponse> responses = jobService.getJobByEmployeeId(hrId);
 
         return ResponseEntity.ok(responses);
     }
@@ -66,6 +66,7 @@ public class JobController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<JobResponse> getDetailJobById(
             @PathVariable UUID id) {
 
