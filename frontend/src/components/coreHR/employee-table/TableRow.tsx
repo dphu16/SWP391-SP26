@@ -100,7 +100,7 @@ const TableRow: React.FC<TableRowProps> = ({
           </button>
           <button
             onClick={() => onDeactivate(emp)}
-            title="Deactivate employee"
+            title="HR Propose Offboarding"
             className="p-1.5 rounded-lg text-text-secondary-light hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
           >
             <svg

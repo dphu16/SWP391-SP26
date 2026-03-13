@@ -3,11 +3,12 @@ import apiClient from "../../services/apiClient";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { getMyRequests, createRequest, updateRequest, deleteRequest, type RequestRecord as RequestRecordApi, type CreateRequestDTO } from "../../services/requestService";
 import { offboardingService, type OffboardingResponse } from "../../services/offboardingService";
+import { personnelChangeService } from "../../services/personnelChangeService";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type AppStatus = "Pending" | "Approved" | "Rejected";
-type AppType = "Leave" | "OT" | "ChangeShift" | "Resignation";
-type ModalType = "Leave" | "OT" | "ChangeShift" | "Resignation" | null;
+type AppType = "Leave" | "OT" | "ChangeShift" | "Resignation" | "PersonnelChange";
+type ModalType = "Leave" | "OT" | "ChangeShift" | "Resignation" | "PersonnelChange" | null;
 
 interface AttendanceEmployee {
     employeeId: string;
@@ -86,6 +87,11 @@ const typeIcon: Record<AppType, React.ReactNode> = {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
         </svg>
     ),
+    PersonnelChange: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+    ),
 };
 
 const typeBg: Record<AppType, string> = {
@@ -93,6 +99,7 @@ const typeBg: Record<AppType, string> = {
     OT: "bg-[#dcfce7] text-[#15803d]",
     ChangeShift: "bg-[#e0f2fe] text-[#0369a1]",
     Resignation: "bg-[#fee2e2] text-[#b91c1c]",
+    PersonnelChange: "bg-[#e0e7ff] text-[#4338ca]",
 };
 
 const statusBadge: Record<AppStatus, string> = {
@@ -224,6 +231,10 @@ const Applications: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [editRequestId, setEditRequestId] = useState<string | null>(null);
+    const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+    const [positions, setPositions] = useState<{ id: string; name: string }[]>([]);
+    const [pcEmployee, setPcEmployee] = useState<AttendanceEmployee | null>(null);
+
     const [formData, setFormData] = useState({
         leaveType: "Annual Leave",
         startDate: "",
@@ -233,7 +244,12 @@ const Applications: React.FC = () => {
         otStartTime: "",
         otEndTime: "",
         shiftDate: "",
-        targetShiftDate: ""
+        targetShiftDate: "",
+        pcType: "DEPARTMENT_TRANSFER",
+        newDepartmentId: "",
+        newPositionId: "",
+        newTitle: "",
+        newSalary: "",
     });
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -286,10 +302,20 @@ const Applications: React.FC = () => {
         loadRequests();
     }, [currentUser?.employeeId]);
 
+    useEffect(() => {
+        if (modal === "PersonnelChange") {
+            apiClient.get('/api/lookup/departments').then(res => setDepartments(res.data)).catch(() => {});
+            apiClient.get('/api/lookup/positions').then(res => {
+                setPositions(res.data?.map((p: any) => ({ id: p.id, name: p.name || p.title })));
+            }).catch(() => {});
+        }
+    }, [modal]);
+
     const closeModal = () => {
         setModal(null);
         setSwapEmployee(null);
-        setFormData({ leaveType: "Annual Leave", startDate: "", endDate: "", reason: "", otDate: "", otStartTime: "", otEndTime: "", shiftDate: "", targetShiftDate: "" });
+        setPcEmployee(null);
+        setFormData({ leaveType: "Annual Leave", startDate: "", endDate: "", reason: "", otDate: "", otStartTime: "", otEndTime: "", shiftDate: "", targetShiftDate: "", pcType: "DEPARTMENT_TRANSFER", newDepartmentId: "", newPositionId: "", newTitle: "", newSalary: "" });
         setSubmitError(null);
         setEditRequestId(null);
     };
@@ -340,6 +366,22 @@ const Applications: React.FC = () => {
                     type: "RESIGNATION",
                     reason: formData.reason,
                     expectedLastDay: formData.startDate
+                });
+                closeModal();
+                loadRequests();
+                setSubmitting(false);
+                return;
+            } else if (modal === "PersonnelChange") {
+                if (!pcEmployee) throw new Error("Please select an employee.");
+                if (!formData.reason) throw new Error("Please specify a reason.");
+                await personnelChangeService.create({
+                    employeeId: pcEmployee.employeeId,
+                    changeType: formData.pcType as any,
+                    reason: formData.reason,
+                    newDepartmentId: formData.newDepartmentId || undefined,
+                    newPositionId: formData.newPositionId || undefined,
+                    newTitle: formData.newTitle || undefined,
+                    newSalary: formData.newSalary ? Number(formData.newSalary) : undefined,
                 });
                 closeModal();
                 loadRequests();
@@ -418,7 +460,12 @@ const Applications: React.FC = () => {
             otStartTime,
             otEndTime,
             shiftDate: r.type === "ChangeShift" ? raw.startDate || "" : "",
-            targetShiftDate: r.type === "ChangeShift" ? raw.endDate || "" : ""
+            targetShiftDate: r.type === "ChangeShift" ? raw.endDate || "" : "",
+            pcType: "DEPARTMENT_TRANSFER",
+            newDepartmentId: "",
+            newPositionId: "",
+            newTitle: "",
+            newSalary: "",
         });
     };
 
@@ -432,7 +479,7 @@ const Applications: React.FC = () => {
                 <div className="relative" ref={menuRef}>
                     <button
                         onClick={() => setMenuOpen(!menuOpen)}
-                        className="flex items-center space-x-2 px-4 py-2 bg-[#0d9488] hover:bg-[#0f766e] text-white rounded-lg font-medium text-sm shadow-sm transition-all"
+                        className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium text-sm shadow-sm transition-all"
                     >
                         <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -450,9 +497,14 @@ const Applications: React.FC = () => {
                             <button onClick={() => handleDropdownItemClick("ChangeShift")} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#0f172a] hover:bg-[#f8fafc] transition-colors border-b border-[#f1f5f9]">
                                 Change Shift
                             </button>
-                            <button onClick={() => handleDropdownItemClick("Resignation")} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors">
+                            <button onClick={() => handleDropdownItemClick("Resignation")} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-black hover:bg-red-50 transition-colors border-b border-[#f1f5f9]">
                                 Application for Resignation
                             </button>
+                            {(currentUser?.roles?.some(r => ["HR", "MANAGER", "ROLE_HR", "ROLE_MANAGER"].includes(r))) && (
+                                <button onClick={() => handleDropdownItemClick("PersonnelChange")} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-black hover:bg-indigo-50 transition-colors">
+                                    Personnel Change
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
@@ -461,7 +513,7 @@ const Applications: React.FC = () => {
             {/* Recent Activity Log */}
             <div className="bg-white border border-[#e2e8f0] rounded-2xl shadow-sm overflow-hidden">
                 <div className="flex justify-between items-center p-5 border-b border-[#e2e8f0]">
-                    <h2 className="text-lg font-bold text-[#0f172a]">Recent Activity Log</h2>
+                    <h2 className="text-lg font-bold text-[#0f172a]">Recent Activity</h2>
                     <button className="text-sm font-semibold text-[#0d9488] hover:text-[#0f766e]">View All History</button>
                 </div>
                 <div className="overflow-x-auto">
@@ -543,6 +595,7 @@ const Applications: React.FC = () => {
                                     {modal === "OT" && "Register your overtime hours for approval."}
                                     {modal === "ChangeShift" && "Request a shift swap with another employee."}
                                     {modal === "Resignation" && "Submit your resignation request to HR/Manager."}
+                                    {modal === "PersonnelChange" && "Propose a personnel change to an employee."}
                                 </p>
                             </div>
                             <button onClick={closeModal} className="text-[#94a3b8] hover:text-[#64748b] transition-colors">
@@ -732,6 +785,116 @@ const Applications: React.FC = () => {
                                         />
                                     </div>
                                 </>
+                            )}
+                            {modal === "PersonnelChange" && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-[#334155] mb-1.5">Employee</label>
+                                        <EmployeeSearch value={pcEmployee} onChange={setPcEmployee} />
+                                        {pcEmployee && (
+                                            <div className="mt-2 p-3 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                                    {pcEmployee.fullName.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-indigo-700 text-sm">{pcEmployee.fullName}</p>
+                                                    <p className="text-xs text-indigo-600 opacity-80">{pcEmployee.employeeCode} · {pcEmployee.position} · {pcEmployee.deptName}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-[#334155] mb-1.5">Change Type</label>
+                                        <select
+                                            value={formData.pcType}
+                                            onChange={e => setFormData({ ...formData, pcType: e.target.value })}
+                                            className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+                                        >
+                                            <option value="DEPARTMENT_TRANSFER">Department Transfer</option>
+                                            <option value="TITLE_CHANGE">Title Change</option>
+                                            <option value="SALARY_CHANGE">Salary Change</option>
+                                            <option value="DISCIPLINE">Discipline</option>
+                                            <option value="REWARD">Reward</option>
+                                        </select>
+                                    </div>
+
+                                    {(formData.pcType === "DEPARTMENT_TRANSFER") && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-[#334155] mb-1.5">New Department</label>
+                                                <select
+                                                    value={formData.newDepartmentId}
+                                                    onChange={e => setFormData({ ...formData, newDepartmentId: e.target.value })}
+                                                    className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+                                                >
+                                                    <option value="">Select Department...</option>
+                                                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-[#334155] mb-1.5">New Position</label>
+                                                <select
+                                                    value={formData.newPositionId}
+                                                    onChange={e => setFormData({ ...formData, newPositionId: e.target.value })}
+                                                    className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+                                                >
+                                                    <option value="">Select Position...</option>
+                                                    {positions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {(formData.pcType === "TITLE_CHANGE") && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-[#334155] mb-1.5">New Position</label>
+                                                <select
+                                                    value={formData.newPositionId}
+                                                    onChange={e => setFormData({ ...formData, newPositionId: e.target.value })}
+                                                    className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+                                                >
+                                                    <option value="">Select Position...</option>
+                                                    {positions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-[#334155] mb-1.5">New Title</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.newTitle}
+                                                    onChange={e => setFormData({ ...formData, newTitle: e.target.value })}
+                                                    placeholder="e.g. Senior Backend Dev"
+                                                    className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {(formData.pcType === "SALARY_CHANGE") && (
+                                        <div>
+                                            <label className="block text-sm font-semibold text-[#334155] mb-1.5">New Base Salary</label>
+                                            <input
+                                                type="number"
+                                                value={formData.newSalary}
+                                                onChange={e => setFormData({ ...formData, newSalary: e.target.value })}
+                                                placeholder="e.g. 25000000"
+                                                className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-[#334155] mb-1.5">Reason / Description</label>
+                                        <textarea
+                                            rows={3}
+                                            value={formData.reason}
+                                            onChange={e => setFormData({ ...formData, reason: e.target.value })}
+                                            placeholder="Reason for this change..."
+                                            className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+                                        />
+                                    </div>
+                                </div>
                             )}
                         </div>
 

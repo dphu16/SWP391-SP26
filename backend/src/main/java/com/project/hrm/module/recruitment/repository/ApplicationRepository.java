@@ -10,4 +10,8 @@ import java.util.UUID;
 
 public interface ApplicationRepository extends JpaRepository<Application, UUID> {
 
+    boolean existsByCandidateIdAndJobId(UUID id, UUID id1);
+    Application findByCandidateIdAndJobId(UUID id, UUID id1);
+    List<Application> findByJob_Id(UUID id);
+    List<Application> findByJob_IdAndStatus(UUID id, ApplicationStatus status);
 }

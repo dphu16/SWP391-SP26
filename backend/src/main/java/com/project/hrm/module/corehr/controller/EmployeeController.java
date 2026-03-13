@@ -70,7 +70,6 @@ public class EmployeeController {
     }
 
     @GetMapping("/employees/search")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<Page<EmployeeDTO>> searchEmployees(
             @RequestParam(required = false) String fullName,
             @RequestParam(required = false) String employeeCode,

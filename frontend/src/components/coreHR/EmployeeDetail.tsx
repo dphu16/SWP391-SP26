@@ -2,7 +2,6 @@ import React from "react";
 import ProfileCard from "./detail/ProfileCard";
 import GeneralTab from "./detail/GeneralTab";
 import JobTab from "./detail/JobTab";
-import PayrollTab from "./detail/PayrollTab";
 import DetailSkeleton from "./detail/DetailSkeleton";
 import DetailError from "./detail/DetailError";
 import DetailTabs from "./detail/DetailTabs";
@@ -18,6 +17,7 @@ const EmployeeDetail: React.FC = () => {
     activeTab,
     setActiveTab,
     dependents,
+    setDependents,
   } = useEmployeeDetail();
 
   if (loading) {
@@ -46,14 +46,13 @@ const EmployeeDetail: React.FC = () => {
             <GeneralTab
               detail={detail}
               dep={dep}
+              setDep={(newDep) => setDependents([newDep])}
               employeeId={id}
               onDetailUpdated={setDetail}
             />
           )}
 
           {activeTab === "Job" && detail && <JobTab detail={detail} />}
-
-          {activeTab === "Payroll" && <PayrollTab />}
         </div>
       </div>
     </div>

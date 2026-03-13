@@ -1,21 +1,14 @@
 import React from "react";
-import SortIcon from "./SortIcon";
 import { COLUMNS } from "./constants";
 
 interface TableHeaderProps {
   allSelected: boolean;
   onToggleAll: () => void;
-  sortField: string | null;
-  sortDir: "asc" | "desc";
-  onSort: (field: string) => void;
 }
 
 const TableHeader: React.FC<TableHeaderProps> = ({
   allSelected,
   onToggleAll,
-  sortField,
-  sortDir,
-  onSort,
 }) => {
   return (
     <thead className="sticky top-0 z-10 bg-surface-light">
@@ -32,23 +25,9 @@ const TableHeader: React.FC<TableHeaderProps> = ({
         {COLUMNS.map((col) => (
           <th
             key={col.key}
-            className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light"
+            className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light text-left"
           >
-            {col.key !== "statusEmp" && col.key !== "roles" ? (
-              <button
-                onClick={() => onSort(col.key)}
-                className="flex items-center gap-1.5 hover:text-text-primary-light transition-colors cursor-pointer group"
-              >
-                {col.label}
-                <SortIcon
-                  field={col.key}
-                  activeField={sortField}
-                  dir={sortDir}
-                />
-              </button>
-            ) : (
-              col.label
-            )}
+            {col.label}
           </th>
         ))}
         <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light text-center sticky right-0 bg-surface-light">

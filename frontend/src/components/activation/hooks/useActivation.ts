@@ -28,6 +28,7 @@ export const useActivation = () => {
   const [info, setInfo] = useState<ActivationResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Form states mapping
   const [newPassword, setNewPassword] = useState("");
@@ -74,14 +75,32 @@ export const useActivation = () => {
 
   const handleSetPassword = async () => {
     setError(null);
-    if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters.");
+    setErrors({});
+    let newErrors: Record<string, string> = {};
+
+    if (!newPassword) {
+      newErrors.newPassword = "Password is required.";
+    } else {
+      if (newPassword.length < 6) {
+        newErrors.newPassword = "Must be at least 6 characters.";
+      } else if (!/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+        newErrors.newPassword = "Must contain at least 1 special character.";
+      } else if (!/\d/.test(newPassword)) {
+        newErrors.newPassword = "Must contain at least 1 number.";
+      }
+    }
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "Confirmation is required.";
+    } else if (newPassword !== confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
+
     setLoading(true);
     try {
       const res = await setPassword({ activationToken: token, newPassword });
@@ -96,10 +115,26 @@ export const useActivation = () => {
 
   const handleEmergencyContact = async () => {
     setError(null);
-    if (!contactName.trim() || !relationship.trim() || !contactPhone.trim()) {
-      setError("Please fill in all required fields.");
+    setErrors({});
+    let newErrors: Record<string, string> = {};
+
+    if (!contactName.trim()) {
+      newErrors.contactName = "Contact name is required.";
+    }
+    if (!relationship.trim()) {
+      newErrors.relationship = "Relationship is required.";
+    }
+    if (!contactPhone.trim()) {
+      newErrors.contactPhone = "Phone number is required.";
+    } else if (!/^(0|\+84)\d{8,9}$/.test(contactPhone.trim().replace(/\s+/g, ""))) {
+      newErrors.contactPhone = "Invalid phone number format.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+
     setLoading(true);
     try {
       const res = await submitEmergencyContact(token, {
@@ -121,10 +156,23 @@ export const useActivation = () => {
 
   const handleBankAccount = async () => {
     setError(null);
-    if (!accountNumber.trim() || !bankName.trim()) {
-      setError("Account number and bank name are required.");
+    setErrors({});
+    let newErrors: Record<string, string> = {};
+
+    if (!accountNumber.trim()) {
+      newErrors.accountNumber = "Account number is required.";
+    } else if (!/^\d+$/.test(accountNumber.trim())) {
+      newErrors.accountNumber = "Account number must contain only digits.";
+    }
+    if (!bankName.trim()) {
+      newErrors.bankName = "Bank name is required.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+
     setLoading(true);
     try {
       await submitBankAccount(token, {
@@ -148,6 +196,7 @@ export const useActivation = () => {
     info,
     loading,
     done,
+    errors,
     handleSetPassword,
     handleEmergencyContact,
     handleBankAccount,

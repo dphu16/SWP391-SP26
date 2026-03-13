@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import apiClient from "../../../services/apiClient";
 import { sendApprovalRequest } from "../../../services/approvalService";
@@ -6,6 +6,8 @@ import type { CreateNewHireDTO } from "./types";
 import { makeDefaultFormData } from "../onboarding/formConstants";
 
 const API_URL = "/api/employees/new";
+
+export type FieldErrors = Record<string, string>;
 
 export const useCandidateOnboarding = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -19,6 +21,7 @@ export const useCandidateOnboarding = () => {
   const candidateEmail = searchParams.get("email") || "";
   const candidatePhone = searchParams.get("phone") || "";
   const jobTitle = searchParams.get("job") || "";
+  const jobId = searchParams.get("jobId") || "";
 
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -28,6 +31,7 @@ export const useCandidateOnboarding = () => {
     message: string;
     type: "success" | "error";
   } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const [formData, setFormData] = useState<CreateNewHireDTO>(
     makeDefaultFormData(
@@ -35,7 +39,7 @@ export const useCandidateOnboarding = () => {
       candidatePhone,
       candidateEmail,
       isResubmit ? undefined : applicationId,
-    )
+    ),
   );
 
   // Load existing employee data for resubmit mode
@@ -85,26 +89,72 @@ export const useCandidateOnboarding = () => {
   }, [isResubmit, applicationId]);
 
   // ── Validation ─────────────────────────────────────────────────────────────
-  const validateStep = (step: number): string | null => {
-    if (step === 0) {
-      if (!formData.fullName.trim()) return "Full Name is required.";
-      if (!formData.email.trim()) return "Email Address is required.";
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
-        return "Invalid email format.";
-      if (formData.citizenId && formData.citizenId.trim().length < 9)
-        return "Citizen ID must be at least 9 characters.";
-      if (formData.taxCode && formData.taxCode.trim().length < 10)
-        return "Tax ID must be at least 10 characters.";
+  const validateStep = useCallback(
+    (step: number): string | null => {
+      const errors: FieldErrors = {};
+
+      if (step === 0) {
+        if (!formData.fullName.trim())
+          errors.fullName = "Full Name is required.";
+        if (!formData.email.trim()) errors.email = "Email Address is required.";
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
+          errors.email = "Invalid email format.";
+        if (formData.phone && !/^[0-9+\-\s]{8,15}$/.test(formData.phone.trim()))
+          errors.phone = "Invalid phone number format.";
+        if (!formData.dateOfBirth)
+          errors.dateOfBirth = "Date of Birth is required.";
+        if (!formData.citizenId || formData.citizenId.trim().length === 0)
+          errors.citizenId = "Citizen ID is required.";
+        else if (formData.citizenId.trim().length < 9)
+          errors.citizenId = "Citizen ID must be at least 9 characters.";
+        if (!formData.taxCode || formData.taxCode.trim().length === 0)
+          errors.taxCode = "Tax ID is required.";
+        else if (formData.taxCode.trim().length < 10)
+          errors.taxCode = "Tax ID must be at least 10 characters.";
+        if (!formData.address.trim()) errors.address = "Address is required.";
+      }
+
+      if (step === 1) {
+        if (!formData.departmentId)
+          errors.departmentId = "Please select a department.";
+        if (!formData.positionId)
+          errors.positionId = "Please select a position.";
+        if (!formData.status) errors.status = "Please select a target status.";
+        if (!formData.role) errors.role = "Please select a role.";
+        if (!formData.dateOfJoining)
+          errors.dateOfJoining = "Joining Date is required.";
+        if (!formData.contractType)
+          errors.contractType = "Please select a contract type.";
+        if (!formData.startDate) errors.startDate = "Start Date is required.";
+        if (!formData.baseSalary || formData.baseSalary <= 0)
+          errors.baseSalary = "Base Salary must be greater than 0.";
+        if (
+          formData.endDate &&
+          formData.startDate &&
+          formData.endDate < formData.startDate
+        )
+          errors.endDate = "End Date must be after Start Date.";
+      }
+
+      setFieldErrors(errors);
+      if (Object.keys(errors).length > 0) {
+        const first = Object.values(errors)[0];
+        return first;
+      }
       return null;
-    }
-    if (step === 1) {
-      if (!formData.departmentId) return "Please select a department.";
-      if (!formData.positionId) return "Please select a position.";
-      if (!formData.status) return "Please select a target status.";
-      return null;
-    }
-    return null;
-  };
+    },
+    [formData],
+  );
+
+  // Clear field error when user edits the field
+  const clearFieldError = useCallback((field: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
 
   const handleNext = () => {
     const err = validateStep(currentStep);
@@ -219,6 +269,7 @@ export const useCandidateOnboarding = () => {
   return {
     applicationId,
     jobTitle,
+    jobId,
     isResubmit,
     currentStep,
     setCurrentStep,
@@ -229,6 +280,8 @@ export const useCandidateOnboarding = () => {
     setToast,
     formData,
     setFormData,
+    fieldErrors,
+    clearFieldError,
     handleNext,
     handleBack,
     handleGoBack,

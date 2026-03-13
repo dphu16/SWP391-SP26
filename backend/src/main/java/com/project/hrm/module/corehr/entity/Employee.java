@@ -43,10 +43,6 @@ public class Employee {
         @JoinColumn(name = "position_id")
         private Position position;
 
-        @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "user_id")
-        private User user;
-
         @Enumerated(EnumType.STRING)
         @Column(name = "role")
         private EmployeeRole role;
@@ -54,10 +50,6 @@ public class Employee {
         @Enumerated(EnumType.STRING)
         @Column(name = "progress_status")
         private ProgressStatus empStatus;
-
-        @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "mentor_id")
-        private Employee mentor;
 
         @Column(name = "date_of_joining")
         private LocalDate dateOfJoining;
@@ -67,12 +59,16 @@ public class Employee {
         private EmployeeStatus status;
 
         @OneToOne(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+        private User user;
+
+        @OneToOne(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
         private Personal personal;
 
-        @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-        private List<Contract> contracts = new ArrayList<>();
+        @OneToOne(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+        private Contract contract;
 
         @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+        @Builder.Default
         private List<Dependent> dependents = new ArrayList<>();
 
         @ManyToOne(fetch = FetchType.LAZY)

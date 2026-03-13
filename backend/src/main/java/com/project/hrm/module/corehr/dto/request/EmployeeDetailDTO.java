@@ -1,6 +1,7 @@
 package com.project.hrm.module.corehr.dto.request;
 
 import com.project.hrm.module.corehr.dto.response.ContractResponseDTO;
+import com.project.hrm.module.corehr.entity.Contract;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.Gender;
 
@@ -38,5 +39,8 @@ public class EmployeeDetailDTO {
     private String deptName;
     private EmployeeStatus statusEmp;
     private UserStatus status;
-    private List<ContractResponseDTO> contracts;
+    private String contractNumber;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private String contractStatus;
 }

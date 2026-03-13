@@ -68,9 +68,10 @@ public class NewHireMapper {
                                 .relationship((e.getDependents() != null && !e.getDependents().isEmpty())
                                                 ? e.getDependents().get(0).getRelationship()
                                                 : null)
-                                .baseSalary((e.getContracts() != null && !e.getContracts().isEmpty())
-                                                ? e.getContracts().get(0).getBaseSalary()
-                                                : (e.getContract() != null ? e.getContract().getBaseSalary() : null))
+                                .baseSalary(e.getContract() != null &&
+                                        (e.getContract().getEndDate() == null || e.getContract().getEndDate().isAfter(java.time.LocalDate.now()))
+                                        ? e.getContract().getBaseSalary()
+                                        : null)
                                 .citizenId(e.getPersonal() != null ? e.getPersonal().getCitizenId() : null)
                                 .taxCode(e.getPersonal() != null ? e.getPersonal().getTaxCode() : null)
                                 .dateOfBirth(e.getPersonal() != null ? e.getPersonal().getDateOfBirth() : null)

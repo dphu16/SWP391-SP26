@@ -11,13 +11,13 @@ const DetailTabs: React.FC<DetailTabsProps> = ({ activeTab, setActiveTab }) => {
     <div className="rounded-2xl border border-border-light bg-surface-light shadow-card px-6 animate-fade-in">
       <nav
         aria-label="Employee detail tabs"
-        className="flex space-x-1 overflow-x-auto no-scrollbar"
+        className="flex overflow-x-auto no-scrollbar"
       >
-        {(["General", "Job", "Payroll"] as const).map((tab) => (
+        {(["General", "Job"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`whitespace-nowrap py-4 px-4 border-b-2 text-sm font-semibold transition-colors cursor-pointer ${
+            className={`flex-1 text-center whitespace-nowrap py-4 px-4 border-b-2 text-sm font-semibold transition-colors cursor-pointer ${
               activeTab === tab
                 ? "border-primary text-primary"
                 : "border-transparent text-text-secondary-light hover:text-text-primary-light hover:border-gray-300"

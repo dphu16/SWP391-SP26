@@ -42,7 +42,12 @@ const HiredApplications: React.FC<HiredApplicationsProps> = ({ onAction }) => {
         </p>
       </div>
 
-      <FilterBar onSearch={setSearchTerm} onFilterChange={handleFilterChange} />
+      <FilterBar 
+        onSearch={setSearchTerm} 
+        onFilterChange={handleFilterChange} 
+        searchPlaceholder="Search candidates by name, email, phone or title..."
+        filterKeys={["position"]}
+      />
 
       <div className="rounded-2xl border border-border-light bg-surface-light overflow-hidden shadow-card animate-fade-in">
         <div className="overflow-x-auto">

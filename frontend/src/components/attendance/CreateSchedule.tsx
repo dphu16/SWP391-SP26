@@ -7,7 +7,7 @@ import {
   cloneScheduleFromPreviousMonth,
   type ShiftResponse,
 } from "../../services/attendanceService";
-import type { PageResponse } from "../coreHR/types";
+import type { PageResponse } from "../../types";
 
 // Khớp với AttendanceEmployeeResponse của backend attendance
 interface AttendanceEmployee {

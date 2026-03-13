@@ -5,6 +5,7 @@ import SkeletonRow from "./shared/SkeletonRow";
 import TableHeader from "./employee-table/TableHeader";
 import TableRow from "./employee-table/TableRow";
 import BulkActionBar from "./employee-table/BulkActionBar";
+import BulkDeactivateModal from "./employee-table/BulkDeactivateModal";
 import { useEmployeeTable } from "./hooks/useEmployeeTable";
 
 interface EmployeeTableProps {
@@ -28,14 +29,15 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
     pageInfo,
     selectedIds,
     setSelectedIds,
-    sortField,
-    sortDir,
     fetchEmployees,
     allSelected,
     toggleAll,
     toggleOne,
     handleDeactivateSingle,
-    handleSort,
+    handleDeactivateMultiple,
+    isBulkDeactivateModalOpen,
+    setIsBulkDeactivateModalOpen,
+    submitDeactivateMultiple,
   } = useEmployeeTable(searchQuery, filterCategory, filterValue);
 
   if (error && !loading) {
@@ -52,6 +54,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
       <BulkActionBar 
         selectedCount={selectedIds.size} 
         onClear={() => setSelectedIds(new Set())} 
+        onDeactivate={handleDeactivateMultiple}
       />
 
       <div className="overflow-x-auto">
@@ -59,9 +62,6 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
           <TableHeader
             allSelected={allSelected}
             onToggleAll={toggleAll}
-            sortField={sortField}
-            sortDir={sortDir}
-            onSort={handleSort}
           />
           <tbody className="divide-y divide-gray-50 text-sm">
             {loading
@@ -94,6 +94,15 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
           totalElements={pageInfo.totalElements}
           pageSize={pageInfo.size}
           onPageChange={setPage}
+        />
+      )}
+
+      {isBulkDeactivateModalOpen && (
+        <BulkDeactivateModal
+          onClose={() => setIsBulkDeactivateModalOpen(false)}
+          onSubmit={submitDeactivateMultiple}
+          employees={employees.filter((emp) => selectedIds.has(emp.id))}
+          loading={loading}
         />
       )}
     </div>

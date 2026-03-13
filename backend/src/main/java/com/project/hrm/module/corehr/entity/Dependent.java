@@ -1,7 +1,7 @@
 package com.project.hrm.module.corehr.entity;
 
-import java.time.LocalDate;
 import java.util.UUID;
+
 import jakarta.persistence.*;
 import lombok.*;
 

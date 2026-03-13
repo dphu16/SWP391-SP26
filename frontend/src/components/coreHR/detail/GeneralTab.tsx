@@ -2,7 +2,11 @@ import React, { useState, useEffect } from "react";
 import apiClient from "../../../services/apiClient";
 import { employeeSelfUpdateService } from "../../../services/personnelChangeService";
 import { useAuth } from "../../../hooks/useAuth";
-import type { EmployeeDetailDTO, DependentDTO, FieldCooldownDTO } from "./types";
+import type {
+  EmployeeDetailDTO,
+  DependentDTO,
+  FieldCooldownDTO,
+} from "./types";
 import { formatDate } from "./types";
 import { InfoRow, SectionCard, IconButton } from "./ui";
 import { EditIcon, CheckIcon } from "./Icons";
@@ -10,6 +14,7 @@ import { EditIcon, CheckIcon } from "./Icons";
 interface GeneralTabProps {
   detail: EmployeeDetailDTO;
   dep: DependentDTO | undefined;
+  setDep: (d: DependentDTO) => void;
   employeeId: string;
   onDetailUpdated: (d: EmployeeDetailDTO) => void;
 }
@@ -17,18 +22,38 @@ interface GeneralTabProps {
 const EDITABLE_FIELDS = ["phone", "email", "address"] as const;
 type EditableField = (typeof EDITABLE_FIELDS)[number];
 
-const GeneralTab: React.FC<GeneralTabProps> = ({ detail, dep, employeeId, onDetailUpdated }) => {
+const GeneralTab: React.FC<GeneralTabProps> = ({
+  detail,
+  dep,
+  setDep,
+  employeeId,
+  onDetailUpdated,
+}) => {
   const { user, hasRole } = useAuth();
   const isOwner = user?.employeeId === employeeId;
   const isHR = hasRole("HR");
   const canEdit = isOwner || isHR;
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ phone: "", address: "", email: "" });
+  const [editForm, setEditForm] = useState({
+    phone: "",
+    address: "",
+    email: "",
+  });
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState(false);
   const [cooldowns, setCooldowns] = useState<FieldCooldownDTO[]>([]);
+
+  // HR Edit states
+  const [isEditingDep, setIsEditingDep] = useState(false);
+  const [depForm, setDepForm] = useState({
+    fullName: "",
+    phone: "",
+    relationship: "",
+    address: "",
+  });
+  const [savingDep, setSavingDep] = useState(false);
 
   useEffect(() => {
     if (isOwner && employeeId) {
@@ -40,7 +65,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ detail, dep, employeeId, onDeta
   }, [employeeId, isOwner]);
 
   const isFieldLocked = (field: EditableField): boolean => {
-    if (isHR) return false; // HR bypasses cooldown
+    if (isHR) return false;
     const cd = cooldowns.find((c) => c.fieldName === field);
     return cd?.locked ?? false;
   };
@@ -104,7 +129,11 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ detail, dep, employeeId, onDeta
     } catch (err: unknown) {
       if (err instanceof Error && "response" in err) {
         const axErr = err as {
-          response?: { status: number; data?: { message?: string; error?: string }; statusText: string };
+          response?: {
+            status: number;
+            data?: { message?: string; error?: string };
+            statusText: string;
+          };
         };
         setEditError(
           axErr.response?.data?.message ||
@@ -120,9 +149,24 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ detail, dep, employeeId, onDeta
   };
 
   const editableFieldConfig = [
-    { label: "Email Address", field: "email" as EditableField, type: "email", required: false },
-    { label: "Phone Number", field: "phone" as EditableField, type: "tel", required: true },
-    { label: "Address", field: "address" as EditableField, type: "text", required: false },
+    {
+      label: "Email Address",
+      field: "email" as EditableField,
+      type: "email",
+      required: false,
+    },
+    {
+      label: "Phone Number",
+      field: "phone" as EditableField,
+      type: "tel",
+      required: true,
+    },
+    {
+      label: "Address",
+      field: "address" as EditableField,
+      type: "text",
+      required: false,
+    },
   ];
 
   return (
@@ -143,7 +187,11 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ detail, dep, employeeId, onDeta
         action={
           canEdit ? (
             !isEditing ? (
-              <IconButton onClick={startEditing} title="Edit personal info" variant="default">
+              <IconButton
+                onClick={startEditing}
+                title="Edit personal info"
+                variant="default"
+              >
                 <EditIcon />
               </IconButton>
             ) : (
@@ -190,11 +238,17 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ detail, dep, employeeId, onDeta
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
           <InfoRow label="Full Name" value={detail.fullName} />
           <InfoRow label="Gender" value={detail.gender} />
-          <InfoRow label="Date of Birth" value={formatDate(detail.dateOfBirth)} />
+          <InfoRow
+            label="Date of Birth"
+            value={formatDate(detail.dateOfBirth)}
+          />
           <InfoRow label="Citizen ID" value={detail.citizenId} />
           <InfoRow label="Employee Code" value={detail.employeeCode} />
           <InfoRow label="Tax Code" value={detail.taxCode} />
-          <InfoRow label="Date of Joining" value={formatDate(detail.dateOfJoining)} />
+          <InfoRow
+            label="Date of Joining"
+            value={formatDate(detail.dateOfJoining)}
+          />
 
           {editableFieldConfig.map(({ label, field, type, required }) => {
             const locked = isFieldLocked(field);
@@ -204,7 +258,9 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ detail, dep, employeeId, onDeta
               <div key={field}>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light mb-1">
                   {label}
-                  {required && isEditing && <span className="text-rose-500 ml-0.5">*</span>}
+                  {required && isEditing && (
+                    <span className="text-rose-500 ml-0.5">*</span>
+                  )}
                   {isEditing && locked && (
                     <span className="ml-2 text-[10px] font-medium text-amber-600 normal-case tracking-normal">
                       🔒 {cooldownInfo}
@@ -216,7 +272,10 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ detail, dep, employeeId, onDeta
                     type={type}
                     value={editForm[field]}
                     onChange={(e) =>
-                      setEditForm((prev) => ({ ...prev, [field]: e.target.value }))
+                      setEditForm((prev) => ({
+                        ...prev,
+                        [field]: e.target.value,
+                      }))
                     }
                     placeholder={label}
                     className="w-full px-3 py-2 text-sm rounded-xl border border-border-light bg-white text-text-primary-light placeholder:text-text-muted-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
@@ -240,17 +299,113 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ detail, dep, employeeId, onDeta
         title="Emergency Contact"
         action={
           isHR ? (
-            <IconButton title="Edit emergency contact" variant="default">
-              <EditIcon />
-            </IconButton>
+            !isEditingDep ? (
+              <IconButton
+                title="Edit emergency contact"
+                variant="default"
+                onClick={() => {
+                  setDepForm({
+                    fullName: dep?.fullName || "",
+                    phone: dep?.phone || "",
+                    relationship: dep?.relationship || "",
+                    address: dep?.address || "",
+                  });
+                  setIsEditingDep(true);
+                }}
+              >
+                <EditIcon />
+              </IconButton>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsEditingDep(false)}
+                  disabled={savingDep}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-gray-100 text-text-secondary-light hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    setSavingDep(true);
+                    try {
+                      let res;
+                      if (dep?.id) {
+                        // Update existing
+                        res = await apiClient.put<DependentDTO>(
+                          `/api/v1/employees/dependents/${dep.id}`,
+                          depForm,
+                        );
+                      } else {
+                        // Create new (HR creating dependent for employee)
+                        res = await apiClient.post<DependentDTO>(
+                          `/api/v1/employees/${employeeId}/dependents`,
+                          depForm,
+                        );
+                      }
+                      setDep(res.data);
+                      setIsEditingDep(false);
+                      setEditSuccess(true);
+                      setTimeout(() => setEditSuccess(false), 3000);
+                    } catch (e) {
+                      setEditError("Lỗi khi cập nhật liên hệ khẩn cấp");
+                    } finally {
+                      setSavingDep(false);
+                    }
+                  }}
+                  disabled={savingDep}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors cursor-pointer disabled:opacity-50 btn-primary-action"
+                >
+                  {savingDep ? "Saving…" : "Save Changes"}
+                </button>
+              </div>
+            )
           ) : null
         }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
-          <InfoRow label="Full Name" value={dep?.fullName || "—"} />
-          <InfoRow label="Phone Number" value={dep?.phone || "—"} />
-          <InfoRow label="Relationship" value={dep?.relationship || "—"} />
-          <InfoRow label="Address" value={dep?.address || "—"} />
+          {isEditingDep ? (
+            <>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light mb-1">Full Name</p>
+                <input value={depForm.fullName} onChange={(e) => setDepForm((prev) => ({ ...prev, fullName: e.target.value }))} className="w-full px-3 py-2 text-sm rounded-xl border border-border-light bg-white text-text-primary-light placeholder:text-text-muted-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors" />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light mb-1">Phone Number</p>
+                <input value={depForm.phone} onChange={(e) => setDepForm((prev) => ({ ...prev, phone: e.target.value }))} className="w-full px-3 py-2 text-sm rounded-xl border border-border-light bg-white text-text-primary-light placeholder:text-text-muted-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors" />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light mb-1">
+                  Relationship
+                </p>
+                <select
+                  value={depForm.relationship}
+                  onChange={(e) =>
+                    setDepForm((prev) => ({
+                      ...prev,
+                      relationship: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors cursor-pointer"
+                >
+                  <option value="">Select relationship</option>
+                  <option value="DAD">Dad</option>
+                  <option value="MOM">Mom</option>
+                  <option value="WIFE">Wife</option>
+                </select>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light mb-1">Address</p>
+                <input value={depForm.address} onChange={(e) => setDepForm((prev) => ({ ...prev, address: e.target.value }))} className="w-full px-3 py-2 text-sm rounded-xl border border-border-light bg-white text-text-primary-light placeholder:text-text-muted-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors" />
+              </div>
+            </>
+          ) : (
+            <>
+              <InfoRow label="Full Name" value={dep?.fullName || "—"} />
+              <InfoRow label="Phone Number" value={dep?.phone || "—"} />
+              <InfoRow label="Relationship" value={dep?.relationship || "—"} />
+              <InfoRow label="Address" value={dep?.address || "—"} />
+            </>
+          )}
         </div>
       </SectionCard>
     </>
