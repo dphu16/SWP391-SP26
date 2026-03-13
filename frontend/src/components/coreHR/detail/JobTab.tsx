@@ -1,8 +1,7 @@
 import React from "react";
 import type { EmployeeDetailDTO, ContractDTO } from "./types";
 import { formatDate } from "./types";
-import { InfoRow, SectionCard, IconButton } from "./ui";
-import { EditIcon } from "./Icons";
+import { InfoRow, SectionCard } from "./ui";
 
 interface JobTabProps {
   detail: EmployeeDetailDTO;
@@ -16,8 +15,11 @@ const isExpiringSoon = (endDate: string): boolean => {
   return diffDays >= 0 && diffDays <= 30;
 };
 
-const ContractStatusBadge: React.FC<{ contract: ContractDTO }> = ({ contract }) => {
-  const expiring = contract.status === "ACTIVE" && isExpiringSoon(contract.endDate);
+const ContractStatusBadge: React.FC<{ contract: ContractDTO }> = ({
+  contract,
+}) => {
+  const expiring =
+    contract.status === "ACTIVE" && isExpiringSoon(contract.endDate);
   if (expiring) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700">
@@ -33,7 +35,9 @@ const ContractStatusBadge: React.FC<{ contract: ContractDTO }> = ({ contract }) 
   };
   const cls = colors[contract.status] || "bg-gray-100 text-gray-500";
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${cls}`}>
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${cls}`}
+    >
       {contract.status}
     </span>
   );
@@ -46,11 +50,6 @@ const JobTab: React.FC<JobTabProps> = ({ detail }) => {
     <>
       <SectionCard
         title="Job Information"
-        action={
-          <IconButton title="Edit job info" variant="default">
-            <EditIcon />
-          </IconButton>
-        }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
           <InfoRow
@@ -95,20 +94,41 @@ const JobTab: React.FC<JobTabProps> = ({ detail }) => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border-light">
-                  <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">Contract #</th>
-                  <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">Type</th>
-                  <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">Start Date</th>
-                  <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">End Date</th>
-                  <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">Status</th>
+                  <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
+                    Contract #
+                  </th>
+                  <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
+                    Type
+                  </th>
+                  <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
+                    Start Date
+                  </th>
+                  <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
+                    End Date
+                  </th>
+                  <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {contracts.map((c) => (
-                  <tr key={c.contractId} className="border-b border-border-light/50 last:border-0">
-                    <td className="py-2.5 px-3 font-medium text-text-primary-light">{c.contractNumber}</td>
-                    <td className="py-2.5 px-3 text-text-secondary-light">{c.contractType}</td>
-                    <td className="py-2.5 px-3 text-text-secondary-light">{formatDate(c.startDate)}</td>
-                    <td className="py-2.5 px-3 text-text-secondary-light">{formatDate(c.endDate)}</td>
+                  <tr
+                    key={c.contractId}
+                    className="border-b border-border-light/50 last:border-0"
+                  >
+                    <td className="py-2.5 px-3 font-medium text-text-primary-light">
+                      {c.contractNumber}
+                    </td>
+                    <td className="py-2.5 px-3 text-text-secondary-light">
+                      {c.contractType}
+                    </td>
+                    <td className="py-2.5 px-3 text-text-secondary-light">
+                      {formatDate(c.startDate)}
+                    </td>
+                    <td className="py-2.5 px-3 text-text-secondary-light">
+                      {formatDate(c.endDate)}
+                    </td>
                     <td className="py-2.5 px-3">
                       <ContractStatusBadge contract={c} />
                     </td>

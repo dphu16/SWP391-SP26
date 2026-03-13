@@ -50,8 +50,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
   const token = useSyncExternalStore(subscribeToStorage, getSnapshot);
   const payload = token ? decodeJwt(token) : null;
-  const resolvedRole =
-    normalizeRole(payload?.role) ?? normalizeRole(payload?.roles?.[0]);
+  const rawRoles = payload?.roles ?? (payload?.role ? [payload.role] : []);
+  const resolvedRoles = rawRoles
+    .map(normalizeRole)
+    .filter((role: UserRole | null): role is UserRole => role !== null);
 
   // Clean up corrupt/expired tokens in an effect (not during render)
   useEffect(() => {
@@ -64,7 +66,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (!resolvedRole || !canAccessPath(resolvedRole, location.pathname)) {
+  if (
+    resolvedRoles.length === 0 ||
+    !canAccessPath(resolvedRoles, location.pathname)
+  ) {
     return <Navigate to="/dashboard" replace />;
   }
 

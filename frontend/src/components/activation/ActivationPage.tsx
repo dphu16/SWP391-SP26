@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { useActivation } from "./hooks/useActivation";
 import { STEPS } from "./constants";
 import { CenteredCard, ErrorBanner, Spinner } from "./shared";
@@ -17,6 +17,7 @@ const ActivationPage: React.FC = () => {
     info,
     loading,
     done,
+    errors,
     handleSetPassword,
     handleEmergencyContact,
     handleBankAccount,
@@ -114,6 +115,7 @@ const ActivationPage: React.FC = () => {
                 setNewPassword={setNewPassword}
                 confirmPassword={confirmPassword}
                 setConfirmPassword={setConfirmPassword}
+                errors={errors}
               />
             )}
 
@@ -128,6 +130,7 @@ const ActivationPage: React.FC = () => {
                 setContactPhone={setContactPhone}
                 contactAddress={contactAddress}
                 setContactAddress={setContactAddress}
+                errors={errors}
               />
             )}
 
@@ -142,6 +145,7 @@ const ActivationPage: React.FC = () => {
                 setBranchName={setBranchName}
                 accountHolderName={accountHolderName}
                 setAccountHolderName={setAccountHolderName}
+                errors={errors}
               />
             )}
 

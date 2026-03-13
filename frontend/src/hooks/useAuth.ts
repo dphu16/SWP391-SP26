@@ -1,3 +1,4 @@
+import { useMemo, useCallback } from "react";
 import { getToken } from "../services/authService";
 import { decodeJwt } from "../utils/jwtDecode";
 
@@ -36,25 +37,33 @@ function normalizeRole(rawRole?: string): UserRole | null {
 }
 
 export function useAuth() {
-  const payload = decodeJwt(getToken());
-  const roleFromSingleClaim = normalizeRole(payload?.role);
-  const roleFromArrayClaim = normalizeRole(payload?.roles?.[0]);
-  const resolvedRole = roleFromSingleClaim ?? roleFromArrayClaim ?? "EMPLOYEE";
+  const token = getToken();
 
-  const user: AuthUser | null = payload
-    ? {
-        username: payload.sub,
-        role: resolvedRole,
-        fullName: payload.fullName,
-        employeeId: payload.employeeId,
-        avatarUrl: payload.avatarUrl,
-      }
-    : null;
+  const user: AuthUser | null = useMemo(() => {
+    const payload = decodeJwt(token);
+    if (!payload) return null;
 
-  const hasRole = (...roles: UserRole[]): boolean => {
-    if (!user) return false;
-    return roles.includes(user.role);
-  };
+    const roleFromSingleClaim = normalizeRole(payload.role);
+    const roleFromArrayClaim = normalizeRole(payload.roles?.[0]);
+    const resolvedRole =
+      roleFromSingleClaim ?? roleFromArrayClaim ?? "EMPLOYEE";
+
+    return {
+      username: payload.sub,
+      role: resolvedRole,
+      fullName: payload.fullName,
+      employeeId: payload.employeeId,
+      avatarUrl: payload.avatarUrl,
+    };
+  }, [token]);
+
+  const hasRole = useCallback(
+    (...roles: UserRole[]): boolean => {
+      if (!user) return false;
+      return roles.includes(user.role);
+    },
+    [user],
+  );
 
   return { user, hasRole };
 }

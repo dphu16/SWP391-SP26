@@ -17,6 +17,7 @@ const CandidateProfileCompletion: React.FC = () => {
   const {
     applicationId,
     jobTitle,
+    jobId,
     isResubmit,
     currentStep,
     setCurrentStep,
@@ -27,6 +28,8 @@ const CandidateProfileCompletion: React.FC = () => {
     setToast,
     formData,
     setFormData,
+    fieldErrors,
+    clearFieldError,
     handleNext,
     handleBack,
     handleGoBack,
@@ -81,12 +84,17 @@ const CandidateProfileCompletion: React.FC = () => {
                       <PersonalInfoForm
                         formData={formData}
                         setFormData={setFormData}
+                        fieldErrors={fieldErrors}
+                        clearFieldError={clearFieldError}
                       />
                     )}
                     {currentStep === 1 && (
                       <EmploymentDetailsForm
                         formData={formData}
                         setFormData={setFormData}
+                        jobId={jobId}
+                        fieldErrors={fieldErrors}
+                        clearFieldError={clearFieldError}
                       />
                     )}
 

@@ -22,6 +22,7 @@ export const useEmployeeTable = (
     size: 10,
   });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeactivateModalOpen, setIsBulkDeactivateModalOpen] = useState(false);
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
@@ -42,12 +43,13 @@ export const useEmployeeTable = (
         if (currentSearch && currentSearch.trim() !== "") {
           endpoint = "/api/employees/search";
           const q = currentSearch.trim();
-          if (/^\+?[\d\s\-]+$/.test(q)) {
-            params.phoneNumber = q.replace(/\s+/g, "");
+          const cleanQ = q.replace(/\s+/g, "");
+          if (/^(0|\+84)\d{8,9}$/.test(cleanQ)) {
+            params.phoneNumber = cleanQ;
           } else if (/^EMP[0-9]+$/i.test(q)) {
             params.employeeCode = q.toUpperCase();
           } else {
-            params.fullName = q;
+            params.fullName = q; // Assume full name for anything else
           }
         }
 
@@ -105,17 +107,65 @@ export const useEmployeeTable = (
 
   // ── Deactivate ──
   const handleDeactivateSingle = async (emp: Employee) => {
-    if (!window.confirm(`Are you sure you want to deactivate ${emp.fullName}?`))
-      return;
+    const reason = window.prompt(`Are you sure you want to propose offboarding for ${emp.fullName}? Please enter a reason:`);
+    if (reason === null) return;
     try {
       setLoading(true);
-      await apiClient.put(`/api/employees/${emp.id}/terminate`);
-      toastSuccess("Success", `Deactivated ${emp.fullName}.`);
+      await apiClient.post(`/api/offboarding/propose/${emp.id}`, {
+        type: "TERMINATED",
+        reason: reason || "HR proposed offboarding",
+        expectedLastDay: new Date().toISOString().split('T')[0]
+      });
+      toastSuccess("Success", `Proposed offboarding for ${emp.fullName}.`);
       await fetchEmployees(page, searchQuery);
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof Error && "response" in err) {
+        const axErr = err as {
+          response?: { data: { message: string, error: string } };
+        };
+        const errMsg = axErr.response?.data?.message || axErr.response?.data?.error;
+        if (errMsg) {
+          toastError("Proposal Failed", errMsg);
+          return;
+        }
+      }
       toastError(
-        "Deactivation Failed",
-        `Could not deactivate ${emp.fullName}.`,
+        "Proposal Failed",
+        `Could not propose offboarding for ${emp.fullName}.`,
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeactivateMultiple = () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkDeactivateModalOpen(true);
+  };
+
+  const submitDeactivateMultiple = async (employeeData: { id: string; reason: string }[]) => {
+    try {
+      setLoading(true);
+      const promises = employeeData.map((data) =>
+        apiClient.post(`/api/offboarding/propose/${data.id}`, {
+          type: "TERMINATED",
+          reason: data.reason || "HR proposed offboarding",
+          expectedLastDay: new Date().toISOString().split("T")[0],
+        }),
+      );
+
+      await Promise.all(promises);
+      toastSuccess(
+        "Success",
+        `Proposed offboarding for ${employeeData.length} employees.`,
+      );
+      setSelectedIds(new Set());
+      setIsBulkDeactivateModalOpen(false);
+      await fetchEmployees(page, searchQuery);
+    } catch (err: unknown) {
+      toastError(
+        "Proposal Failed",
+        "Could not propose offboarding for some or all selected employees.",
       );
     } finally {
       setLoading(false);
@@ -148,6 +198,10 @@ export const useEmployeeTable = (
     toggleAll,
     toggleOne,
     handleDeactivateSingle,
+    handleDeactivateMultiple,
+    isBulkDeactivateModalOpen,
+    setIsBulkDeactivateModalOpen,
+    submitDeactivateMultiple,
     handleSort,
   };
 };

@@ -71,12 +71,6 @@ export const sidebarConfig: SidebarSection[] = [
         // All authenticated users can submit requests; HR/MANAGER can review
         children: [
           {
-            key: "my-requests",
-            label: "My Requests",
-            path: "/requests/my-requests",
-            // GET /api/v1/requests/my-requests → any authenticated
-          },
-          {
             key: "create-request",
             label: "Create Request",
             path: "/attendance/applications",
@@ -193,6 +187,12 @@ export const sidebarConfig: SidebarSection[] = [
             key: "job-openings",
             label: "Job Openings",
             path: "/recruitment/jobs",
+            roles: allow("recruitment:view"),
+          },
+          {
+            key: "schedules",
+            label: "Schedules",
+            path: "/recruitment/schedules",
             roles: allow("recruitment:view"),
           },
         ],

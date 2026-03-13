@@ -21,6 +21,7 @@ const capabilityRoles: Record<SidebarCapability, UserRole[]> = {
   "payroll:admin": ["HR", "MANAGER", "FINANCE"],
   "performance:view": ["HR", "MANAGER", "EMPLOYEE", "MENTOR"],
   "recruitment:view": ["HR", "MANAGER"],
+
 };
 
 const routeCapabilityMap: Array<{
@@ -39,19 +40,23 @@ const routeCapabilityMap: Array<{
   { prefix: "/payroll/tax-report", capability: "payroll:admin" },
   { prefix: "/performance", capability: "performance:view" },
   { prefix: "/recruitment", capability: "recruitment:view" },
+  { prefix: "/recruitment/jobs", capability: "recruitment:view" },
+  { prefix: "/recruitment/requests", capability: "recruitment:view" },
+  { prefix: "/recruitment/schedules", capability: "recruitment:view" },
 ];
 
 export function allow(capability: SidebarCapability): UserRole[] {
   return capabilityRoles[capability];
 }
 
-export function canAccessPath(role: UserRole, pathname: string): boolean {
+export function canAccessPath(roles: UserRole[], pathname: string): boolean {
   const matched = routeCapabilityMap.find((item) =>
     pathname.startsWith(item.prefix),
   );
   if (!matched) return true;
 
-  return allow(matched.capability).includes(role);
+  const allowedRoles = allow(matched.capability);
+  return roles.some(role => allowedRoles.includes(role));
 }
 
 export const sidebarRoleCapabilities = capabilityRoles;

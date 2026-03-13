@@ -16,6 +16,7 @@ export const useOffboardingRequests = () => {
   const [selectedRequest, setSelectedRequest] =
     useState<OffboardingResponse | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
+  const [filterType, setFilterType] = useState<string>("ALL");
 
   const { success, error: toastError } = useToast();
   const auth = useAuth();
@@ -80,13 +81,22 @@ export const useOffboardingRequests = () => {
   const filteredRequests = useMemo(() => {
     return requests.filter((r) => {
       const matchStatus = filterStatus === "ALL" || r.status === filterStatus;
+      const matchType = filterType === "ALL" || r.type === filterType;
       const matchSearch =
         searchQuery === "" ||
         r.employeeName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.employeeCode?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchStatus && matchSearch;
+      return matchStatus && matchType && matchSearch;
     });
-  }, [requests, filterStatus, searchQuery]);
+  }, [requests, filterStatus, filterType, searchQuery]);
+
+  const handleFilterChange = useCallback((category: string, value: string) => {
+    if (category === "status") {
+      setFilterStatus(value);
+    } else if (category === "type") {
+      setFilterType(value);
+    }
+  }, []);
 
   return {
     requests,
@@ -103,6 +113,9 @@ export const useOffboardingRequests = () => {
     setSelectedRequest,
     filterStatus,
     setFilterStatus,
+    filterType,
+    setFilterType,
+    handleFilterChange,
     isManager,
     handleCreateRequest,
   };

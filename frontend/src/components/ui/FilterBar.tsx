@@ -1,25 +1,47 @@
 import React, { useState, useEffect } from "react";
 import apiClient from "../../services/apiClient";
 
+export interface FilterOption {
+  label: string;
+  value: string;
+}
+
+export interface FilterCategory {
+  key: string;
+  label: string;
+  options: FilterOption[];
+}
+
 interface FilterBarProps {
   onSearch?: (q: string) => void;
   onFilterChange?: (category: string, value: string) => void;
   onAddEmployee?: () => void;
+  searchPlaceholder?: string;
+  filters?: FilterCategory[];
+  filterKeys?: string[];
+  hideFilters?: boolean;
 }
 
-const STATIC_ROLES = ["Manager", "HR", "Employee", "Finance", "Mentor"];
+const STATIC_ROLES = ["Manager", "HR", "Employee", "Finance", "Mentor", "Intern", "Probation"];
 
-const FilterBar: React.FC<FilterBarProps> = ({ onSearch, onFilterChange }) => {
+const FilterBar: React.FC<FilterBarProps> = ({ 
+  onSearch, 
+  onFilterChange,
+  searchPlaceholder = "Search employees, departments, skills...",
+  filters,
+  filterKeys,
+  hideFilters = false,
+}) => {
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("department");
-  const [value, setValue] = useState("All Departments");
+  const [category, setCategory] = useState("");
+  const [value, setValue] = useState("");
 
   // Options state
   const [departments, setDepartments] = useState<string[]>([]);
   const [positions, setPositions] = useState<string[]>([]);
 
   useEffect(() => {
-    // Fetch departments and positions
+    if (filters || hideFilters) return;
     const fetchOptions = async () => {
       try {
         const [deptRes, posRes] = await Promise.all([
@@ -33,28 +55,52 @@ const FilterBar: React.FC<FilterBarProps> = ({ onSearch, onFilterChange }) => {
       }
     };
     fetchOptions();
-  }, []);
+  }, [filters, hideFilters]);
 
-  const FILTER_DATA: Record<string, { label: string; options: string[] }> = {
-    department: {
+  const defaultFilters: FilterCategory[] = [
+    {
+      key: "department",
       label: "Department",
-      options: ["All Departments", ...departments],
+      options: [{ label: "All Departments", value: "All Departments" }, ...departments.map((v) => ({ label: v, value: v }))],
     },
-    position: {
+    {
+      key: "position",
       label: "Position",
-      options: ["All Positions", ...positions],
+      options: [{ label: "All Positions", value: "All Positions" }, ...positions.map((v) => ({ label: v, value: v }))],
     },
-    role: {
+    {
+      key: "role",
       label: "Role",
-      options: ["All Roles", ...STATIC_ROLES],
+      options: [{ label: "All Roles", value: "All Roles" }, ...STATIC_ROLES.map((v) => ({ label: v, value: v }))],
     },
-    status: {
+    {
+      key: "status",
       label: "Status",
-      options: ["All Status", "Active", "Inactive"],
+      options: [
+        { label: "All Status", value: "All Status" },
+        { label: "Official", value: "OFFICIAL" },
+        { label: "Completed", value: "COMPLETED" },
+        { label: "Pending Review", value: "PENDING_REVIEW" },
+        { label: "Pending Verify", value: "PENDING_VERIFY" },
+        { label: "Pending Activation", value: "PENDING_ACTIVATION" },
+        { label: "Rejected", value: "REJECTED" },
+        { label: "New", value: "NEW" },
+      ],
     },
-  };
+  ];
 
-  const currentOptions = FILTER_DATA[category]?.options || [];
+  const activeFilters = filters || (filterKeys ? defaultFilters.filter(f => filterKeys.includes(f.key)) : defaultFilters);
+
+  useEffect(() => {
+    if (!hideFilters && activeFilters.length > 0 && !category) {
+      setCategory(activeFilters[0].key);
+      const firstOpt = activeFilters[0].options[0]?.value || "";
+      setValue(firstOpt);
+    }
+  }, [activeFilters, hideFilters, category]);
+
+  const currentCategoryObj = activeFilters.find((f) => f.key === category) || activeFilters[0];
+  const currentOptions = currentCategoryObj?.options || [];
 
   const handleSearch = (val: string) => {
     setSearch(val);
@@ -63,7 +109,8 @@ const FilterBar: React.FC<FilterBarProps> = ({ onSearch, onFilterChange }) => {
 
   const handleCategoryChange = (newCategory: string) => {
     setCategory(newCategory);
-    const firstOption = FILTER_DATA[newCategory]?.options[0] || "";
+    const newCatObj = activeFilters.find((f) => f.key === newCategory);
+    const firstOption = newCatObj?.options[0]?.value || "";
     setValue(firstOption);
     onFilterChange?.(newCategory, firstOption);
   };
@@ -87,7 +134,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ onSearch, onFilterChange }) => {
           type="search"
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
-          placeholder="Search employees, departments, skills..."
+          placeholder={searchPlaceholder}
           className="w-full pl-11 pr-10 py-3 bg-background-light/50 border-none rounded-xl text-sm text-text-primary-light placeholder-text-secondary-light focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all duration-200 outline-none"
         />
         {search && (
@@ -103,50 +150,52 @@ const FilterBar: React.FC<FilterBarProps> = ({ onSearch, onFilterChange }) => {
       </div>
 
       {/* 2 & 3. Filter Boxes */}
-      <div className="flex items-center gap-3">
-        {/* Category Box */}
-        <div className="relative min-w-[140px]">
-          <select
-            value={category}
-            onChange={(e) => handleCategoryChange(e.target.value)}
-            className="w-full appearance-none pl-4 pr-10 py-3 bg-surface-light border border-border-light rounded-xl text-sm font-medium text-text-primary-light hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer outline-none"
-          >
-            {Object.keys(FILTER_DATA).map((key) => (
-              <option key={key} value={key}>
-                {FILTER_DATA[key].label}
-              </option>
-            ))}
-          </select>
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary-light">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </span>
-        </div>
+      {!hideFilters && activeFilters.length > 0 && (
+        <div className="flex items-center gap-3">
+          {/* Category Box */}
+          <div className="relative min-w-[140px]">
+            <select
+              value={category}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              className="w-full appearance-none pl-4 pr-10 py-3 bg-surface-light border border-border-light rounded-xl text-sm font-medium text-text-primary-light hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer outline-none"
+            >
+              {activeFilters.map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary-light">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </span>
+          </div>
 
-        {/* Value Box */}
-        <div className="relative min-w-[160px]">
-          <select
-            value={value}
-            onChange={(e) => handleValueChange(e.target.value)}
-            className="w-full appearance-none pl-4 pr-10 py-3 bg-surface-light border border-border-light rounded-xl text-sm font-medium text-text-primary-light hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer outline-none"
-          >
-            {currentOptions.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary-light">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </span>
-        </div>
+          {/* Value Box */}
+          <div className="relative min-w-[160px]">
+            <select
+              value={value}
+              onChange={(e) => handleValueChange(e.target.value)}
+              className="w-full appearance-none pl-4 pr-10 py-3 bg-surface-light border border-border-light rounded-xl text-sm font-medium text-text-primary-light hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer outline-none"
+            >
+              {currentOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary-light">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </span>
+          </div>
 
-        {/* Divider */}
-        <div className="hidden lg:block w-px h-8 bg-border-light mx-1" />
-      </div>
+          {/* Divider */}
+          <div className="hidden lg:block w-px h-8 bg-border-light mx-1" />
+        </div>
+      )}
     </div>
   );
 };

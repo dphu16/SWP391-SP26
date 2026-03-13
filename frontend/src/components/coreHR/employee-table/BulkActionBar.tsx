@@ -3,9 +3,10 @@ import React from "react";
 interface BulkActionBarProps {
   selectedCount: number;
   onClear: () => void;
+  onDeactivate?: () => void;
 }
 
-const BulkActionBar: React.FC<BulkActionBarProps> = ({ selectedCount, onClear }) => {
+const BulkActionBar: React.FC<BulkActionBarProps> = ({ selectedCount, onClear, onDeactivate }) => {
   if (selectedCount === 0) return null;
 
   return (
@@ -13,12 +14,22 @@ const BulkActionBar: React.FC<BulkActionBarProps> = ({ selectedCount, onClear })
       <span className="text-sm font-semibold text-primary">
         {selectedCount} selected
       </span>
-      <button
-        onClick={onClear}
-        className="ml-auto text-xs text-text-secondary-light hover:text-text-primary-light transition-colors cursor-pointer"
-      >
-        Clear
-      </button>
+      <div className="ml-auto flex items-center gap-3">
+        {onDeactivate && (
+          <button
+            onClick={onDeactivate}
+            className="text-xs px-3 py-1.5 bg-red-50 text-error rounded-lg hover:bg-red-100 transition-colors font-medium border border-red-500"
+          >
+            Inactive
+          </button>
+        )}
+        <button
+          onClick={onClear}
+          className="text-xs text-text-secondary-light hover:text-text-primary-light transition-colors cursor-pointer"
+        >
+          Clear
+        </button>
+      </div>
     </div>
   );
 };

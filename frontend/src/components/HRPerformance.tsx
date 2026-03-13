@@ -61,7 +61,7 @@ const Icons = {
 import { useState, useEffect, useMemo } from "react";
 import type { GlobalStats } from "../services/kpiService";
 
-const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) => {
+const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) => void }) => {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
     const [allKpis, setAllKpis] = useState<KpiLibrary[]>([]);

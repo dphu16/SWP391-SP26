@@ -48,6 +48,27 @@ public class NotificationService {
     }
 
     /**
+     * Create a system notification for all HR users when an employee changes their personal email.
+     */
+    @Transactional
+    public void createNotificationForEmailChange(String employeeName, String newEmail) {
+        List<User> hrUsers = userRepository.findByRoles_Name(EmployeeRole.ROLE_HR);
+        String message = "Nhân viên " + employeeName
+                + " vừa cập nhật email cá nhân thành " + newEmail + ". Email đăng nhập đã được hệ thống cập nhật tự động.";
+        for (User hrUser : hrUsers) {
+            Notification notification = Notification.builder()
+                    .recipient(hrUser)
+                    .message(message)
+                    .type("EMAIL_UPDATE")
+                    .isRead(false)
+                    .build();
+            notificationRepository.save(notification);
+        }
+        log.info("Created system notifications for {} HR user(s) about email update by: {}", hrUsers.size(),
+                employeeName);
+    }
+
+    /**
      * Get all notifications for the currently logged-in user by email.
      */
     @Transactional(readOnly = true)

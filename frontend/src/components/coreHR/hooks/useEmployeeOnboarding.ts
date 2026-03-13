@@ -15,8 +15,8 @@ export const useEmployeeOnboarding = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filter, setFilter] = useState({
-    category: "department",
-    value: "All Departments",
+    category: "status",
+    value: "All Progress",
   });
 
   useEffect(() => {
@@ -39,14 +39,8 @@ export const useEmployeeOnboarding = () => {
       let matchesFilter = true;
       if (filter.value && !filter.value.startsWith("All")) {
         switch (filter.category) {
-          case "position":
-            matchesFilter = app.jobTitle === filter.value;
-            break;
           case "status":
-            matchesFilter =
-              app.status === filter.value ||
-              app.onboardingStatus === filter.value ||
-              app.progressStatus === filter.value;
+            matchesFilter = app.progressStatus === filter.value;
             break;
         }
       }

@@ -8,6 +8,7 @@ import com.project.hrm.module.corehr.entity.FieldCooldown;
 import com.project.hrm.module.corehr.mapper.EmployeeDetailMapper;
 import com.project.hrm.module.corehr.repository.FieldCooldownRepository;
 import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
+import com.project.hrm.module.corehr.service.helper.NotificationService;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -22,11 +23,14 @@ public class EmployeeSelfUpdateService {
 
     private final EmployeeHelper employeeHelper;
     private final FieldCooldownRepository cooldownRepository;
+    private final NotificationService notificationService;
 
     public EmployeeSelfUpdateService(EmployeeHelper employeeHelper,
-            FieldCooldownRepository cooldownRepository) {
+            FieldCooldownRepository cooldownRepository,
+            NotificationService notificationService) {
         this.employeeHelper = employeeHelper;
         this.cooldownRepository = cooldownRepository;
+        this.notificationService = notificationService;
     }
 
     public List<FieldCooldownDTO> getCooldowns(UUID employeeId) {
@@ -76,6 +80,7 @@ public class EmployeeSelfUpdateService {
                 employee.getUser().setEmail(dto.getEmail());
             }
             updatedFields.add("email");
+            notificationService.createNotificationForEmailChange(employee.getFullName(), dto.getEmail());
         }
 
         if (dto.getAddress() != null && !dto.getAddress().equals(employee.getPersonal().getAddress())) {

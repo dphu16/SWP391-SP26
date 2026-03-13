@@ -16,8 +16,8 @@ export const useHiredApplications = (
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filter, setFilter] = useState({
-    category: "department",
-    value: "All Departments",
+    category: "position",
+    value: "All Positions",
   });
 
   useEffect(() => {
@@ -84,6 +84,7 @@ export const useHiredApplications = (
       email: app.candidateEmail || "",
       phone: app.candidatePhone || "",
       job: app.jobTitle || "",
+      jobId: app.jobId || "",
       action: actionType,
     });
     navigate(`/onboarding/${app.id}/profile?${params.toString()}`);

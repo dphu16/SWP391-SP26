@@ -8,6 +8,7 @@ export interface CurrentUser {
     employeeId?: string;  // Optional — chỉ có nếu backend đã link user ↔ employee
     fullName: string;
     role: string;
+    roles: string[];
     avatarUrl?: string;
 }
 
@@ -29,6 +30,7 @@ export function useCurrentUser(): CurrentUser | null {
             employeeId: payload.employeeId ?? undefined,    // present only if linked
             fullName: payload.fullName ?? payload.sub,
             role: payload.role ?? "EMPLOYEE",
+            roles: payload.roles ?? (payload.role ? [payload.role] : ["EMPLOYEE"]),
             avatarUrl: payload.avatarUrl,
         };
     }, []);

@@ -1,10 +1,27 @@
 import React from "react";
 import FilterBar from "../../components/ui/FilterBar";
+import type { FilterCategory } from "../../components/ui/FilterBar";
 import { Avatar, ErrorState, EmptyState } from "./shared";
 import SkeletonRow from "./shared/SkeletonRow";
 import ProgressBadge from "./onboarding/ProgressBadge";
 import StatusModal from "./onboarding/StatusModal";
 import { useEmployeeOnboarding } from "./hooks/useEmployeeOnboarding";
+
+const ONBOARDING_FILTERS: FilterCategory[] = [
+  {
+    key: "status",
+    label: "Progress",
+    options: [
+      { label: "All Progress", value: "All Progress" },
+      { label: "Pending Review", value: "PENDING_REVIEW" },
+      { label: "Pending Verify", value: "PENDING_VERIFY" },
+      { label: "Rejected", value: "REJECTED" },
+      { label: "Pending Activation", value: "PENDING_ACTIVATION" },
+      { label: "Password Created", value: "PASSWORD_CREATED" },
+      { label: "Completed", value: "COMPLETED" },
+    ],
+  },
+];
 
 const COLUMNS = [
   { key: "candidateName", label: "Employee" },
@@ -43,7 +60,12 @@ const EmployeeOnboarding: React.FC = () => {
         </p>
       </div>
 
-      <FilterBar onSearch={setSearchTerm} onFilterChange={handleFilterChange} />
+      <FilterBar 
+        onSearch={setSearchTerm} 
+        onFilterChange={handleFilterChange} 
+        searchPlaceholder="Search candidates by name or email..."
+        filters={ONBOARDING_FILTERS}
+      />
 
       <div className="rounded-2xl border border-border-light bg-surface-light overflow-hidden shadow-card animate-fade-in">
         <div className="overflow-x-auto">
@@ -55,24 +77,7 @@ const EmployeeOnboarding: React.FC = () => {
                     key={col.key}
                     className={`px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light ${idx === 0 ? "pl-6" : ""}`}
                   >
-                    {col.key !== "status" && col.key !== "progressStatus" ? (
-                      <button className="flex items-center gap-1.5 hover:text-text-primary-light transition-colors cursor-pointer group">
-                        {col.label}
-                        <svg
-                          viewBox="0 0 16 16"
-                          fill="currentColor"
-                          className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400 transition-colors"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M8 2a.75.75 0 01.75.75v8.69l3.22-3.22a.75.75 0 111.06 1.06l-4.5 4.5a.75.75 0 01-1.06 0l-4.5-4.5a.75.75 0 111.06-1.06l3.22 3.22V2.75A.75.75 0 018 2z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </button>
-                    ) : (
-                      col.label
-                    )}
+                    {col.label}
                   </th>
                 ))}
               </tr>

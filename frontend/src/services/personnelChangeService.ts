@@ -120,9 +120,7 @@ export const employeeSelfUpdateService = {
     }),
 
   getCooldowns: (employeeId: string) =>
-    apiClient.get<FieldCooldownDTO[]>(
-      `/api/employees/${employeeId}/cooldowns`,
-    ),
+    apiClient.get<FieldCooldownDTO[]>(`/api/employees/${employeeId}/cooldowns`),
 };
 
 export const contractService = {
