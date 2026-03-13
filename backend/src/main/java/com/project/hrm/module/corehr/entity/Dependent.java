@@ -1,7 +1,7 @@
 package com.project.hrm.module.corehr.entity;
 
-import java.time.LocalDate;
 import java.util.UUID;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -32,10 +32,4 @@ public class Dependent {
 
     @Column(name = "address", length = 100)
     private String address;
-
-    @Column(name = "date_of_birth")
-    private LocalDate dateOfBirth;
-
-    @Column(name = "status", length = 20)
-    private String status;
 }

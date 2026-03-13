@@ -24,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -113,7 +114,7 @@ public class OnboardingService implements IOnboardingService {
         dto.setAvatarUrl(personal != null ? personal.getAvatar() : null);
         dto.setDepartmentId(employee.getDepartment() != null ? employee.getDepartment().getDeptId() : null);
         dto.setPositionId(employee.getPosition() != null ? employee.getPosition().getPositionId() : null);
-        dto.setMentorId(employee.getMentor() != null ? employee.getMentor().getEmployeeId() : null);
+        dto.setMentorId(employee.getManager() != null ? employee.getManager().getEmployeeId() : null);
         dto.setDateOfJoining(employee.getDateOfJoining());
         dto.setRole(employee.getRole());
         dto.setStatus(employee.getStatus());
@@ -149,7 +150,7 @@ public class OnboardingService implements IOnboardingService {
             employee.setPosition(employeeHelper.findPositionOrThrow(updatedData.getPositionId()));
         }
         if (updatedData.getMentorId() != null) {
-            employee.setMentor(employeeHelper.findEmployeeOrThrow(updatedData.getMentorId()));
+            employee.setManager(employeeHelper.findEmployeeOrThrow(updatedData.getMentorId()));
         }
         employee.setRole(updatedData.getRole());
         employee.setDateOfJoining(updatedData.getDateOfJoining());

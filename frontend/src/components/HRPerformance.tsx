@@ -59,9 +59,11 @@ const Icons = {
 };
 
 import { useState, useEffect, useMemo } from "react";
-import type { GlobalStats } from "../services/kpiService";
+import { createPortal } from "react-dom";
+import type { GlobalStats, DepartmentLeaderboardItem } from "../services/kpiService";
 
-const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) => {
+
+const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) => void }) => {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
     const [allKpis, setAllKpis] = useState<KpiLibrary[]>([]);
@@ -70,11 +72,12 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     const [loading, setLoading] = useState(true);
     const [isAddKpiModalOpen, setIsAddKpiModalOpen] = useState(false);
     const [modalTab, setModalTab] = useState<'library' | 'new'>('library');
-    const [viewMode, setViewMode] = useState<"global" | "specific" | "cycles">("global");
+    const [viewMode, setViewMode] = useState<"global" | "specific" | "cycles" | "trainings">("global");
     const [globalStats, setGlobalStats] = useState<GlobalStats>({
         orgAverageScore: 0,
         totalKpiTargetValue: 0
     });
+    const [leaderboard, setLeaderboard] = useState<DepartmentLeaderboardItem[]>([]);
 
     // Cycles state
     const [cycles, setCycles] = useState<PerformanceCycle[]>([]);
@@ -101,7 +104,94 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     // Employee KPI Detail state
     const [selectedEmployeeReview, setSelectedEmployeeReview] = useState<PerformanceReview | null>(null);
     const [employeeGoals, setEmployeeGoals] = useState<any[]>([]);
+    const [mentorAssessment, setMentorAssessment] = useState<any>(null);
     const [goalsLoading, setGoalsLoading] = useState(false);
+
+    // Plan Training Modal State
+    const [showPlanTrainingModal, setShowPlanTrainingModal] = useState(false);
+    const [planTrainingForm, setPlanTrainingForm] = useState({
+        courseName: '', courseUrl: '', deadline: '', reason: ''
+    });
+    const [planTrainingLoading, setPlanTrainingLoading] = useState(false);
+    const [planTrainingError, setPlanTrainingError] = useState('');
+    const [planTrainingSuccess, setPlanTrainingSuccess] = useState('');
+
+    // Trainings (HR view) state
+    const [allTrainings, setAllTrainings] = useState<any[]>([]);
+    const [trainingsLoading, setTrainingsLoading] = useState(false);
+    const [confirmingId, setConfirmingId] = useState<string | null>(null);
+    const [trainingStatusFilter, setTrainingStatusFilter] = useState<'ALL' | 'REGISTERED' | 'COMPLETED' | 'CONFIRMED'>('COMPLETED');
+    const [previewCertUrl, setPreviewCertUrl] = useState<string | null>(null);
+    const [trainingActionError, setTrainingActionError] = useState('');
+
+    const handlePlanTrainingCreate = async () => {
+        if (!planTrainingForm.courseName || !planTrainingForm.courseUrl || !planTrainingForm.deadline || !planTrainingForm.reason) {
+            setPlanTrainingError('Please fill in all required fields.');
+            return;
+        }
+        if (!selectedEmployeeReview?.employee?.employeeId || !selectedEmployeeReview?.reviewId) return;
+
+        setPlanTrainingLoading(true);
+        setPlanTrainingError('');
+        try {
+            // 1. Validate Deadline (Must be today or later)
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const deadlineDate = new Date(planTrainingForm.deadline);
+            if (deadlineDate < today) {
+                setPlanTrainingError('Deadline cannot be in the past.');
+                setPlanTrainingLoading(false);
+                return;
+            }
+
+            // 2. Fetch existing trainings to check for duplicates
+            const allCurrentTrainings = await kpiService.getAllTrainings();
+
+            const normalizedName = planTrainingForm.courseName.trim().toLowerCase();
+            const normalizedUrl = planTrainingForm.courseUrl.trim().toLowerCase();
+
+            const isDuplicateName = allCurrentTrainings.some((t: any) =>
+                t.course?.courseName?.trim().toLowerCase() === normalizedName
+            );
+            const isDuplicateUrl = allCurrentTrainings.some((t: any) =>
+                t.course?.courseUrl?.trim().toLowerCase() === normalizedUrl
+            );
+
+            if (isDuplicateName) {
+                setPlanTrainingError(`The course name "${planTrainingForm.courseName}" already exists in the system.`);
+                setPlanTrainingLoading(false);
+                return;
+            }
+
+            if (isDuplicateUrl) {
+                setPlanTrainingError(`The course URL is already associated with another training.`);
+                setPlanTrainingLoading(false);
+                return;
+            }
+
+            await kpiService.planTraining({
+                employeeId: selectedEmployeeReview.employee.employeeId,
+                reviewId: selectedEmployeeReview.reviewId,
+                courseName: planTrainingForm.courseName,
+                courseUrl: planTrainingForm.courseUrl,
+                deadline: planTrainingForm.deadline,
+                reason: planTrainingForm.reason,
+            });
+            setShowPlanTrainingModal(false);
+            setPlanTrainingSuccess('Training planned successfully. Email assignment sent.');
+            setPlanTrainingForm({ courseName: '', courseUrl: '', deadline: '', reason: '' });
+
+            // Refresh training list if we are in that view
+            if (viewMode === "trainings") {
+                fetchAllTrainings();
+            }
+        } catch (e: any) {
+            const errorMsg = e.response?.data?.error || e.response?.data?.message || 'Failed to plan training.';
+            setPlanTrainingError(errorMsg);
+        } finally {
+            setPlanTrainingLoading(false);
+        }
+    };
 
     const handleViewCycleResults = async (cycleId: string) => {
         setSelectedCycleId(cycleId);
@@ -121,9 +211,14 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
         if (!selectedCycleId || !review.employee?.employeeId) return;
         setSelectedEmployeeReview(review);
         setGoalsLoading(true);
+        setMentorAssessment(null);
         try {
-            const goals = await kpiService.getGoalsByEmployeeAndCycle(review.employee.employeeId, selectedCycleId);
+            const [goals, assessment] = await Promise.all([
+                kpiService.getGoalsByEmployeeAndCycle(review.employee.employeeId, selectedCycleId),
+                kpiService.getMentorAssessment(review.reviewId)
+            ]);
             setEmployeeGoals(goals);
+            setMentorAssessment(assessment);
         } catch (error) {
             console.error(error);
         } finally {
@@ -137,7 +232,6 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
         { value: 'NUMERIC', label: 'Numeric', desc: '' },
         { value: 'PERCENTAGE', label: 'Percentage', desc: '' },
         { value: 'BOOLEAN', label: 'Yes / No', desc: '' },
-        { value: 'RATING', label: 'Rating', desc: '' },
     ];
     const [newKpi, setNewKpi] = useState<{
         name: string;
@@ -178,8 +272,12 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     useEffect(() => {
         if (viewMode === 'global') {
             const fetchGlobalStats = async () => {
-                const data = await kpiService.getGlobalStats();
-                setGlobalStats(data);
+                const [statsData, leaderboardData] = await Promise.all([
+                    kpiService.getGlobalStats(),
+                    kpiService.getDepartmentLeaderboard()
+                ]);
+                setGlobalStats(statsData);
+                setLeaderboard(leaderboardData);
             };
             fetchGlobalStats();
         } else if (viewMode === 'cycles') {
@@ -191,6 +289,25 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                 setCyclesLoading(false);
             };
             fetchCycles();
+        }
+    }, [viewMode]);
+
+    // Fetch all trainings for HR when in trainings view
+    const fetchAllTrainings = async () => {
+        setTrainingsLoading(true);
+        try {
+            const data = await kpiService.getAllTrainings();
+            setAllTrainings(data);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setTrainingsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (viewMode === 'trainings') {
+            fetchAllTrainings();
         }
     }, [viewMode]);
 
@@ -254,8 +371,8 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                 details: structureDetails
             });
             setPublishSuccess('KPI Structure published successfully to all employees in this department!');
-        } catch (e) {
-            setPublishError('Failed to publish. Please try again.');
+        } catch (e: any) {
+            setPublishError(e.response?.data?.message || 'Fail to publish. Have no active cycle to publish.');
         }
     };
 
@@ -317,7 +434,9 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
             }
             setShowCycleModal(false);
         } catch (e: any) {
-            setCycleError(e?.response?.data?.error || 'Failed to save cycle.');
+            console.error('Cycle save error:', e);
+            const errorMsg = e.response?.data?.error || e.response?.data?.message || e.message || 'Failed to save cycle.';
+            setCycleError(errorMsg);
         } finally {
             setCycleSaving(false);
         }
@@ -384,15 +503,27 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
     };
 
     const handleCreateAndAddKpi = async () => {
-        setCreateKpiError('');
-        setCreateKpiSuccess('');
-        // Check for duplicate name
-        const trimmedName = newKpi.name.trim();
-        const isDuplicateName = allKpis.some(k => k.name.trim().toLowerCase() === trimmedName.toLowerCase());
-        if (isDuplicateName) {
-            setCreateKpiError(`A KPI named "${trimmedName}" already exists in the department/library. Please use a different name.`);
+        // 1. Check Mandatory Fields
+        if (!newKpi.name.trim()) {
+            setCreateKpiError("KPI Name is required.");
             return;
         }
+        if (!newKpi.category) {
+            setCreateKpiError("Category is required.");
+            return;
+        }
+
+        // 2. Check for duplicate name GLOBALLY (Across all categories)
+        const trimmedName = newKpi.name.trim();
+        const isDuplicate = allKpis.some(k =>
+            k.name.trim().toLowerCase() === trimmedName.toLowerCase()
+        );
+
+        if (isDuplicate) {
+            setCreateKpiError(`A KPI named "${trimmedName}" already exists in the system. Please use a unique name.`);
+            return;
+        }
+
         if (newKpi.defaultWeight <= 0) {
             setCreateKpiError("Default weight must be greater than 0%.");
             return;
@@ -417,16 +548,61 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
         }
     };
 
-    return (
+    // HR reject certificate — backend reads HR identity from JWT token
+    const handleRejectCertificate = async (participantId: string) => {
+        if (!window.confirm('Are you sure you want to reject this certificate? The employee will need to re-upload it.')) return;
+        setConfirmingId(participantId);
+        setTrainingActionError('');
+        try {
+            await kpiService.rejectTrainingCertificate(participantId);
+            setAllTrainings(prev => prev.map(t =>
+                t.participantId === participantId
+                    ? { ...t, status: 'REJECTED', certificateUrl: null, hrConfirmedAt: null }
+                    : t
+            ));
+        } catch (e: any) {
+            console.error('Rejection error:', e);
+            const errorMsg = e.response?.data?.error || e.response?.data?.message || e.message || 'Unknown error';
+            setTrainingActionError(`Failed to reject certificate: ${errorMsg}`);
+        } finally {
+            setConfirmingId(null);
+        }
+    };
+
+    const handleConfirmCertificate = async (participantId: string) => {
+        setConfirmingId(participantId);
+        setTrainingActionError('');
+        try {
+            await kpiService.confirmTrainingCertificate(participantId);
+            setAllTrainings(prev => prev.map(t =>
+                t.participantId === participantId
+                    ? { ...t, status: 'CONFIRMED', hrConfirmedAt: new Date().toISOString() }
+                    : t
+            ));
+        } catch (e: any) {
+            const errorMsg = e.response?.data?.error || e.response?.data?.message || 'Failed to confirm certificate.';
+            setTrainingActionError(errorMsg);
+        } finally {
+            setConfirmingId(null);
+        }
+    };
+
+    const mainContent = (
         <div className="flex flex-col h-full space-y-5 animate-fade-in">
             {/* Header section */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight">
-                        Performance
+                    <h1 className="text-3xl font-black font-heading text-text-primary-light dark:text-text-primary-dark tracking-tight uppercase">
+                        {viewMode === 'global' ? 'Performance Overview' :
+                            viewMode === 'specific' ? 'KPI Structure' :
+                                viewMode === 'cycles' ? 'Evaluation Cycles' :
+                                    'Training Management'}
                     </h1>
-                    <p className="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                        Global KPI Structure Definition & Cross-department Review
+                    <p className="mt-1 text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark opacity-70">
+                        {viewMode === 'global' ? '' :
+                            viewMode === 'specific' ? '' :
+                                viewMode === 'cycles' ? '' :
+                                    ''}
                     </p>
                 </div>
                 <div className="flex items-center gap-6">
@@ -458,6 +634,15 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                 }`}
                         >
                             Cycles
+                        </button>
+                        <button
+                            onClick={() => { setViewMode("trainings"); }}
+                            className={`px-4 py-1.5 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${viewMode === "trainings"
+                                ? "bg-white dark:bg-surface-dark text-primary shadow-sm"
+                                : "text-text-muted-light dark:text-text-muted-dark hover:text-text-primary-light"
+                                }`}
+                        >
+                            Trainings
                         </button>
                     </div>
 
@@ -492,29 +677,34 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                 Department Leaderboard
                             </h2>
                             <div className="space-y-5">
-                                {[
-                                    { name: "IT Engineering", score: 92, color: "bg-blue-500" },
-                                    { name: "Sales & Marketing", score: 88, color: "bg-primary" },
-                                    { name: "Finance", score: 84, color: "bg-accent-amber" },
-                                    { name: "Human Resources", score: 79, color: "bg-gray-400" }
-                                ].map((dept, i) => (
-                                    <div key={i}>
-                                        <div className="flex justify-between text-sm font-bold mb-1.5">
-                                            <span>{dept.name}</span>
-                                            <span>{dept.score} pts</span>
-                                        </div>
-                                        <div className="h-2.5 w-full bg-surface-2-light dark:bg-surface-2-dark rounded-full overflow-hidden">
-                                            <div className={`h-full ${dept.color} rounded-full transition-all duration-1000`} style={{ width: `${dept.score}%` }}></div>
-                                        </div>
+                                {leaderboard.length === 0 ? (
+                                    <div className="text-center py-10 text-text-muted-light text-xs font-bold uppercase tracking-widest italic opacity-50">
+                                        No data available for current cycle
                                     </div>
-                                ))}
+                                ) : (
+                                    leaderboard.map((dept, i) => {
+                                        const colors = ["bg-blue-500", "bg-primary", "bg-accent-amber", "bg-gray-400"];
+                                        const colorClass = colors[i] || "bg-gray-300";
+                                        return (
+                                            <div key={dept.departmentName}>
+                                                <div className="flex justify-between text-sm font-bold mb-1.5">
+                                                    <span>{dept.departmentName}</span>
+                                                    <span>{dept.averageScore.toFixed(1)} pts</span>
+                                                </div>
+                                                <div className="h-2.5 w-full bg-surface-2-light dark:bg-surface-2-dark rounded-full overflow-hidden">
+                                                    <div className={`h-full ${colorClass} rounded-full transition-all duration-1000`} style={{ width: `${Math.min(100, dept.averageScore)}%` }}></div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
                             </div>
                         </div>
 
-                        {/* Bell Curve Mock (Score Distribution) */}
+                        {/* Bell Curve (Score Distribution) */}
                         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm p-5 bento-card flex flex-col">
                             <h2 className="text-sm font-bold font-heading text-text-primary-light dark:text-text-primary-dark mb-6">
-                                Company Score Distribution (Bell Curve)
+                                Company Score Distribution
                             </h2>
                             <div className="flex-1 flex items-end justify-between gap-2 px-4 h-48 relative">
                                 {/* SVG Bell Curve overlay line mock */}
@@ -522,14 +712,18 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                     <path d="M 0 100 Q 25 100 40 50 T 50 10 Q 60 50 75 100" fill="none" stroke="rgba(124, 58, 237, 0.4)" strokeWidth="3" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
                                 </svg>
 
-                                {/* Bars representing bins */}
-                                {[10, 20, 45, 80, 100, 85, 40, 15, 5].map((height, i) => (
-                                    <div key={i} className="w-full bg-primary/20 rounded-t-sm hover:bg-primary/40 transition-colors group relative" style={{ height: `${height}%` }}>
-                                        <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] font-bold bg-gray-800 text-white px-2 py-1 rounded shadow-lg pointer-events-none transition-opacity">
-                                            {Math.floor(height * 2.5)} staff
+                                {/* Bars representing real bins */}
+                                {(globalStats.scoreDistribution || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).map((count, i) => {
+                                    const maxCount = Math.max(...(globalStats.scoreDistribution || [1]), 1);
+                                    const heightPercent = Math.max(5, (count / maxCount) * 100);
+                                    return (
+                                        <div key={i} className="w-full bg-primary/20 rounded-t-sm hover:bg-primary/40 transition-colors group relative" style={{ height: `${heightPercent}%` }}>
+                                            <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] font-bold bg-gray-800 text-white px-2 py-1 rounded shadow-lg pointer-events-none transition-opacity whitespace-nowrap z-20">
+                                                {count} staff ({i * 10}-{i * 10 + 10} pts)
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                             <div className="flex justify-between text-xs font-bold text-text-muted-light mt-4 uppercase tracking-widest pt-3 border-t border-border-light relative z-10">
                                 <span>&lt; 50 (Poor)</span>
@@ -541,30 +735,150 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                 </div>
             )}
 
+            {viewMode === "trainings" && (
+                <div className="flex flex-col gap-5 animate-fade-in">
+                    {/* Header + filter */}
+                    <div className="flex items-center justify-between">
+                        <div />
+                        <div className="flex items-center gap-2">
+                            <button onClick={fetchAllTrainings} className="p-2 rounded-lg border border-border-light text-text-secondary-light hover:bg-surface-2-light transition-colors text-xs font-bold">
+                                ↻ Refresh
+                            </button>
+                            {(['ALL', 'REGISTERED', 'COMPLETED', 'CONFIRMED'] as const).map(s => (
+                                <button key={s} onClick={() => setTrainingStatusFilter(s)}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${trainingStatusFilter === s
+                                        ? s === 'COMPLETED' ? 'bg-amber-500 text-white border-amber-500'
+                                            : s === 'CONFIRMED' ? 'bg-emerald-500 text-white border-emerald-500'
+                                                : 'bg-primary text-white border-primary'
+                                        : 'bg-white border-border-light text-text-muted-light hover:border-primary/30'
+                                        }`}>
+                                    {s}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {trainingActionError && (
+                        <div className="flex items-center gap-2 text-sm text-red-600 font-semibold bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+                            {trainingActionError}
+                            <button onClick={() => setTrainingActionError('')} className="ml-auto text-red-400 hover:text-red-600 text-xs font-bold">✕</button>
+                        </div>
+                    )}
+
+                    {trainingsLoading ? (
+                        <div className="p-20 text-center text-text-muted-light font-black uppercase tracking-widest animate-pulse text-sm">Loading Trainings...</div>
+                    ) : (
+                        <div className="bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-sm overflow-hidden bento-card">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-surface-2-light/40 dark:bg-surface-2-dark/40 border-b border-border-light dark:border-border-dark">
+                                        <th className="px-6 py-4 text-[10px] font-black text-text-muted-light uppercase tracking-[0.2em]">Employee</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-text-muted-light uppercase tracking-[0.2em]">Course</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-text-muted-light uppercase tracking-[0.2em] text-center">Deadline</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-text-muted-light uppercase tracking-[0.2em] text-center">Status</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-text-muted-light uppercase tracking-[0.2em] text-center">Certificate</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-text-muted-light uppercase tracking-[0.2em] text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border-light">
+                                    {allTrainings
+                                        .filter(t => trainingStatusFilter === 'ALL' || t.status === trainingStatusFilter)
+                                        .map((t: any) => (
+                                            <tr key={t.participantId} className="group hover:bg-primary/[0.02] transition-colors">
+                                                <td className="px-6 py-5 border-l-4 border-transparent group-hover:border-primary transition-colors">
+                                                    <div className="font-bold text-sm text-text-primary-light dark:text-text-primary-dark group-hover:text-primary transition-colors">{t.employeeName || 'Unknown'}</div>
+                                                    <div className="text-[11px] text-text-muted-light mt-0.5">{t.employeeId?.slice(0, 8)}...</div>
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <div className="font-semibold text-sm text-text-primary-light">{t.course?.courseName || 'N/A'}</div>
+                                                    <div className="text-[11px] text-text-muted-light mt-0.5 bg-surface-2-light px-2 py-0.5 rounded inline-block">{t.course?.platform || 'N/A'}</div>
+                                                </td>
+                                                <td className="px-6 py-5 text-center">
+                                                    <span className="text-sm font-bold text-text-secondary-light">
+                                                        {t.deadline ? new Date(t.deadline).toLocaleDateString() : '—'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-5 text-center">
+                                                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${t.status === 'CONFIRMED' ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                                        : t.status === 'COMPLETED' ? 'bg-amber-100 text-amber-700 border-amber-200'
+                                                            : t.status === 'FAILED' ? 'bg-rose-100 text-rose-700 border-rose-200'
+                                                                : 'bg-gray-100 text-gray-600 border-gray-200'
+                                                        }`}>
+                                                        {t.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-5 text-center">
+                                                    {t.certificateUrl ? (
+                                                        <button
+                                                            onClick={() => setPreviewCertUrl(
+                                                                t.certificateUrl.startsWith('http')
+                                                                    ? t.certificateUrl
+                                                                    : `http://localhost:8080${t.certificateUrl}`
+                                                            )}
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black uppercase rounded-lg border border-primary/20 transition-colors cursor-pointer"
+                                                        >
+                                                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5"><path fillRule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm2.25 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z" clipRule="evenodd" /></svg>
+                                                            View Cert
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-[10px] font-bold text-text-muted-light italic">Not submitted</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-5 text-right">
+                                                    {t.status === 'COMPLETED' ? (
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button
+                                                                onClick={() => handleRejectCertificate(t.participantId)}
+                                                                disabled={confirmingId === t.participantId}
+                                                                className="px-4 py-2.5 bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-rose-500/20 hover:bg-rose-600 disabled:opacity-50 transition-all"
+                                                            >
+                                                                {confirmingId === t.participantId ? '...' : 'Reject'}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleConfirmCertificate(t.participantId)}
+                                                                disabled={confirmingId === t.participantId}
+                                                                className="px-5 py-2.5 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 disabled:opacity-50 transition-all"
+                                                            >
+                                                                {confirmingId === t.participantId ? 'Confirming...' : '✓ Confirm'}
+                                                            </button>
+                                                        </div>
+                                                    ) : t.status === 'CONFIRMED' ? (
+                                                        <div className="text-right">
+                                                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 uppercase">
+                                                                <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
+                                                                Confirmed
+                                                            </span>
+                                                            {t.hrConfirmedAt && <div className="text-[10px] text-text-muted-light mt-0.5">{new Date(t.hrConfirmedAt).toLocaleDateString()}</div>}
+                                                        </div>
+                                                    ) : t.status === 'REJECTED' ? (
+                                                        <span className="text-[10px] text-rose-600 font-black uppercase tracking-widest">Rejected</span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-text-muted-light italic">Awaiting certificate</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    {allTrainings.filter(t => trainingStatusFilter === 'ALL' || t.status === trainingStatusFilter).length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-16 text-center text-text-muted-light font-bold text-sm">
+                                                No training records found for this filter.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {viewMode === "specific" && (
                 <div className="flex gap-6 items-start animate-fade-in-up">
                     {/* Left Column (Main Content) */}
                     <div className="flex-1 space-y-6">
                         {/* Top Stats Row */}
-                        <div className="grid grid-cols-3 gap-5">
-                            {/* Standardization Rate */}
-                            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card">
-                                <h3 className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-3">
-                                    Library Utilization
-                                </h3>
-                                <div className="flex items-baseline gap-2 mb-4">
-                                    <span className="text-3xl font-bold font-heading">
-                                        {allKpis.length > 0 ? Math.round((structureDetails.length / allKpis.length) * 100) : 0}%
-                                    </span>
-                                    <span className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
-                                        of global KPIs used here
-                                    </span>
-                                </div>
-                                <div className="h-2 w-full bg-surface-2-light dark:bg-surface-2-dark rounded-full overflow-hidden">
-                                    <div className="h-full bg-primary rounded-full transition-all duration-500 ease-out" style={{ width: `${allKpis.length > 0 ? (structureDetails.length / allKpis.length) * 100 : 0}%` }}></div>
-                                </div>
-                            </div>
-
+                        <div className="grid grid-cols-2 gap-5">
                             {/* Departments Pendng Review */}
                             <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card">
                                 <h3 className="text-xs font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-3">
@@ -572,7 +886,6 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                 </h3>
                                 <div className="flex items-baseline gap-2">
                                     <span className="text-3xl font-bold font-heading">{departments.length}</span>
-                                    <span className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark ml-1">Listed in system</span>
                                 </div>
                             </div>
 
@@ -585,9 +898,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                     <span className={`text-3xl font-bold font-heading ${currentTotalWeight === 100 ? 'text-primary' : currentTotalWeight > 100 ? 'text-red-500' : 'text-accent-amber'}`}>
                                         {currentTotalWeight}%
                                     </span>
-                                    <span className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark ml-1">
-                                        {currentTotalWeight === 100 ? "Perfectly balanced" : currentTotalWeight > 100 ? "Over 100%!" : "Needs more KPIs"}
-                                    </span>
+
                                 </div>
                             </div>
                         </div>
@@ -638,7 +949,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                                 KPI Item & Category
                                             </th>
                                             <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest w-[20%] text-center">
-                                                Mandatory Weight (%)
+                                                Mandatory Weight
                                             </th>
                                             <th className="px-5 py-4 text-[11px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest w-[35%]">
                                                 Measurement Logic
@@ -841,10 +1152,7 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                 <div className="flex flex-col gap-6 animate-fade-in">
                     {/* Header */}
                     <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-lg font-bold font-heading text-text-primary-light dark:text-text-primary-dark">Review Cycle Configuration</h2>
-                            <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-0.5">Define evaluation periods, deadlines and criteria for structured performance reviews.</p>
-                        </div>
+                        <div />
                         {!selectedCycleId && (
                             <button
                                 onClick={openNewCycleModal}
@@ -872,33 +1180,77 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                             <p className="text-xs text-text-muted-light dark:text-text-muted-dark">KPI Breakdown Detail</p>
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() => setSelectedEmployeeReview(null)}
-                                        className="px-4 py-2 text-sm font-semibold rounded-lg border border-border-light text-text-secondary-light hover:bg-surface-2-light transition-colors"
-                                    >
-                                        ← Back to Results
-                                    </button>
+                                    <div className="flex gap-2 items-center">
+                                        <button
+                                            onClick={() => {
+                                                setPlanTrainingError('');
+                                                setPlanTrainingSuccess('');
+                                                setPlanTrainingForm({ courseName: '', courseUrl: '', deadline: '', reason: '' });
+                                                setShowPlanTrainingModal(true);
+                                            }}
+                                            className="px-4 py-2 text-sm font-bold bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors shadow-sm"
+                                        >
+                                            Plan Training
+                                        </button>
+                                        <button
+                                            onClick={() => setSelectedEmployeeReview(null)}
+                                            className="px-4 py-2 text-sm font-semibold rounded-lg border border-border-light text-text-secondary-light hover:bg-surface-2-light transition-colors"
+                                        >
+                                            ← Back to Results
+                                        </button>
+                                    </div>
                                 </div>
+
+                                {planTrainingSuccess && (
+                                    <div className="m-5 mb-0 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700 font-semibold">
+                                        {planTrainingSuccess}
+                                    </div>
+                                )}
 
                                 {/* Score Summary Cards */}
                                 <div className="grid grid-cols-3 gap-4 p-5">
                                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                                        <p className="text-[11px] font-bold text-blue-500 uppercase tracking-widest mb-1">KPI Score (70%)</p>
+                                        <p className="text-[11px] font-bold text-blue-500 uppercase tracking-widest mb-1">Manager: KPI Score (70%)</p>
                                         <p className="text-2xl font-black text-blue-600 dark:text-blue-400">{selectedEmployeeReview.kpiScore ?? '-'}</p>
                                     </div>
                                     <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                                        <p className="text-[11px] font-bold text-amber-500 uppercase tracking-widest mb-1">Attitude (30%)</p>
+                                        <p className="text-[11px] font-bold text-amber-500 uppercase tracking-widest mb-1">Mentor: Attitude (30%)</p>
                                         <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{selectedEmployeeReview.attitudeScore ?? '-'}</p>
                                     </div>
                                     <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                                        <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-1">Overall</p>
+                                        <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-1">Overall Assessment</p>
                                         <p className="text-2xl font-black text-primary">{selectedEmployeeReview.overallScore !== null && selectedEmployeeReview.overallScore !== undefined ? selectedEmployeeReview.overallScore.toFixed(1) : '-'}</p>
                                     </div>
                                 </div>
 
+                                {/* Mentor Assessment Detail */}
+                                {mentorAssessment && (
+                                    <div className="px-5 pb-4">
+                                        <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-3">Mentor Assessment Breakdown</h3>
+                                        <div className="grid grid-cols-4 gap-4">
+                                            <div className="bg-surface-2-light dark:bg-surface-2-dark rounded-lg p-3 flex flex-col items-center justify-center text-center">
+                                                <p className="text-[10px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-1">Teamwork</p>
+                                                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{mentorAssessment.teamworkScore ?? '-'}</p>
+                                            </div>
+                                            <div className="bg-surface-2-light dark:bg-surface-2-dark rounded-lg p-3 flex flex-col items-center justify-center text-center">
+                                                <p className="text-[10px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-1">Communication</p>
+                                                <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{mentorAssessment.communicationScore ?? '-'}</p>
+                                            </div>
+                                            <div className="bg-surface-2-light dark:bg-surface-2-dark rounded-lg p-3 flex flex-col items-center justify-center text-center">
+                                                <p className="text-[10px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-1">Technical</p>
+                                                <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{mentorAssessment.technicalScore ?? '-'}</p>
+                                            </div>
+                                            <div className="bg-surface-2-light dark:bg-surface-2-dark rounded-lg p-3 flex flex-col items-center justify-center text-center">
+                                                <p className="text-[10px] font-bold text-text-muted-light dark:text-text-muted-dark uppercase tracking-widest mb-1">Adaptability</p>
+                                                <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{mentorAssessment.adaptabilityScore ?? '-'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* KPI Goals Table */}
                                 <div className="px-5 pb-2">
-                                    <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-3">Individual KPI Goals</h3>
+                                    <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-3">Manager KPI Detail Completion</h3>
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left border-collapse">
@@ -1165,8 +1517,8 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                 </div>
             )}
             {/* Add KPI Modal Overlay */}
-            {isAddKpiModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            {isAddKpiModalOpen && createPortal(
+                <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
                     <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
                         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-surface-2-light/50 dark:bg-surface-2-dark/50">
                             <h2 className="text-lg font-bold text-text-primary-light dark:text-text-primary-dark font-heading">
@@ -1262,21 +1614,22 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                                     </div>
                                     {/* Measurement Type */}
                                     <div>
-                                        <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-2">Measurement Type</label>
+                                        <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-2">
+                                            Measurement Type
+                                        </label>
                                         <div className="grid grid-cols-2 gap-2">
                                             {MEASUREMENT_TYPES.map(mt => (
-                                                <button
+                                                <div
                                                     key={mt.value}
-                                                    type="button"
                                                     onClick={() => setNewKpi({ ...newKpi, measurementType: mt.value })}
-                                                    className={`text-left px-3 py-2.5 rounded-lg border transition-all ${newKpi.measurementType === mt.value
-                                                        ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
-                                                        : 'border-border-light dark:border-border-dark hover:bg-surface-2-light dark:hover:bg-surface-2-dark'
+                                                    className={`px-3 py-2.5 rounded-lg border transition-all cursor-pointer ${newKpi.measurementType === mt.value
+                                                        ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                                                        : 'border-border-light dark:border-border-dark bg-gray-50 hover:border-primary/50'
                                                         }`}
                                                 >
                                                     <div className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark">{mt.label}</div>
                                                     <div className="text-[11px] text-text-muted-light dark:text-text-muted-dark mt-0.5">{mt.desc}</div>
-                                                </button>
+                                                </div>
                                             ))}
                                         </div>
                                     </div>
@@ -1322,7 +1675,85 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>, document.body
+            )}
+
+            {/* ─── CREATE PLAN TRAINING MODAL ───────────────────────── */}
+            {showPlanTrainingModal && createPortal(
+                <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-dark">
+                            <h3 className="text-lg font-bold font-heading text-text-primary-light dark:text-text-primary-dark">
+                                Plan Training for {selectedEmployeeReview?.employee?.fullName || 'Employee'}
+                            </h3>
+                            <button onClick={() => setShowPlanTrainingModal(false)} className="text-text-muted-light hover:text-text-primary-light transition-colors">
+                                <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            {planTrainingError && (
+                                <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 font-semibold">
+                                    {planTrainingError}
+                                </div>
+                            )}
+                            <div>
+                                <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1">Course Name *</label>
+                                <input
+                                    type="text"
+                                    value={planTrainingForm.courseName}
+                                    onChange={e => setPlanTrainingForm(f => ({ ...f, courseName: e.target.value }))}
+                                    placeholder="e.g. Advanced Excel Analysis"
+                                    className="w-full px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1">Course Link (Coursera) *</label>
+                                <input
+                                    type="text"
+                                    value={planTrainingForm.courseUrl}
+                                    onChange={e => setPlanTrainingForm(f => ({ ...f, courseUrl: e.target.value }))}
+                                    placeholder="https://coursera.org/..."
+                                    className="w-full px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1">Deadline *</label>
+                                <input
+                                    type="date"
+                                    value={planTrainingForm.deadline}
+                                    onChange={e => setPlanTrainingForm(f => ({ ...f, deadline: e.target.value }))}
+                                    className="w-full px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-1">Reason for Training *</label>
+                                <textarea
+                                    value={planTrainingForm.reason}
+                                    onChange={e => setPlanTrainingForm(f => ({ ...f, reason: e.target.value }))}
+                                    placeholder="e.g. Needs improvement on data aggregation as per Q1 review."
+                                    rows={3}
+                                    className="w-full px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 px-6 py-4 border-t border-border-light dark:border-border-dark bg-surface-2-light/40 dark:bg-surface-2-dark/40">
+                            <button
+                                onClick={() => setShowPlanTrainingModal(false)}
+                                className="px-5 py-2 text-sm font-semibold border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark rounded-lg hover:bg-surface-2-light dark:hover:bg-surface-2-dark transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handlePlanTrainingCreate}
+                                disabled={planTrainingLoading}
+                                className="px-5 py-2 text-sm font-bold bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-60 flex items-center gap-2"
+                            >
+                                {planTrainingLoading && <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
+                                {planTrainingLoading ? 'Saving...' : 'Assign Training'}
+                            </button>
+                        </div>
+                    </div>
+                </div>, document.body
             )}
 
             {/* ─── CREATE / EDIT CYCLE MODAL ─────────────────────────────────── */}
@@ -1402,6 +1833,75 @@ const HRPerformance = ({ activeTab, setActiveTab }: { activeTab: string, setActi
                 </div>
             )}
         </div>
+    );
+
+    // Certificate preview modal (portal)
+    const certPreviewModal = previewCertUrl && createPortal(
+        <div
+            className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4"
+            onClick={() => setPreviewCertUrl(null)}
+        >
+            <div
+                className="relative bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Modal Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border-light">
+                    <div>
+                        <h3 className="font-black text-sm text-text-primary-light uppercase tracking-widest">Certificate Preview</h3>
+                        <p className="text-[11px] text-text-muted-light mt-0.5">Review the submitted training certificate</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <a
+                            href={previewCertUrl!}
+                            download
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-lg transition-colors"
+                        >
+                            ↓ Download
+                        </a>
+                        <button
+                            onClick={() => setPreviewCertUrl(null)}
+                            className="p-2 rounded-lg text-text-muted-light hover:text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-auto p-4 bg-gray-50 flex items-center justify-center min-h-[400px]">
+                    {previewCertUrl!.toLowerCase().includes('.pdf') ? (
+                        <iframe
+                            src={previewCertUrl!}
+                            className="w-full h-[600px] rounded-xl border border-border-light"
+                            title="Certificate PDF"
+                        />
+                    ) : (
+                        <img
+                            src={previewCertUrl!}
+                            alt="Training Certificate"
+                            className="max-w-full max-h-[65vh] object-contain rounded-xl shadow-lg"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                (e.target as HTMLImageElement).nextElementSibling?.removeAttribute('hidden');
+                            }}
+                        />
+                    )}
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+
+    return (
+        <>
+            {mainContent}
+            {certPreviewModal}
+        </>
     );
 };
 

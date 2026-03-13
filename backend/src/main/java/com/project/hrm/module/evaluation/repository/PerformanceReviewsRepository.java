@@ -30,4 +30,15 @@ public interface PerformanceReviewsRepository extends JpaRepository<PerformanceR
            "AND pr.overallScore IS NOT NULL " +
            "GROUP BY pr.employee.department.deptId")
     List<Double> findDepartmentAveragesByCycle(@Param("cycleId") UUID cycleId);
+
+    @Query("SELECT pr.employee.department.deptName, AVG(pr.overallScore) " +
+           "FROM PerformanceReviews pr " +
+           "WHERE pr.cycle.cycleId = :cycleId " +
+           "AND pr.overallScore IS NOT NULL " +
+           "GROUP BY pr.employee.department.deptName " +
+           "ORDER BY AVG(pr.overallScore) DESC")
+    List<Object[]> findDepartmentAveragesWithNamesByCycle(@Param("cycleId") UUID cycleId);
+
+    @Query("SELECT pr.overallScore FROM PerformanceReviews pr WHERE pr.cycle.cycleId = :cycleId AND pr.overallScore IS NOT NULL")
+    List<Double> findAllScoresByCycle(@Param("cycleId") UUID cycleId);
 }

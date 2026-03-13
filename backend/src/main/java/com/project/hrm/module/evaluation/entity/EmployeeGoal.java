@@ -61,6 +61,9 @@ public class EmployeeGoal {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @Column(name = "reviewer_comment")
+    private String reviewerComment;
+
     @OneToMany(mappedBy = "goal", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<GoalEvidence> evidences = new java.util.ArrayList<>();
 }

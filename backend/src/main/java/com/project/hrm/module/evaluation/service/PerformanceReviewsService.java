@@ -63,13 +63,23 @@ public class PerformanceReviewsService {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
-        // Try to find an ACTIVE cycle, else fall back to the most recently created cycle
+        LocalDateTime now = LocalDateTime.now();
+
+        // Strategy to find the most relevant cycle:
+        // 1. ACTIVE cycles that cover today's date (Most recently created first)
+        // 2. The most recently created ACTIVE cycle
+        // 3. Fallback to the most recently created cycle of any status
         PerformanceCycles targetCycle = cycleRepository.findAll().stream()
                 .filter(c -> c.getStatus() == CycleStatus.ACTIVE)
+                .filter(c -> !now.isBefore(c.getStartDate().atStartOfDay()) && !now.isAfter(c.getEndDate().atTime(23, 59, 59)))
+                .sorted(java.util.Comparator.comparing(PerformanceCycles::getCreatedAt).reversed())
                 .findFirst()
                 .orElseGet(() -> cycleRepository.findAll().stream()
+                        .filter(c -> c.getStatus() == CycleStatus.ACTIVE)
                         .max(java.util.Comparator.comparing(PerformanceCycles::getCreatedAt))
-                        .orElseThrow(() -> new RuntimeException("No performance cycles configured")));
+                        .orElseGet(() -> cycleRepository.findAll().stream()
+                                .max(java.util.Comparator.comparing(PerformanceCycles::getCreatedAt))
+                                .orElseThrow(() -> new RuntimeException("No performance cycles configured"))));
 
         return repository.findByEmployee_EmployeeIdAndCycle_CycleId(employeeId, targetCycle.getCycleId())
                 .orElseGet(() -> {
@@ -111,9 +121,12 @@ public class PerformanceReviewsService {
         PerformanceReviews review = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Review not found"));
 
+        double kpiWeight = (review.getCycle().getKpiWeight() != null ? review.getCycle().getKpiWeight() : 70.0) / 100.0;
+        double attitudeWeight = (review.getCycle().getAttitudeWeight() != null ? review.getCycle().getAttitudeWeight() : 30.0) / 100.0;
+
         double overall = (
-                review.getKpiScore() * 0.7 +
-                        review.getAttitudeScore() * 0.3
+                review.getKpiScore() * kpiWeight +
+                        review.getAttitudeScore() * attitudeWeight
         );
 
         review.setOverallScore(overall);

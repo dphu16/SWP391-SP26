@@ -31,6 +31,12 @@ public class PerformanceCycles {
     @Column(name = "status")
     private CycleStatus status;
 
+    @Column(name = "kpi_weight")
+    private Double kpiWeight = 70.0;
+
+    @Column(name = "attitude_weight")
+    private Double attitudeWeight = 30.0;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 }

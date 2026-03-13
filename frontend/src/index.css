@@ -164,6 +164,16 @@ body {
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
+/* Shake for validation errors */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.animate-shake {
+  animation: shake 0.2s cubic-bezier(.36,.07,.19,.97) both;
+}
+
 /* ===== BENTO GRID CARD HOVER ===== */
 .bento-card {
   transition: box-shadow 200ms ease, transform 200ms ease;

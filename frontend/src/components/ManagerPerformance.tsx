@@ -57,6 +57,8 @@ const ManagerPerformance = () => {
     const [loading, setLoading] = useState(true);
     const [searchKpiQuery, setSearchKpiQuery] = useState("");
     const [teamStats, setTeamStats] = useState<TeamStats>({ totalMembers: 0, submittedMembers: 0, averageScore: null });
+    const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
+    const [cycles, setCycles] = useState<any[]>([]);
 
     // Review state
     const [activeReview, setActiveReview] = useState<PerformanceReview | null>(null);
@@ -65,6 +67,9 @@ const ManagerPerformance = () => {
     const [attitudeScoreInput, setAttitudeScoreInput] = useState('');
     const [managerNoteInput, setManagerNoteInput] = useState('');
     const [scoreSaving, setScoreSaving] = useState(false);
+    const [actionMessage, setActionMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
+    const [finalizeFeedback, setFinalizeFeedback] = useState<{ type: 'error' | 'success', text: string } | null>(null);
+    const [hasMentorAssessment, setHasMentorAssessment] = useState(false);
 
     const activeEmployee = useMemo(() => employees.find(e => e.id === activeEmployeeId), [employees, activeEmployeeId]);
 
@@ -100,6 +105,23 @@ const ManagerPerformance = () => {
                     setActiveEmployeeId(employeesData[0].id);
                 }
 
+                // Find active cycle: Priority 1: ACTIVE coverage today, Priority 2: Latest ACTIVE, Priority 3: Latest ANY
+                if (cyclesData && cyclesData.length > 0) {
+                    const now = new Date();
+                    const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+                    const bestCycle = cyclesData
+                        .filter(c => c.status === 'ACTIVE')
+                        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                        .find(c => nowStr >= c.startDate && nowStr <= c.endDate)
+                        || cyclesData.find(c => c.status === 'ACTIVE')
+                        || cyclesData[0];
+
+                    if (bestCycle) setActiveCycleId(bestCycle.cycleId);
+                }
+
+                setCycles(cyclesData);
+
                 (window as any).__kpiContext = { deptsData, allKpiLibs, activeDeptKpis, cyclesData };
 
                 // Fetch real team stats from DB
@@ -125,7 +147,9 @@ const ManagerPerformance = () => {
                 const [allLibs, structure, goals] = await Promise.all([
                     kpiService.getAllKpiLibraries(),
                     deptId ? kpiService.getKpisByDepartment(deptId) : Promise.resolve([]),
-                    kpiService.getGoalsByEmployee(activeEmployeeId)
+                    (activeEmployeeId && activeCycleId)
+                        ? kpiService.getGoalsByEmployeeAndCycle(activeEmployeeId, activeCycleId)
+                        : kpiService.getGoalsByEmployee(activeEmployeeId)
                 ]);
 
                 // Map department structure to UI list, overlaying existing goals
@@ -136,6 +160,7 @@ const ManagerPerformance = () => {
 
                     const targetVal = goal?.targetValue || 0;
                     const isActuallyAssigned = !!goal && targetVal > 0;
+                    const mt = lib?.measurementType || "NUMERIC";
 
                     return {
                         goalId: goal?.goalId,
@@ -144,10 +169,11 @@ const ManagerPerformance = () => {
                         name: goal?.title || lib?.name || "Unknown",
                         category: lib?.category || "N/A",
                         description: lib?.description || "",
+                        measurementType: mt,
                         weight: s.weight || lib?.defaultWeight || 0,
                         status: goal?.status || null,
                         imageUrl: goal?.imageUrl || "",
-                        _targetValue: targetVal ? String(targetVal) : '',
+                        _targetValue: isActuallyAssigned ? String(targetVal) : (mt === 'BOOLEAN' ? '1' : ''),
                         _isAssigned: isActuallyAssigned
                     };
                 });
@@ -167,22 +193,40 @@ const ManagerPerformance = () => {
         if (!activeEmployeeId) return;
         const fetchReview = async () => {
             setReviewLoading(true);
-            const [review, mentorScore] = await Promise.all([
-                kpiService.getActiveReview(activeEmployeeId),
-                kpiService.getMentorAttitudeScore(activeEmployeeId)
-            ]);
-            setActiveReview(review);
-            if (review) {
-                setKpiScoreInput(review.kpiScore !== null && review.kpiScore !== undefined ? String(review.kpiScore) : '');
-                // Override with mentor score since it's now managed by Mentor
-                setAttitudeScoreInput(String(mentorScore));
-                setManagerNoteInput(review.rating || '');
-            } else {
-                setKpiScoreInput('');
-                setAttitudeScoreInput(String(mentorScore));
-                setManagerNoteInput('');
+            try {
+                const review = await kpiService.getActiveReview(activeEmployeeId);
+                setActiveReview(review);
+
+                if (review) {
+                    setKpiScoreInput(review.kpiScore !== null ? String(review.kpiScore) : '');
+                    setManagerNoteInput(review.rating || '');
+
+                    // Sync active cycle with the review's cycle to ensure consistency
+                    if (review.cycle?.cycleId) {
+                        setActiveCycleId(review.cycle.cycleId);
+                    }
+
+                    // Fetch detailed mentor assessment to get the average score
+                    const assessment = await kpiService.getMentorAssessment(review.reviewId);
+                    if (assessment) {
+                        setAttitudeScoreInput(String(assessment.averageScore || 0));
+                        setHasMentorAssessment(true);
+                    } else {
+                        // Fallback to review level attitudeScore if assessment object not found
+                        setAttitudeScoreInput(review.attitudeScore !== null ? String(review.attitudeScore) : '0');
+                        setHasMentorAssessment(review.attitudeScore !== null && review.attitudeScore > 0);
+                    }
+                } else {
+                    setKpiScoreInput('');
+                    setAttitudeScoreInput('0');
+                    setManagerNoteInput('');
+                    setHasMentorAssessment(false);
+                }
+            } catch (error) {
+                console.error("Error fetching review data:", error);
+            } finally {
+                setReviewLoading(false);
             }
-            setReviewLoading(false);
         };
         fetchReview();
     }, [activeEmployeeId]);
@@ -191,12 +235,17 @@ const ManagerPerformance = () => {
         const kpiToAssign = kpis.find(k => k.kpiLibraryId === kpiLibraryId);
         if (!kpiToAssign || !activeEmployeeId) return;
 
-        const activeCycle = kpiToAssign.cycleId || "c2c5ec68-7c85-48ef-be8a-350e82c5f1fa";
+        const targetCycleId = kpiToAssign.cycleId || activeCycleId;
+
+        if (!targetCycleId) {
+            setActionMessage({ type: 'error', text: 'No active performance cycle found to assign KPIs.' });
+            return;
+        }
 
         try {
             await kpiService.assignEmployeeGoal({
                 employeeId: activeEmployeeId,
-                cycleId: activeCycle,
+                cycleId: targetCycleId,
                 kpiLibraryId: kpiLibraryId,
                 targetValue: Number(kpiToAssign._targetValue),
                 title: kpiToAssign.name,
@@ -217,6 +266,7 @@ const ManagerPerformance = () => {
                     const goal = goals.find(g => (g.kpiLibrary?.libId || g.kpiLibraryId) === libId);
                     const targetVal = goal?.targetValue || 0;
                     const isActuallyAssigned = !!goal && targetVal > 0;
+                    const mt = lib?.measurementType || "NUMERIC";
                     return {
                         goalId: goal?.goalId,
                         cycleId: goal?.cycle?.cycleId,
@@ -224,18 +274,20 @@ const ManagerPerformance = () => {
                         name: goal?.title || lib?.name || "Unknown",
                         category: lib?.category || "N/A",
                         description: lib?.description || "",
+                        measurementType: mt,
                         weight: s.weight || lib?.defaultWeight || 0,
                         status: goal?.status || null,
                         imageUrl: goal?.imageUrl || "",
-                        _targetValue: targetVal ? String(targetVal) : '',
+                        _targetValue: isActuallyAssigned ? String(targetVal) : (mt === 'BOOLEAN' ? '1' : ''),
                         _isAssigned: isActuallyAssigned
                     };
                 });
                 setKpis(merged);
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to assign target", e);
-            alert("Failed to save target. Please try again.");
+            const errorMsg = e.response?.data?.message || "Failed to save target. Please try again.";
+            setActionMessage({ type: 'error', text: errorMsg });
         }
     };
 
@@ -249,23 +301,27 @@ const ManagerPerformance = () => {
         if (assigned.length === 0) return null;
         const totalWeight = assigned.reduce((s: number, k: any) => s + k.weight, 0);
         if (totalWeight === 0) return null;
-        // Weighted achievement: each KPI contributes (weight/totalWeight)*100 when target set
-        // We assume achievement = 100% if assigned (no current value without progress logs)
         return Math.round(assigned.reduce((s: number, k: any) => s + k.weight, 0) / totalWeight * 100);
+    }, [kpis]);
+
+    const allKpisCompleted = useMemo(() => {
+        const assignedKpis = kpis.filter(k => k._isAssigned);
+        return assignedKpis.length > 0 && assignedKpis.every(k => k.status === 'COMPLETED');
     }, [kpis]);
 
     const handleSaveDraft = async () => {
         if (!activeReview) return;
         const kpi = parseFloat(kpiScoreInput);
         const att = parseFloat(attitudeScoreInput);
-        if (isNaN(kpi) || isNaN(att)) { alert('Please enter valid scores.'); return; }
-        if (kpi < 0 || kpi > 100 || att < 0 || att > 100) { alert('Scores must be between 0 and 100.'); return; }
+        if (isNaN(kpi) || isNaN(att)) { setActionMessage({ type: 'error', text: 'Please enter valid scores.' }); return; }
+        if (kpi < 0 || kpi > 100 || att < 0 || att > 100) { setActionMessage({ type: 'error', text: 'Scores must be between 0 and 100.' }); return; }
         setScoreSaving(true);
+        setActionMessage(null);
         try {
             const updated = await kpiService.updateReviewScore(activeReview.reviewId, { kpiScore: kpi, attitudeScore: att, rating: managerNoteInput });
             setActiveReview(updated);
         } catch (e) {
-            alert('Failed to save score.');
+            setActionMessage({ type: 'error', text: 'Failed to save score.' });
         } finally {
             setScoreSaving(false);
         }
@@ -282,8 +338,16 @@ const ManagerPerformance = () => {
         // Save scores first if changed, then finalize
         const kpi = parseFloat(kpiScoreInput);
         const att = parseFloat(attitudeScoreInput);
-        if (isNaN(kpi) || isNaN(att)) { alert('Please enter KPI Score and Attitude Score first.'); return; }
+
+        if (isNaN(kpi) || isNaN(att)) { setActionMessage({ type: 'error', text: 'Please enter KPI Score and Attitude Score first.' }); return; }
+
+        if (!hasMentorAssessment) {
+            setFinalizeFeedback({ type: 'error', text: 'Mentor has not submitted their assessment yet.' });
+            return;
+        }
+
         setScoreSaving(true);
+        setFinalizeFeedback(null);
         try {
             await kpiService.updateReviewScore(activeReview.reviewId, { kpiScore: kpi, attitudeScore: att, rating: managerNoteInput });
             const finalized = await kpiService.finalizeReview(activeReview.reviewId);
@@ -291,10 +355,9 @@ const ManagerPerformance = () => {
 
             // Re-fetch team stats after finalization to update Average Score and Progress
             await reloadStats();
-
-            alert('Review finalized successfully!');
+            setFinalizeFeedback({ type: 'success', text: 'Review finalized successfully!' });
         } catch (e: any) {
-            alert(e?.response?.data?.error || 'Failed to finalize review.');
+            setFinalizeFeedback({ type: 'error', text: e?.response?.data?.error || 'Failed to finalize review.' });
         } finally {
             setScoreSaving(false);
         }
@@ -311,11 +374,24 @@ const ManagerPerformance = () => {
                         Performance
                     </h1>
                     <p className="mt-0.5 text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
-                        Standardized KPI management and scoring workflow
+                        Active Period: <span className="text-primary font-bold">{cycles.find(c => c.cycleId === activeCycleId)?.cycleName || "No Active Cycle"}</span>
                     </p>
                 </div>
 
             </div>
+
+            {actionMessage && (
+                <div className={`flex items-center gap-2 text-sm font-semibold rounded-lg px-4 py-3 ${actionMessage.type === 'error' ? 'text-red-600 bg-red-50 border border-red-200' : 'text-emerald-600 bg-emerald-50 border border-emerald-200'}`}>
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
+                        {actionMessage.type === 'error'
+                            ? <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                            : <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                        }
+                    </svg>
+                    {actionMessage.text}
+                    <button onClick={() => setActionMessage(null)} className="ml-auto text-xs font-bold opacity-60 hover:opacity-100">✕</button>
+                </div>
+            )}
 
             <div className="flex gap-6 items-start">
                 <div className="flex-1 space-y-6">
@@ -399,16 +475,37 @@ const ManagerPerformance = () => {
                                                 <div className="inline-flex font-bold text-primary bg-primary/5 px-2 py-1 rounded-lg text-xs border border-primary/20">{kpi.weight}%</div>
                                             </td>
                                             <td className="px-6 py-5">
-                                                <input
-                                                    type="number"
-                                                    value={kpi._targetValue}
-                                                    readOnly={kpi._isAssigned}
-                                                    onChange={(e) => handleTargetChange(kpi.kpiLibraryId, e.target.value)}
-                                                    className={`w-full px-4 py-2 rounded-xl text-sm font-bold transition-all outline-none ${kpi._isAssigned
-                                                        ? 'bg-surface-2-light/50 dark:bg-surface-2-dark/50 text-text-muted-light/60 cursor-not-allowed border-dashed border-border-light/50'
-                                                        : 'bg-surface-2-light dark:bg-surface-2-dark border-border-light dark:border-border-dark focus:bg-white dark:focus:bg-surface-dark focus:border-primary focus:ring-4 focus:ring-primary/5'
-                                                        }`}
-                                                />
+                                                {kpi.measurementType === 'BOOLEAN' ? (
+                                                    <div className="px-4 py-2 bg-surface-2-light/50 dark:bg-surface-2-dark/50 border border-border-light/50 border-dashed rounded-xl text-sm font-bold text-primary flex items-center gap-2">
+                                                        {Icons.checkCircle}
+                                                        Yes
+                                                    </div>
+                                                ) : (
+                                                    <div className="relative">
+                                                        <input
+                                                            type="number"
+                                                            value={kpi._targetValue}
+                                                            readOnly={kpi._isAssigned}
+                                                            min="0"
+                                                            max={kpi.measurementType === 'PERCENTAGE' ? "100" : undefined}
+                                                            onChange={(e) => {
+                                                                let val = e.target.value;
+                                                                if (kpi.measurementType === 'PERCENTAGE' && val !== '') {
+                                                                    if (Number(val) > 100) val = '100';
+                                                                    if (Number(val) < 0) val = '0';
+                                                                }
+                                                                handleTargetChange(kpi.kpiLibraryId, val);
+                                                            }}
+                                                            className={`w-full px-4 py-2 rounded-xl text-sm font-bold transition-all outline-none ${kpi._isAssigned
+                                                                ? 'bg-surface-2-light/50 dark:bg-surface-2-dark/50 text-text-muted-light/60 cursor-not-allowed border-dashed border-border-light/50'
+                                                                : 'bg-surface-2-light dark:bg-surface-2-dark border-border-light dark:border-border-dark focus:bg-white dark:focus:bg-surface-dark focus:border-primary focus:ring-4 focus:ring-primary/5'
+                                                                } ${kpi.measurementType === 'PERCENTAGE' ? 'pr-8' : ''}`}
+                                                        />
+                                                        {kpi.measurementType === 'PERCENTAGE' && (
+                                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted-light font-bold text-[10px] pointer-events-none">%</div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-6 py-5 text-right">
                                                 {!kpi._isAssigned ? (
@@ -429,9 +526,70 @@ const ManagerPerformance = () => {
                                                     </div>
                                                 ) : kpi.status === 'SUBMITTED' ? (
                                                     <div className="flex items-center justify-end gap-2">
-                                                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-blue-500/20">
-                                                            Pending Mentor
-                                                        </div>
+                                                        <button
+                                                            onClick={async () => {
+                                                                try {
+                                                                    await kpiService.updateEmployeeGoalStatus(kpi.goalId, 'COMPLETED');
+                                                                    const updated = await kpiService.getGoalsByEmployeeAndCycle(activeEmployee!.employeeId, activeCycleId!);
+                                                                    const allLibs = await kpiService.getAllKpiLibraries();
+                                                                    const formatted = updated.map((g: any) => {
+                                                                        const lib = allLibs.find(l => l.libId === (g.kpiLibrary?.libId || g.kpiLibraryId));
+                                                                        const mt = lib?.measurementType || "NUMERIC";
+                                                                        return {
+                                                                            goalId: g.goalId,
+                                                                            cycleId: g.cycle?.cycleId,
+                                                                            kpiLibraryId: g.kpiLibrary?.libId || g.kpiLibraryId,
+                                                                            name: g.title || lib?.name || "Unknown",
+                                                                            category: lib?.category || g.kpiLibrary?.category || "N/A",
+                                                                            description: lib?.description || "",
+                                                                            measurementType: mt,
+                                                                            weight: g.weight || lib?.defaultWeight || 0,
+                                                                            status: g.status,
+                                                                            _targetValue: String(g.targetValue || 0),
+                                                                            _isAssigned: !!g.targetValue && g.targetValue > 0
+                                                                        };
+                                                                    });
+                                                                    setKpis(formatted);
+                                                                } catch (e: any) {
+                                                                    setActionMessage({ type: 'error', text: e.response?.data?.message || 'Failed to approve' });
+                                                                }
+                                                            }}
+                                                            className="px-3 py-1.5 bg-emerald-500 text-white hover:bg-emerald-600 text-[10px] font-bold rounded-lg uppercase tracking-widest transition-all"
+                                                        >
+                                                            Approve
+                                                        </button>
+                                                        <button
+                                                            onClick={async () => {
+                                                                try {
+                                                                    await kpiService.updateEmployeeGoalStatus(kpi.goalId, 'ACKNOWLEDGED', 'Rejected by Manager');
+                                                                    const updated = await kpiService.getGoalsByEmployeeAndCycle(activeEmployee!.employeeId, activeCycleId!);
+                                                                    const allLibs = await kpiService.getAllKpiLibraries();
+                                                                    const formatted = updated.map((g: any) => {
+                                                                        const lib = allLibs.find(l => l.libId === (g.kpiLibrary?.libId || g.kpiLibraryId));
+                                                                        const mt = lib?.measurementType || "NUMERIC";
+                                                                        return {
+                                                                            goalId: g.goalId,
+                                                                            cycleId: g.cycle?.cycleId,
+                                                                            kpiLibraryId: g.kpiLibrary?.libId || g.kpiLibraryId,
+                                                                            name: g.title || lib?.name || "Unknown",
+                                                                            category: lib?.category || g.kpiLibrary?.category || "N/A",
+                                                                            description: lib?.description || "",
+                                                                            measurementType: mt,
+                                                                            weight: g.weight || lib?.defaultWeight || 0,
+                                                                            status: g.status,
+                                                                            _targetValue: String(g.targetValue || 0),
+                                                                            _isAssigned: !!g.targetValue && g.targetValue > 0
+                                                                        };
+                                                                    });
+                                                                    setKpis(formatted);
+                                                                } catch (e: any) {
+                                                                    setActionMessage({ type: 'error', text: e.response?.data?.message || 'Failed to reject' });
+                                                                }
+                                                            }}
+                                                            className="px-3 py-1.5 bg-rose-500 text-white hover:bg-rose-600 text-[10px] font-bold rounded-lg uppercase tracking-widest transition-all"
+                                                        >
+                                                            Reject
+                                                        </button>
                                                     </div>
                                                 ) : kpi.status === 'COMPLETED' ? (
                                                     <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-emerald-500/20">
@@ -478,13 +636,12 @@ const ManagerPerformance = () => {
                                     <div className="space-y-6 flex-1">
                                         <div className="bg-white dark:bg-surface-dark p-4 rounded-xl border border-border-light shadow-sm">
                                             <div className="flex justify-between items-center mb-2">
-                                                <label className="block text-[10px] font-black uppercase opacity-60 italic">KPI PERFORMANCE (70%)</label>
-                                                {computedKpiScore !== null && (
+                                                <label className="block text-[10px] font-black uppercase opacity-60 italic">KPI PERFORMANCE</label>
+                                                {computedKpiScore !== null && allKpisCompleted && (
                                                     <button
                                                         onClick={() => setKpiScoreInput(String(computedKpiScore))}
                                                         className="text-[10px] font-black text-primary hover:underline"
                                                     >
-                                                        SUGGESTED: {computedKpiScore}%
                                                     </button>
                                                 )}
                                             </div>
@@ -493,17 +650,17 @@ const ManagerPerformance = () => {
                                                 value={kpiScoreInput}
                                                 onChange={e => setKpiScoreInput(e.target.value)}
                                                 disabled={activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
-                                                className="w-full px-4 py-2 text-xl font-black bg-surface-2-light border-none rounded-lg outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:italic"
+                                                className={`w-full px-4 py-2 text-xl font-black rounded-lg outline-none transition-all placeholder:italic [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED' ? 'bg-surface-2-light/50 cursor-not-allowed opacity-50' : 'bg-surface-2-light border-none focus:ring-2 focus:ring-primary/20'}`}
                                                 placeholder="---"
                                             />
                                         </div>
                                         <div className="bg-white dark:bg-surface-dark p-4 rounded-xl border border-border-light shadow-sm opacity-90">
-                                            <label className="block text-[10px] font-black uppercase mb-2 opacity-60 italic">MENTOR ASSESSMENT (30%)</label>
+                                            <label className="block text-[10px] font-black uppercase mb-2 opacity-60 italic">MENTOR ASSESSMENT</label>
                                             <input
                                                 type="number"
                                                 value={attitudeScoreInput}
                                                 readOnly
-                                                className="w-full px-4 py-2 text-xl font-black bg-surface-2-light/50 border-none rounded-lg cursor-not-allowed outline-none"
+                                                className="w-full px-4 py-2 text-xl font-black bg-surface-2-light/50 border-none rounded-lg cursor-not-allowed outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                             />
                                         </div>
                                     </div>
@@ -512,14 +669,22 @@ const ManagerPerformance = () => {
                                         <button
                                             onClick={handleFinalize}
                                             disabled={scoreSaving || activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
-                                            className="w-full py-3.5 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/30 transition-all active:scale-95 disabled:opacity-30"
+                                            className="w-full py-3.5 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/30 transition-all active:scale-95 disabled:opacity-30 flex items-center justify-center gap-2"
                                         >
                                             {activeReview?.status === 'SUBMITTED' ? '✓ Data Locked' : 'Finalize Performance Record'}
                                         </button>
+                                        {finalizeFeedback && (
+                                            <div className={`p-4 border rounded-xl flex items-center gap-3 animate-fade-in ${finalizeFeedback.type === 'error' ? 'bg-rose-50 border-rose-100 animate-shake text-rose-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+                                                <div className={`w-2 h-2 rounded-full animate-pulse ${finalizeFeedback.type === 'error' ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                                                <p className="text-[10px] font-black uppercase tracking-wider leading-tight">
+                                                    {finalizeFeedback.text}
+                                                </p>
+                                            </div>
+                                        )}
                                         <button
                                             onClick={handleSaveDraft}
                                             disabled={scoreSaving || activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
-                                            className="w-full py-2.5 text-[10px] font-black uppercase tracking-widest text-text-primary-light opacity-60 hover:opacity-100 transition-all"
+                                            className="w-full py-2.5 text-[10px] font-black uppercase tracking-widest text-text-primary-light opacity-60 hover:opacity-100 transition-all disabled:opacity-20"
                                         >
                                             {scoreSaving ? 'Processing...' : 'Save Draft Snapshot'}
                                         </button>
@@ -536,7 +701,9 @@ const ManagerPerformance = () => {
                                         onChange={e => setManagerNoteInput(e.target.value)}
                                         disabled={activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
                                         placeholder="Enter your assessment notes, feedback, and developmental goals here..."
-                                        className="w-full flex-1 p-4 bg-surface-2-light dark:bg-surface-2-dark border border-border-light dark:border-border-dark rounded-xl resize-none outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+                                        className={`w-full flex-1 p-4 border rounded-xl resize-none outline-none transition-all text-sm font-medium ${activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'
+                                            ? 'bg-surface-2-light/30 border-dashed border-border-light cursor-not-allowed opacity-50'
+                                            : 'bg-surface-2-light dark:bg-surface-2-dark border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/20 text-text-primary-light dark:text-text-primary-dark'}`}
                                     />
                                 </div>
                             </div>

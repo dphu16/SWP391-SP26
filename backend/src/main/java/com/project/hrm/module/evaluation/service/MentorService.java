@@ -15,6 +15,7 @@ import com.project.hrm.module.evaluation.repository.PerformanceReviewsRepository
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.project.hrm.module.corehr.enums.EmployeeStatus;
 
 import java.util.List;
 import java.util.UUID;
@@ -41,7 +42,7 @@ public class MentorService {
         
         // Return all employees in the same department, excluding the mentor themselves
         return employeeRepository.findByDepartment_DeptId(deptId).stream()
-                .filter(e -> !e.getEmployeeId().equals(mentorId))
+                .filter(e -> !e.getEmployeeId().equals(mentorId) && e.getStatus() == EmployeeStatus.OFFICIAL)
                 .map(e -> MenteeDTO.builder()
                         .employeeId(e.getEmployeeId())
                         .fullName(e.getFullName())
@@ -51,6 +52,7 @@ public class MentorService {
                 .toList();
     }
 
+    @Transactional
     public List<GoalEvidence> getEvidencesByGoal(UUID goalId) {
         List<GoalEvidence> evidences = evidenceRepository.findByGoal_GoalId(goalId);
         

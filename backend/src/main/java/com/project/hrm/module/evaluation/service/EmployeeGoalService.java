@@ -58,7 +58,46 @@ public class EmployeeGoalService {
                 .orElseThrow(() -> new RuntimeException("Cycle not found"));
 
         KpiLibrary kpi = kpiLibraryRepository.findById(req.getKpiLibraryId())
-                .orElseThrow(() -> new RuntimeException("KPI not found"));
+                .orElseThrow(() -> new RuntimeException("KPI does not exist"));
+
+        // Rule: Cycle must be ACTIVE (Requirement 1 & 6)
+        if (cycle.getStatus() != com.project.hrm.module.evaluation.enums.CycleStatus.ACTIVE) {
+            throw new RuntimeException("KPIs can only be assigned when the evaluation cycle is ACTIVE");
+        }
+
+        // Rule: Current date must be within cycle duration (Requirement 6 - Period check)
+        java.time.LocalDate now = java.time.LocalDate.now();
+        if (now.isBefore(cycle.getStartDate())) {
+            throw new RuntimeException("Cycle '" + cycle.getCycleName() + "' has not started yet (Starts on: " + cycle.getStartDate() + "). Cannot assign goals.");
+        }
+        if (now.isAfter(cycle.getEndDate())) {
+            throw new RuntimeException("Cycle '" + cycle.getCycleName() + "' expired on " + cycle.getEndDate() + ". Cannot assign goals.");
+        }
+
+        // Rule: Employee must be OFFICIAL and not TERMINATED (Requirement 2)
+        if (employee.getStatus() != com.project.hrm.module.corehr.enums.EmployeeStatus.OFFICIAL) {
+            throw new RuntimeException("KPIs can only be assigned to OFFICIAL employees");
+        }
+
+        if (employee.getStatus() == com.project.hrm.module.corehr.enums.EmployeeStatus.TERMINATED) {
+            throw new RuntimeException("Cannot assign KPIs to TERMINATED employees");
+        }
+
+        // Rule: Validate Weight (Requirement 4)
+        if (req.getWeight() == null || req.getWeight() <= 0) {
+            throw new RuntimeException("KPI Weight must be greater than 0");
+        }
+
+        // Check if total weight exceeds 100%
+        Double currentTotalWeight = repository.findAllByEmployee_EmployeeIdAndCycle_CycleId(employee.getEmployeeId(), cycle.getCycleId())
+                .stream()
+                .filter(g -> !g.getKpiLibrary().getLibId().equals(kpi.getLibId()))
+                .mapToDouble(g -> g.getWeight() != null ? g.getWeight() : 0.0)
+                .sum();
+
+        if (currentTotalWeight + req.getWeight() > 100.001) { // Floating point safety
+            throw new RuntimeException("Total KPI weight cannot exceed 100%. Currently at: " + currentTotalWeight + "%");
+        }
 
         // Find the assigning Employee
         Employee assigner = null;
@@ -73,7 +112,7 @@ public class EmployeeGoalService {
         }
 
         if (assigner == null) {
-            throw new RuntimeException("Không tìm thấy thông tin người giao KPI");
+            throw new RuntimeException("Assigner information not found");
         }
 
         // Rule 1.1: Employee must belong to the assigning Manager's team (Same department or direct reporting line)
@@ -85,18 +124,18 @@ public class EmployeeGoalService {
                 && employee.getManager().getEmployeeId().equals(assigner.getEmployeeId());
 
         if (!inSameDepartment && !isDirectManager) {
-            throw new RuntimeException("Chỉ quản lý cùng phòng ban hoặc quản lý trực tiếp mới có quyền gán KPI cho nhân viên này");
+            throw new RuntimeException("Only managers in the same department or direct managers have the authority to assign KPIs to this employee");
         }
 
         // Rule 1.2: KPI must exist within the employee's department KPI Structure
         if (employee.getDepartment() == null) {
-            throw new RuntimeException("Nhân viên chưa được phân bổ phòng ban");
+            throw new RuntimeException("Employee has not been assigned to a department");
         }
         boolean isValidKpiForDept = kpiStructureDetailRepository.findByStructure_DepartmentId(employee.getDepartment().getDeptId())
                 .stream()
                 .anyMatch(detail -> detail.getKpiLibrary().getLibId().equals(kpi.getLibId()));
         if (!isValidKpiForDept) {
-            throw new RuntimeException("KPI này không thuộc danh mục phòng ban của nhân viên");
+            throw new RuntimeException("This KPI does not belong to the employee's department category");
         }
 
         // Use findAll to safely handle pre-existing duplicate rows
@@ -144,17 +183,17 @@ public class EmployeeGoalService {
                 break;
             case PERCENTAGE:
                 if (req.getTargetValue() == null || req.getTargetValue() <= 0) {
-                    throw new RuntimeException("Target value của loại Percentage bắt buộc nhập và phải lớn hơn 0");
+                    throw new RuntimeException("Target value for Percentage type is required and must be greater than 0");
                 }
                 if (req.getTargetValue() > 100) {
-                    throw new RuntimeException("Target value loại Percentage không được vượt quá 100");
+                    throw new RuntimeException("Target value for Percentage type cannot exceed 100");
                 }
                 goal.setTargetValue(req.getTargetValue());
                 break;
             case NUMERIC:
             default:
                 if (req.getTargetValue() == null || req.getTargetValue() <= 0) {
-                    throw new RuntimeException("Target value bắt buộc nhập và phải lớn hơn 0");
+                    throw new RuntimeException("Target value is required and must be greater than 0");
                 }
                 goal.setTargetValue(req.getTargetValue());
                 break;
@@ -165,8 +204,19 @@ public class EmployeeGoalService {
 
     // API 10 - Get employee goals (Active Cycle Only)
     public List<EmployeeGoal> getByEmployee(UUID employeeId){
-        PerformanceCycles activeCycle = cycleRepository.findFirstByStatusOrderByCreatedAtDesc(com.project.hrm.module.evaluation.enums.CycleStatus.ACTIVE)
+        java.time.LocalDate now = java.time.LocalDate.now();
+        
+        PerformanceCycles activeCycle = cycleRepository.findAll().stream()
+                .filter(c -> c.getStatus() == com.project.hrm.module.evaluation.enums.CycleStatus.ACTIVE)
+                .filter(c -> !now.isBefore(c.getStartDate()) && !now.isAfter(c.getEndDate()))
+                .findFirst()
                 .orElse(null);
+
+        // Fallback to most recent ACTIVE if none covers "now"
+        if (activeCycle == null) {
+            activeCycle = cycleRepository.findFirstByStatusOrderByCreatedAtDesc(com.project.hrm.module.evaluation.enums.CycleStatus.ACTIVE)
+                    .orElse(null);
+        }
                 
         if (activeCycle == null) return List.of();
         
@@ -187,19 +237,49 @@ public class EmployeeGoalService {
         GoalStatus current = goal.getStatus();
         GoalStatus next = req.getStatus();
 
+        // New Rule: Cannot perform actions if cycle is CLOSED or outside date range
+        if (goal.getCycle().getStatus() == com.project.hrm.module.evaluation.enums.CycleStatus.CLOSED) {
+            throw new RuntimeException("This evaluation cycle is closed. Status changes cannot be performed.");
+        }
+
+        java.time.LocalDate today = java.time.LocalDate.now();
+        if (today.isBefore(goal.getCycle().getStartDate())) {
+            throw new RuntimeException("The evaluation cycle has not started (Starts on: " + goal.getCycle().getStartDate() + ").");
+        }
+        if (today.isAfter(goal.getCycle().getEndDate())) {
+            throw new RuntimeException("The evaluation cycle ended on " + goal.getCycle().getEndDate() + ".");
+        }
+
         // Validate flow
         if (current == GoalStatus.ASSIGNED && next != GoalStatus.ACKNOWLEDGED)
-            throw new RuntimeException("Từ ASSIGNED chỉ có thể chuyển sang ACKNOWLEDGED (Nhân viên acknowledge / xác nhận)");
+            throw new RuntimeException("From ASSIGNED status, it can only transition to ACKNOWLEDGED (Employee acknowledges)");
+
+        // Rule: Only allow ACKNOWLEDGED if targetValue exists and > 0
+        if (next == GoalStatus.ACKNOWLEDGED && (goal.getTargetValue() == null || goal.getTargetValue() <= 0)) {
+            throw new RuntimeException("This KPI cannot be acknowledged yet because the Manager has not assigned a Target Value. Please wait for the Manager's update.");
+        }
 
         if (current == GoalStatus.ACKNOWLEDGED && next != GoalStatus.SUBMITTED)
-            throw new RuntimeException("Từ ACKNOWLEDGED chỉ có thể chuyển sang SUBMITTED (Nhân viên thực hiện và nộp kết quả)");
+            throw new RuntimeException("From ACKNOWLEDGED status, it can only transition to SUBMITTED (Employee performs and submits results)");
 
         if (current == GoalStatus.SUBMITTED && next != GoalStatus.COMPLETED && next != GoalStatus.ACKNOWLEDGED)
-            throw new RuntimeException("Từ SUBMITTED người đánh giá chỉ có thể duyệt sang COMPLETED hoặc từ chối quay về ACKNOWLEDGED");
+            throw new RuntimeException("From SUBMITTED status, the reviewer can only approve to COMPLETED or reject back to ACKNOWLEDGED");
+
+        // Rejection logic (SUBMITTED -> ACKNOWLEDGED)
+        if (current == GoalStatus.SUBMITTED && next == GoalStatus.ACKNOWLEDGED) {
+            // Comment is now optional
+        }
 
         goal.setStatus(next);
+        if (req.getComment() != null) {
+            goal.setReviewerComment(req.getComment());
+        }
 
         if (next == GoalStatus.SUBMITTED) {
+            java.time.LocalDate now = java.time.LocalDate.now();
+            if (now.isAfter(goal.getCycle().getEndDate())) {
+                throw new RuntimeException("Submission portal closed on " + goal.getCycle().getEndDate() + ". You cannot perform this action.");
+            }
             goal.setSubmittedAt(LocalDateTime.now());
         }
 
@@ -212,7 +292,46 @@ public class EmployeeGoalService {
                 .orElseThrow(() -> new RuntimeException("Goal not found"));
 
         if (goal.getStatus() != GoalStatus.ACKNOWLEDGED && goal.getStatus() != GoalStatus.SUBMITTED) {
-            throw new RuntimeException("Chỉ có thể nộp kết quả khi mục tiêu đang ở trạng thái ACKNOWLEDGED");
+            throw new RuntimeException("Results can only be submitted when the goal is in ACKNOWLEDGED status");
+        }
+
+        // Rule: Cannot submit if cycle is CLOSED or outside date range
+        if (goal.getCycle().getStatus() == com.project.hrm.module.evaluation.enums.CycleStatus.CLOSED) {
+            throw new RuntimeException("This evaluation cycle is closed. Evidence cannot be submitted.");
+        }
+
+        java.time.LocalDate today = java.time.LocalDate.now();
+        if (today.isBefore(goal.getCycle().getStartDate())) {
+            throw new RuntimeException("The evaluation cycle has not started. Evidence submission portal is not open yet.");
+        }
+        if (today.isAfter(goal.getCycle().getEndDate())) {
+            throw new RuntimeException("Evidence submission portal closed on " + goal.getCycle().getEndDate() + ". Evaluation cycle has ended.");
+        }
+
+        // Rule: Mandatory evidence
+        if (req.getImageUrl() == null || req.getImageUrl().isBlank()) {
+            throw new RuntimeException("You must upload at least one evidence file to confirm your work results.");
+        }
+
+        // Rule: Actual Value mandatory
+        if (req.getActualValue() == null) {
+            throw new RuntimeException("Please enter the Actual Value.");
+        }
+
+        // Rule: Validation based on Measurement Type
+        com.project.hrm.module.evaluation.enums.MeasurementType type = goal.getKpiLibrary().getMeasurementType();
+        if (type == com.project.hrm.module.evaluation.enums.MeasurementType.PERCENTAGE) {
+            if (req.getActualValue() < 0 || req.getActualValue() > 100) {
+                throw new RuntimeException("For PERCENTAGE metric, the actual result must be between 0 and 100.");
+            }
+        } else if (type == com.project.hrm.module.evaluation.enums.MeasurementType.RATING) {
+            if (req.getActualValue() < 1 || req.getActualValue() > 5) {
+                throw new RuntimeException("For RATING metric, the actual result must be between 1 and 5.");
+            }
+        } else if (type == com.project.hrm.module.evaluation.enums.MeasurementType.BOOLEAN) {
+            if (req.getActualValue() != 0 && req.getActualValue() != 1) {
+                throw new RuntimeException("For BOOLEAN metric, the actual result can only be 0 (No) or 1 (Yes).");
+            }
         }
 
         goal.setCurrentValue(req.getActualValue());
