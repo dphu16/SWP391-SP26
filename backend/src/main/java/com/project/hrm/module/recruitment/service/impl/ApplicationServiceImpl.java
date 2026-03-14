@@ -1,6 +1,7 @@
 package com.project.hrm.module.recruitment.service.impl;
 
 import com.project.hrm.module.recruitment.dto.request.EmailRequest;
+import com.project.hrm.module.recruitment.enums.JobStatus;
 import com.project.hrm.module.recruitment.service.CvReviewService;
 import com.project.hrm.module.recruitment.service.InterviewService;
 import com.project.hrm.module.recruitment.service.email.ExpectedInterview;
@@ -120,7 +121,7 @@ public class ApplicationServiceImpl implements ApplicationService {
                 .orElseThrow(() -> new RuntimeException("Not found application!"));
         OffsetDateTime start = request.getStart();
         OffsetDateTime end = request.getEnd();
-        if (!start.isBefore(end.minusDays(7))) {
+        if (!start.isBefore(end.minusDays(6))) {
             throw new RuntimeException("Start date must be at least a week before end date");
         }
         app.setStart(request.getStart());
@@ -193,6 +194,7 @@ public class ApplicationServiceImpl implements ApplicationService {
                 rejectEmail.sendEmail(emailRequest);
 
             }
+            job.setStatus(JobStatus.CLOSED);
             applicationRepository.saveAll(list);
         }
 

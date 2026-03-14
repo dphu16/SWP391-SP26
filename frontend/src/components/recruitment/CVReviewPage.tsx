@@ -147,8 +147,8 @@ const CVReviewPage: React.FC = () => {
             return;
         }
 
-        if (diffDays < 7) {
-            toastError("Validation Error", "The interview timeline must be at least 7 days apart.");
+        if (diffDays < 6) {
+            toastError("Validation Error", "The interview timeline must be at least 6 days apart.");
             return;
         }
 
@@ -371,7 +371,15 @@ const CVReviewPage: React.FC = () => {
                                             type="date"
                                             required
                                             value={startTime}
-                                            onChange={e => setStartTime(e.target.value)}
+                                            onChange={e => {
+                                                const newStart = e.target.value;
+                                                setStartTime(newStart);
+                                                if (newStart) {
+                                                    const d = new Date(newStart);
+                                                    d.setDate(d.getDate() + 6);
+                                                    setEndTime(d.toISOString().split("T")[0]);
+                                                }
+                                            }}
                                             className="w-full px-4 py-2.5 rounded-xl border border-emerald-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
                                         />
                                     </div>

@@ -49,17 +49,9 @@ const JobListPage: React.FC = () => {
         fetchJobs();
     }, [fetchJobs]);
 
-    const handleToggleStatus = async (e: React.MouseEvent, job: Job) => {
+    const handleToggleStatus = async (e: React.MouseEvent, job: Job, nextStatus: JobStatus) => {
         e.stopPropagation();
-        if (job.status === "CLOSED") return;
-
-        let nextStatus: JobStatus;
-
-        if (job.status === "OPEN") {
-            nextStatus = "CLOSED";
-        } else {
-            return;
-        }
+        if (job.status === nextStatus) return;
 
         if (!window.confirm(`Are you sure you want to change status from ${job.status} to ${nextStatus}?`)) return;
 
@@ -199,10 +191,12 @@ const JobListPage: React.FC = () => {
                                                         ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
                                                         : job.status === "DRAFT"
                                                             ? "bg-amber-50 text-amber-700 ring-amber-200"
-                                                            : ""
+                                                            : job.status === "FILLED"
+                                                                ? "bg-indigo-50 text-indigo-700 ring-indigo-200"
+                                                                : ""
                                                     }`}
                                             >
-                                                <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${job.status === "OPEN" ? "bg-emerald-500" : job.status === "DRAFT" ? "bg-amber-500" : "bg-rose-500"
+                                                <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${job.status === "OPEN" ? "bg-emerald-500" : job.status === "DRAFT" ? "bg-amber-500" : job.status === "FILLED" ? "bg-indigo-500" : "bg-rose-500"
                                                     }`}></span>
                                                 {job.status}
                                             </div>
@@ -264,13 +258,34 @@ const JobListPage: React.FC = () => {
                                                         </button>
                                                     </div>
                                                 )}
-                                                {job.status === "OPEN" && (
+                                                {job.status === "OPEN" && user?.employeeId === job.hrId && (
                                                     <button
-                                                        onClick={(e) => handleToggleStatus(e, job)}
+                                                        onClick={(e) => handleToggleStatus(e, job, "CLOSED")}
                                                         className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all cursor-pointer"
                                                         title="Close Job"
                                                     >
                                                         Close
+                                                    </button>
+                                                )}
+                                                {job.status === "FILLED" && user?.employeeId === job.hrId && (
+                                                    <button
+                                                        onClick={(e) => handleToggleStatus(e, job, "CLOSED")}
+                                                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all cursor-pointer"
+                                                        title="Close Job"
+                                                    >
+                                                        Close
+                                                    </button>
+                                                )}
+                                                {job.status === "CLOSED" && user?.employeeId === job.hrId && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            navigate(`/recruitment/jobs/edit/${job.id}`);
+                                                        }}
+                                                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all cursor-pointer"
+                                                        title="Reopen Job"
+                                                    >
+                                                        Reopen
                                                     </button>
                                                 )}
                                             </div>

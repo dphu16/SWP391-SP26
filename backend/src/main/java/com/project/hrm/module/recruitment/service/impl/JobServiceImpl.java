@@ -25,6 +25,7 @@ import java.util.UUID;
 public class JobServiceImpl implements JobService {
 
     private final JobRepository jobRepository;
+    private final ApplicationRepository applicationRepository;
     private final JobDetailRepository jobDetailRepository;
     private final REmployeeRepository REmployeeRepository;
     private final RPositionRepository RPositionRepository;
@@ -44,6 +45,11 @@ public class JobServiceImpl implements JobService {
     public List<JobResponse> getAllJob() {
         List<Job> responses = jobRepository.
                 findByStatusIsNotOrderByPostedAtDesc(JobStatus.DRAFT);
+        for (Job i : responses) {
+            if (i.getClosedAt().isBefore(OffsetDateTime.now())) {
+                i.setStatus(JobStatus.CLOSED);
+            }
+        }
         return responses.stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -52,6 +58,15 @@ public class JobServiceImpl implements JobService {
     @Override
     public List<JobResponse> getJobByEmployeeId(UUID id) {
         List<Job> responses = jobRepository.findByEmployee_EmployeeIdOrderByPostedAtDesc(id);
+        for (Job i : responses) {
+            if (i.getStatus().equals(JobStatus.DRAFT) && i.getPostedAt().isBefore(OffsetDateTime.now())) {
+                i.setStatus(JobStatus.OPEN);
+            } else {
+                if (i.getClosedAt().isBefore(OffsetDateTime.now())) {
+                    i.setStatus(JobStatus.CLOSED);
+                }
+            }
+        }
         return responses.stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -61,12 +76,23 @@ public class JobServiceImpl implements JobService {
     public JobResponse getJobById(UUID id) {
         Job entity = jobRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
+        if (entity.getStatus().equals(JobStatus.DRAFT) && entity.getPostedAt().isBefore(OffsetDateTime.now())) {
+            entity.setStatus(JobStatus.OPEN);
+        } else {
+            if (entity.getClosedAt().isBefore(OffsetDateTime.now())) {
+                entity.setStatus(JobStatus.CLOSED);
+            }
+        }
         return mapToResponse(entity);
     }
 
     @Override
     public List<JobResponse> getJobByStatus(JobStatus status) {
         List<Job> responses = jobRepository.findByStatus(status);
+        for (Job i : responses) {
+            long count = applicationRepository.countByJob_Id(i.getId());
+            if (i.getJobDetail().getMaxCv() <= count) i.setStatus(JobStatus.FILLED);
+        }
         return responses.stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -117,7 +143,13 @@ public class JobServiceImpl implements JobService {
         jobRepository.delete(entity);
     }
 
-    private void createJobDetail(JobDetail entity, CreateJobRequest request){
+    private void createJobDetail(JobDetail entity, CreateJobRequest request) {
+        if (request.getQuantity() < 1 || request.getQuantity() > 100) {
+            throw new RuntimeException("Quantity must be between 1 and 100!");
+        }
+        if (request.getMaxCv() < 50) {
+            throw new RuntimeException("Quantity applied CV must be greater and equal than 50!");
+        }
         entity.setQuantity(request.getQuantity());
         entity.setMaxCv(request.getMaxCv());
         entity.setLocation(request.getLocation());
@@ -139,7 +171,7 @@ public class JobServiceImpl implements JobService {
             entity.setRequest(jobRequest);
             entity.setPos(jobRequest.getPos());
             entity.setEmployee(jobRequest.getReportsTo());
-        } else{
+        } else {
             Employee employee = REmployeeRepository.findById(request.getHrId())
                     .orElseThrow(() -> new RuntimeException("Employee not found"));
             Position position = RPositionRepository.findById(request.getPosId())
@@ -158,10 +190,10 @@ public class JobServiceImpl implements JobService {
         jobRepository.save(entity);
     }
 
-    private JobResponse mapToResponse(Job entity){
+    private JobResponse mapToResponse(Job entity) {
         JobResponse response = new JobResponse();
         response.setId(entity.getId());
-        if(entity.getRequest()!=null) {
+        if (entity.getRequest() != null) {
             response.setReqId(entity.getRequest().getId());
         }
         JobDetail jobDetail = entity.getJobDetail();

@@ -54,7 +54,8 @@ const JobDetailPage: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-3">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${job.status === "OPEN" ? "bg-emerald-50 text-emerald-700" :
                             job.status === "CLOSED" ? "bg-rose-50 text-rose-700" :
-                                "bg-gray-100 text-gray-700"
+                                job.status === "FILLED" ? "bg-indigo-50 text-indigo-700" :
+                                    "bg-gray-100 text-gray-700"
                             }`}>
                             {job.status}
                         </span>
