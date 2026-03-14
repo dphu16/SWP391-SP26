@@ -5,6 +5,7 @@ import com.project.hrm.module.recruitment.service.CvReviewService;
 import com.project.hrm.module.recruitment.service.InterviewService;
 import com.project.hrm.module.recruitment.service.email.ExpectedInterview;
 import com.project.hrm.module.recruitment.service.email.OfferEmail;
+import com.project.hrm.module.recruitment.service.email.RejectEmail;
 import com.project.hrm.module.recruitment.service.email.UploadCV;
 import com.project.hrm.module.recruitment.dto.request.ApplicationRequest;
 import com.project.hrm.module.recruitment.dto.request.DateLimitRequest;
@@ -40,6 +41,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final InterviewService interviewService;
     private final FileService fileService;
     private final OfferEmail offerEmail;
+    private final RejectEmail rejectEmail;
 
     @Override
     public ApplicationResponse create(ApplicationRequest request) {
@@ -123,6 +125,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         }
         app.setStart(request.getStart());
         app.setEnd(request.getEnd());
+        app.setStatus(ApplicationStatus.INTERVIEW);
         applicationRepository.save(app);
         Job job = jobRepository.findById(app.getJob().getId())
                 .orElseThrow(() -> new RuntimeException("Not found job."));
@@ -169,10 +172,30 @@ public class ApplicationServiceImpl implements ApplicationService {
     public ApplicationResponse lastStage(UUID id) {
         Application app = applicationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Not found application!"));
+        Job job = jobRepository.findById(app.getJob().getId())
+                .orElseThrow(() -> new RuntimeException("Not found job"));
+        long count = applicationRepository.countByJob_IdAndStatus(app.getJob().getId(), ApplicationStatus.HIRED);
+        if(count==job.getJobDetail().getQuantity()){
+            throw new RuntimeException("Have full quantity in position!");
+        }
         if(app.getStatus().equals(ApplicationStatus.OFFER)){
             app.setStatus(ApplicationStatus.HIRED);
             applicationRepository.save(app);
         }
+
+        if((count+1)==job.getJobDetail().getQuantity()){
+            List<Application> list = applicationRepository.findByJob_IdAndStatusIsNot(app.getJob().getId(), ApplicationStatus.HIRED);
+            for(Application i: list){
+                if(i.getStatus().equals(ApplicationStatus.REJECTED)) continue;
+
+                i.setStatus(ApplicationStatus.REJECTED);
+                EmailRequest emailRequest = rejectGmail(i,job);
+                rejectEmail.sendEmail(emailRequest);
+
+            }
+            applicationRepository.saveAll(list);
+        }
+
         return mapToResponse(app);
     }
 
@@ -220,6 +243,15 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     private EmailRequest offerGmail(Application app, Job job){
+        EmailRequest request = new EmailRequest();
+        request.setTitle(job.getPos().getTitle());
+        request.setCandidateName(app.getCandidate().getFullName());
+        request.setCanEmail(app.getCandidate().getEmail());
+        request.setHrName(job.getEmployee().getFullName());
+        return request;
+    }
+
+    private EmailRequest rejectGmail(Application app, Job job){
         EmailRequest request = new EmailRequest();
         request.setTitle(job.getPos().getTitle());
         request.setCandidateName(app.getCandidate().getFullName());

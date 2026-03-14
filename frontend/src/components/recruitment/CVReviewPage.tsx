@@ -13,7 +13,7 @@ const CVReviewPage: React.FC = () => {
     const { error: toastError, success: toastSuccess } = useToast();
 
     const [app, setApp] = useState<Application | null>(null);
-    const [reviewRef, setReviewRef] = useState<{ reviewerName: string; comment: string } | null>(null);
+    const [reviewRef, setReviewRef] = useState<{ reviewerName: string; comment: string; result: string } | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -55,15 +55,32 @@ const CVReviewPage: React.FC = () => {
         try {
             setLoading(true);
             const res = await applicationService.getById(id);
-            setApp(res.data);
-            if (res.data.status !== "APPLIED") {
-                try {
-                    const reviewRes = await applicationService.getCVReview(id);
-                    setReviewRef(reviewRes.data);
-                } catch (e) {
-                    console.error("Could not fetch cv review info", e);
-                }
+            const appData = res.data;
+            setApp(appData);
 
+            // Populate dates if they exist (formatted for type="date" input)
+            if (appData.start) {
+                setStartTime(new Date(appData.start).toISOString().split("T")[0]);
+            }
+            if (appData.end) {
+                setEndTime(new Date(appData.end).toISOString().split("T")[0]);
+            }
+
+            // Always check for existing review to determine if we should show evaluation form or date form
+            try {
+                const reviewRes = await applicationService.getCVReview(id);
+                if (reviewRes.data) {
+                    setReviewRef(reviewRes.data);
+                    // If already PASSED but still in APPLIED status, jump to date form
+                    if (reviewRes.data.result === "PASSED" && appData.status === "APPLIED") {
+                        setShowDateForm(true);
+                    }
+                }
+            } catch (e) {
+                console.log("No review record found yet");
+            }
+
+            if (appData.status !== "APPLIED") {
                 try {
                     const intRes = await applicationService.getInterview(id);
                     setInterviews(intRes.data);
@@ -277,8 +294,8 @@ const CVReviewPage: React.FC = () => {
                     </div>
                 </section>
 
-                {/* Review Form */}
-                {app.status === "APPLIED" ? (
+                {/* Review Form: Only show if status is APPLIED and (no review yet OR review is PASSED and we're in date-limit phase) */}
+                {app.status === "APPLIED" && (!reviewRef || reviewRef.result === "PASSED") ? (
                     !showDateForm ? (
                         <section className="p-8 rounded-2xl border border-border-light bg-white shadow-card">
                             <div className="grid grid-cols-1 lg:grid-cols-10 gap-10">
@@ -477,14 +494,37 @@ const CVReviewPage: React.FC = () => {
 
                                 {reviewRef && (
                                     <div className="space-y-3">
-                                        <div>
-                                            <label className="text-[10px] font-bold text-gray-500 uppercase">Reviewer</label>
-                                            <p className="text-sm font-semibold text-gray-800">{reviewRef.reviewerName}</p>
+                                        <div className="flex flex-wrap gap-6">
+                                            <div>
+                                                <label className="text-[10px] font-bold text-gray-500 uppercase">Reviewer</label>
+                                                <p className="text-sm font-semibold text-gray-800">{reviewRef.reviewerName}</p>
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-gray-500 uppercase">Result</label>
+                                                <div className="mt-0.5">
+                                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${reviewRef.result === 'PASSED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                                        {reviewRef.result}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="text-[10px] font-bold text-gray-500 uppercase">Comment</label>
                                             <p className="text-sm text-gray-700 whitespace-pre-wrap">{reviewRef.comment || <span className="text-gray-400 italic">No comment provided.</span>}</p>
                                         </div>
+                                        {(app.start || app.end) && (
+                                            <div className="pt-3 border-t border-gray-100">
+                                                <label className="text-[10px] font-bold text-gray-500 uppercase">Interview Timeline</label>
+                                                <div className="flex gap-4 mt-1">
+                                                    <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md">
+                                                        <span>Start: {app.start ? new Date(app.start).toLocaleDateString() : 'N/A'}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md">
+                                                        <span>End: {app.end ? new Date(app.end).toLocaleDateString() : 'N/A'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

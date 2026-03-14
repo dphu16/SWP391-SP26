@@ -7,5 +7,7 @@ import java.util.UUID;
 
 public interface CvReviewRepository extends JpaRepository<CvReview, UUID> {
     CvReview findByApp_Id(UUID id);
+    boolean existsByApp_Id(UUID appId);
+
     void deleteByApp_Id(UUID appId);
 }
