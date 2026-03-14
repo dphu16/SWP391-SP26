@@ -121,8 +121,11 @@ public class ApplicationServiceImpl implements ApplicationService {
                 .orElseThrow(() -> new RuntimeException("Not found application!"));
         OffsetDateTime start = request.getStart();
         OffsetDateTime end = request.getEnd();
+        if(start.isBefore(OffsetDateTime.now().minusDays(1))){
+            throw new RuntimeException("Start date must be at least a day before now!");
+        }
         if (!start.isBefore(end.minusDays(6))) {
-            throw new RuntimeException("Start date must be at least a week before end date");
+            throw new RuntimeException("Start date must be at least a week before end date!");
         }
         app.setStart(request.getStart());
         app.setEnd(request.getEnd());
