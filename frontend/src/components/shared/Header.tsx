@@ -47,9 +47,8 @@ const ChevronDownIcon = ({ open }: { open: boolean }) => (
   <svg
     viewBox="0 0 16 16"
     fill="currentColor"
-    className={`w-3.5 h-3.5 text-text-secondary-light transition-transform duration-200 ${
-      open ? "rotate-180" : ""
-    }`}
+    className={`w-3.5 h-3.5 text-text-secondary-light transition-transform duration-200 ${open ? "rotate-180" : ""
+      }`}
   >
     <path
       fillRule="evenodd"
@@ -103,18 +102,16 @@ const MenuItem: React.FC<MenuItemProps> = ({
 }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer group ${
-      variant === "danger"
+    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer group ${variant === "danger"
         ? "text-rose-600 hover:bg-rose-50 "
         : "text-text-primary-light hover:bg-gray-100 "
-    }`}
+      }`}
   >
     <span
-      className={`flex-shrink-0 ${
-        variant === "danger"
+      className={`flex-shrink-0 ${variant === "danger"
           ? "text-rose-500"
           : "text-text-secondary-light group-hover:text-text-primary-light "
-      } transition-colors`}
+        } transition-colors`}
     >
       {icon}
     </span>
@@ -309,11 +306,10 @@ const Header: React.FC = () => {
 
             {/* Notification dropdown panel */}
             <div
-              className={`absolute right-0 top-full mt-2 w-80 bg-surface-light rounded-2xl border border-border-light shadow-dropdown overflow-hidden transition-all duration-200 origin-top-right z-50 ${
-                notifOpen
+              className={`absolute right-0 top-full mt-2 w-80 bg-surface-light rounded-2xl border border-border-light shadow-dropdown overflow-hidden transition-all duration-200 origin-top-right z-50 ${notifOpen
                   ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
                   : "opacity-0 scale-95 -translate-y-1 pointer-events-none"
-              }`}
+                }`}
             >
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border-light">
@@ -346,9 +342,8 @@ const Header: React.FC = () => {
                     <button
                       key={n.notificationId}
                       onClick={() => handleMarkOneRead(n.notificationId)}
-                      className={`w-full text-left px-4 py-3 border-b border-border-light last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer ${
-                        !n.isRead ? "bg-blue-50/60" : ""
-                      }`}
+                      className={`w-full text-left px-4 py-3 border-b border-border-light last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer ${!n.isRead ? "bg-blue-50/60" : ""
+                        }`}
                     >
                       <div className="flex items-start gap-2">
                         {!n.isRead && (
@@ -392,9 +387,8 @@ const Header: React.FC = () => {
               aria-expanded={dropdownOpen}
               aria-controls="user-dropdown"
               onClick={() => setDropdownOpen((o) => !o)}
-              className={`flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-xl transition-colors cursor-pointer group ${
-                dropdownOpen ? "bg-gray-100 " : "hover:bg-gray-100 "
-              }`}
+              className={`flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-xl transition-colors cursor-pointer group ${dropdownOpen ? "bg-gray-100 " : "hover:bg-gray-100 "
+                }`}
             >
               {/* Avatar */}
               {currentUser.avatarUrl ? (
@@ -428,11 +422,10 @@ const Header: React.FC = () => {
               id="user-dropdown"
               role="menu"
               aria-labelledby="user-menu-button"
-              className={`absolute right-0 top-full mt-2 w-64 bg-surface-light rounded-2xl border border-border-light shadow-dropdown overflow-hidden transition-all duration-200 origin-top-right z-50 ${
-                dropdownOpen
+              className={`absolute right-0 top-full mt-2 w-64 bg-surface-light rounded-2xl border border-border-light shadow-dropdown overflow-hidden transition-all duration-200 origin-top-right z-50 ${dropdownOpen
                   ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
                   : "opacity-0 scale-95 -translate-y-1 pointer-events-none"
-              }`}
+                }`}
             >
               {/* User identity header */}
               <div className="px-4 py-3.5 border-b border-border-light ">
@@ -466,13 +459,13 @@ const Header: React.FC = () => {
                 <MenuItem
                   icon={<UserIcon />}
                   label="My Profile"
-                  
+
                   onClick={openProfile}
                 />
                 <MenuItem
                   icon={<SettingsIcon />}
                   label="Settings"
-                  
+
                   onClick={() => setDropdownOpen(false)}
                 />
               </div>

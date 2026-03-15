@@ -11,7 +11,6 @@ import java.util.UUID;
 public interface ApplicationService {
     ApplicationResponse create(ApplicationRequest request);
     ApplicationResponse getApplicationById(UUID id);
-    List<ApplicationResponse> getApplicationByJobId(UUID id);
     List<ApplicationResponse> getAppByJobIdAndStatus(UUID id, ApplicationStatus status);
     ApplicationResponse update(UUID id, ApplicationRequest request);
     ApplicationResponse setDateLimit(DateLimitRequest request);

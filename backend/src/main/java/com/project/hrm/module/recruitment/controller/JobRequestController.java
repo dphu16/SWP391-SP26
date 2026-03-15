@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -39,23 +40,48 @@ public class JobRequestController {
     }
 
     @GetMapping("/department-name/{name}")
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<List<JobRequestResponse>> getRequestToManager(
-            @PathVariable String name) {
+            @PathVariable String name,
+            @RequestParam RequestStatus status) {
 
         List<JobRequestResponse> responses =
-                jobRequestService.getRequestByDepartmentName(name);
+                jobRequestService.getRequestByDepartmentName(name, status);
 
         return ResponseEntity.ok(responses);
     }
 
     @GetMapping("/hr/{id}")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<JobRequestResponse>> getRequestToHr(
-            @PathVariable UUID id) {
+            @PathVariable UUID id,
+            @RequestParam RequestStatus status) {
 
         List<JobRequestResponse> responses =
-                jobRequestService.getRequestByReportTo(id);
+                jobRequestService.getRequestByReportTo(id, status);
 
         return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/hr/null/submit")
+    @PreAuthorize("hasRole('HR')")
+    public ResponseEntity<List<JobRequestResponse>> getRequestByHr() {
+
+        List<JobRequestResponse> responses =
+                jobRequestService.getRequestByHr();
+
+        return ResponseEntity.ok(responses);
+    }
+
+    @PatchMapping("/hr/list/{id}")
+    @PreAuthorize("hasRole('HR')")
+    public ResponseEntity<List<JobRequestResponse>> choiceRequest(
+            @PathVariable UUID id,
+            @RequestBody List<UUID> ids) {
+
+        List<JobRequestResponse> response = jobRequestService.choiceHr(id, ids);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")

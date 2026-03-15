@@ -7,21 +7,36 @@ export type SidebarCapability =
   | "offboarding:manage"
   | "request:review"
   | "attendance:manage"
-  | "payroll:admin"
+  | "payroll:group"
+  | "payroll:finance"
+  | "payroll:hr"
+  | "payroll:tax"
   | "performance:view"
   | "recruitment:view";
 
+const allAuthenticatedRoles: UserRole[] = [
+  "HR",
+  "MANAGER",
+  "EMPLOYEE",
+  "FINANCE",
+  "MENTOR",
+  "INTERN",
+  "PROBATION",
+];
+
 const capabilityRoles: Record<SidebarCapability, UserRole[]> = {
-  "candidate:view": ["HR"],
+  "candidate:view": allAuthenticatedRoles,
   "employees:view": ["HR", "MANAGER"],
   "onboarding:manage": ["HR"],
   "offboarding:manage": ["HR", "MANAGER"],
-  "request:review": ["HR", "MANAGER"],
-  "attendance:manage": ["HR", "MANAGER"],
-  "payroll:admin": ["HR", "MANAGER", "FINANCE"],
-  "performance:view": ["HR", "MANAGER", "EMPLOYEE", "MENTOR"],
-  "recruitment:view": ["HR", "MANAGER"],
-
+  "request:review": ["MANAGER"],
+  "attendance:manage": ["MANAGER"],
+  "payroll:group": ["HR", "FINANCE"],
+  "payroll:finance": ["FINANCE"],
+  "payroll:hr": ["HR", "MANAGER"],
+  "payroll:tax": ["HR", "MANAGER"],
+  "performance:view": ["HR", "MANAGER", "FINANCE"],
+  "recruitment:view": ["HR"],
 };
 
 const routeCapabilityMap: Array<{
@@ -32,16 +47,18 @@ const routeCapabilityMap: Array<{
   { prefix: "/onboarding/progress", capability: "onboarding:manage" },
   { prefix: "/employees", capability: "employees:view" },
   { prefix: "/offboarding/requests", capability: "offboarding:manage" },
+  { prefix: "/offboarding/approval", capability: "offboarding:manage" },
   { prefix: "/attendance/review", capability: "request:review" },
-  { prefix: "/attendance/view-schedule", capability: "attendance:manage" },
   { prefix: "/attendance/create-schedule", capability: "attendance:manage" },
   { prefix: "/attendance/summary", capability: "attendance:manage" },
-  { prefix: "/payroll/hr", capability: "payroll:admin" },
-  { prefix: "/payroll/tax-report", capability: "payroll:admin" },
+  { prefix: "/payroll/employee", capability: "payroll:group" },
+  { prefix: "/payroll/finance", capability: "payroll:finance" },
+  { prefix: "/payroll/hr", capability: "payroll:hr" },
+  { prefix: "/payroll/tax-report", capability: "payroll:tax" },
   { prefix: "/performance", capability: "performance:view" },
   { prefix: "/recruitment", capability: "recruitment:view" },
   { prefix: "/recruitment/jobs", capability: "recruitment:view" },
-  { prefix: "/recruitment/requests", capability: "recruitment:view" },
+  { prefix: "/recruitment/job-requests", capability: "recruitment:view" },
   { prefix: "/recruitment/schedules", capability: "recruitment:view" },
 ];
 
@@ -56,7 +73,7 @@ export function canAccessPath(roles: UserRole[], pathname: string): boolean {
   if (!matched) return true;
 
   const allowedRoles = allow(matched.capability);
-  return roles.some(role => allowedRoles.includes(role));
+  return roles.some((role) => allowedRoles.includes(role));
 }
 
 export const sidebarRoleCapabilities = capabilityRoles;

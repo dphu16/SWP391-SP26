@@ -1,476 +1,313 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { getBatches, getTaxInsuranceReport, type PayrollBatchDTO, type TaxInsuranceDTO } from "../../services/payrollService";// ─── Helpers ───────────────────────────────────────────────────────────────────
+import { Icon } from "./PayrollModule";
+import {
+    getAllPeriods, getTaxReportByBatch, createPaymentRequest, getActiveFinanceAccounts, getMyPaymentRequests,
+    type TaxReportResponse, type PayrollPeriodResponse
+} from "../../services/payrollService";
+
 const fmt = (n?: number | null) =>
-    n != null ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n) : "—";
+    n == null ? "0 ₫" : new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
 
-const fmtPeriod = (period?: string | null) => {
-    if (!period) return "—";
-    const d = new Date(period);
-    return `Month ${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-};
-
-
-
-// ─── Icons ─────────────────────────────────────────────────────────────────────
-const IcReport = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
-    </svg>
-);
-const IcSend = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-        <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-    </svg>
-);
-const IcCheck = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-        <path d="M20 6L9 17l-5-5" />
-    </svg>
-);
-const IcRefresh = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-        <path d="M1 4v6h6M23 20v-6h-6" /><path d="M20.5 9A9 9 0 005.2 5.2L1 10M23 14l-4.3 4.8A9 9 0 013.5 15" />
-    </svg>
-);
-const IcChevron = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-        <path d="M6 9l6 6 6-6" />
-    </svg>
-);
-const IcShield = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
-);
-const IcTax = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3" /><circle cx="12" cy="17" r=".5" fill="currentColor" />
-    </svg>
-);
-const IcUsers = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
-    </svg>
-);
-
-// ─── Confirm Modal ─────────────────────────────────────────────────────────────
-const ConfirmModal: React.FC<{
-    batch: PayrollBatchDTO;
-    rows: TaxInsuranceDTO[];
-    onSend: () => void;
-    onClose: () => void;
-    sending: boolean;
-    sent: boolean;
-}> = ({ batch, rows, onSend, onClose, sending, sent }) => {
-    const totalPIT = rows.reduce((s, r) => s + r.pit, 0);
-    const totalIns = rows.reduce((s, r) => s + r.totalIns, 0);
-    const totalBHXH = rows.reduce((s, r) => s + r.bhxh, 0);
-    const totalBHYT = rows.reduce((s, r) => s + r.bhyt, 0);
-    const totalBHtn = rows.reduce((s, r) => s + r.bhtn, 0);
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
-                {/* Header */}
-                <div className="px-6 py-5 bg-gradient-to-r from-indigo-600 to-violet-700 flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-white flex-shrink-0">
-                        {sent ? <IcCheck /> : <IcSend />}
-                    </div>
-                    <div>
-                        <h3 className="text-base font-bold text-white">
-                            {sent ? "Report Sent" : "Confirm Send Report"}
-                        </h3>
-                        <p className="text-xs text-white/70">{fmtPeriod(batch.period)} · {rows.length} employees</p>
-                    </div>
-                </div>
-
-                {/* Body */}
-                {!sent ? (
-                    <>
-                        {/* Summary */}
-                        <div className="px-6 py-5 space-y-3">
-                            <p className="text-sm text-slate-600">The Personal Income Tax and Insurance report will be sent to the Finance - Accounting department:</p>
-
-                            <div className="rounded-xl bg-indigo-50 border border-indigo-100 divide-y divide-indigo-100">
-                                {[
-                                    { label: "Total PIT", value: fmt(totalPIT), color: "text-indigo-700" },
-                                    { label: "Total Social Insurance (8%)", value: fmt(totalBHXH), color: "text-slate-700" },
-                                    { label: "Total Health Insurance (1.5%)", value: fmt(totalBHYT), color: "text-slate-700" },
-                                    { label: "Total Unemployment Insurance (1%)", value: fmt(totalBHtn), color: "text-slate-700" },
-                                    { label: "Total Insurances", value: fmt(totalIns), color: "text-violet-700 font-bold" },
-                                ].map((r: { label: string, value: string, color: string }, i: number) => (
-                                    <div key={i} className="flex items-center justify-between px-4 py-2.5">
-                                        <span className="text-sm text-slate-600">{r.label}</span>
-                                        <span className={`text-sm font-semibold ${r.color}`}>{r.value}</span>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5">
-                                    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                                    <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-                                </svg>
-                                <p className="text-xs text-amber-700">Once sent, the data will be transferred to the accounting system. Please review carefully before confirming.</p>
-                            </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-                            <button onClick={onClose} disabled={sending} className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-white cursor-pointer disabled:opacity-50">Cancel</button>
-                            <button onClick={onSend} disabled={sending}
-                                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700 cursor-pointer shadow-sm disabled:opacity-75">
-                                <span className={sending ? "animate-spin" : ""}>
-                                    {sending ? <IcRefresh /> : <IcSend />}
-                                </span>
-                                {sending ? "Sending..." : "Confirm & Send"}
-                            </button>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <div className="flex flex-col items-center justify-center p-10 py-14 text-center animate-in fade-in zoom-in duration-500">
-                            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-5 shadow-inner ring-4 ring-emerald-50">
-                                <svg className="w-10 h-10 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-800 mb-2">Report Sent Successfully!</h3>
-                            <p className="text-sm text-slate-500 max-w-[280px] leading-relaxed mx-auto">
-                                The system has saved the status and notified the Finance department to proceed with the review.
-                            </p>
-                        </div>
-                        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-center">
-                            <button onClick={onClose}
-                                className="w-full sm:w-auto px-10 py-2.5 rounded-xl text-sm font-bold bg-slate-800 text-white hover:bg-slate-900 transition-all cursor-pointer shadow-sm">
-                                Done
-                            </button>
-                        </div>
-                    </>
-                )}
-            </div>
-        </div>
-    );
-};
-// ─── Success Toast Notification ────────────────────────────────────────────────
-const SuccessToast: React.FC<{ period: string; onClose: () => void }> = ({ period, onClose }) => (
-    <div className="fixed bottom-6 right-6 z-50 animate-[slideUp_0.3s_ease]">
-        <div className="flex items-start gap-3 px-5 py-4 rounded-2xl bg-white border border-emerald-200 shadow-xl shadow-emerald-100/50 max-w-sm">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <IcCheck />
-            </div>
-            <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-900">Report sent successfully!</p>
-                <p className="text-xs text-slate-500 mt-0.5">The Tax &amp; Insurance report {period} has been sent to Finance - Accounting.</p>
-                <div className="mt-2 h-1 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full animate-[shrink_4s_linear]" style={{ width: "100%" }} />
-                </div>
-            </div>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer mt-0.5">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M18 6L6 18M6 6l12 12" /></svg>
-            </button>
-        </div>
-    </div>
-);
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN: Tax & Insurance Report Page
-// ═══════════════════════════════════════════════════════════════════════════════
 const TaxInsuranceReport: React.FC = () => {
-    const [batches, setBatches] = useState<PayrollBatchDTO[]>([]);
-    const [selId, setSelId] = useState("");
-    const [batchLoad, setBatchLoad] = useState(true);
-    const [taxRows, setTaxRows] = useState<TaxInsuranceDTO[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
-    const [sending, setSending] = useState(false);
-    const [showToast, setShowToast] = useState(false);
-    const [sentPeriods, setSentPeriods] = useState<Set<string>>(new Set());
+    const [periods, setPeriods] = useState<PayrollPeriodResponse[]>([]);
+    const [selPeriodId, setSelPeriodId] = useState("");
+    const [periodLoad, setPeriodLoad] = useState(true);
 
-    // Load batches
-    const loadBatches = useCallback(async () => {
-        setBatchLoad(true);
+    const [report, setReport] = useState<TaxReportResponse[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [successMsg, setSuccessMsg] = useState<string | null>(null);
+    // Track which batchIds have already had TAX report sent (prevent duplicate)
+    const [sentBatches, setSentBatches] = useState<Set<string>>(new Set());
+
+    const loadData = useCallback(async () => {
         try {
-            const data = await getBatches();
-            setBatches(data);
-            if (data.length > 0) setSelId(id => id || data[0].batchId);
-        } finally { setBatchLoad(false); }
+            const [data, myReqs] = await Promise.all([
+                getAllPeriods(),
+                getMyPaymentRequests()
+            ]);
+
+            const sentBatchIds = new Set<string>();
+            myReqs.forEach(req => {
+                if (req.type === "TAX_INSURANCE" && req.payrollBatchId) {
+                    sentBatchIds.add(req.payrollBatchId);
+                }
+            });
+            setSentBatches(sentBatchIds);
+
+            const sorted = [...data].sort((a, b) => b.year - a.year || b.month - a.month);
+            setPeriods(sorted);
+            if (sorted.length > 0 && !selPeriodId) setSelPeriodId(sorted[0].periodId);
+        } catch {
+            setError("Lỗi khi tải dữ liệu ban đầu.");
+        } finally {
+            setPeriodLoad(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    useEffect(() => { loadBatches(); }, []); // eslint-disable-line
+    useEffect(() => { loadData(); }, [loadData]);
 
-    // Load review rows when batch changes
-    useEffect(() => {
-        if (!selId) return;
+    const selPeriod = periods.find(p => p.periodId === selPeriodId);
+    const batchId = selPeriod?.batchId;
+    const batchStatus = selPeriod?.batchStatus;
+
+    // Allow sending tax report when batch is PROCESSED (salary report already sent)
+    // or when LOCKED (final state). NOT on DRAFT/VALIDATED.
+    const canSendTax = (batchStatus === "PROCESSED" || batchStatus === "LOCKED") && !!(batchId);
+    const alreadySent = batchId ? sentBatches.has(batchId) : false;
+
+    const handleLoadReport = async () => {
+        if (!batchId) {
+            setError("This payroll period has no batch yet.");
+            return;
+        }
         setLoading(true);
-        setTaxRows([]);
-        getTaxInsuranceReport(selId)
-            .then(setTaxRows)
-            .catch(() => setTaxRows([]))
-            .finally(() => setLoading(false));
-    }, [selId]);
+        setError(null);
+        try {
+            const data = await getTaxReportByBatch(batchId);
+            setReport(data);
+            if (data.length === 0) setError("No payslips found or salary not yet calculated.");
+        } catch (e: unknown) {
+            const err = e as { response?: { data?: { message?: string } } };
+            setError(err.response?.data?.message || "Failed to load report from server.");
+            setReport([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    const totalGross = taxRows.reduce((s, r) => s + (r.grossSalary ?? 0), 0);
-    const totalPIT = taxRows.reduce((s, r) => s + (r.pit ?? 0), 0);
-    const totalIns = taxRows.reduce((s, r) => s + (r.totalIns ?? 0), 0);
-    const totalBHXH = taxRows.reduce((s, r) => s + (r.bhxh ?? 0), 0);
-    const totalBHYT = taxRows.reduce((s, r) => s + (r.bhyt ?? 0), 0);
-    const totalNet = taxRows.reduce((s, r) => s + (r.netSalary ?? 0), 0);
+    const handleSendReport = async () => {
+        if (!batchId || alreadySent) return;
+        setLoading(true); setError(null); setSuccessMsg(null);
+        try {
+            const accs = await getActiveFinanceAccounts();
+            if (!accs || accs.length === 0) throw new Error("No ACTIVE finance account found.");
+            await createPaymentRequest({
+                payrollBatchId: batchId,
+                hrNote: `Tax & Insurance declaration for period ${selPeriod?.month}/${selPeriod?.year}`,
+                type: "TAX_INSURANCE",
+                sourceAccountId: accs[0].accountId
+            });
+            setSentBatches(prev => new Set(prev).add(batchId));
+            setSuccessMsg(`Tax & Insurance declaration for ${selPeriod?.month}/${selPeriod?.year} sent to Finance successfully!`);
+        } catch (e: unknown) {
+            const err = e as { response?: { data?: { message?: string } } };
+            const msg = err.response?.data?.message || (e as Error).message || "Failed to send report to server.";
+            setError(msg);
+            if (msg.includes("đã được gửi") || msg.includes("trùng lặp")) {
+                setSentBatches(prev => new Set(prev).add(batchId));
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    const selBatch = batches.find(b => b.batchId === selId);
-    const period = fmtPeriod(selBatch?.period);
-    const alreadySent = sentPeriods.has(selId);
+    const totalGross = report.reduce((s, r) => s + r.grossSalary, 0);
+    const totalTax = report.reduce((s, r) => s + r.taxAmount, 0);
+    const totalIns = report.reduce((s, r) => s + r.insuranceAmount, 0);
+    const totalNet = report.reduce((s, r) => s + r.netSalary, 0);
 
-    const handleSend = async () => {
-        setSending(true);
-
-        // Simulate network communication to finance subsystem
-        await new Promise(r => setTimeout(r, 1000));
-
-        // Mark tax report as sent locally so Finance can see it
-        localStorage.setItem(`tax_report_sent_${selId}`, "true");
-        setSentPeriods(prev => new Set([...prev, selId]));
-
-        setShowConfirm(false);
-        setSending(false);
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 4500);
+    const BATCH_STATUS_CFG: Record<string, { text: string; bg: string; border: string; dot: string }> = {
+        LOCKED: { text: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200", dot: "bg-rose-500" },
+        PROCESSED: { text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", dot: "bg-emerald-500" },
+        VALIDATED: { text: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", dot: "bg-blue-500" },
+        DRAFT: { text: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200", dot: "bg-slate-400" },
     };
 
     return (
-        <div className="space-y-5">
-            {/* ── Page Header ──────────────────────────────────────────────────── */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900 p-6 shadow-lg">
-                <div className="absolute top-0 right-0 w-80 h-80 bg-violet-500/10 rounded-full -translate-y-1/3 translate-x-1/4 pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-400/10 rounded-full translate-y-1/2 -translate-x-1/4 pointer-events-none" />
-                <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-                    <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center shadow-lg flex-shrink-0"
-                            style={{ boxShadow: "0 0 28px rgba(99,102,241,0.45)" }}>
-                            <span className="text-white scale-125"><IcReport /></span>
-                        </div>
-                        <div>
-                            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-300/80">HR · Finance</span>
-                            <h1 className="text-2xl font-bold text-white tracking-tight">Tax &amp; Insurance Report</h1>
-                            <p className="text-sm text-indigo-200/70 mt-0.5">Calculate PIT, Social, Health, and Unemployment Insurances for payroll</p>
-                        </div>
-                    </div>
-                    {/* Sent badge */}
-                    {alreadySent && (
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-sm font-semibold self-start sm:self-auto">
-                            <IcCheck /> Report Sent
-                        </div>
-                    )}
-                </div>
-            </div>
+        <div className="py-4 px-4 space-y-6">
 
-            {/* ── Controls ─────────────────────────────────────────────────────── */}
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 flex flex-col sm:flex-row items-start sm:items-end gap-4">
-                <div className="flex-1 w-full sm:max-w-xs">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Select Batch</label>
-                    {batchLoad ? (
-                        <div className="h-11 rounded-xl bg-slate-100 animate-pulse" />
-                    ) : (
-                        <div className="relative">
-                            <select value={selId} onChange={e => { setSelId(e.target.value); }}
-                                className="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer">
-                                {batches.map((b: PayrollBatchDTO) => (
-                                    <option key={b.batchId} value={b.batchId}>
-                                        {fmtPeriod(b.period)} — {b.status}
-                                    </option>
-                                ))}
-                            </select>
-                            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><IcChevron /></span>
-                        </div>
-                    )}
-                </div>
-                <div className="flex items-center gap-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex-wrap sm:flex-nowrap">
-                    <span className="font-semibold text-slate-700">Employee Deductions:</span>
-                    <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold">Social 8%</span>
-                    <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Health 1.5%</span>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">Unemployment 1%</span>
-                    <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-semibold">Progressive PIT</span>
-                </div>
-            </div>
+            {/* ── Control panel ── */}
+            <div className="bg-white rounded-2xl border border-[#e2e8f0] p-6 shadow-sm mb-6 print:hidden">
+                <div className="flex flex-col sm:flex-row gap-4 items-end">
+                    {/* Period selector + Batch info */}
+                    <div className="flex-1">
+                        <label className="block text-sm font-semibold text-[#374151] mb-2">Select Payroll Period</label>
+                        {periodLoad ? (
+                            <div className="h-10 rounded-xl bg-[#f1f5f9] animate-pulse w-full max-w-sm" />
+                        ) : periods.length === 0 ? (
+                            <p className="text-sm text-[#94a3b8] italic">No payroll periods found.</p>
+                        ) : (
+                            <>
+                                <div className="relative max-w-sm">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]">{Icon.calendar}</span>
+                                    <select value={selPeriodId}
+                                        onChange={e => { setSelPeriodId(e.target.value); setReport([]); setError(null); setSuccessMsg(null); }}
+                                        className="w-full pl-9 pr-9 py-3 rounded-xl appearance-none border border-[#e2e8f0] bg-white text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#10b981]/30 focus:border-[#10b981] transition-all cursor-pointer">
+                                        {periods.map(p => (
+                                            <option key={p.periodId} value={p.periodId}>
+                                                Month {String(p.month).padStart(2, "0")}/{p.year} — {p.status}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none">{Icon.chevronDown}</span>
+                                </div>
 
-            {/* ── Stat Cards ───────────────────────────────────────────────────── */}
-            {taxRows.length > 0 && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[
-                        { label: "Total Emp", value: taxRows.length + " emp.", icon: <IcUsers />, from: "from-blue-500", to: "to-indigo-600" },
-                        { label: "Total Gross", value: fmt(totalGross), icon: <IcReport />, from: "from-violet-500", to: "to-purple-600" },
-                        { label: "Total PIT", value: fmt(totalPIT), icon: <IcTax />, from: "from-rose-500", to: "to-pink-600" },
-                        { label: "Total Ins (10.5%)", value: fmt(totalIns), icon: <IcShield />, from: "from-emerald-500", to: "to-teal-600" },
-                    ].map((c: { label: string, value: string, icon: React.ReactNode, from: string, to: string }, i: number) => (
-                        <div key={i} className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
-                            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${c.from} ${c.to} flex items-center justify-center text-white flex-shrink-0 shadow-sm`}>
-                                {c.icon}
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{c.label}</p>
-                                <p className="text-xl font-bold text-slate-800 mt-0.5">{c.value}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* ── Table ────────────────────────────────────────────────────────── */}
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                {/* Table header */}
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
-                    <div>
-                        <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-sm">
-                                <IcShield />
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-800">Employee Tax &amp; Insurance Details</h3>
-                                {taxRows.length > 0 && <p className="text-xs text-slate-400">{taxRows.length} employees · {period}</p>}
-                            </div>
-                        </div>
-                    </div>
-                    {taxRows.length > 0 && (
-                        <button onClick={() => window.print()}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
-                                <path d="M6 9V2h12v7" /><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2" /><rect x="6" y="14" width="12" height="8" />
-                            </svg>
-                            Print
-                        </button>
-                    )}
-                </div>
-
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-slate-100 bg-indigo-50/50">
-                                {["No.", "Employee", "Department", "Gross Salary", "Base Salary (Ins)",
-                                    "Social (8%)", "Health (1.5%)", "Unemp (1%)", "Total Ins (10.5%)", "PIT", "Net Salary"].map(h => (
-                                        <th key={h} className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-indigo-600/70 text-left whitespace-nowrap">{h}</th>
-                                    ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {loading ? (
-                                Array.from({ length: 5 }).map((_, i) => (
-                                    <tr key={i}>{Array.from({ length: 11 }).map((__, j) => (
-                                        <td key={j} className="px-4 py-4">
-                                            <div className={`h-4 rounded bg-slate-100 animate-pulse ${j === 1 ? "w-28" : "w-20"}`} />
-                                        </td>
-                                    ))}</tr>
-                                ))
-                            ) : taxRows.length === 0 ? (
-                                <tr><td colSpan={11} className="px-6 py-16 text-center">
-                                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4 text-slate-300">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-10 h-10">
-                                            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
-                                            <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />
-                                        </svg>
+                                {/* Batch ID + status badge — displayed below selector */}
+                                {selPeriod && (
+                                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                                        <span className="text-xs text-[#64748b] font-medium tracking-wide">Batch ID:</span>
+                                        <span className="font-mono text-xs text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-lg select-all">
+                                            {batchId ?? <span className="text-rose-400 italic">No batch yet</span>}
+                                        </span>
+                                        {batchStatus && (() => {
+                                            const cfg = BATCH_STATUS_CFG[batchStatus] ?? BATCH_STATUS_CFG.DRAFT;
+                                            return (
+                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${cfg.text} ${cfg.bg} ${cfg.border}`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                                                    {batchStatus}
+                                                </span>
+                                            );
+                                        })()}
+                                        {canSendTax && (
+                                            <span className="text-[11px] text-[#10b981] font-semibold">✓ Eligible to send declaration</span>
+                                        )}
+                                        {!canSendTax && batchStatus && (
+                                            <span className="text-[11px] text-[#b45309] font-semibold italic">Salary report must be sent first</span>
+                                        )}
                                     </div>
-                                    <p className="text-sm font-semibold text-slate-600">No data found in this batch</p>
-                                    <p className="text-xs text-slate-400 mt-1">Please select a calculated batch or go to Payroll Management (HR) to calculate payroll.</p>
-                                </td></tr>
-                            ) : (
-                                taxRows.map((r: TaxInsuranceDTO, idx: number) => (
-                                    <tr key={idx} className="hover:bg-indigo-50/20 transition-colors">
-                                        <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{String(idx + 1).padStart(2, "0")}</td>
-                                        <td className="px-4 py-3.5">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                                    {r.employeeName?.charAt(0).toUpperCase()}
+                                )}
+                            </>
+                        )}
+                    </div>
+
+                    {/* Buttons */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <button onClick={handleLoadReport} disabled={loading || !batchId}
+                            className="relative group overflow-hidden bg-white border border-[#e2e8f0] text-[#0f172a] px-6 py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#f8fafc] disabled:opacity-50 cursor-pointer transition-all">
+                            {loading ? "Loading..." : "Load Report"}
+                        </button>
+                        {report.length > 0 && !loading && (
+                            <button onClick={handleSendReport}
+                                disabled={!canSendTax || alreadySent}
+                                className="relative group overflow-hidden bg-[#10b981] text-white px-6 py-3 rounded-xl font-bold text-sm shadow-[0_4px_14px_rgb(16,185,129,0.3)] hover:shadow-[0_6px_20px_rgb(16,185,129,0.4)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2 transition-all transform hover:-translate-y-0.5"
+                                title={alreadySent ? "Already sent for this batch" : !canSendTax ? "Salary report (SALARY) must be sent first" : ""}>
+                                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></span>
+                                {Icon.money}
+                                {alreadySent ? "Already Sent" : "Send to Finance"}
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Messages */}
+                {error && (
+                    <div className="mt-4 p-4 rounded-xl bg-[#fef2f2] border border-[#fecaca] text-[#dc2626] text-sm font-medium flex items-center gap-3">
+                        {Icon.warning} <span className="flex-1">{error}</span>
+                    </div>
+                )}
+                {successMsg && (
+                    <div className="mt-4 p-4 rounded-xl bg-[#f0fdf4] border border-[#10b981] text-[#059669] text-sm font-medium flex items-center gap-3">
+                        <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        <span className="flex-1">{successMsg}</span>
+                    </div>
+                )}
+            </div>
+
+            {/* ── Report table ── */}
+            {!loading && report.length > 0 && (
+                <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm overflow-hidden animate-fade-in">
+                    {/* Table header */}
+                    <div className="p-5 border-b border-[#f1f5f9] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h3 className="text-base font-bold text-[#0f172a] flex items-center gap-2">
+                                <svg className="w-5 h-5 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                </svg>
+                                Report — Month {selPeriod?.month}/{selPeriod?.year}
+                            </h3>
+                            <p className="text-sm font-medium text-[#64748b] mt-1 ml-7">
+                                {report.length} employees
+                            </p>
+                        </div>
+                        {/* KPI pills */}
+                        <div className="flex gap-2 flex-wrap text-right">
+                            <div className="px-4 py-2 rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
+                                <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">Tax (PIT)</p>
+                                <p className="text-sm font-extrabold text-rose-600">{fmt(totalTax)}</p>
+                            </div>
+                            <div className="px-4 py-2 rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
+                                <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">Insurance</p>
+                                <p className="text-sm font-extrabold text-indigo-600">{fmt(totalIns)}</p>
+                            </div>
+                            <div className="px-4 py-2 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] shadow-sm">
+                                <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">Net Total</p>
+                                <p className="text-sm font-extrabold text-[#10b981]">{fmt(totalNet)}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-[#e2e8f0]">
+                                    <th className="px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Employee</th>
+                                    <th className="px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Dept / Position</th>
+                                    <th className="px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Gross</th>
+                                    <th className="px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Insurance (10.5%)</th>
+                                    <th className="px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Tax (PIT)</th>
+                                    <th className="px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Net Salary</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {report.map(r => (
+                                    <tr key={r.employeeId} className="border-b border-[#f1f5f9] hover:bg-[#f8fafc] transition-colors">
+                                        {/* Employee */}
+                                        <td className="px-5 py-4">
+                                            <div className="flex items-center justify-center gap-3 text-left min-w-[180px]">
+                                                <div className="w-9 h-9 rounded-xl bg-[#e6faf3] flex items-center justify-center flex-shrink-0">
+                                                    <svg className="w-4 h-4 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                    </svg>
                                                 </div>
-                                                <span className="font-semibold text-slate-800 whitespace-nowrap">{r.employeeName}</span>
+                                                <div className="flex-1">
+                                                    <div className="font-semibold text-[#0f172a] text-[13px]">{r.employeeName}</div>
+                                                    <div className="text-[10px] text-[#94a3b8] font-mono mt-0.5">{r.employeeCode}</div>
+                                                </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3.5 text-slate-500 text-xs whitespace-nowrap">{r.department || "—"}</td>
-                                        <td className="px-4 py-3.5 font-semibold text-slate-800 whitespace-nowrap">{fmt(r.grossSalary)}</td>
-                                        <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">{fmt(r.baseSalary)}</td>
-                                        <td className="px-4 py-3.5 text-blue-700 whitespace-nowrap">-{fmt(r.bhxh)}</td>
-                                        <td className="px-4 py-3.5 text-green-700 whitespace-nowrap">-{fmt(r.bhyt)}</td>
-                                        <td className="px-4 py-3.5 text-amber-700 whitespace-nowrap">-{fmt(r.bhtn)}</td>
-                                        <td className="px-4 py-3.5 font-semibold text-emerald-700 whitespace-nowrap">-{fmt(r.totalIns)}</td>
-                                        <td className="px-4 py-3.5 font-semibold text-rose-600 whitespace-nowrap">-{fmt(r.pit)}</td>
-                                        <td className="px-4 py-3.5">
-                                            <span className="font-bold text-violet-700 whitespace-nowrap">{fmt(r.netSalary)}</span>
+                                        {/* Dept */}
+                                        <td className="px-5 py-4 text-center">
+                                            <div className="font-medium text-[#334155] text-[13px]">{r.department || "—"}</div>
+                                            <div className="text-xs text-[#94a3b8] mt-0.5">{r.position || "—"}</div>
+                                        </td>
+                                        {/* Gross */}
+                                        <td className="px-5 py-4 text-center font-semibold text-[#0f172a] tabular-nums text-[13px]">{fmt(r.grossSalary)}</td>
+                                        {/* Insurance */}
+                                        <td className="px-5 py-4 text-center tabular-nums">
+                                            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
+                                                −{fmt(r.insuranceAmount)}
+                                            </span>
+                                        </td>
+                                        {/* Tax */}
+                                        <td className="px-5 py-4 text-center tabular-nums">
+                                            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-600 border border-rose-100">
+                                                −{fmt(r.taxAmount)}
+                                            </span>
+                                        </td>
+                                        {/* Net */}
+                                        <td className="px-5 py-4 text-center tabular-nums">
+                                            <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                {fmt(r.netSalary)}
+                                            </span>
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                        {taxRows.length > 0 && (
+                                ))}
+                            </tbody>
                             <tfoot>
-                                <tr className="border-t-2 border-indigo-100 bg-indigo-50/60">
-                                    <td colSpan={3} className="px-4 py-3 text-xs font-bold text-indigo-700 uppercase tracking-wide">Total</td>
-                                    <td className="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">{fmt(totalGross)}</td>
-                                    <td className="px-4 py-3" />
-                                    <td className="px-4 py-3 font-bold text-blue-700 whitespace-nowrap">-{fmt(totalBHXH)}</td>
-                                    <td className="px-4 py-3 font-bold text-green-700 whitespace-nowrap">-{fmt(totalBHYT)}</td>
-                                    <td className="px-4 py-3 font-bold text-amber-700 whitespace-nowrap">-{fmt(taxRows.reduce((s: number, r: TaxInsuranceDTO) => s + (r.bhtn ?? 0), 0))}</td>
-                                    <td className="px-4 py-3 font-bold text-emerald-700 whitespace-nowrap">-{fmt(totalIns)}</td>
-                                    <td className="px-4 py-3 font-bold text-rose-600 whitespace-nowrap">-{fmt(totalPIT)}</td>
-                                    <td className="px-4 py-3 font-bold text-violet-700 text-base whitespace-nowrap">{fmt(totalNet)}</td>
+                                <tr className="border-t-2 border-[#e2e8f0] bg-[#f8fafc]">
+                                    <td colSpan={2} className="px-5 py-3.5 text-center text-xs font-black text-[#0f172a] uppercase tracking-widest">Total</td>
+                                    <td className="px-5 py-3.5 text-center font-extrabold text-[#0f172a] tabular-nums text-[13px]">{fmt(totalGross)}</td>
+                                    <td className="px-5 py-3.5 text-center font-extrabold text-indigo-600 tabular-nums text-[13px]">−{fmt(totalIns)}</td>
+                                    <td className="px-5 py-3.5 text-center font-extrabold text-rose-600 tabular-nums text-[13px]">−{fmt(totalTax)}</td>
+                                    <td className="px-5 py-3.5 text-center font-extrabold text-[#10b981] tabular-nums text-[13px]">{fmt(totalNet)}</td>
                                 </tr>
                             </tfoot>
-                        )}
-                    </table>
+                        </table>
+                    </div>
                 </div>
-
-                {/* ── Footer action buttons ─────────────────────────────────────── */}
-                {taxRows.length > 0 && (
-                    <div className="px-6 py-4 border-t border-slate-100 bg-gradient-to-r from-slate-50 to-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div className="text-sm text-slate-500">
-                            Total Deductions: <span className="font-bold text-rose-600">{fmt(totalPIT + totalIns)}</span>
-                            <span className="text-slate-300 mx-2">·</span>
-                            Net Salary: <span className="font-bold text-violet-700">{fmt(totalNet)}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            {alreadySent ? (
-                                <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-emerald-50 border border-emerald-200 text-emerald-700">
-                                    <IcCheck /> Sent Report {period}
-                                </div>
-                            ) : (
-                                <>
-                                    <button onClick={() => window.print()}
-                                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                                            <path d="M6 9V2h12v7" /><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2" /><rect x="6" y="14" width="12" height="8" />
-                                        </svg>
-                                        Print
-                                    </button>
-                                    <button onClick={() => setShowConfirm(true)} disabled={sending || selBatch?.status !== "LOCKED"}
-                                        className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${sending ? "bg-indigo-400 text-white cursor-wait" :
-                                            selBatch?.status !== "LOCKED" ? "bg-slate-200 text-slate-500 cursor-not-allowed" :
-                                                "bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700 cursor-pointer"
-                                            }`}>
-                                        <span className={sending ? "animate-spin" : ""}>
-                                            {selBatch?.status !== "LOCKED" ? <IcShield /> : sending ? <IcRefresh /> : <IcSend />}
-                                        </span>
-                                        {selBatch?.status !== "LOCKED" ? "Require Payroll Locked" : sending ? "Sending..." : "Send Report"}
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                )}
-                {/* Notice if not locked */}
-                {taxRows.length > 0 && selBatch && selBatch.status !== "LOCKED" && !alreadySent && (
-                    <div className="px-6 py-3 bg-amber-50 border-t border-amber-100 flex items-center justify-center gap-2 text-xs text-amber-700 font-medium">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-                        Nút gửi báo cáo thuế chỉ khả dụng sau khi đợt lương này đã được khoá (HR bấm Send Report bên Payroll Management)
-                    </div>
-                )}
-            </div>
-
-            {/* Modals */}
-            {showConfirm && selBatch && (
-                <ConfirmModal batch={selBatch} rows={taxRows} onSend={handleSend} onClose={() => setShowConfirm(false)} sending={sending} sent={sentPeriods.has(selBatch.batchId)} />
             )}
-            {showToast && <SuccessToast period={period} onClose={() => setShowToast(false)} />}
         </div>
     );
 };

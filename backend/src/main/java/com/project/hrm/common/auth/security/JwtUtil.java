@@ -1,7 +1,7 @@
 package com.project.hrm.common.auth.security;
 
-import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.module.corehr.repository.EmployeeRepository;
+
+import com.project.hrm.module.corehr.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -13,11 +13,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
+
 
 @Component
 public class JwtUtil {
@@ -28,10 +28,10 @@ public class JwtUtil {
     @Value("${app.jwt.access-token-expiry}")
     private long expirationMs;
 
-    private final EmployeeRepository employeeRepository;
+    private final UserRepository userRepository;
 
-    public JwtUtil(EmployeeRepository employeeRepository) {
-        this.employeeRepository = employeeRepository;
+    public JwtUtil(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
     private SecretKey key() {
@@ -63,9 +63,11 @@ public class JwtUtil {
             }
         }
 
-        // Add employeeId to JWT
-        employeeRepository.findByUser_Email(userDetails.getUsername())
-                .ifPresent(emp -> claims.put("employeeId", emp.getEmployeeId().toString()));
+        // Add employeeId to JWT directly from User table
+        // Đoạn code đã sửa
+        userRepository.findByEmail(userDetails.getUsername())
+                .filter(u -> u.getEmployee() != null && u.getEmployee().getEmployeeId() != null)
+                .ifPresent(u -> claims.put("employeeId", u.getEmployee().getEmployeeId().toString()));
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -79,6 +81,15 @@ public class JwtUtil {
 
     public String extractUsername(String token) {
         return parseClaims(token).getSubject();
+    }
+
+    /**
+     * Extract the employeeId claim embedded in the token (maybe null for users
+     * without employee records).
+     */
+    public String extractEmployeeId(String token) {
+        Object empId = parseClaims(token).get("employeeId");
+        return empId != null ? empId.toString() : null;
     }
 
     public boolean isValid(String token, UserDetails userDetails) {

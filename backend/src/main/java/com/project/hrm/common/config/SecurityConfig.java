@@ -37,7 +37,11 @@ public class SecurityConfig {
                         throws Exception {
                 http
                                 .authenticationProvider(authenticationProvider)
-                                .csrf(csrf -> csrf.disable())
+                        .cors(cors -> {}) //Có thể xóa
+                        .csrf(csrf -> csrf.disable())
+                        .headers(headers -> headers  //Có thể xóa
+                                .frameOptions(frame -> frame.disable())  //Có thể xóa
+                        )   //Có thể xóa
                                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                                 .authorizeHttpRequests(auth -> auth
@@ -49,6 +53,8 @@ public class SecurityConfig {
                                                 .requestMatchers("/oauth2/**").permitAll()
                                                 .requestMatchers("/api/jobs/candidate/**").permitAll()
                                                 .requestMatchers("/api/app/candidate/**").permitAll()
+                                                .requestMatchers("/error").permitAll()
+                                                .requestMatchers("/cv/**").permitAll()
 
                                                 .anyRequest().authenticated())
 

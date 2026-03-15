@@ -48,8 +48,11 @@ export interface Application {
   phone: string;
   cvUrl: string;
   status: string;
+  score: number | null;
   onboardingStatus?: "PENDING" | "IN_PROGRESS" | "COMPLETED";
   createdAt?: string;
+  start?: string;
+  end?: string;
 }
 
 // DTO để tạo nhân viên mới (POST /api/employees/new)

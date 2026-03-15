@@ -1,6 +1,6 @@
 package com.project.hrm.module.recruitment.service.email;
 
-import com.project.hrm.module.recruitment.entity.Application;
+import com.project.hrm.module.recruitment.dto.request.EmailRequest;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -20,13 +20,13 @@ public class UploadCV {
     }
 
     @Async
-    public void sendEmail(Application app) {
+    public void sendEmail(EmailRequest request) {
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setTo(app.getCandidate().getEmail());
+            helper.setTo(request.getCanEmail());
             helper.setSubject("Application Submitted Successfully");
 
             String content = """
@@ -39,20 +39,20 @@ public class UploadCV {
             <br>
             <p>HR Team</p>
             """.formatted(
-                    app.getCandidate().getFullName(),
-                    app.getJob().getPos().getTitle(),
-                    app.getCandidate().getPhone()
+                    request.getCandidateName(),
+                    request.getTitle(),
+                    request.getCanPhone()
             );
 
             helper.setText(content, true);
 
             // đường dẫn file CV
-            File file = new File("uploads/" + app.getCvUrl());
+            File file = new File("uploads/" + request.getCvUrl());
 
             FileSystemResource resource = new FileSystemResource(file);
 
             // attach file
-            helper.addAttachment("CV_" + app.getCandidate().getFullName() + ".pdf", resource);
+            helper.addAttachment("CV_" + request.getCandidateName() + ".pdf", resource);
 
             mailSender.send(message);
 

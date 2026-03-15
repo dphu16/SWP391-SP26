@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -50,5 +51,7 @@ public class Application {
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
 
+    @Column(name = "score", precision = 4, scale = 2)
+    private BigDecimal score;
 
 }

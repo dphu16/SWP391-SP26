@@ -36,7 +36,6 @@ export const sidebarConfig: SidebarSection[] = [
         path: "/onboarding/hired",
         icon: Icons.recruitment,
         // GET /api/applications/hired
-        roles: allow("candidate:view"),
       },
       {
         key: "employees",
@@ -62,12 +61,12 @@ export const sidebarConfig: SidebarSection[] = [
             path: "/offboarding/requests",
             roles: allow("offboarding:manage"),
           },
-            {
-                key: "offboarding-approval",
-                label: "Approval",
-                path: "/offboarding/approval",
-                roles: allow("offboarding:manage"),
-            },
+          {
+            key: "offboarding-approval",
+            label: "Approval",
+            path: "/offboarding/approval",
+            roles: allow("offboarding:manage"),
+          },
         ],
       },
       {
@@ -76,6 +75,12 @@ export const sidebarConfig: SidebarSection[] = [
         icon: Icons.checklist,
         // All authenticated users can submit requests; HR/MANAGER can review
         children: [
+          {
+            key: "my-requests",
+            label: "My Requests",
+            path: "/requests/my-requests",
+            // GET /api/v1/requests?mine=true → any authenticated
+          },
           {
             key: "create-request",
             label: "Create Request",
@@ -104,13 +109,11 @@ export const sidebarConfig: SidebarSection[] = [
         key: "attendance",
         label: "Attendance",
         icon: Icons.attendance,
-        roles: allow("attendance:manage"),
         children: [
           {
             key: "view-schedule",
             label: "View Schedule",
             path: "/attendance/view-schedule",
-            roles: allow("attendance:manage"),
           },
           {
             key: "create-schedule",
@@ -130,7 +133,8 @@ export const sidebarConfig: SidebarSection[] = [
         key: "payroll",
         label: "Payroll",
         icon: Icons.payroll,
-        // Payroll visible to everyone (self payslips) + HR/MANAGER/FINANCE for admin
+        roles: allow("payroll:group"),
+        // Payroll visible for HR/FINANCE group; tax report is limited to HR/MANAGER
         children: [
           {
             key: "my-payslips",
@@ -139,16 +143,22 @@ export const sidebarConfig: SidebarSection[] = [
             // Self-service — any authenticated
           },
           {
+            key: "finance-payment",
+            label: "Finance Payment",
+            path: "/payroll/finance",
+            roles: allow("payroll:finance"),
+          },
+          {
             key: "hr-payroll",
-            label: "HR Payroll",
+            label: "Payroll Management",
             path: "/payroll/hr",
-            roles: allow("payroll:admin"),
+            roles: allow("payroll:hr"),
           },
           {
             key: "tax-insurance",
-            label: "Tax & Insurance",
+            label: "Tax & Insurance Reports",
             path: "/payroll/tax-report",
-            roles: allow("payroll:admin"),
+            roles: allow("payroll:tax"),
           },
         ],
       },

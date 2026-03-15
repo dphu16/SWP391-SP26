@@ -8,4 +8,5 @@ import java.util.UUID;
 public interface CvReviewService {
     CvReviewResponse create(CvReviewRequest request);
     CvReviewResponse getReviewById(UUID id);
+    void deleteReview(UUID appId);
 }

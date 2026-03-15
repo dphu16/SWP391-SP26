@@ -51,6 +51,7 @@ export interface Application {
   onboardingStatus: string;
   progressStatus: string | null;
   rejectionReason: string | null;
+  score: number | null;
   createdAt: string;
 }
 

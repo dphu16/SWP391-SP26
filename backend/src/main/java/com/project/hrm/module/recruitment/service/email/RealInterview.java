@@ -1,7 +1,6 @@
 package com.project.hrm.module.recruitment.service.email;
 
-import com.project.hrm.module.recruitment.entity.Application;
-import com.project.hrm.module.recruitment.entity.Interview;
+import com.project.hrm.module.recruitment.dto.request.EmailRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -14,11 +13,9 @@ public class RealInterview {
     private final JavaMailSender mailSender;
 
     @Async
-    public void sendEmail(Interview interview) {
-        Application app = interview.getApp();
-        String title = app.getJob().getPos().getTitle();
+    public void sendEmail(EmailRequest request) {
 
-        String subject = "Interview Invitation - " + title;
+        String subject = "Interview Invitation - " + request.getTitle();
 
         String body = """
                 Dear %s,
@@ -36,14 +33,14 @@ public class RealInterview {
                 Best regards,
                 Recruitment Team
                 """.formatted(
-                app.getCandidate().getFullName(),
-                title,
-                interview.getScheduleTime(),
-                app.getJob().getEmployee().getFullName()
+                request.getCandidateName(),
+                request.getTitle(),
+                request.getDate(),
+                request.getHrName()
         );
 
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(app.getCandidate().getEmail());
+        message.setTo(request.getCanEmail());
         message.setSubject(subject);
         message.setText(body);
 

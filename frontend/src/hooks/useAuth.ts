@@ -43,19 +43,20 @@ export function useAuth() {
     const payload = decodeJwt(token);
     if (!payload) return null;
 
-    const roleFromSingleClaim = normalizeRole(payload.role);
-    const roleFromArrayClaim = normalizeRole(payload.roles?.[0]);
-    const resolvedRole =
-      roleFromSingleClaim ?? roleFromArrayClaim ?? "EMPLOYEE";
+        // JWT stores roles as array: ["ROLE_HR"], ["ROLE_EMPLOYEE"], etc.
+        // Strip the "ROLE_" prefix and take the first role
+        const rawRoles: string[] = Array.isArray(payload.roles) ? payload.roles : [];
+        const firstRole = rawRoles[0]?.replace(/^ROLE_/, "") as UserRole ?? "EMPLOYEE";
 
-    return {
-      username: payload.sub,
-      role: resolvedRole,
-      fullName: payload.fullName,
-      employeeId: payload.employeeId,
-      avatarUrl: payload.avatarUrl,
-    };
-  }, [token]);
+        return {
+            username: payload.sub,
+            role: firstRole,
+            fullName: payload.fullName,
+            employeeId: payload.employeeId,
+            avatarUrl: payload.avatarUrl,
+        };
+    }, []);
+
 
   const hasRole = useCallback(
     (...roles: UserRole[]): boolean => {

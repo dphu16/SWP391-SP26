@@ -120,18 +120,24 @@ const PublicJobDetail: React.FC = () => {
                 <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm mb-8">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                         <h1 className="text-3xl font-extrabold text-gray-900">{job.posName}</h1>
-                        {!showApplyForm && (
-                            <button
-                                onClick={() => {
-                                    setShowApplyForm(true);
-                                    setTimeout(() => {
-                                        document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth' });
-                                    }, 100);
-                                }}
-                                className="px-8 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-hover transition-colors shadow-lg shadow-primary/30"
-                            >
-                                Apply Now
-                            </button>
+                        {job.status === "OPEN" ? (
+                            !showApplyForm && (
+                                <button
+                                    onClick={() => {
+                                        setShowApplyForm(true);
+                                        setTimeout(() => {
+                                            document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth' });
+                                        }, 100);
+                                    }}
+                                    className="px-8 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-hover transition-colors shadow-lg shadow-primary/30"
+                                >
+                                    Apply Now
+                                </button>
+                            )
+                        ) : (
+                            <div className="px-6 py-3 bg-gray-100 text-gray-500 font-bold rounded-xl border border-gray-200">
+                                {job.status === "FILLED" ? "Position Filled" : "Recruitment Closed"}
+                            </div>
                         )}
                     </div>
 

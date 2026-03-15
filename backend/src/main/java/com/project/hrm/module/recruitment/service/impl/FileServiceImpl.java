@@ -24,9 +24,17 @@ public class FileServiceImpl implements FileService {
 
         validatePdf(originalFileName, file);
 
-        String fileName = processAndSaveFile(file, originalFileName);
+        return processAndSaveFile(file, originalFileName);
+    }
 
-        return "/cv/" + fileName;
+    @Override
+    public void deletePDF(String fileName) {
+        try {
+            Path path = Paths.get("uploads/cv/" + fileName);
+            Files.deleteIfExists(path);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private String getOriginalFileName(MultipartFile file) {

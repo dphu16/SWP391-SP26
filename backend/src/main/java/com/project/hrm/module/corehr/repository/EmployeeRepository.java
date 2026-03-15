@@ -56,7 +56,12 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
         @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal" })
         List<Employee> findByManager_EmployeeId(UUID managerId);
 
-        @EntityGraph(attributePaths = { "user", "position", "department" })
-        List<Employee> findByDepartment_DeptId(UUID deptId);
+    // Sửa lại để trả về List<Employee> và truy vấn thông qua quan hệ với User
+    @Query("SELECT e FROM Employee e WHERE e.user.status = 'ACTIVE'")
+    List<Employee> findActiveEmployeesForPayroll();
+
+    @EntityGraph(attributePaths = { "user", "position", "department" })
+    List<Employee> findByDepartment_DeptId(UUID deptId);
+
 
 }
