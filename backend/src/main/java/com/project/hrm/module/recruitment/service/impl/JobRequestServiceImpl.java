@@ -85,7 +85,7 @@ public class JobRequestServiceImpl implements JobRequestService {
         List<JobRequest> list = jobRequestRepository.findAllById(ids);
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Job request not found with id: " + employeeId));
-        for(JobRequest i: list){
+        for (JobRequest i : list) {
             i.setReportsTo(employee);
         }
         return list.stream()
@@ -143,18 +143,18 @@ public class JobRequestServiceImpl implements JobRequestService {
         jobRequestRepository.delete(entity);
     }
 
-    private JobRequestResponse uploadData(JobRequest entity, JobRequestRequest request){
+    private JobRequestResponse uploadData(JobRequest entity, JobRequestRequest request) {
         if (request.getQuantity() <= 0) {
             throw new IllegalArgumentException("Quantity must be greater than 0");
         }
-            Department department = departmentRepository.findById(request.getDeptId())
-                    .orElseThrow(() ->
-                            new RuntimeException("Department not found"));
-            entity.setDept(department);
-            Position position = positionRepository.findById(request.getPosId())
-                    .orElseThrow(() ->
-                            new RuntimeException("Position not found"));
-            entity.setPos(position);
+        Department department = departmentRepository.findById(request.getDeptId())
+                .orElseThrow(() ->
+                        new RuntimeException("Department not found"));
+        entity.setDept(department);
+        Position position = positionRepository.findById(request.getPosId())
+                .orElseThrow(() ->
+                        new RuntimeException("Position not found"));
+        entity.setPos(position);
 
         entity.setQuantity(request.getQuantity());
         entity.setLocation(request.getLocation());
@@ -176,7 +176,7 @@ public class JobRequestServiceImpl implements JobRequestService {
         response.setPosName(entity.getPos().getTitle());
         response.setDeptId(entity.getDept().getDeptId());
         response.setDeptName(entity.getDept().getDeptName());
-        if(entity.getQuantity() == null) entity.setQuantity(1);
+        if (entity.getQuantity() == null) entity.setQuantity(1);
         response.setQuantity(entity.getQuantity());
         response.setLocation(entity.getLocation());
 

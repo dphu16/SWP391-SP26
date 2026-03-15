@@ -52,6 +52,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/oauth2/**").permitAll()
                                                 .requestMatchers("/api/jobs/candidate/**").permitAll()
                                                 .requestMatchers("/api/app/candidate/**").permitAll()
+                                                .requestMatchers("/error").permitAll()
                                                 .requestMatchers("/cv/**").permitAll()
 
                                                 .anyRequest().authenticated())

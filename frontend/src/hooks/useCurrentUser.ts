@@ -29,8 +29,7 @@ export function useCurrentUser(): CurrentUser | null {
             username: payload.sub,                          // always present in JWT
             employeeId: payload.employeeId ?? undefined,    // present only if linked
             fullName: payload.fullName ?? payload.sub,
-            role: payload.role ?? "EMPLOYEE",
-            roles: payload.roles ?? (payload.role ? [payload.role] : ["EMPLOYEE"]),
+            role: payload.roles?.[0] ?? "EMPLOYEE",
             avatarUrl: payload.avatarUrl,
         };
     }, []);

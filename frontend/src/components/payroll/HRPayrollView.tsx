@@ -1,14 +1,22 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Icon } from "./PayrollModule";
 import {
-    getBatches, createBatch, calculatePayroll,
-    getBatchDetailsForReview, updatePayrollDetail, approveBatch, sendPayrollReport,
-    type PayrollBatchDTO, type PayrollReviewDTO, type UpdatePayrollDetailRequest,
+    getPayslipsByBatch, confirmPayslip, cancelPayslip,
+    createPeriod, getAllPeriods, closePeriod, getAllInquiries, calculatePayslips, validateAllInBatch,
+    createPaymentRequest, markInquiryInProgress, respondToInquiry, rejectInquiry, getActiveFinanceAccounts,
+    getMyPaymentRequests,
+    type PayrollPeriodResponse, type PayslipResponse, type SalaryInquiryDto, type PaymentRequestResponse
 } from "../../services/payrollService";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n?: number | null) =>
     n != null ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n) : "—";
+
+const getErrMsg = (e: unknown) => {
+    const err = e as { response?: { data?: { message?: string } | string } };
+    if (typeof err?.response?.data === "string") return err.response.data;
+    return err?.response?.data?.message ?? "An unexpected error occurred.";
+};
 
 const fmtPeriod = (period?: string | null) => {
     if (!period) return "—";
@@ -16,44 +24,202 @@ const fmtPeriod = (period?: string | null) => {
     return `Month ${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 };
 
-const getErrMsg = (e: unknown) => {
-    const err = e as { response?: { data?: { message?: string } | string } };
-    return typeof err?.response?.data === "string"
-        ? err.response.data
-        : err?.response?.data?.message ?? "An error occurred, please try again.";
-};
-
-// ─── Status config ─────────────────────────────────────────────────────────────
-const BATCH_STATUS: Record<string, { label: string; dot: string; text: string; bg: string; border: string }> = {
-    DRAFT: { label: "Draft", dot: "bg-slate-400", text: "text-slate-600", bg: "bg-slate-100", border: "border-slate-200" },
-    PROCESSED: { label: "Calculated", dot: "bg-blue-500", text: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
-    VALIDATED: { label: "Approved", dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-    LOCKED: { label: "Locked", dot: "bg-amber-500", text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
-};
-
 // ─── Sub-components ────────────────────────────────────────────────────────────
-const BatchBadge: React.FC<{ status: string }> = ({ status }) => {
-    const c = BATCH_STATUS[status] ?? BATCH_STATUS.DRAFT;
+const InquiryBadge: React.FC<{ status: string }> = ({ status }) => {
+    const cfg: Record<string, { label: string; dot: string; text: string; bg: string; border: string }> = {
+        OPEN: { label: "New", dot: "bg-blue-500", text: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
+        IN_PROGRESS: { label: "In Progress", dot: "bg-amber-500", text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
+        RESOLVED: { label: "Resolved", dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
+        REJECTED: { label: "Rejected", dot: "bg-rose-500", text: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200" },
+    };
+    const c = cfg[status] ?? cfg.OPEN;
     return (
-        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${c.text} ${c.bg} ${c.border}`}>
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${c.text} ${c.bg} ${c.border}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
             {c.label}
         </span>
     );
 };
 
-const SkeletonRows = () => (
-    <>{Array.from({ length: 5 }).map((_, i) => (
-        <tr key={i}>{Array.from({ length: 10 }).map((__, j) => (
-            <td key={j} className="px-4 py-4">
-                <div className={`h-4 rounded bg-slate-100 animate-pulse ${j === 0 ? "w-32" : j === 1 ? "w-24" : "w-16"}`} />
-            </td>
-        ))}</tr>
-    ))}</>
-);
+const HRInquiriesModal: React.FC<{ onClose: () => void; onRefreshCount: () => void }> = ({ onClose, onRefreshCount }) => {
+    const [inquiries, setInquiries] = useState<SalaryInquiryDto[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [replyingTo, setReplyingTo] = useState<string | null>(null);
+    const [replyAction, setReplyAction] = useState<"APPROVE" | "REJECT" | null>(null);
+    const [replyText, setReplyText] = useState("");
+    const [busy, setBusy] = useState(false);
+    const [err, setErr] = useState("");
+    const [activeTab, setActiveTab] = useState<"OPEN" | "IN_PROGRESS" | "RESOLVED" | "REJECTED">("OPEN");
 
-// ─── Create Batch Modal ────────────────────────────────────────────────────────
-const CreateBatchModal: React.FC<{ onCreated: (b: PayrollBatchDTO) => void; onClose: () => void }> = ({ onCreated, onClose }) => {
+    const loadData = useCallback(async () => {
+        setLoading(true); setErr("");
+        try {
+            const data = await getAllInquiries();
+            setInquiries(data);
+            onRefreshCount();
+        } catch (e) { setErr(getErrMsg(e)); }
+        finally { setLoading(false); }
+    }, [onRefreshCount]);
+
+    useEffect(() => { loadData(); }, [loadData]);
+
+    const handleMarkProgress = async (id: string) => {
+        setBusy(true);
+        try {
+            await markInquiryInProgress(id);
+            await loadData();
+        } catch (e) { setErr(getErrMsg(e)); }
+        finally { setBusy(false); }
+    };
+
+    const handleSubmitReply = async (id: string) => {
+        if (!replyText.trim()) return;
+        setBusy(true);
+        try {
+            if (replyAction === "APPROVE") {
+                await respondToInquiry({ inquiryId: id, officialResponse: replyText });
+                setActiveTab("RESOLVED");
+            } else if (replyAction === "REJECT") {
+                await rejectInquiry(id, replyText);
+                setActiveTab("REJECTED");
+            }
+            setReplyingTo(null);
+            setReplyAction(null);
+            setReplyText("");
+            await loadData();
+        } catch (e) { setErr(getErrMsg(e)); }
+        finally { setBusy(false); }
+    };
+
+    const TABS: { key: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "REJECTED"; label: string; color: string; activeClass: string }[] = [
+        { key: "OPEN", label: "New", color: "text-blue-600", activeClass: "bg-blue-600 text-white" },
+        { key: "IN_PROGRESS", label: "In Progress", color: "text-amber-600", activeClass: "bg-amber-500 text-white" },
+        { key: "RESOLVED", label: "Resolved", color: "text-emerald-600", activeClass: "bg-emerald-600 text-white" },
+        { key: "REJECTED", label: "Rejected", color: "text-rose-600", activeClass: "bg-rose-500 text-white" },
+    ];
+
+    const filtered = inquiries.filter(i => i.status === activeTab);
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-800">Employee Salary Inquiries</h2>
+                        <p className="text-xs text-slate-400 mt-0.5">{inquiries.length} total inquiries</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:bg-slate-200">{Icon.close}</button>
+                </div>
+
+                {/* 4 Status Tabs */}
+                <div className="px-6 pt-4 pb-0 border-b border-slate-100 flex gap-1">
+                    {TABS.map(tab => {
+                        const count = inquiries.filter(i => i.status === tab.key).length;
+                        const isActive = activeTab === tab.key;
+                        return (
+                            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-lg border-b-2 transition-all cursor-pointer ${isActive
+                                    ? `border-current ${tab.color} border-b-current bg-transparent`
+                                    : "border-transparent text-slate-400 hover:text-slate-600"
+                                    }`}>
+                                {tab.label}
+                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${isActive ? tab.activeClass : "bg-slate-100 text-slate-500"
+                                    }`}>{count}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    {err && <div className="p-3 bg-rose-50 text-rose-600 rounded-xl border border-rose-200 text-sm mb-4">{err}</div>}
+                    {loading ? (
+                        <div className="py-12 text-center text-slate-400 animate-pulse">Loading data...</div>
+                    ) : filtered.length === 0 ? (
+                        <div className="py-16 text-center text-slate-400 space-y-2">
+                            <svg className="w-10 h-10 mx-auto text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                            <p className="text-sm font-semibold text-slate-500">
+                                {activeTab === "OPEN" && "No new inquiries."}
+                                {activeTab === "IN_PROGRESS" && "No inquiries in progress."}
+                                {activeTab === "RESOLVED" && "No resolved inquiries yet."}
+                                {activeTab === "REJECTED" && "No rejected inquiries yet."}
+                            </p>
+                        </div>
+                    ) : (
+                        filtered.map(inq => (
+                            <div key={inq.id} className="border border-slate-200 rounded-xl p-4 space-y-3 bg-white hover:border-slate-300 transition-all">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="font-bold text-slate-800">{inq.subject}</span>
+                                            <InquiryBadge status={inq.status} />
+                                        </div>
+                                        <p className="text-xs text-slate-500">From: <span className="font-semibold">{inq.employeeName}</span> • {new Date(inq.createdAt).toLocaleDateString()}</p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {/* OPEN: Accept */}
+                                        {inq.status === "OPEN" && (
+                                            <button onClick={() => handleMarkProgress(inq.id)} disabled={busy}
+                                                className="px-3 py-1.5 text-xs font-bold bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50 cursor-pointer transition-colors">
+                                                Accept
+                                            </button>
+                                        )}
+                                        {/* IN_PROGRESS: Approve (-> RESOLVED) + Reject */}
+                                        {inq.status === "IN_PROGRESS" && replyingTo !== inq.id && (
+                                            <button onClick={() => { setReplyingTo(inq.id); setReplyAction("APPROVE"); setReplyText(""); }}
+                                                className="px-3 py-1.5 text-xs font-bold bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 cursor-pointer transition-colors flex items-center gap-1.5">
+                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                                Approve
+                                            </button>
+                                        )}
+                                        {inq.status !== "RESOLVED" && inq.status !== "REJECTED" && replyingTo !== inq.id && (
+                                            <button onClick={() => { setReplyingTo(inq.id); setReplyAction("REJECT"); setReplyText(""); }} disabled={busy}
+                                                className="px-3 py-1.5 text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-100 disabled:opacity-50 cursor-pointer transition-colors">
+                                                Reject
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
+                                    {inq.message}
+                                </div>
+
+                                {inq.hrResponse && (
+                                    <div className={`${inq.status === "REJECTED" ? "bg-rose-50 border-rose-200" : "bg-emerald-50 border-emerald-200"} border rounded-lg p-3`}>
+                                        <p className={`text-[10px] font-bold ${inq.status === "REJECTED" ? "text-rose-700" : "text-emerald-700"} uppercase tracking-wide mb-1`}>Official Response:</p>
+                                        <p className="text-sm text-slate-700">{inq.hrResponse.officialResponse}</p>
+                                    </div>
+                                )}
+
+                                {replyingTo === inq.id ? (
+                                    <div className="space-y-3 pt-2 border-t border-slate-100">
+                                        <p className={`text-xs font-bold ${replyAction === "APPROVE" ? "text-emerald-700" : "text-rose-700"}`}>
+                                            {replyAction === "APPROVE" ? "Enter response to approve (→ Resolved):" : "Enter rejection reason (→ Rejected):"}
+                                        </p>
+                                        <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
+                                            className={`w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:outline-none ${replyAction === "APPROVE" ? "focus:ring-emerald-400" : "focus:ring-rose-400"}`}
+                                            rows={3} placeholder={replyAction === "APPROVE" ? "Enter official response..." : "Enter rejection reason..."} />
+                                        <div className="flex justify-end gap-2">
+                                            <button onClick={() => { setReplyingTo(null); setReplyAction(null); setReplyText(""); }} className="px-4 py-2 text-xs font-bold text-slate-500 cursor-pointer hover:text-slate-700">Cancel</button>
+                                            <button onClick={() => handleSubmitReply(inq.id)} disabled={busy || !replyText.trim()}
+                                                className={`px-4 py-2 text-xs font-bold text-white rounded-lg disabled:opacity-50 cursor-pointer ${replyAction === "APPROVE" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"}`}>
+                                                {replyAction === "APPROVE" ? "Confirm Approval" : "Confirm Rejection"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const CreatePeriodModal: React.FC<{ onCreated: () => void; onClose: () => void }> = ({ onCreated, onClose }) => {
     const now = new Date();
     const [month, setMonth] = useState(now.getMonth() + 1);
     const [year, setYear] = useState(now.getFullYear());
@@ -63,8 +229,8 @@ const CreateBatchModal: React.FC<{ onCreated: (b: PayrollBatchDTO) => void; onCl
     const create = async () => {
         setBusy(true); setErr("");
         try {
-            const b = await createBatch(month, year);
-            onCreated(b); onClose();
+            await createPeriod({ month, year });
+            onCreated();
         } catch (e) { setErr(getErrMsg(e)); }
         finally { setBusy(false); }
     };
@@ -73,948 +239,732 @@ const CreateBatchModal: React.FC<{ onCreated: (b: PayrollBatchDTO) => void; onCl
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
             <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm mx-4 overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-slate-50">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-                            <span className="text-white">{Icon.calendar}</span>
-                        </div>
-                        <div>
-                            <h3 className="text-base font-bold text-slate-900">Create New Batch</h3>
-                            <p className="text-xs text-slate-500">Select Month/Year</p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 cursor-pointer">{Icon.close}</button>
+                <div className="px-6 py-5 border-b border-slate-100 bg-emerald-50">
+                    <h3 className="text-base font-bold text-slate-900">Create New Payroll Period</h3>
                 </div>
-
                 <div className="px-6 py-5 space-y-4">
-                    {err && <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-700">{Icon.warning} {err}</div>}
+                    {err && <div className="p-3 bg-rose-50 text-rose-700 text-xs rounded-lg border border-rose-200">{err}</div>}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Month</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase">Month</label>
                             <select value={month} onChange={e => setMonth(Number(e.target.value))}
-                                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer">
-                                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                                    <option key={m} value={m}>Month {String(m).padStart(2, "0")}</option>
-                                ))}
+                                className="w-full mt-1 px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
+                                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Year</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase">Year</label>
                             <select value={year} onChange={e => setYear(Number(e.target.value))}
-                                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer">
-                                {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+                                className="w-full mt-1 px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
+                                {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                             </select>
                         </div>
                     </div>
-                    <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
-                        <p className="text-xs text-blue-700"><span className="font-semibold">Note:</span> After creating, click "Calculate" to calculate payroll for all employees.</p>
-                    </div>
                 </div>
-
                 <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-                    <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-white cursor-pointer">Cancel</button>
-                    <button onClick={create} disabled={busy}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${busy ? "bg-emerald-400 text-white cursor-wait" : "bg-emerald-500 text-white hover:bg-emerald-600 cursor-pointer"}`}>
-                        {busy ? "Creating..." : "Create Batch"}
+                    <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-slate-500">Close</button>
+                    <button onClick={create} disabled={busy} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md disabled:opacity-50">
+                        {busy ? "Creating..." : "Create Period"}
                     </button>
                 </div>
             </div>
         </div>
     );
 };
-
-// ─── Edit Detail Modal ─────────────────────────────────────────────────────────
-const EditModal: React.FC<{ detail: PayrollReviewDTO; onSaved: () => void; onClose: () => void }> = ({ detail, onSaved, onClose }) => {
-    const [ot, setOt] = useState(detail.totalOtHours ?? 0);
-    const [abs, setAbs] = useState(detail.totalAbsentDays ?? 0);
-    const [adj, setAdj] = useState("");
-    const [busy, setBusy] = useState(false);
-    const [err, setErr] = useState("");
-
-    const save = async () => {
-        setBusy(true); setErr("");
-        try {
-            const req: UpdatePayrollDetailRequest = { totalOtHours: ot, totalAbsentDays: abs };
-            if (adj.trim()) req.grossSalaryAdjustment = Number(adj);
-            await updatePayrollDetail(detail.detailId, req);
-            onSaved(); onClose();
-        } catch (e) { setErr(getErrMsg(e)); }
-        finally { setBusy(false); }
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md mx-4 overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                            <span className="text-white">{Icon.edit}</span>
-                        </div>
-                        <div>
-                            <h3 className="text-base font-bold text-slate-900">Adjust Data</h3>
-                            <p className="text-xs text-slate-500">{detail.employeeName}{detail.department && ` · ${detail.department}`}</p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 cursor-pointer">{Icon.close}</button>
-                </div>
-
-                <div className="px-6 py-5 space-y-4">
-                    {err && <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-700">{Icon.warning} {err}</div>}
-                    {detail.hasWarning && (
-                        <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700">
-                            <span className="flex-shrink-0 mt-0.5">{Icon.warning}</span>
-                            <span>{detail.warningMessage}</span>
-                        </div>
-                    )}
-                    <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 flex justify-between items-center">
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Base Salary</span>
-                        <span className="text-sm font-bold text-slate-800">{fmt(detail.baseSalary)}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">OT Hours</label>
-                            <input type="number" min="0" value={ot} onChange={e => setOt(Number(e.target.value))}
-                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Absent Days</label>
-                            <input type="number" min="0" value={abs} onChange={e => setAbs(Number(e.target.value))}
-                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">
-                            Gross Adj. <span className="text-slate-400 font-normal normal-case">(optional)</span>
-                        </label>
-                        <input type="number" min="0" value={adj} onChange={e => setAdj(e.target.value)}
-                            placeholder={`Current: ${fmt(detail.grossSalary)}`}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                        <p className="text-[10px] text-slate-400 mt-1.5">Leave blank if no override needed.</p>
-                    </div>
-                </div>
-
-                <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-                    <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-white cursor-pointer">Cancel</button>
-                    <button onClick={save} disabled={busy}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${busy ? "bg-blue-400 text-white cursor-wait" : "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"}`}>
-                        {busy ? "Saving..." : "Save Changes"}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// ─── Payroll Report Modal ──────────────────────────────────────────────────────
-const PayrollReportModal: React.FC<{
-    batch: PayrollBatchDTO;
-    rows: PayrollReviewDTO[];
-    onConfirm: () => void;
-    onClose: () => void;
-}> = ({ batch, rows, onConfirm, onClose }) => {
-    const printRef = useRef<HTMLDivElement>(null);
-    const [sent, setSent] = useState(false);
-    const [sending, setSending] = useState(false);
-
-    const totalGross = rows.reduce((s, r) => s + (r.grossSalary ?? 0), 0);
-    const totalBase = rows.reduce((s, r) => s + (r.baseSalary ?? 0), 0);
-    const totalOtPay = rows.reduce((s, r) => s + (r.otPay ?? 0), 0);
-    const totalDeduct = rows.reduce((s, r) => s + (r.absentDeduction ?? 0), 0);
-    const warnCount = rows.filter(r => r.hasWarning).length;
-    const now = new Date();
-    const reportDate = now.toLocaleString("vi-VN");
-    const period = fmtPeriod(batch.period);
-
-    const handleConfirm = async () => {
-        setSending(true);
-        await new Promise(r => setTimeout(r, 900)); // simulate send
-        setSent(true);
-        setSending(false);
-        setTimeout(() => { onConfirm(); onClose(); }, 1400);
-        try {
-            await sendPayrollReport(batch.batchId);
-            setSent(true);
-            onConfirm(); // Trigger background refresh
-        } catch (error: any) {
-            console.error("Failed to send report:", error);
-            alert(getErrMsg(error));
-        } finally {
-            setSending(false);
-        }
-    };
-
-    const handlePrint = () => window.print();
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[92vh] flex flex-col overflow-hidden">
-
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-violet-600 to-indigo-700 flex-shrink-0">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                                <polyline points="14 2 14 8 20 8" />
-                                <line x1="16" y1="13" x2="8" y2="13" />
-                                <line x1="16" y1="17" x2="8" y2="17" />
-                                <polyline points="10 9 9 9 8 9" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h2 className="text-base font-bold text-white">Payroll Report for Finance</h2>
-                            <p className="text-xs text-white/70">{period} · Created at {reportDate}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button onClick={handlePrint}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 cursor-pointer transition-all">
-                            {Icon.print} Print Report
-                        </button>
-                        <button onClick={onClose} className="p-1.5 rounded-lg text-white/60 hover:bg-white/10 cursor-pointer">{Icon.close}</button>
-                    </div>
-                </div>
-
-                {/* Body — scrollable */}
-                <div ref={printRef} className="flex-1 overflow-y-auto">
-                    {!sent ? (
-                        <>
-                            {/* Summary strip */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border-b border-slate-100">
-                                {[
-                                    { label: "Payroll Period", value: period, color: "text-violet-700" },
-                                    { label: "Total Headcount", value: `${rows.length} emp.`, color: "text-slate-800" },
-                                    { label: "Total Gross", value: fmt(totalGross), color: "text-emerald-700" },
-                                    { label: "Warnings", value: `${warnCount} emp.`, color: warnCount > 0 ? "text-amber-600" : "text-slate-400" },
-                                ].map((s, i) => (
-                                    <div key={i} className={`px-6 py-4 ${i < 3 ? "border-r border-slate-100" : ""}`}>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{s.label}</p>
-                                        <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Summary strip */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border-b border-slate-100">
-                                {[
-                                    { label: "Payroll Period", value: period, color: "text-violet-700" },
-                                    { label: "Total Headcount", value: `${rows.length} emp.`, color: "text-slate-800" },
-                                    { label: "Total Gross", value: fmt(totalGross), color: "text-emerald-700" },
-                                    { label: "Warnings", value: `${warnCount} emp.`, color: warnCount > 0 ? "text-amber-600" : "text-slate-400" },
-                                ].map((s, i) => (
-                                    <div key={i} className={`px-6 py-4 ${i < 3 ? "border-r border-slate-100" : ""}`}>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{s.label}</p>
-                                        <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Breakdown cards */}
-                            <div className="px-6 py-4 grid grid-cols-3 gap-3 border-b border-slate-100 bg-slate-50/40">
-                                {[
-                                    { label: "Total Base Salary", value: fmt(totalBase), color: "bg-blue-500" },
-                                    { label: "Total OT Pay", value: fmt(totalOtPay), color: "bg-amber-500" },
-                                    { label: "Total Deductions", value: fmt(totalDeduct), color: "bg-rose-500" },
-                                ].map((c, i) => (
-                                    <div key={i} className="rounded-xl border border-slate-200 bg-white px-4 py-3 flex items-center gap-3">
-                                        <div className={`w-2 h-10 rounded-full ${c.color} flex-shrink-0`} />
-                                        <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{c.label}</p>
-                                            <p className="text-sm font-bold text-slate-800 mt-0.5">{c.value}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Employee table */}
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-xs">
-                                    <thead>
-                                        <tr className="border-b border-slate-100 bg-slate-50">
-                                            {["No.", "Employee", "Department", "Base Salary", "OT (h)", "OT Pay", "Deduct", "Gross Salary", "Status"].map(h => (
-                                                <th key={h} className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-left whitespace-nowrap">{h}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {rows.map((r, idx) => (
-                                            <tr key={r.detailId} className={r.hasWarning ? "bg-amber-50/40" : "hover:bg-slate-50/60"}>
-                                                <td className="px-4 py-2.5 text-slate-400 font-mono">{String(idx + 1).padStart(2, "0")}</td>
-                                                <td className="px-4 py-2.5">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">
-                                                            {r.employeeName?.charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <span className="font-semibold text-slate-800 whitespace-nowrap">{r.employeeName}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-2.5 text-slate-500">{r.department || "—"}</td>
-                                                <td className="px-4 py-2.5 font-medium text-slate-700 whitespace-nowrap">{fmt(r.baseSalary)}</td>
-                                                <td className="px-4 py-2.5 text-center">
-                                                    <span className={r.totalOtHours > 0 ? "text-amber-600 font-semibold" : "text-slate-400"}>{r.totalOtHours ?? 0}h</span>
-                                                </td>
-                                                <td className="px-4 py-2.5 whitespace-nowrap">{r.otPay > 0 ? fmt(r.otPay) : <span className="text-slate-300">—</span>}</td>
-                                                <td className="px-4 py-2.5 whitespace-nowrap">
-                                                    {r.absentDeduction > 0
-                                                        ? <span className="text-rose-600 font-medium">-{fmt(r.absentDeduction)}</span>
-                                                        : <span className="text-slate-300">—</span>}
-                                                </td>
-                                                <td className="px-4 py-2.5 font-bold text-slate-800 whitespace-nowrap">{fmt(r.grossSalary)}</td>
-                                                <td className="px-4 py-2.5">
-                                                    {r.hasWarning
-                                                        ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold text-amber-700 bg-amber-100 border border-amber-200 whitespace-nowrap"><span className="w-1 h-1 rounded-full bg-amber-500" /> Warning</span>
-                                                        : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200"><span className="w-1 h-1 rounded-full bg-emerald-500" /> OK</span>}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                    <tfoot>
-                                        <tr className="border-t-2 border-slate-200 bg-slate-50">
-                                            <td colSpan={3} className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide">Total ({rows.length} Emp.)</td>
-                                            <td className="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">{fmt(totalBase)}</td>
-                                            <td className="px-4 py-3" />
-                                            <td className="px-4 py-3 font-bold text-amber-700 whitespace-nowrap">{fmt(totalOtPay)}</td>
-                                            <td className="px-4 py-3 font-bold text-rose-600 whitespace-nowrap">-{fmt(totalDeduct)}</td>
-                                            <td className="px-4 py-3 font-bold text-violet-700 text-sm whitespace-nowrap">{fmt(totalGross)}</td>
-                                            <td className="px-4 py-3" />
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-
-                            {/* Notes */}
-                            <div className="px-6 py-4 border-t border-slate-100 bg-amber-50/30">
-                                <p className="text-[11px] text-slate-500 leading-relaxed">
-                                    <span className="font-bold text-slate-700">Note:</span> This report was automatically generated from the HRM system on {reportDate}.
-                                    Gross Salary does not include deductions for Personal Income Tax and Social Insurances.
-                                    Please review carefully before sending to the Finance department.
-                                    {warnCount > 0 && <span className="text-amber-700 font-semibold"> There are {warnCount} employees requiring review.</span>}
-                                </p>
-                            </div>
-                            {/* Notes */}
-                            <div className="px-6 py-4 border-t border-slate-100 bg-amber-50/30">
-                                <p className="text-[11px] text-slate-500 leading-relaxed">
-                                    <span className="font-bold text-slate-700">Note:</span> This report was automatically generated from the HRM system on {reportDate}.
-                                    Gross Salary does not include deductions for Personal Income Tax and Social Insurances.
-                                    Please review carefully before sending to the Finance department.
-                                    {warnCount > 0 && <span className="text-amber-700 font-semibold"> There are {warnCount} employees requiring review.</span>}
-                                </p>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center p-16 h-full min-h-[400px] text-center animate-in fade-in zoom-in duration-500">
-                            <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mb-6 shadow-inner ring-4 ring-emerald-50">
-                                <svg className="w-12 h-12 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                            </div>
-                            <h3 className="text-2xl font-bold text-slate-800 mb-3">Report Sent Successfully!</h3>
-                            <p className="text-slate-500 max-w-md leading-relaxed">
-                                The system has saved the status and notified the Finance department to proceed with the review. The current payroll batch has been locked.
-                            </p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Footer actions */}
-                <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-4 flex-shrink-0">
-                    <div className="text-xs text-slate-400">
-                        {sent
-                            ? <span className="text-emerald-600 font-semibold flex items-center gap-1.5">{Icon.checkCircle} Report sent successfully!</span>
-                            : <span>After confirmation, the report will be sent to the Finance department for review.</span>}
-                    </div>
-                    <div className="flex gap-3">
-                        <button onClick={onClose} disabled={sending || sent}
-                            className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-40 cursor-pointer transition-all">
-                            Cancel
-                        </button>
-                        <button onClick={handleConfirm} disabled={sending || sent}
-                            className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${sent ? "bg-emerald-500 text-white cursor-default" :
-                                sending ? "bg-violet-400 text-white cursor-wait" :
-                                    "bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700 cursor-pointer"
-                                }`}>
-                            <span className={sending ? "animate-spin" : ""}>
-                                {sent ? Icon.checkCircle : sending ? Icon.refresh : (
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                                        <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-                                    </svg>
-                                )}
-                            </span>
-                            {sent ? "Sent!" : sending ? "Sending..." : "Confirm & Send"}
-                        </button>
-                    </div>
-                    {!sent ? (
-                        <>
-                            <div className="text-xs text-slate-400">
-                                <span>After confirmation, the report will be sent to the Finance department for review.</span>
-                            </div>
-                            <div className="flex gap-3">
-                                <button onClick={onClose} disabled={sending}
-                                    className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-40 cursor-pointer transition-all">
-                                    Cancel
-                                </button>
-                                <button onClick={handleConfirm} disabled={sending}
-                                    className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${sending ? "bg-violet-400 text-white cursor-wait" :
-                                        "bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700 cursor-pointer"
-                                        }`}>
-                                    <span className={sending ? "animate-spin" : ""}>
-                                        {sending ? Icon.refresh : (
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                                                <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-                                            </svg>
-                                        )}
-                                    </span>
-                                    {sending ? "Sending..." : "Confirm & Send"}
-                                </button>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="w-full flex justify-end">
-                            <button onClick={onClose}
-                                className="px-8 py-2.5 rounded-xl text-sm font-bold bg-slate-800 text-white hover:bg-slate-900 transition-all cursor-pointer shadow-sm">
-                                Done
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// ─── Stat Card ─────────────────────────────────────────────────────────────────
-const StatCard: React.FC<{
-    label: string; value: string | number; icon: React.ReactNode; bg: string;
-    valueColor?: string; subtitle?: string; active?: boolean; onClick?: () => void;
-}> = ({ label, value, icon, bg, valueColor = "text-slate-800", subtitle, active, onClick }) => (
-    <button onClick={onClick}
-        className={`w-full rounded-2xl border bg-white shadow-sm p-5 flex items-start gap-4 text-left cursor-pointer transition-all hover:shadow-md ${active ? "border-emerald-400/40 ring-2 ring-emerald-400/10" : "border-slate-200 hover:border-slate-300"
-            }`}>
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${bg}`}>
-            <span className="text-white scale-110">{icon}</span>
-        </div>
-        <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{label}</p>
-            <p className={`text-2xl font-bold leading-tight ${valueColor}`}>{value}</p>
-            {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
-        </div>
-    </button>
-);
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MAIN: HR Payroll View
+// MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 const HRPayrollView: React.FC = () => {
-    // ── Batch state ────────────────────────────────────────────────────────────
-    const [batches, setBatches] = useState<PayrollBatchDTO[]>([]);
-    const [batchLoad, setBatchLoad] = useState(true);
-    const [batchErr, setBatchErr] = useState("");
-    const [selId, setSelId] = useState("");
+    const [periods, setPeriods] = useState<PayrollPeriodResponse[]>([]);
+    const [selPeriodId, setSelPeriodId] = useState<string>("");
+    const [periodLoad, setPeriodLoad] = useState(true);
     const [showCreate, setShowCreate] = useState(false);
 
-    // ── Calculate state ────────────────────────────────────────────────────────
-    const [calcState, setCalcState] = useState<"idle" | "busy" | "ok" | "err">("idle");
-    const [calcErr, setCalcErr] = useState("");
+    const [payslips, setPayslips] = useState<PayslipResponse[]>([]);
+    const [payslipLoad, setPayslipLoad] = useState(false);
+    const [actionMsg, setActionMsg] = useState("");
+    const [actionMsgType, setActionMsgType] = useState<"ok" | "err">("ok");
+    const [actionBusy, setActionBusy] = useState<string | null>(null);
 
-    // ── Review table state ─────────────────────────────────────────────────────
-    const [rows, setRows] = useState<PayrollReviewDTO[]>([]);
-    const [rowsLoad, setRowsLoad] = useState(false);
-    const [rowsLoaded, setRowsLoaded] = useState(false);
+    const [showInquiries, setShowInquiries] = useState(false);
+    const [pendingInqCount, setPendingInqCount] = useState(0);
     const [search, setSearch] = useState("");
-    const [filter, setFilter] = useState<"all" | "ok" | "warning">("all");
-    const [editRow, setEditRow] = useState<PayrollReviewDTO | null>(null);
+    const [deptFilter, setDeptFilter] = useState("");
+    const [paymentHistory, setPaymentHistory] = useState<PaymentRequestResponse[]>([]);
+    const [historyLoad, setHistoryLoad] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
 
-    // ── Approve state ──────────────────────────────────────────────────────────
-    const [approveBusy, setApproveBusy] = useState(false);
-    const [approveMsg, setApproveMsg] = useState("");
-    const [approveMsgType, setApproveMsgType] = useState<"ok" | "err">("ok");
+    // Derived
+    const deptOptions = Array.from(new Set(payslips.map(p => p.departmentName).filter(Boolean))) as string[];
+    const filteredPayslips = payslips.filter(p => {
+        const matchName = !search || p.employeeName.toLowerCase().includes(search.toLowerCase());
+        const matchDept = !deptFilter || p.departmentName === deptFilter;
+        return matchName && matchDept;
+    });
 
-    // ── Report state ───────────────────────────────────────────────────────────
-    const [showReport, setShowReport] = useState(false);
-
-    // ── Load batches ───────────────────────────────────────────────────────────
-    const loadBatches = useCallback(async () => {
-        setBatchLoad(true); setBatchErr("");
+    const loadPeriods = useCallback(async () => {
+        setPeriodLoad(true);
         try {
-            const data = await getBatches();
-            setBatches(data);
-            if (data.length > 0) setSelId(id => id || data[0].batchId);
-        } catch { setBatchErr("Could not load payroll batches."); }
-        finally { setBatchLoad(false); }
+            const data = await getAllPeriods();
+            // Sort descending by startDate to get the latest period first
+            const sorted = [...data].sort((a, b) =>
+                new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+            );
+            setPeriods(sorted);
+            if (sorted.length > 0) setSelPeriodId(sorted[0].periodId);
+        } catch (e) { console.error(e); }
+        finally { setPeriodLoad(false); }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    useEffect(() => { loadBatches(); }, []); // eslint-disable-line
-
-    // ── Load review data whenever batch changes ────────────────────────────────
-    const loadReview = useCallback(async (batchId: string) => {
-        if (!batchId) return;
-        setRowsLoad(true); setCalcErr(""); setApproveMsg(""); setRowsLoaded(false);
+    const loadInquiryCount = useCallback(async () => {
         try {
-            const data = await getBatchDetailsForReview(batchId);
-            setRows(data);
-            setRowsLoaded(true);
-        } catch {
-            setRows([]);
-            setRowsLoaded(true); // still mark loaded so UI shows "no data" state
-            setCalcErr('No calculation data found for this batch. Click "Calculate" to start.');
-        } finally { setRowsLoad(false); }
+            const list = await getAllInquiries();
+            setPendingInqCount(list.filter(i => i.status === "OPEN" || i.status === "IN_PROGRESS").length);
+        } catch (e) { console.error(e); }
+    }, []);
+
+    const loadPaymentHistory = useCallback(async () => {
+        setHistoryLoad(true);
+        try {
+            const data = await getMyPaymentRequests();
+            setPaymentHistory(data);
+        } catch (e) { console.error(e); }
+        finally { setHistoryLoad(false); }
+    }, []);
+
+    useEffect(() => { loadPeriods(); loadInquiryCount(); }, [loadPeriods, loadInquiryCount]);
+
+    const selPeriod = React.useMemo(() => periods.find(p => p.periodId === selPeriodId), [periods, selPeriodId]);
+    const batchId = selPeriod?.batchId;
+    const batchStatus = selPeriod?.batchStatus;
+    const isPeriodClosed = selPeriod?.status === "PAID" || selPeriod?.status === "CLOSED";
+
+    const loadPayslips = useCallback(async (bId: string) => {
+        setPayslipLoad(true); setActionMsg("");
+        try {
+            const data = await getPayslipsByBatch(bId);
+            setPayslips(data);
+        } catch (e) { console.error(e); }
+        finally { setPayslipLoad(false); }
     }, []);
 
     useEffect(() => {
-        if (selId) {
-            setCalcState("idle"); setCalcErr(""); setApproveMsg("");
-            loadReview(selId);
-        }
-    }, [selId, loadReview]);
+        if (batchId) loadPayslips(batchId);
+        else setPayslips([]);
+    }, [batchId, loadPayslips]);
 
-    // ── Handlers ──────────────────────────────────────────────────────────────
-    const onBatchCreated = (b: PayrollBatchDTO) => {
-        setBatches(prev => [b, ...prev]);
-        setSelId(b.batchId);
-    };
+    const metrics = React.useMemo(() => {
+        return payslips.reduce((acc, p) => {
+            acc.emp += 1;
+            acc.gross += p.grossSalary;
+            acc.pit += p.taxAmount;
+            acc.ins += p.insuranceAmount;
+            if (p.status === "CONFIRMED") acc.confirmed += 1;
+            if (p.status === "DRAFT") acc.draft += 1;
+            if (p.totalAbsentDays > 0 || (p.grossSalary < p.totalDeductions)) acc.warnings += 1;
+            return acc;
+        }, { emp: 0, gross: 0, pit: 0, ins: 0, confirmed: 0, draft: 0, warnings: 0 });
+    }, [payslips]);
 
     const handleCalculate = async () => {
-        if (!selId) return;
-        setCalcState("busy"); setCalcErr(""); setApproveMsg("");
+        if (!batchId) return;
+        setPayslipLoad(true); setActionMsg("");
         try {
-            await calculatePayroll(selId);
-            setCalcState("ok");
-            const updated = await getBatches();
-            setBatches(updated);
-            await loadReview(selId);
-        } catch (e) {
-            setCalcState("err");
-            setCalcErr(getErrMsg(e));
-        }
+            const data = await calculatePayslips(batchId);
+            setPayslips(data);
+            await loadPeriods(); // Refresh period/batch status after calculate
+            setActionMsg("Salary calculated successfully."); setActionMsgType("ok");
+        } catch (e) { setActionMsg(getErrMsg(e)); setActionMsgType("err"); }
+        finally { setPayslipLoad(false); }
     };
 
-    const handleApprove = async () => {
-        if (!selId) return;
-        setApproveBusy(true); setApproveMsg("");
+    const handleConfirm = async (id: string) => {
+        setActionBusy(id); setActionMsg("");
         try {
-            const msg = await approveBatch(selId);
-            setApproveMsg(msg || "Batch successfully approved!");
-            setApproveMsgType("ok");
-            const updated = await getBatches();
-            setBatches(updated);
-        } catch (e) {
-            setApproveMsg(getErrMsg(e));
-            setApproveMsgType("err");
-        } finally { setApproveBusy(false); }
+            await confirmPayslip(id);
+            await loadPayslips(batchId!);
+            await loadPeriods();
+            setActionMsg("Payslip confirmed."); setActionMsgType("ok");
+        } catch (e) { setActionMsg(getErrMsg(e)); setActionMsgType("err"); }
+        finally { setActionBusy(null); }
     };
 
-    const [selectedDepartment, setSelectedDepartment] = useState("all");
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 30;
+    const handleCancel = async (id: string) => {
+        if (!window.confirm("Are you sure you want to cancel this payslip?")) return;
+        setActionBusy(id); setActionMsg("");
+        try {
+            await cancelPayslip(id);
+            await loadPayslips(batchId!);
+            await loadPeriods();
+            setActionMsg("Payslip cancelled."); setActionMsgType("ok");
+        } catch (e) { setActionMsg(getErrMsg(e)); setActionMsgType("err"); }
+        finally { setActionBusy(null); }
+    };
 
-    const uniqueDepartments = React.useMemo(() => {
-        const dpts = new Set(rows.map(r => r.department).filter(Boolean));
-        return Array.from(dpts).sort();
-    }, [rows]);
+    const handleConfirmAll = async () => {
+        if (!batchId) return;
+        setActionBusy("confirmAll"); setActionMsg("");
+        try {
+            await validateAllInBatch(batchId);
+            await loadPayslips(batchId);
+            await loadPeriods();
+            setActionMsg(`All payslips confirmed successfully.`); setActionMsgType("ok");
+        } catch (e) { setActionMsg(getErrMsg(e)); setActionMsgType("err"); }
+        finally { setActionBusy(null); }
+    };
 
-    // ── Derived ───────────────────────────────────────────────────────────────
-    const filtered = React.useMemo(() => {
-        return rows.filter(r => {
-            const matchSearch = r.employeeName.toLowerCase().includes(search.toLowerCase());
-            const matchFilter = filter === "all" || (filter === "warning" ? r.hasWarning : !r.hasWarning);
-            const matchDept = selectedDepartment === "all" || r.department === selectedDepartment;
-            return matchSearch && matchFilter && matchDept;
-        });
-    }, [rows, search, filter, selectedDepartment]);
+    const handleClosePeriod = async () => {
+        if (!selPeriodId) return;
+        setActionBusy("closePeriod"); setActionMsg("");
+        try {
+            await closePeriod(selPeriodId);
+            await loadPeriods();
+            setActionMsg("Payroll period closed successfully."); setActionMsgType("ok");
+        } catch (e) { setActionMsg(getErrMsg(e)); setActionMsgType("err"); }
+        finally { setActionBusy(null); }
+    };
 
-    // Reset pagination when filter changes
-    React.useEffect(() => {
-        setCurrentPage(1);
-    }, [search, filter, selectedDepartment, selId]);
+    const handleSendToFinance = async () => {
+        if (!batchId) return;
+        setActionBusy("sendFinance"); setActionMsg("");
+        try {
+            const accs = await getActiveFinanceAccounts();
+            if (!accs || accs.length === 0) throw new Error("No ACTIVE finance account found.");
+            const periodLabel = selPeriod
+                ? `Month ${String(selPeriod.month).padStart(2, "0")}/${selPeriod.year}`
+                : "current period";
+            await createPaymentRequest({
+                payrollBatchId: batchId,
+                hrNote: `Employee salary payment — ${periodLabel}`,
+                type: "SALARY",
+                sourceAccountId: accs[0].accountId
+            });
+            await loadPeriods();
+            setActionMsg(`Salary payment request for ${periodLabel} sent to Finance.`); setActionMsgType("ok");
+        } catch (e) { setActionMsg(getErrMsg(e)); setActionMsgType("err"); }
+        finally { setActionBusy(null); }
+    };
 
-    const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
-    const paginatedRows = React.useMemo(() => {
-        const start = (currentPage - 1) * itemsPerPage;
-        return filtered.slice(start, start + itemsPerPage);
-    }, [filtered, currentPage]);
+    const STATUS_CFG = {
+        LOCKED: { label: "LOCKED", dot: "bg-rose-500", text: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200" },
+        PROCESSED: { label: "PROCESSED", dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
+        VALIDATED: { label: "VALIDATED", dot: "bg-blue-500", text: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
+        DRAFT: { label: "DRAFT", dot: "bg-slate-400", text: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" },
+    };
 
-    const warnCount = rows.filter(r => r.hasWarning).length;
-    const okCount = rows.filter(r => !r.hasWarning).length;
-    const totalGross = rows.reduce((s, r) => s + (r.grossSalary ?? 0), 0);
-    const selBatch = batches.find(b => b.batchId === selId);
+    const PR_STATUS_CFG: Record<string, { label: string; dot: string; text: string; bg: string; border: string }> = {
+        PENDING:  { label: "Pending",  dot: "bg-amber-500",   text: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
+        APPROVED: { label: "Approved", dot: "bg-blue-500",    text: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200" },
+        PAID:     { label: "Paid",     dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
+        REJECTED: { label: "Rejected", dot: "bg-rose-500",    text: "text-rose-700",    bg: "bg-rose-50",    border: "border-rose-200" },
+    };
+    const PR_TYPE_LABEL: Record<string, string> = {
+        SALARY: "Salary Payment",
+        TAX_INSURANCE: "Tax & Insurance",
+    };
 
-    // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <>
-            {/* ── Batch control panel ───────────────────────────────────────────── */}
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden mb-5">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
-                        <span className="text-white">{Icon.calendar}</span>
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-bold text-slate-800">Payroll Management</h3>
-                        <p className="text-xs text-slate-400">Select Batch → Calculate → Review → Approve</p>
-                    </div>
-                </div>
+        <div className="flex flex-col pb-10 max-w-7xl mx-auto w-full">
+            {/* Header */}
+            <div className="mb-6">
+                <h1 className="text-[28px] font-bold text-[#1a1c21] tracking-tight">Payroll Management</h1>
+            </div>
 
-                <div className="px-6 py-5">
-                    {/* Error banner */}
-                    {batchErr && (
-                        <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-700">
-                            {Icon.warning} {batchErr}
-                            <button onClick={loadBatches} className="ml-auto text-xs font-semibold text-rose-600 hover:underline cursor-pointer">Retry</button>
-                        </div>
-                    )}
-
-                    <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-                        {/* Batch selector */}
-                        <div className="flex-1 w-full sm:max-w-md">
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Selected Batch</label>
-                            {batchLoad ? (
-                                <div className="h-11 rounded-xl bg-slate-100 animate-pulse" />
-                            ) : batches.length === 0 ? (
-                                <div className="px-4 py-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
-                                    No payroll batches found.{" "}
-                                    <button onClick={() => setShowCreate(true)} className="text-emerald-600 font-semibold hover:underline cursor-pointer">Create new →</button>
-                                </div>
-                            ) : (
-                                <div className="relative">
-                                    <select value={selId} onChange={e => setSelId(e.target.value)}
-                                        className="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer hover:border-emerald-300 transition-colors">
-                                        {batches.map(b => (
-                                            <option key={b.batchId} value={b.batchId}>
-                                                {fmtPeriod(b.period)} — {BATCH_STATUS[b.status]?.label ?? b.status}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">{Icon.chevronDown}</span>
-                                </div>
+            {/* Filter & Action Panel */}
+            <div className="bg-white rounded-2xl border border-[#e2e8f0] p-5 shadow-sm mb-6 flex flex-col gap-4">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    {/* Choose period dropdown */}
+                    <div className="flex-1 min-w-[280px] max-w-sm">
+                        <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-2">Selected Payroll Period</label>
+                        <div className="flex flex-col gap-2.5">
+                            {periodLoad ? <div className="h-10 w-full bg-slate-100 animate-[shimmer_1.5s_infinite] rounded-lg" /> : (
+                                <select value={selPeriodId} onChange={e => setSelPeriodId(e.target.value)}
+                                    className="w-full px-3 py-2 border border-[#e2e8f0] rounded-lg text-sm font-medium text-[#0f172a] bg-white focus:outline-none focus:ring-1 focus:ring-[#10b981]/50 focus:border-[#10b981] transition-all appearance-none cursor-pointer shadow-sm"
+                                    style={{
+                                        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                        backgroundPosition: "right 0.75rem center", backgroundRepeat: "no-repeat", backgroundSize: "1.25em 1.25em"
+                                    }}>
+                                    {periods.map(p => <option key={p.periodId} value={p.periodId}>{fmtPeriod(p.startDate)}{p.status ? ` — ${p.status}` : ""}</option>)}
+                                </select>
                             )}
-                        </div>
-
-                        {/* Action buttons */}
-                        <div className="flex gap-2 flex-wrap">
-                            <button onClick={() => setShowCreate(true)}
-                                className="inline-flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer">
-                                {Icon.money} New Batch
-                            </button>
-                            <button onClick={handleCalculate}
-                                disabled={!selId || calcState === "busy" || batchLoad}
-                                className={`inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all shadow-sm ${calcState === "busy" ? "bg-emerald-400 text-white cursor-wait" :
-                                    calcState === "ok" ? "bg-emerald-500 text-white hover:bg-emerald-600 cursor-pointer" :
-                                        !selId || batchLoad ? "bg-slate-200 text-slate-400 cursor-not-allowed" :
-                                            "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 cursor-pointer"
-                                    }`}>
-                                <span className={calcState === "busy" ? "animate-spin" : ""}>
-                                    {calcState === "ok" ? Icon.check : Icon.refresh}
-                                </span>
-                                {calcState === "busy" ? "Calculating..." : calcState === "ok" ? "Done" : "Calculate"}
-                            </button>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                {/* Batch status badge */}
+                                {batchStatus && (
+                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${STATUS_CFG[batchStatus as keyof typeof STATUS_CFG]?.text} ${STATUS_CFG[batchStatus as keyof typeof STATUS_CFG]?.bg} border ${STATUS_CFG[batchStatus as keyof typeof STATUS_CFG]?.border}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CFG[batchStatus as keyof typeof STATUS_CFG]?.dot}`} />
+                                        Batch: {batchStatus}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Batch info */}
-                    {selBatch && !batchLoad && (
-                        <div className="mt-4 flex items-center gap-3 flex-wrap">
-                            <BatchBadge status={selBatch.status} />
-                            <span className="text-xs text-slate-400">Batch ID:</span>
-                            <code className="text-xs font-mono text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 max-w-xs truncate">
-                                {selBatch.batchId}
-                            </code>
-                        </div>
-                    )}
-
-                    {/* Messages */}
-                    {calcErr && (
-                        <div className="mt-4 flex items-start gap-2 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-700">
-                            <span className="flex-shrink-0 mt-0.5">{Icon.warning}</span> {calcErr}
-                        </div>
-                    )}
-                    {approveMsg && (
-                        <div className={`mt-4 flex items-start gap-2 px-4 py-3 rounded-xl text-sm ${approveMsgType === "ok" ? "bg-emerald-50 border border-emerald-200 text-emerald-700" : "bg-rose-50 border border-rose-200 text-rose-700"
-                            }`}>
-                            <span className="flex-shrink-0 mt-0.5">{approveMsgType === "ok" ? Icon.checkCircle : Icon.warning}</span>
-                            {approveMsg}
-                        </div>
-                    )}
+                    {/* Toolbar Actions */}
+                    <div className="flex flex-wrap items-center gap-2.5 pt-6">
+                        <button onClick={() => setShowCreate(true)} className="flex items-center justify-center gap-2 px-3 py-2 bg-[#f0fdf4] text-[#166534] border border-[#bbf7d0] hover:bg-[#dcfce7] rounded-lg font-bold text-sm transition-colors shadow-sm">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                            New Period
+                        </button>
+                        <button onClick={() => setShowInquiries(true)} className="relative flex items-center justify-center gap-2 px-3 py-2 bg-[#f8fafc] hover:bg-[#f1f5f9] text-[#374151] rounded-lg font-bold text-sm border border-[#e2e8f0] transition-colors shadow-sm">
+                            <svg className="w-4 h-4 text-[#64748b]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Inquiries
+                            {pendingInqCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#ef4444] text-white text-[9px] flex items-center justify-center rounded-full shadow-sm">{pendingInqCount}</span>}
+                        </button>
+                        <div className="w-px h-6 bg-[#e2e8f0] mx-1 hidden sm:block"></div>
+                        <button onClick={handleCalculate} disabled={payslipLoad || isPeriodClosed || batchStatus === "LOCKED"}
+                            className="relative flex items-center justify-center gap-2 bg-[#10b981] text-white px-4 py-2 rounded-lg font-bold text-sm shadow-sm hover:bg-[#059669] transition-all disabled:opacity-60 disabled:cursor-not-allowed border border-[#059669]">
+                            {payslipLoad ? (
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            ) : (
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                            )}
+                            {payslipLoad ? "Processing..." : "Calculate Full Payroll"}
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* ── Stat cards (only when data loaded) ───────────────────────────── */}
-            {rowsLoaded && rows.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
-                    <StatCard label="Total Employees" value={rows.length} icon={Icon.users}
-                        bg="bg-gradient-to-br from-blue-500 to-indigo-600"
-                        subtitle="In this batch"
-                        active={filter === "all"} onClick={() => setFilter("all")} />
-                    <StatCard label="Normal" value={okCount} icon={Icon.check}
-                        bg="bg-gradient-to-br from-emerald-400 to-emerald-600"
-                        valueColor="text-emerald-600" subtitle="No warnings"
-                        active={filter === "ok"} onClick={() => setFilter(f => f === "ok" ? "all" : "ok")} />
-                    <StatCard label="Warnings" value={warnCount} icon={Icon.warning}
-                        bg="bg-gradient-to-br from-amber-400 to-orange-500"
-                        valueColor={warnCount > 0 ? "text-amber-600" : "text-slate-400"} subtitle="Needs review"
-                        active={filter === "warning"} onClick={() => setFilter(f => f === "warning" ? "all" : "warning")} />
-                    <StatCard label="Total Gross" value={fmt(totalGross)} icon={Icon.money}
-                        bg="bg-gradient-to-br from-violet-500 to-purple-600"
-                        valueColor="text-violet-600" subtitle="Before deductions" />
+            {actionMsg && (
+                <div className={`p-4 rounded-xl text-sm font-semibold border animate-in fade-in slide-in-from-top-2 ${actionMsgType === "ok" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"}`}>
+                    <div className="flex items-center gap-2">
+                        {actionMsgType === "ok" ? Icon.checkCircle : Icon.warning}
+                        {actionMsg}
+                    </div>
                 </div>
             )}
 
-            {/* ── Review table ──────────────────────────────────────────────────── */}
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                {/* Toolbar */}
-                <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                        <h3 className="text-sm font-bold text-slate-800">Employee Payroll Table</h3>
-                        {rows.length > 0 && (
-                            <p className="text-xs text-slate-400 mt-0.5">
-                                {filtered.length}/{rows.length} employees{selBatch && ` · ${fmtPeriod(selBatch.period)}`}
-                            </p>
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white rounded-2xl border border-[#e2e8f0] p-5 shadow-sm relative overflow-hidden group">
+                    <div className="absolute right-0 top-0 w-16 h-16 bg-[#e0f2fe] rounded-bl-full flex items-center justify-center text-[#0369a1] group-hover:bg-[#bae6fd] transition-colors">
+                        {Icon.users}
+                    </div>
+                    <p className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-2">Employees</p>
+                    <p className="text-2xl font-bold text-[#0f172a]">{metrics.emp} <span className="text-xs font-medium text-[#64748b]">Total</span></p>
+                </div>
+                <div className="bg-white rounded-2xl border border-[#e2e8f0] p-5 shadow-sm relative overflow-hidden group">
+                    <div className="absolute right-0 top-0 w-16 h-16 bg-[#dcfce7] rounded-bl-full flex items-center justify-center text-[#166534] group-hover:bg-[#bbf7d0] transition-colors">
+                        {Icon.wallet}
+                    </div>
+                    <p className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-2">Gross Salary</p>
+                    <p className="text-2xl font-bold text-[#0f172a]">{fmt(metrics.gross)}</p>
+                </div>
+                <div className="bg-white rounded-2xl border border-[#e2e8f0] p-5 shadow-sm relative overflow-hidden group">
+                    <div className="absolute right-0 top-0 w-16 h-16 bg-[#fef2f2] rounded-bl-full flex items-center justify-center text-[#b91c1c] group-hover:bg-[#fecaca] transition-colors">
+                        {Icon.trendUp}
+                    </div>
+                    <p className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-2">PIT Deductions</p>
+                    <p className="text-2xl font-bold text-[#0f172a]">{fmt(metrics.pit)}</p>
+                </div>
+                <div className="bg-white rounded-2xl border border-[#e2e8f0] p-5 shadow-sm relative overflow-hidden group">
+                    <div className="absolute right-0 top-0 w-16 h-16 bg-[#ede9fe] rounded-bl-full flex items-center justify-center text-[#6d28d9] group-hover:bg-[#ddd6fe] transition-colors">
+                        {Icon.shield}
+                    </div>
+                    <p className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-2">Ins. Contributions</p>
+                    <p className="text-2xl font-bold text-[#0f172a]">{fmt(metrics.ins)}</p>
+                </div>
+            </div>
+
+            {/* Table Area */}
+            <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm overflow-hidden flex flex-col mb-10">
+                {/* Table toolbar */}
+                <div className="p-5 border-b border-[#f1f5f9] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex-shrink-0">
+                        <h3 className="text-base font-bold text-[#0f172a] flex items-center gap-2">
+                            <svg className="w-5 h-5 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                            </svg>
+                            Payroll Details
+                        </h3>
+                        <p className="text-sm text-[#64748b] mt-1 ml-7">
+                            Showing {filteredPayslips.length} of {metrics.emp} employees — {metrics.draft} pending confirmation
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        {/* Search */}
+                        <div className="relative">
+                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="Search employees..."
+                                className="pl-9 pr-3 py-2 text-sm border border-[#e2e8f0] rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-[#10b981]/30 focus:border-[#10b981] w-48 placeholder:text-[#94a3b8]"
+                            />
+                        </div>
+                        {/* Department filter */}
+                        <div className="relative">
+                            <select
+                                value={deptFilter}
+                                onChange={e => setDeptFilter(e.target.value)}
+                                className="appearance-none pl-3 pr-8 py-2 text-sm border border-[#e2e8f0] rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-[#10b981]/30 focus:border-[#10b981] cursor-pointer text-[#0f172a]"
+                            >
+                                <option value="">All Departments</option>
+                                {deptOptions.map(d => <option key={d} value={d}>{d}</option>)}
+                            </select>
+                            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </div>
+                        {/* Clear filters */}
+                        {(search || deptFilter) && (
+                            <button onClick={() => { setSearch(""); setDeptFilter(""); }}
+                                className="text-sm font-medium text-[#64748b] hover:text-[#0f172a] transition-colors cursor-pointer flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                Clear
+                            </button>
                         )}
                     </div>
-                    {rows.length > 0 && (
-                        <div className="flex items-center gap-2">
-                            {/* Filter pills */}
-                            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-                                {(["all", "ok", "warning"] as const).map(f => (
-                                    <button key={f} onClick={() => setFilter(f)}
-                                        className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${filter === f ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                                            }`}>
-                                        {f === "all" ? "All" : f === "ok" ? "Normal" : "Warnings"}
-                                    </button>
-                                ))}
-                            </div>
-                            {/* Search */}
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{Icon.search}</span>
-                                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search employee..."
-                                    className="pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 w-44 transition-colors" />
-                            </div>
-                            {/* Department Filter */}
-                            {uniqueDepartments.length > 0 && (
-                                <div className="relative min-w-[140px]">
-                                    <select
-                                        value={selectedDepartment}
-                                        onChange={(e) => setSelectedDepartment(e.target.value)}
-                                        className="w-full appearance-none pl-4 pr-9 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer transition-colors"
-                                    >
-                                        <option value="all">All Departments</option>
-                                        {uniqueDepartments.map(dept => (
-                                            <option key={dept} value={dept}>{dept}</option>
-                                        ))}
-                                    </select>
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M6 9l6 6 6-6" /></svg>
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-                    )}
                 </div>
 
-                {/* Table */}
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
+                    <table className="w-full text-sm table-fixed">
                         <thead>
-                            <tr className="border-b border-slate-100 bg-slate-50/50">
-                                {["Employee", "Department", "Base Salary", "OT (h)", "OT Pay", "Absent (d)", "Deduct", "Gross Salary", "Status", ""].map(h => (
-                                    <th key={h} className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap">{h}</th>
-                                ))}
+                            <tr className="border-b border-[#e2e8f0]">
+                                {/* 1 */}
+                                <th className="w-[15%] px-5 py-3 text-left text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Employee</th>
+                                {/* 2 */}
+                                <th className="w-[10%] px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Department</th>
+                                {/* 3 */}
+                                <th className="w-[10%] px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Base Salary</th>
+                                {/* 4 */}
+                                <th className="w-[7%] px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">OT (H)</th>
+                                {/* 5 */}
+                                <th className="w-[8%] px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">OT Pay</th>
+                                {/* 6 */}
+                                <th className="w-[7%] px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Absent</th>
+                                {/* 7 */}
+                                <th className="w-[8%] px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Deduct</th>
+                                {/* 8 */}
+                                <th className="w-[12%] px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Net Salary</th>
+                                {/* 9 */}
+                                <th className="w-[10%] px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Status</th>
+                                {/* 10 */}
+                                <th className="w-[13%] px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {rowsLoad ? (
-                                <SkeletonRows />
-                            ) : !rowsLoaded ? (
-                                <tr><td colSpan={10} className="px-6 py-20 text-center">
-                                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4 text-slate-300">
-                                        <span className="scale-150">{Icon.refresh}</span>
+                        <tbody>
+                            {payslipLoad ? (
+                                <tr><td colSpan={10} className="py-24 text-center">
+                                    <div className="flex flex-col items-center gap-3">
+                                        <div className="w-8 h-8 border-2 border-[#10b981]/30 border-t-[#10b981] rounded-full animate-spin" />
+                                        <span className="text-sm text-[#94a3b8] font-medium">Loading payroll data...</span>
                                     </div>
-                                    <p className="text-sm font-semibold text-slate-600">Loading data...</p>
                                 </td></tr>
-                            ) : filtered.length === 0 ? (
-                                <tr><td colSpan={10} className="px-6 py-16 text-center">
-                                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4 text-slate-300">
-                                        <span className="scale-150">{Icon.inbox}</span>
+                            ) : payslips.length === 0 ? (
+                                <tr><td colSpan={10} className="p-10 text-center">
+                                    <div className="w-16 h-16 rounded-full bg-[#f1f5f9] flex items-center justify-center mx-auto mb-4">
+                                        <svg className="w-8 h-8 text-[#94a3b8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                        </svg>
                                     </div>
-                                    <p className="text-sm font-semibold text-slate-600">
-                                        {rows.length === 0
-                                            ? 'No data in this batch — click "Calculate" to start.'
-                                            : "No matching results."}
-                                    </p>
-                                    {rows.length === 0 && (
-                                        <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-                                            The system will automatically calculate payroll for all active employees.
-                                        </p>
-                                    )}
+                                    <p className="text-[#94a3b8] text-sm font-medium">No payslip data for this period.</p>
                                 </td></tr>
                             ) : (
-                                paginatedRows.map(row => (
-                                    <tr key={row.detailId}
-                                        className={`group cursor-pointer transition-colors ${row.hasWarning ? "bg-amber-50/30 hover:bg-amber-50/60" : "hover:bg-slate-50/70"}`}
-                                        onClick={() => setEditRow(row)}>
-                                        {/* Name */}
-                                        <td className="px-4 py-3.5">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 text-xs font-bold flex-shrink-0">
-                                                    {row.employeeName?.charAt(0).toUpperCase() ?? "?"}
+                                filteredPayslips.map(p => {
+                                    const gross = p.grossSalary ?? 0;
+                                    const taxPct = gross > 0 ? ((p.taxAmount ?? 0) / gross * 100).toFixed(1) : "0";
+                                    const insPct = gross > 0 ? ((p.insuranceAmount ?? 0) / gross * 100).toFixed(1) : "0";
+                                    return (
+                                        <tr key={p.payslipId} className="border-b border-[#f1f5f9] hover:bg-[#f8fafc] transition-colors">
+                                            {/* 1 — Employee */}
+                                            <td className="px-5 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-xl bg-[#e6faf3] flex items-center justify-center flex-shrink-0">
+                                                        <svg className="w-4 h-4 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-semibold text-[#0f172a] text-[13px] whitespace-nowrap">{p.employeeName}</div>
+                                                        <div className="text-[10px] text-[#94a3b8] font-mono mt-0.5">#{p.payslipId.substring(0, 8)}</div>
+                                                    </div>
                                                 </div>
-                                                <span className="font-semibold text-slate-800 whitespace-nowrap">{row.employeeName}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3.5 text-slate-500 text-xs">{row.department || "—"}</td>
-                                        <td className="px-4 py-3.5 font-medium text-slate-700 whitespace-nowrap">{fmt(row.baseSalary)}</td>
-                                        <td className="px-4 py-3.5">
-                                            <span className={`font-semibold ${row.totalOtHours > 80 ? "text-amber-600" : "text-slate-700"}`}>
-                                                {row.totalOtHours ?? 0}h
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3.5 text-slate-700 whitespace-nowrap">{fmt(row.otPay)}</td>
-                                        <td className="px-4 py-3.5">
-                                            <span className={row.totalAbsentDays > 0 ? "text-rose-600 font-semibold" : "text-slate-500"}>
-                                                {row.totalAbsentDays ?? 0}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3.5 whitespace-nowrap">
-                                            {row.absentDeduction
-                                                ? <span className="text-rose-600 font-medium">-{fmt(row.absentDeduction)}</span>
-                                                : <span className="text-slate-300">—</span>}
-                                        </td>
-                                        <td className="px-4 py-3.5">
-                                            <span className="font-bold text-slate-800 whitespace-nowrap">{fmt(row.grossSalary)}</span>
-                                        </td>
-                                        <td className="px-4 py-3.5">
-                                            {row.hasWarning ? (
-                                                <div>
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> Warning
+                                            </td>
+
+                                            {/* 2 — Department */}
+                                            <td className="px-5 py-4 text-center">
+                                                <div className="font-medium text-[#334155] text-[13px] whitespace-nowrap">{p.departmentName || "—"}</div>
+                                            </td>
+
+                                            {/* 3 — Base Salary */}
+                                            <td className="px-5 py-4 text-center font-semibold text-[#0f172a] text-[13px] tabular-nums whitespace-nowrap">
+                                                {fmt(p.baseSalary)}
+                                            </td>
+
+                                            {/* 4 — OT (H) */}
+                                            <td className="px-5 py-4 text-center">
+                                                {p.totalOtHours > 0 ? (
+                                                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[11px] font-black bg-sky-50 text-sky-600 border border-sky-100">
+                                                        {p.totalOtHours}H
                                                     </span>
-                                                    {row.warningMessage && <p className="text-[10px] text-slate-400 mt-0.5 max-w-[140px] truncate">{row.warningMessage}</p>}
+                                                ) : (
+                                                    <span className="text-[#cbd5e1] font-medium">—</span>
+                                                )}
+                                            </td>
+
+                                            {/* 5 — OT Pay */}
+                                            <td className="px-5 py-4 text-center">
+                                                {p.totalOtHours > 0 ? (
+                                                    <span className="font-bold text-sky-600 text-[13px] tabular-nums">{fmt(p.otPay)}</span>
+                                                ) : (
+                                                    <span className="text-[#cbd5e1]">—</span>
+                                                )}
+                                            </td>
+
+                                            {/* 6 — Absent (Day) */}
+                                            <td className="px-5 py-4 text-center">
+                                                {p.totalAbsentDays > 0 ? (
+                                                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[11px] font-black bg-rose-50 text-rose-600 border border-rose-100">
+                                                        {p.totalAbsentDays}D
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[#cbd5e1] font-medium">—</span>
+                                                )}
+                                            </td>
+
+                                            {/* 7 — Deduct (absent only) */}
+                                            <td className="px-5 py-4 text-center">
+                                                {p.absentDeduction > 0 ? (
+                                                    <span className="font-bold text-rose-600 text-[13px] tabular-nums">-{fmt(p.absentDeduction)}</span>
+                                                ) : (
+                                                    <span className="text-[#cbd5e1]">—</span>
+                                                )}
+                                            </td>
+
+                                            {/* 8 — Net Salary */}
+                                            <td className="px-5 py-4 text-center">
+                                                <div className="inline-block px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-black text-[13px] tabular-nums">
+                                                    {fmt(p.netSalary)}
                                                 </div>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> OK
+                                                <div className="text-[10px] text-[#94a3b8] font-bold mt-1">
+                                                    PIT {taxPct}% · INS {insPct}%
+                                                </div>
+                                            </td>
+
+                                            {/* 9 — Status */}
+                                            <td className="px-5 py-4 text-center">
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${p.status === "CONFIRMED" ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                                                        p.status === "PAID" ? "bg-sky-50 text-sky-700 border-sky-100" :
+                                                            p.status === "CANCELLED" ? "bg-rose-50 text-rose-700 border-rose-100" :
+                                                                "bg-slate-50 text-slate-600 border-slate-200"
+                                                    }`}>
+                                                    {p.status}
                                                 </span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3.5">
-                                            <button onClick={e => { e.stopPropagation(); setEditRow(row); }}
-                                                className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer opacity-0 group-hover:opacity-100">
-                                                {Icon.edit}
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
+                                            </td>
+
+                                            {/* 10 — Actions */}
+                                            <td className="px-5 py-4 text-center">
+                                                <div className="flex justify-center gap-2">
+                                                    {p.status === "DRAFT" && !isPeriodClosed && (
+                                                        <button onClick={() => handleConfirm(p.payslipId)} disabled={actionBusy !== null}
+                                                            title="Approve"
+                                                            className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all shadow-sm border border-emerald-100 flex items-center justify-center">
+                                                            {Icon.check}
+                                                        </button>
+                                                    )}
+                                                    {p.status !== "PAID" && p.status !== "CANCELLED" && !isPeriodClosed && (
+                                                        <button onClick={() => handleCancel(p.payslipId)} disabled={actionBusy !== null}
+                                                            title="Cancel payslip"
+                                                            className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm border border-rose-100 flex items-center justify-center">
+                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                                        </button>
+                                                    )}
+                                                    {(p.status === "PAID" || p.status === "CANCELLED" || isPeriodClosed) && (
+                                                        <span className="text-[#cbd5e1] font-bold text-lg">—</span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* Pagination Controls */}
-                {filtered.length > 0 && (
-                    <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between flex-wrap gap-4">
-                        <div className="text-xs text-slate-500">
-                            Showing <span className="font-semibold text-slate-700">{(currentPage - 1) * itemsPerPage + (filtered.length > 0 ? 1 : 0)}</span>
-                            {" "}to <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span>
-                            {" "}of <span className="font-semibold text-slate-700">{filtered.length}</span> employees
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                            >
-                                Previous
-                            </button>
-
-                            <div className="flex items-center gap-1.5 px-2">
-                                {Array.from({ length: totalPages }).map((_, i) => {
-                                    const page = i + 1;
-                                    if (totalPages > 7) {
-                                        if (page !== 1 && page !== totalPages && Math.abs(page - currentPage) > 1) {
-                                            if (page === 2 || page === totalPages - 1) return <span key={page} className="text-slate-400 text-xs px-1">...</span>;
-                                            return null;
-                                        }
-                                    }
-                                    return (
-                                        <button
-                                            key={page}
-                                            onClick={() => setCurrentPage(page)}
-                                            className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-colors cursor-pointer ${currentPage === page
-                                                    ? "bg-emerald-500 text-white shadow-sm"
-                                                    : "text-slate-500 hover:bg-slate-200"
-                                                }`}
-                                        >
-                                            {page}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            <button
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                disabled={currentPage === totalPages}
-                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Footer: approve */}
-                {rowsLoaded && rows.length > 0 && (
-                    <div className="px-6 py-4 border-t border-slate-100 bg-gradient-to-r from-slate-50 to-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 text-sm">
-                            <span className="flex items-center gap-1.5 text-emerald-700">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                <span className="font-semibold">{okCount}</span> normal
-                            </span>
-                            {warnCount > 0 && (
-                                <span className="flex items-center gap-1.5 text-amber-700">
-                                    <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                    <span className="font-semibold">{warnCount}</span> warnings
+                {/* Footer Bar */}
+                {payslips.length > 0 && (
+                    <div className="border-t border-[#e2e8f0] bg-[#f8fafc] p-5 flex flex-wrap justify-between items-center gap-6">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-white border border-[#e2e8f0] px-3 py-1.5 rounded-lg flex items-center gap-3 shadow-sm">
+                                <span className="flex items-center gap-1.5 text-xs font-bold text-[#166534]">
+                                    <span className="w-2 h-2 rounded-full bg-[#10b981]"></span> {metrics.confirmed} Confirmed
                                 </span>
-                            )}
-                            <span className="text-slate-400">·</span>
-                            <span className="text-slate-500 text-xs">Total gross: <span className="font-semibold text-slate-700">{fmt(totalGross)}</span></span>
+                                <span className="w-px h-3 bg-[#e2e8f0]"></span>
+                                <span className="flex items-center gap-1.5 text-xs font-medium text-[#64748b]">
+                                    <span className="w-2 h-2 rounded-full bg-[#cbd5e1]"></span> {metrics.draft} Draft
+                                </span>
+                            </div>
+                            <div className="text-sm">
+                                <span className="text-[#64748b] font-medium mr-2">Total Payroll (Net):</span>
+                                <span className="font-bold text-[#0f172a] text-lg">{fmt(payslips.reduce((a, b) => a + (b.status === 'CANCELLED' ? 0 : b.netSalary), 0))}</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {/* Send Report button */}
-                            <button onClick={() => setShowReport(true)}
-                                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold border border-violet-300 bg-violet-50 text-violet-700 hover:bg-violet-100 hover:border-violet-400 transition-all cursor-pointer shadow-sm">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                                    <polyline points="14 2 14 8 20 8" />
-                                    <line x1="16" y1="13" x2="8" y2="13" />
-                                    <line x1="16" y1="17" x2="8" y2="17" />
-                                    <polyline points="10 9 9 9 8 9" />
-                                </svg>
-                                Send Report
-                            </button>
-                            {/* Approve button */}
-                            <button onClick={handleApprove} disabled={approveBusy}
-                                className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-sm ${approveBusy ? "bg-emerald-400 text-white cursor-wait" : "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 cursor-pointer"
-                                    }`}>
-                                <span className={approveBusy ? "animate-spin" : ""}>{approveBusy ? Icon.refresh : Icon.checkCircle}</span>
-                                {approveBusy ? "Processing..." : "Validate & Approve Batch"}
-                            </button>
+
+                        <div className="flex gap-3">
+                            {!isPeriodClosed && metrics.draft > 0 && (
+                                <button onClick={handleConfirmAll} disabled={actionBusy === "confirmAll" || batchStatus === "LOCKED"}
+                                    className="px-5 py-2.5 bg-white border border-[#e2e8f0] hover:bg-[#10b981] hover:text-white hover:border-[#10b981] text-[#0f172a] rounded-xl text-sm font-bold transition-all shadow-sm disabled:opacity-50 flex items-center gap-2">
+                                    {Icon.check} {actionBusy === "confirmAll" ? "Processing..." : "Approve All Pending"}
+                                </button>
+                            )}
+                            {!isPeriodClosed && metrics.confirmed > 0 && metrics.draft === 0 && (
+                                <button onClick={handleSendToFinance} disabled={actionBusy === "sendFinance" || (batchStatus !== "VALIDATED" && batchStatus !== "PROCESSED")}
+                                    className="px-6 py-2.5 bg-[#4f46e5] hover:bg-[#4338ca] text-white rounded-xl text-sm font-bold transition-all shadow-sm disabled:opacity-50 flex items-center gap-2">
+                                    {Icon.wallet} {actionBusy === "sendFinance" ? "Sending..." : "Submit to Finance"}
+                                </button>
+                            )}
+                            {!isPeriodClosed && (metrics.emp > 0 && metrics.draft === 0 && payslips.every(p => p.status === "PAID" || p.status === "CANCELLED")) && (
+                                <button onClick={handleClosePeriod} disabled={actionBusy === "closePeriod"}
+                                    className="px-6 py-2.5 bg-[#0f172a] hover:bg-[#1e293b] text-white rounded-xl text-sm font-bold shadow-sm transition-all disabled:opacity-50">
+                                    {actionBusy === "closePeriod" ? "Closing..." : "Close Payroll Period"}
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Modals */}
-            {showCreate && <CreateBatchModal onCreated={onBatchCreated} onClose={() => setShowCreate(false)} />}
-            {editRow && <EditModal detail={editRow} onSaved={() => loadReview(selId)} onClose={() => setEditRow(null)} />}
-            {showReport && selBatch && (
-                <PayrollReportModal
-                    batch={selBatch}
-                    rows={rows}
-                    onConfirm={() => setApproveMsg("Report sent to Finance successfully!")}
-                    onClose={() => setShowReport(false)}
-                />
-            )}
-        </>
+            {/* ── Payment Request History Panel ── */}
+            <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm overflow-hidden mb-6">
+                {/* Header */}
+                <div className="px-5 py-4 border-b border-[#f1f5f9] flex items-center justify-between">
+                    <div>
+                        <h3 className="text-base font-bold text-[#0f172a] flex items-center gap-2">
+                            <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Finance Payment Responses
+                        </h3>
+                        <p className="text-xs text-[#64748b] mt-0.5 ml-7">Track Finance's decisions on your payment requests</p>
+                    </div>
+                    <button
+                        onClick={() => {
+                            if (!showHistory) loadPaymentHistory();
+                            setShowHistory(v => !v);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-[#4f46e5] bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors cursor-pointer"
+                    >
+                        {showHistory ? "Hide" : "View Responses"}
+                        <svg className={`w-4 h-4 transition-transform ${showHistory ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                </div>
+
+                {/* Collapsible body */}
+                {showHistory && (
+                    <div className="p-5">
+                        {historyLoad ? (
+                            <div className="flex justify-center items-center py-10">
+                                <div className="w-7 h-7 border-[3px] border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        ) : paymentHistory.length === 0 ? (
+                            <div className="py-10 text-center text-[#94a3b8]">
+                                <svg className="w-10 h-10 mx-auto text-[#cbd5e1] mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <p className="text-sm font-semibold">No payment requests sent yet.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {paymentHistory.map(req => {
+                                    const prStatus = PR_STATUS_CFG[req.status] ?? PR_STATUS_CFG.PENDING;
+                                    const isRejected = req.status === "REJECTED";
+                                    const isPaid = req.status === "PAID";
+                                    return (
+                                        <div key={req.requestId}
+                                            className={`rounded-xl border p-4 flex flex-col sm:flex-row sm:items-start gap-4 transition-all ${
+                                                isRejected ? "bg-rose-50/60 border-rose-200" :
+                                                isPaid ? "bg-emerald-50/60 border-emerald-200" :
+                                                "bg-slate-50 border-[#e2e8f0]"
+                                            }`}>
+                                            {/* Left: status dot */}
+                                            <div className={`mt-1 w-2.5 h-2.5 rounded-full flex-shrink-0 ${prStatus.dot}`} />
+
+                                            {/* Middle: info */}
+                                            <div className="flex-1 min-w-0 space-y-1.5">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="text-[11px] font-mono text-[#64748b]">
+                                                        #{req.requestId.substring(0, 8)}
+                                                    </span>
+                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${prStatus.bg} ${prStatus.text} ${prStatus.border}`}>
+                                                        {prStatus.label}
+                                                    </span>
+                                                    <span className="text-[11px] font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded">
+                                                        {PR_TYPE_LABEL[req.type] ?? req.type}
+                                                    </span>
+                                                    <span className="text-[11px] font-black text-[#0f172a] tabular-nums">
+                                                        {fmt(req.totalAmountRequested)}
+                                                    </span>
+                                                    {req.createdAt && (
+                                                        <span className="text-[10px] text-[#94a3b8]">
+                                                            Sent: {new Date(req.createdAt).toLocaleDateString("vi-VN")}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* HR Note */}
+                                                {req.hrNote && (
+                                                    <p className="text-xs text-[#64748b]">
+                                                        <span className="font-bold text-[#334155]">Your note:</span> {req.hrNote}
+                                                    </p>
+                                                )}
+
+                                                {/* Finance feedback */}
+                                                {req.financeNote ? (
+                                                    <div className={`flex items-start gap-2 mt-2 p-3 rounded-lg border ${
+                                                        isRejected
+                                                            ? "bg-rose-100/70 border-rose-200"
+                                                            : "bg-emerald-100/70 border-emerald-200"
+                                                    }`}>
+                                                        <div className={`flex-shrink-0 mt-0.5 ${
+                                                            isRejected ? "text-rose-600" : "text-emerald-600"
+                                                        }`}>
+                                                            {isRejected ? (
+                                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                </svg>
+                                                            ) : (
+                                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                </svg>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <p className={`text-[10px] font-black uppercase tracking-wide mb-0.5 ${
+                                                                isRejected ? "text-rose-700" : "text-emerald-700"
+                                                            }`}>Finance Response:</p>
+                                                            <p className="text-sm text-[#1e293b] font-medium">{req.financeNote}</p>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    req.status === "PENDING" && (
+                                                        <p className="text-xs text-[#94a3b8] italic mt-1">Awaiting Finance review...</p>
+                                                    )
+                                                )}
+                                            </div>
+
+                                            {/* Right: approved date */}
+                                            {req.approvedAt && (
+                                                <div className="text-right flex-shrink-0">
+                                                    <p className="text-[10px] text-[#94a3b8] font-bold uppercase tracking-wide">Processed</p>
+                                                    <p className="text-xs font-semibold text-[#334155]">{new Date(req.approvedAt).toLocaleDateString("vi-VN")}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {showCreate && <CreatePeriodModal onCreated={() => { setShowCreate(false); loadPeriods(); }} onClose={() => setShowCreate(false)} />}
+            {showInquiries && <HRInquiriesModal onClose={() => setShowInquiries(false)} onRefreshCount={loadInquiryCount} />}
+        </div>
     );
 };
 
