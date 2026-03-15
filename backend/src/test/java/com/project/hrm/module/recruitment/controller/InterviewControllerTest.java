@@ -155,11 +155,58 @@ class InterviewControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    @DisplayName("GET /api/interview/{id} – chưa đăng nhập → 401")
+    void getById_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/api/interview/{id}", appId))
+                .andExpect(status().isUnauthorized());
+    }
+
     // ===================== PATCH /api/interview/{id}/result =====================
 
     @Test
+    @DisplayName("PATCH /api/interview/{id}/result – HR nhập kết quả COMPLETED → 201")
+    @WithMockUser(roles = "HR")
+    void inputResult_asHr_completed_returns201() throws Exception {
+        InterviewResponse completedResponse = new InterviewResponse();
+        completedResponse.setId(interviewId);
+        completedResponse.setAppId(appId);
+        completedResponse.setInterviewerName("Le Interviewer");
+        completedResponse.setStatus(InterviewStatus.COMPLETED);
+        completedResponse.setFeedback("Great candidate");
+        completedResponse.setScore(BigDecimal.valueOf(8.5));
+        completedResponse.setFullName("Tran Thi B");
+        completedResponse.setJobTitle("Backend Developer");
+
+        when(interviewService.inputResult(eq(interviewId), any())).thenReturn(completedResponse);
+
+        InterviewRequest req = new InterviewRequest();
+        req.setStatus(InterviewStatus.COMPLETED);
+        req.setFeedback("Great candidate");
+        req.setScore(BigDecimal.valueOf(8.5));
+
+        mockMvc.perform(patch("/api/interview/{id}/result", interviewId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(req)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.score").value(8.5))
+                .andExpect(jsonPath("$.feedback").value("Great candidate"));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/interview/{id}/result – EMPLOYEE không được nhập kết quả → 403")
+    @WithMockUser(roles = "EMPLOYEE")
+    void inputResult_asEmployee_returns403() throws Exception {
+        mockMvc.perform(patch("/api/interview/{id}/result", interviewId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @DisplayName("PATCH /api/interview/{id}/result – nhập kết quả COMPLETED → 201")
-    @WithMockUser
+    @WithMockUser(roles = "MANAGER")
     void inputResult_completed_returns201() throws Exception {
         InterviewResponse completedResponse = new InterviewResponse();
         completedResponse.setId(interviewId);
@@ -189,7 +236,7 @@ class InterviewControllerTest {
 
     @Test
     @DisplayName("PATCH /api/interview/{id}/result – nhập kết quả CANCELLED → 201")
-    @WithMockUser
+    @WithMockUser(roles = "MANAGER")
     void inputResult_cancelled_returns201() throws Exception {
         InterviewResponse cancelledResponse = new InterviewResponse();
         cancelledResponse.setId(interviewId);
@@ -250,6 +297,15 @@ class InterviewControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    @DisplayName("POST /api/interview/send/{deptId} – chưa đăng nhập → 401")
+    void sendList_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(post("/api/interview/send/{deptId}", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[]"))
+                .andExpect(status().isUnauthorized());
+    }
+
     // ===================== GET /api/interview/list/{id} =====================
 
     @Test
@@ -274,6 +330,14 @@ class InterviewControllerTest {
 
         mockMvc.perform(get("/api/interview/list/{id}", interviewerId))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /api/interview/list/{id} – EMPLOYEE không có quyền → 403")
+    @WithMockUser(roles = "EMPLOYEE")
+    void getList_asEmployee_returns403() throws Exception {
+        mockMvc.perform(get("/api/interview/list/{id}", UUID.randomUUID()))
+                .andExpect(status().isForbidden());
     }
 
     @Test

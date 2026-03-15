@@ -22,6 +22,7 @@ public class JobRequestController {
     private final JobRequestService jobRequestService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<JobRequestResponse> create(
             @Valid @RequestBody JobRequestRequest request) {
 
@@ -31,6 +32,7 @@ public class JobRequestController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<JobRequestResponse>> getAll() {
 
         List<JobRequestResponse> responses =
@@ -85,6 +87,7 @@ public class JobRequestController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<JobRequestResponse> getById(
             @PathVariable UUID id) {
 
@@ -92,6 +95,7 @@ public class JobRequestController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<JobRequestResponse> updateBefore(
             @PathVariable UUID id,
             @RequestBody JobRequestRequest request) {
@@ -102,6 +106,7 @@ public class JobRequestController {
     }
 
     @PostMapping("/{id}/status")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<JobRequestResponse> updateStatus(
             @PathVariable UUID id,
             @RequestParam RequestStatus status,
@@ -113,6 +118,7 @@ public class JobRequestController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
 
         jobRequestService.delete(id);
