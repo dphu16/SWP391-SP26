@@ -43,6 +43,7 @@ public class SecurityConfig {
                                 .frameOptions(frame -> frame.disable())  //Có thể xóa
                         )   //Có thể xóa
                                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers("/api/auth/**").permitAll()
                                                 .requestMatchers("/api/activation/verify").permitAll()

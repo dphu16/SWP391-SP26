@@ -3,8 +3,6 @@ package com.project.hrm.module.recruitment.service.impl;
 import com.project.hrm.module.corehr.entity.Department;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.enums.EmployeeRole;
-import com.project.hrm.module.corehr.repository.DepartmentRepository;
-import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.recruitment.dto.request.EmailRequest;
 import com.project.hrm.module.recruitment.dto.request.InterviewRequest;
 import com.project.hrm.module.recruitment.dto.response.InterviewResponse;
@@ -32,8 +30,8 @@ import java.util.UUID;
 public class InterviewServiceImpl implements InterviewService {
     private final ApplicationRepository applicationRepository;
     private final InterviewRepository interviewRepository;
-    private final EmployeeRepository employeeRepository;
-    private final DepartmentRepository departmentRepository;
+    private final REmployeeRepository employeeRepository;
+    private final RDepartmentRepository departmentRepository;
     private final RealInterview realInterview;
     private final JobRepository jobRepository;
 
