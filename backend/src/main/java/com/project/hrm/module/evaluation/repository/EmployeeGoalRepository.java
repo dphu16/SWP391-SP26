@@ -21,13 +21,16 @@ public interface EmployeeGoalRepository
     @Query("SELECT COUNT(DISTINCT eg.employee.employeeId) FROM EmployeeGoal eg " +
            "WHERE eg.employee.employeeId IN :employeeIds " +
            "AND eg.cycle.cycleId = :cycleId " +
-           "AND eg.status = com.project.hrm.module.evaluation.enums.GoalStatus.SUBMITTED")
+           "AND eg.status IN (com.project.hrm.module.evaluation.enums.GoalStatus.SUBMITTED, com.project.hrm.module.evaluation.enums.GoalStatus.COMPLETED)")
     long countDistinctSubmittedEmployees(
             @Param("employeeIds") List<UUID> employeeIds,
             @Param("cycleId") UUID cycleId);
 
     @Query("SELECT SUM(eg.targetValue) FROM EmployeeGoal eg WHERE eg.cycle.cycleId = :cycleId")
     Double sumTargetValueByCycle(@Param("cycleId") UUID cycleId);
+    
+    @Query("SELECT SUM(eg.targetValue) FROM EmployeeGoal eg")
+    Double sumAllTargetValues();
     
     @Modifying
     @Transactional

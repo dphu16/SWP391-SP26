@@ -4,6 +4,7 @@ import com.project.hrm.module.evaluation.dto.CycleStatusRequest;
 import com.project.hrm.module.evaluation.dto.PerformanceCyclesRequest;
 import com.project.hrm.module.evaluation.entity.PerformanceCycles;
 import com.project.hrm.module.evaluation.enums.CycleStatus;
+import com.project.hrm.module.evaluation.repository.EmployeeGoalRepository;
 import com.project.hrm.module.evaluation.repository.PerformanceCyclesRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,14 +17,19 @@ import java.util.UUID;
 public class PerformanceCyclesService {
 
     private final PerformanceCyclesRepository repository;
+    private final EmployeeGoalRepository goalRepository;
 
-    public PerformanceCyclesService(PerformanceCyclesRepository repository) {
+    public PerformanceCyclesService(PerformanceCyclesRepository repository, EmployeeGoalRepository goalRepository) {
         this.repository = repository;
+        this.goalRepository = goalRepository;
     }
 
     // Create cycle
     @Transactional
     public PerformanceCycles create(PerformanceCyclesRequest req) {
+        if (repository.existsByCycleNameIgnoreCase(req.getCycleName())) {
+            throw new RuntimeException("This cycle name already exists. Please choose a different name.");
+        }
 
         if (req.getEndDate().isBefore(req.getStartDate())) {
             throw new RuntimeException("End date must be after start date");
@@ -33,7 +39,7 @@ public class PerformanceCyclesService {
                 !req.getStartDate().isAfter(c.getEndDate()) && !req.getEndDate().isBefore(c.getStartDate())
         );
         if (hasOverlap) {
-            throw new RuntimeException("Thời gian của chu kỳ này bị trùng lặp với một chu kỳ đã tồn tại");
+            throw new RuntimeException("This cycle's time range overlaps with an existing cycle.");
         }
 
         PerformanceCycles cycle = new PerformanceCycles();
@@ -56,6 +62,18 @@ public class PerformanceCyclesService {
         if (cycle.getStatus() == CycleStatus.CLOSED)
             throw new RuntimeException("Cannot edit a closed cycle");
 
+        // Rule: Only allow editing dates if NO goals have been assigned yet
+        // Note: HR publishing a structure creates goals with targetValue = 0.
+        // Manager assigning a target updates targetValue > 0.
+        boolean isDateChanging = !cycle.getStartDate().equals(req.getStartDate()) || !cycle.getEndDate().equals(req.getEndDate());
+        if (isDateChanging) {
+            boolean hasAssignedTargets = goalRepository.findAll().stream()
+                    .anyMatch(g -> g.getCycle().getCycleId().equals(id) && g.getTargetValue() != null && g.getTargetValue() > 0);
+            if (hasAssignedTargets) {
+                throw new RuntimeException("Cannot modify the timeframe because specific targets have already been assigned (Target Value > 0). Please delete the assigned targets before changing the timeframe.");
+            }
+        }
+
         if (req.getEndDate().isBefore(req.getStartDate()))
             throw new RuntimeException("End date must be after start date");
 
@@ -64,7 +82,11 @@ public class PerformanceCyclesService {
                 .anyMatch(c -> !req.getStartDate().isAfter(c.getEndDate()) && !req.getEndDate().isBefore(c.getStartDate())
         );
         if (hasOverlap) {
-            throw new RuntimeException("Thời gian cập nhật bị trùng lặp với một chu kỳ khác đã tồn tại");
+            throw new RuntimeException("The updated timeframe overlaps with another existing cycle.");
+        }
+
+        if (repository.existsByCycleNameIgnoreCaseAndCycleIdNot(req.getCycleName(), id)) {
+            throw new RuntimeException("The updated cycle name already exists. Please choose a different name.");
         }
 
         cycle.setCycleName(req.getCycleName());

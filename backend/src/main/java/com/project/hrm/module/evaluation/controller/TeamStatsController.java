@@ -13,6 +13,8 @@ import com.project.hrm.module.corehr.mapper.EmployeeMapper;
 import java.util.List;
 import java.util.Collections;
 import java.util.stream.Collectors;
+import com.project.hrm.module.corehr.enums.EmployeeStatus;
+import com.project.hrm.module.corehr.enums.EmployeeRole;
 
 @CrossOrigin(origins = "http://localhost:5173")
 @RestController
@@ -47,10 +49,13 @@ public class TeamStatsController {
         }
 
         // Returns all employees in the SAME department
-        List<Employee> teamMembers = employeeRepo.findByPosition_Department_DeptId(manager.getDepartment().getDeptId());
+        List<Employee> teamMembers = employeeRepo.findByDepartment_DeptId(manager.getDepartment().getDeptId());
 
         List<EmployeeDTO> dtos = teamMembers.stream()
-                .filter(e -> e.getEmployeeId() != null && !e.getEmployeeId().equals(manager.getEmployeeId()))
+                .filter(e -> e.getEmployeeId() != null 
+                        && !e.getEmployeeId().equals(manager.getEmployeeId()) 
+                        && e.getStatus() == EmployeeStatus.OFFICIAL
+                        && e.getRole() == EmployeeRole.ROLE_EMPLOYEE)
                 .map(EmployeeMapper::toDTO)
                 .collect(Collectors.toList());
 
@@ -60,5 +65,10 @@ public class TeamStatsController {
     @GetMapping("/hr/stats")
     public ResponseEntity<GlobalPerformanceStatsResponse> getGlobalStats() {
         return ResponseEntity.ok(statsService.getGlobalPerformanceStats());
+    }
+
+    @GetMapping("/hr/leaderboard")
+    public ResponseEntity<List<DepartmentScoreResponse>> getDepartmentLeaderboard() {
+        return ResponseEntity.ok(statsService.getDepartmentLeaderboard());
     }
 }

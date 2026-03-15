@@ -6,4 +6,5 @@ import lombok.Data;
 @Data
 public class GoalStatusRequest {
     private GoalStatus status;
+    private String comment;
 }
