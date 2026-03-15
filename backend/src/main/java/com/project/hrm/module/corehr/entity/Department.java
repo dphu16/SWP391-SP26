@@ -13,7 +13,6 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Department {
 
     @Id
@@ -33,12 +32,6 @@ public class Department {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "mentor_id")
-    @ToString.Exclude
-    @JsonIgnore
-    private Employee mentor;
 
 
 }
