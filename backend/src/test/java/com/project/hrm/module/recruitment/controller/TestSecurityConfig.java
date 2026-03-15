@@ -1,4 +1,4 @@
-package com.project.hrm.recruitment.controller;
+package com.project.hrm.module.recruitment.controller;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.test.context.TestConfiguration;

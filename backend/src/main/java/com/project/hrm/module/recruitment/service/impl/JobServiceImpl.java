@@ -183,7 +183,7 @@ public class JobServiceImpl implements JobService {
         }
         OffsetDateTime start = request.getPostedTime();
         OffsetDateTime end = request.getClosedTime();
-        if(end.isAfter(OffsetDateTime.now().minusDays(1))){
+        if(end.isBefore(OffsetDateTime.now().plusDays(1))){
             throw new RuntimeException("End date must be at least 1 day after now");
         }
         if (!start.isBefore(end.minusDays(1))) {

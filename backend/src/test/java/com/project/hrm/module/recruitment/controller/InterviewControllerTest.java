@@ -1,9 +1,8 @@
-package com.project.hrm.recruitment.controller;
+package com.project.hrm.module.recruitment.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.project.hrm.module.recruitment.controller.InterviewController;
 import com.project.hrm.module.recruitment.dto.request.InterviewRequest;
 import com.project.hrm.module.recruitment.dto.response.InterviewResponse;
 import com.project.hrm.module.recruitment.enums.InterviewStatus;

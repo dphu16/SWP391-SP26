@@ -1,7 +1,6 @@
-package com.project.hrm.recruitment.controller;
+package com.project.hrm.module.recruitment.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.project.hrm.module.recruitment.controller.CvReviewController;
 import com.project.hrm.module.recruitment.dto.request.CvReviewRequest;
 import com.project.hrm.module.recruitment.dto.response.CvReviewResponse;
 import com.project.hrm.module.recruitment.enums.ResultStatus;
