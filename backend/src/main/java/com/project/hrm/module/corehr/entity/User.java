@@ -60,6 +60,4 @@ public class User {
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
 
-    @Column(name = "employee_id")
-    private UUID employeeId;
 }

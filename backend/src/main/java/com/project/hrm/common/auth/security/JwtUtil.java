@@ -1,6 +1,6 @@
 package com.project.hrm.common.auth.security;
 
-import com.project.hrm.module.corehr.entity.User;
+
 import com.project.hrm.module.corehr.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -13,11 +13,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
+
 
 @Component
 public class JwtUtil {
@@ -64,9 +64,10 @@ public class JwtUtil {
         }
 
         // Add employeeId to JWT directly from User table
+        // Đoạn code đã sửa
         userRepository.findByEmail(userDetails.getUsername())
-                .filter(user -> user.getEmployeeId() != null)
-                .ifPresent(user -> claims.put("employeeId", user.getEmployeeId().toString()));
+                .filter(u -> u.getEmployee() != null && u.getEmployee().getEmployeeId() != null)
+                .ifPresent(u -> claims.put("employeeId", u.getEmployee().getEmployeeId().toString()));
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -82,7 +83,10 @@ public class JwtUtil {
         return parseClaims(token).getSubject();
     }
 
-    /** Extract the employeeId claim embedded in the token (may be null for users without employee records). */
+    /**
+     * Extract the employeeId claim embedded in the token (may be null for users
+     * without employee records).
+     */
     public String extractEmployeeId(String token) {
         Object empId = parseClaims(token).get("employeeId");
         return empId != null ? empId.toString() : null;
