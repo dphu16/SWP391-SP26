@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useLoginForm } from "./hooks/useLoginForm";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { library } from "@fortawesome/fontawesome-svg-core";
@@ -27,6 +28,7 @@ const LoginForm: React.FC = () => {
     handleSubmit,
     handleGoogleLogin,
   } = useLoginForm();
+  const navigate = useNavigate();
 
   return (
     <form
@@ -132,8 +134,12 @@ const LoginForm: React.FC = () => {
           </span>
         </label>
 
-        <a
-          href="#"
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate("/forgot-password");
+          }}
           className={[
             "text-[13px] font-medium text-[#0891B2]",
             "hover:text-[#164E63]",
@@ -143,7 +149,7 @@ const LoginForm: React.FC = () => {
           aria-label="Forgot password?"
         >
           Forgot password?
-        </a>
+        </button>
       </div>
 
       {/* Submit Button */}

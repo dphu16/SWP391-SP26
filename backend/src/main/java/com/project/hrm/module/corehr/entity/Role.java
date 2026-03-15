@@ -21,4 +21,7 @@ public class Role {
     @Enumerated(EnumType.STRING)
     @Column(unique = true, nullable = false)
     private EmployeeRole name;
+
+    @Column(length = 255)
+    private String description;
 }

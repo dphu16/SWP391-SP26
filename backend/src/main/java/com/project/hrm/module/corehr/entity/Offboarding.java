@@ -48,7 +48,6 @@ public class Offboarding {
     @Column(name = "status", nullable = false, length = 30)
     private OffboardingStatus status;
 
-    /** Trạng thái nhân viên trước khi offboarding (OFFICIAL, INTERN, PROBATION) */
     @Enumerated(EnumType.STRING)
     @Column(name = "previous_employee_status", length = 30)
     private EmployeeStatus previousEmployeeStatus;

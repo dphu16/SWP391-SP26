@@ -1,6 +1,0 @@
-src/components/attendance/CreateSchedule.tsx(10,35): error TS2307: Cannot find module '../coreHR/types' or its corresponding type declarations.
-src/components/coreHR/dashboard/Icons.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
-src/components/coreHR/detail/Icons.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
-src/components/coreHR/detail/JobTab.tsx(4,32): error TS6133: 'IconButton' is declared but its value is never read.
-src/components/coreHR/detail/JobTab.tsx(5,1): error TS6133: 'EditIcon' is declared but its value is never read.
-src/components/HRPerformance.tsx(64,24): error TS6198: All destructured elements are unused.

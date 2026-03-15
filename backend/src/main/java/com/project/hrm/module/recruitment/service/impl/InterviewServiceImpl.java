@@ -105,7 +105,12 @@ public class InterviewServiceImpl implements InterviewService {
                 double weight;
                 double appScore = entity.getApp().getScore().doubleValue();
                 double score = request.getScore().doubleValue();
-                if (employee.getUser().getRole().equals(EmployeeRole.ROLE_HR)) {
+                boolean isHrInterviewer = employee.getUser() != null
+                        && employee.getUser().getRoles() != null
+                        && employee.getUser().getRoles().stream()
+                        .anyMatch(r -> r.getName() == EmployeeRole.ROLE_HR);
+
+                if (isHrInterviewer) {
                     weight = 0.3;
                 } else {
                     weight = 0.7;
@@ -147,7 +152,7 @@ public class InterviewServiceImpl implements InterviewService {
             if(i.getScheduleTime() == null){
                 throw new RuntimeException(i.getApp().getCandidate().getFullName()+" hasn't interview day!");
             }
-            check = interviewRepository.existsByApp_IdAndInterviewer_User_Role(i.getApp().getId(), role);
+            check = interviewRepository.existsByApp_IdAndInterviewer_User_Roles_Name(i.getApp().getId(), role);
             if(check) {
                 throw new RuntimeException("This app has name "+i.getApp().getCandidate().getFullName()+" is existed!");
             };

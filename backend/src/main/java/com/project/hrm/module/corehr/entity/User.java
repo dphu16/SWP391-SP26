@@ -1,7 +1,6 @@
 package com.project.hrm.module.corehr.entity;
 
 import com.project.hrm.module.corehr.enums.AuthProvider;
-import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -35,10 +34,6 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "role", length = 50)
-    private EmployeeRole role;
-
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
@@ -47,11 +42,8 @@ public class User {
     private UserStatus status;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "provider" ,nullable = false)
+    @Column(name = "provider", nullable = false)
     private AuthProvider provider = AuthProvider.LOCAL;
-
-    @Column(name = "full_name", length = 100)
-    private String fullName;
 
     @Column(name = "avatar_url")
     private String avatarUrl;

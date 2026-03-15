@@ -1,8 +1,11 @@
 package com.project.hrm.common.auth.controller;
 
 import com.project.hrm.common.auth.dto.AuthResponse;
+import com.project.hrm.common.auth.dto.ForgotPasswordRequest;
 import com.project.hrm.common.auth.dto.LoginRequest;
+import com.project.hrm.common.auth.dto.ResetPasswordRequest;
 import com.project.hrm.common.auth.service.AuthService;
+import com.project.hrm.common.auth.service.ForgotPasswordService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +23,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final ForgotPasswordService forgotPasswordService;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest req) {
@@ -35,5 +39,19 @@ public class AuthController {
     public ResponseEntity<?> logout(@RequestBody Map<String, String> body) {
         authService.logout(body.get("refreshToken"));
         return ResponseEntity.ok(Map.of("message", "Đăng xuất thành công"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        forgotPasswordService.requestPasswordReset(request);
+        // Always return the same generic message to prevent email enumeration
+        return ResponseEntity.ok(Map.of("message",
+                "If this email exists in our system, a password reset link has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        forgotPasswordService.resetPassword(request);
+        return ResponseEntity.ok(Map.of("message", "Password has been reset successfully."));
     }
 }
