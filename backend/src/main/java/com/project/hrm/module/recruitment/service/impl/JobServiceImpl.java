@@ -2,6 +2,8 @@ package com.project.hrm.module.recruitment.service.impl;
 
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.entity.Position;
+import com.project.hrm.module.corehr.repository.EmployeeRepository;
+import com.project.hrm.module.corehr.repository.PositionRepository;
 import com.project.hrm.module.recruitment.dto.request.CreateJobRequest;
 import com.project.hrm.module.recruitment.dto.response.JobResponse;
 import com.project.hrm.module.recruitment.entity.Job;
@@ -25,9 +27,10 @@ import java.util.UUID;
 public class JobServiceImpl implements JobService {
 
     private final JobRepository jobRepository;
+    private final ApplicationRepository applicationRepository;
     private final JobDetailRepository jobDetailRepository;
-    private final REmployeeRepository REmployeeRepository;
-    private final RPositionRepository RPositionRepository;
+    private final EmployeeRepository employeeRepository;
+    private final PositionRepository positionRepository;
     private final JobRequestRepository jobRequestRepository;
 
     @Override
@@ -42,7 +45,13 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public List<JobResponse> getAllJob() {
-        List<Job> responses = jobRepository.findAll();
+        List<Job> responses = jobRepository.
+                findByStatusIsNotOrderByPostedAtDesc(JobStatus.DRAFT);
+        for (Job i : responses) {
+            if (i.getClosedAt().isBefore(OffsetDateTime.now())) {
+                i.setStatus(JobStatus.CLOSED);
+            }
+        }
         return responses.stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -50,7 +59,16 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public List<JobResponse> getJobByEmployeeId(UUID id) {
-        List<Job> responses = jobRepository.findByEmployee_EmployeeId(id);
+        List<Job> responses = jobRepository.findByEmployee_EmployeeIdOrderByPostedAtDesc(id);
+        for (Job i : responses) {
+            if (i.getStatus().equals(JobStatus.DRAFT) && i.getPostedAt().isBefore(OffsetDateTime.now())) {
+                i.setStatus(JobStatus.OPEN);
+            } else {
+                if (i.getClosedAt().isBefore(OffsetDateTime.now())) {
+                    i.setStatus(JobStatus.CLOSED);
+                }
+            }
+        }
         return responses.stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -60,12 +78,23 @@ public class JobServiceImpl implements JobService {
     public JobResponse getJobById(UUID id) {
         Job entity = jobRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
+        if (entity.getStatus().equals(JobStatus.DRAFT) && entity.getPostedAt().isBefore(OffsetDateTime.now())) {
+            entity.setStatus(JobStatus.OPEN);
+        } else {
+            if (entity.getClosedAt().isBefore(OffsetDateTime.now())) {
+                entity.setStatus(JobStatus.CLOSED);
+            }
+        }
         return mapToResponse(entity);
     }
 
     @Override
     public List<JobResponse> getJobByStatus(JobStatus status) {
         List<Job> responses = jobRepository.findByStatus(status);
+        for (Job i : responses) {
+            long count = applicationRepository.countByJob_Id(i.getId());
+            if (i.getJobDetail().getMaxCv() <= count) i.setStatus(JobStatus.FILLED);
+        }
         return responses.stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -74,7 +103,8 @@ public class JobServiceImpl implements JobService {
     @Override
     public JobResponse update(UUID id, CreateJobRequest request) {
         Job entity = jobRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
+                .orElseThrow(() ->
+                        new RuntimeException("Job not found with id: " + id));
         JobDetail jobDetail = entity.getJobDetail();
         createJobDetail(jobDetail, request);
         entity.setJobDetail(jobDetail);
@@ -86,7 +116,8 @@ public class JobServiceImpl implements JobService {
     public JobResponse updateStatus(UUID id, JobStatus status) {
 
         Job entity = jobRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
+                .orElseThrow(() ->
+                        new RuntimeException("Job not found with id: " + id));
 
         if (entity.getStatus().equals(JobStatus.CLOSED)) {
             throw new RuntimeException("Cannot update status of closed job");
@@ -104,12 +135,23 @@ public class JobServiceImpl implements JobService {
     @Override
     public void delete(UUID id) {
         Job entity = jobRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
-
+                .orElseThrow(() ->
+                        new RuntimeException("Job not found with id: " + id));
+        UUID job = entity.getJobDetail().getJobDetailId();
+        JobDetail jobDetail = jobDetailRepository.findById(job)
+                .orElseThrow(() ->
+                        new RuntimeException("Job not found with id: " + job));
+        jobDetailRepository.delete(jobDetail);
         jobRepository.delete(entity);
     }
 
     private void createJobDetail(JobDetail entity, CreateJobRequest request) {
+        if (request.getQuantity() < 1 || request.getQuantity() > 100) {
+            throw new RuntimeException("Quantity must be between 1 and 100!");
+        }
+        if (request.getMaxCv() < 50) {
+            throw new RuntimeException("Quantity applied CV must be greater and equal than 50!");
+        }
         entity.setQuantity(request.getQuantity());
         entity.setMaxCv(request.getMaxCv());
         entity.setLocation(request.getLocation());
@@ -125,21 +167,30 @@ public class JobServiceImpl implements JobService {
     private void addJobFromRequest(Job entity, CreateJobRequest request) {
         if (request.getRequestId() != null) {
             JobRequest jobRequest = jobRequestRepository.findById(request.getRequestId())
-                    .orElseThrow(() -> new RuntimeException("Job Request not found"));
+                    .orElseThrow(() ->
+                            new RuntimeException("Job Request not found"));
 
             entity.setRequest(jobRequest);
             entity.setPos(jobRequest.getPos());
             entity.setEmployee(jobRequest.getReportsTo());
         } else {
-            Employee employee = REmployeeRepository.findById(request.getHrId())
+            Employee employee = employeeRepository.findById(request.getHrId())
                     .orElseThrow(() -> new RuntimeException("Employee not found"));
-            Position position = RPositionRepository.findById(request.getPosId())
+            Position position = positionRepository.findById(request.getPosId())
                     .orElseThrow(() -> new RuntimeException("Position not found"));
             entity.setEmployee(employee);
             entity.setPos(position);
         }
-        entity.setClosedAt(request.getClosedTime());
-        entity.setPostedAt(request.getPostedTime());
+        OffsetDateTime start = request.getPostedTime();
+        OffsetDateTime end = request.getClosedTime();
+        if(end.isBefore(OffsetDateTime.now().plusDays(1))){
+            throw new RuntimeException("End date must be at least 1 day after now");
+        }
+        if (!start.isBefore(end.minusDays(1))) {
+            throw new RuntimeException("Start date must be at least 1 day before end date");
+        }
+        entity.setClosedAt(end);
+        entity.setPostedAt(start);
         entity.setStatus(request.getStatus());
         jobRepository.save(entity);
     }
@@ -165,16 +216,12 @@ public class JobServiceImpl implements JobService {
         response.setType(jobDetail.getType());
         response.setLocation(jobDetail.getLocation());
         Position position = entity.getPos();
-        if (position != null) {
-            if (position.getDepartment() != null) {
-                response.setDeptId(position.getDepartment().getDeptId());
-                response.setDeptName(position.getDepartment().getDeptName());
-            }
-            response.setPosId(position.getPositionId());
-            response.setPosName(position.getTitle());
-            response.setMinSalary(position.getBaseSalaryMin());
-            response.setMaxSalary(position.getBaseSalaryMax());
-        }
+        response.setDeptId(position.getDepartment().getDeptId());
+        response.setDeptName(position.getDepartment().getDeptName());
+        response.setPosId(position.getPositionId());
+        response.setPosName(position.getTitle());
+        response.setMinSalary(position.getBaseSalaryMin());
+        response.setMaxSalary(position.getBaseSalaryMax());
         return response;
     }
 }

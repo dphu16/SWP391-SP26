@@ -11,12 +11,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSpecificationExecutor<Employee> {
+
+        @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal" })
+        @Override
+        Page<Employee> findAll(Specification<Employee> spec, Pageable pageable);
 
         @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal" })
         Optional<Employee> findByUser_Email(String email);
@@ -56,8 +61,12 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
         @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal" })
         List<Employee> findByManager_EmployeeId(UUID managerId);
 
-        @EntityGraph(attributePaths = { "user", "position", "department" })
-        List<Employee> findByDepartment_DeptId(UUID deptId);
+    // Sửa lại để trả về List<Employee> và truy vấn thông qua quan hệ với User
+    @Query("SELECT e FROM Employee e WHERE e.user.status = 'ACTIVE'")
+    List<Employee> findActiveEmployeesForPayroll();
+
+    @EntityGraph(attributePaths = { "user", "position", "department" })
+    List<Employee> findByDepartment_DeptId(UUID deptId);
 
 
 }

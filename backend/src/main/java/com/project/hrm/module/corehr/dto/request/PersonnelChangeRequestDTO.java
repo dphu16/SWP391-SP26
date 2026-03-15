@@ -16,8 +16,6 @@ public class PersonnelChangeRequestDTO {
     private UUID newDepartmentId;
     private UUID newPositionId;
 
-    // For TITLE_CHANGE
-    private String newTitle;
 
     // For SALARY_CHANGE
     private BigDecimal newSalary;

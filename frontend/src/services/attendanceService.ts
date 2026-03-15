@@ -113,6 +113,35 @@ export const getAllShifts = async (): Promise<ShiftResponse[]> => {
     }
 };
 
+export interface ShiftCreateRequest {
+    name: string;
+    startTime: string; // "HH:mm"
+    endTime: string;   // "HH:mm"
+}
+
+export const createShift = async (req: ShiftCreateRequest): Promise<ShiftResponse> => {
+    const response = await apiClient.post('/api/v1/attendance/work-schedules/shifts', req);
+    return response.data;
+};
+
+export const deleteShift = async (shiftId: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/attendance/work-schedules/shifts/${shiftId}`);
+};
+
+export const deleteSchedule = async (scheduleId: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/attendance/work-schedules/${scheduleId}`);
+};
+
+export const deleteSchedulesByMonth = async (
+    employeeId: string,
+    month: number,
+    year: number
+): Promise<void> => {
+    await apiClient.delete(`/api/v1/attendance/work-schedules/bulk-delete`, {
+        params: { employeeId, month, year },
+    });
+};
+
 export interface WorkScheduleRequest {
     employeeId: string;
     date: string; // "YYYY-MM-DD"
@@ -133,6 +162,13 @@ export const createSchedule = async (req: WorkScheduleRequest): Promise<WorkSche
 
 export const createBulkSchedules = async (req: BulkScheduleRequest): Promise<WorkScheduleResponse[]> => {
     const response = await apiClient.post(`/api/v1/attendance/work-schedules/bulk`, req);
+    return response.data;
+};
+
+export const updateSchedule = async (scheduleId: string, newShiftId: string): Promise<WorkScheduleResponse> => {
+    const response = await apiClient.put(`/api/v1/attendance/work-schedules/${scheduleId}`, null, {
+        params: { newShiftId },
+    });
     return response.data;
 };
 
@@ -157,6 +193,7 @@ export interface AttendanceSummaryDTO {
     month: number;
     year: number;
     totalWorkingHours: number; // BigDecimal → number via JSON
+    totalOtHours: number;
     totalLateDays: number;
     totalEarlyLeaveDays: number;
     totalMissingPunchDays: number;
@@ -173,6 +210,18 @@ export const getAttendanceSummary = async (
     params: AttendanceSummaryParams
 ): Promise<AttendanceSummaryDTO[]> => {
     const response = await apiClient.get(`/api/v1/attendance/summary`, { params });
+    return response.data;
+}
+
+export interface AttendanceUpdateRequest {
+    checkInTime?: string;
+    checkOutTime?: string;
+    status?: string;
+    otHours?: number;
+}
+
+export const updateAttendanceLog = async (logId: string, req: AttendanceUpdateRequest): Promise<AttendanceLogResponse> => {
+    const response = await apiClient.put(`/api/v1/attendance/logs/${logId}`, req);
     return response.data;
 };
 

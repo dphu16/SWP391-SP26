@@ -1,10 +1,12 @@
 package com.project.hrm.module.recruitment.service.impl;
 
-import com.project.hrm.module.recruitment.entity.Interview;
-import com.project.hrm.module.recruitment.enums.InterviewStatus;
-import com.project.hrm.module.recruitment.repository.InterviewRepository;
+import com.project.hrm.module.recruitment.dto.request.EmailRequest;
+import com.project.hrm.module.recruitment.enums.JobStatus;
+import com.project.hrm.module.recruitment.service.CvReviewService;
+import com.project.hrm.module.recruitment.service.InterviewService;
 import com.project.hrm.module.recruitment.service.email.ExpectedInterview;
 import com.project.hrm.module.recruitment.service.email.OfferEmail;
+import com.project.hrm.module.recruitment.service.email.RejectEmail;
 import com.project.hrm.module.recruitment.service.email.UploadCV;
 import com.project.hrm.module.recruitment.dto.request.ApplicationRequest;
 import com.project.hrm.module.recruitment.dto.request.DateLimitRequest;
@@ -20,7 +22,9 @@ import com.project.hrm.module.recruitment.service.ApplicationService;
 import com.project.hrm.module.recruitment.service.FileService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -34,9 +38,11 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final UploadCV uploadCV;
     private final ExpectedInterview expectedInterview;
     private final ApplicationRepository applicationRepository;
+    private final CvReviewService cvReviewService;
+    private final InterviewService interviewService;
     private final FileService fileService;
     private final OfferEmail offerEmail;
-    private final InterviewRepository interviewRepository;
+    private final RejectEmail rejectEmail;
 
     @Override
     public ApplicationResponse create(ApplicationRequest request) {
@@ -54,6 +60,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         if (applicationRepository.existsByCandidateIdAndJobId(
                 candidate.getId(), job.getId())) {
             app = applicationRepository.findByCandidateIdAndJobId(candidate.getId(), job.getId());
+            fileService.deletePDF(app.getCvUrl());
         }
         app.setJob(job);
         app.setCandidate(candidate);
@@ -62,7 +69,8 @@ public class ApplicationServiceImpl implements ApplicationService {
         app.setStatus(ApplicationStatus.APPLIED);
         app.setCreatedAt(OffsetDateTime.now());
         applicationRepository.save(app);
-        uploadCV.sendEmail(app);
+        EmailRequest emailRequest = sendCV(app,job);
+        uploadCV.sendEmail(emailRequest);
         return mapToResponse(app);
     }
 
@@ -76,20 +84,13 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     @Override
-    public List<ApplicationResponse> getApplicationByJobId(UUID id) {
-
-        List<Application> applications =
-                applicationRepository.findByJob_Id(id);
-
-        return applications.stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
-
-    @Override
     public List<ApplicationResponse> getAppByJobIdAndStatus(UUID id, ApplicationStatus status) {
+        Sort sort = Sort.by(
+                Sort.Order.desc("score"),
+                Sort.Order.asc("candidate.fullName")
+        );
         List<Application> applications =
-                applicationRepository.findByJob_IdAndStatus(id, status);
+                applicationRepository.findByJob_IdAndStatus(id, status, sort);
 
 
         return applications.stream()
@@ -103,10 +104,14 @@ public class ApplicationServiceImpl implements ApplicationService {
                 .orElseThrow(() -> new RuntimeException("Not found application!"));
         updateCandidate(app.getCandidate(), request);
         if (!(request.getCvUrl() == null || request.getCvUrl().isEmpty())){
+            fileService.deletePDF(app.getCvUrl());
             String cvUrl = fileService.inputPDF(request.getCvUrl());
             app.setCvUrl(cvUrl);
         }
-        uploadCV.sendEmail(app);
+        Job job = jobRepository.findById(request.getJobId())
+                .orElseThrow(() -> new RuntimeException("Not found job."));
+        EmailRequest emailRequest = sendCV(app,job);
+        uploadCV.sendEmail(emailRequest);
         return mapToResponse(app);
     }
 
@@ -114,11 +119,22 @@ public class ApplicationServiceImpl implements ApplicationService {
     public ApplicationResponse setDateLimit(DateLimitRequest request) {
         Application app = applicationRepository.findById(request.getId())
                 .orElseThrow(() -> new RuntimeException("Not found application!"));
+        OffsetDateTime start = request.getStart();
+        OffsetDateTime end = request.getEnd();
+        if(start.isBefore(OffsetDateTime.now().minusDays(1))){
+            throw new RuntimeException("Start date must be at least a day before now!");
+        }
+        if (!start.isBefore(end.minusDays(6))) {
+            throw new RuntimeException("Start date must be at least a week before end date!");
+        }
         app.setStart(request.getStart());
         app.setEnd(request.getEnd());
+        app.setStatus(ApplicationStatus.INTERVIEW);
         applicationRepository.save(app);
-        String title = app.getJob().getPos().getTitle();
-        expectedInterview.sendEmail(app, title);
+        Job job = jobRepository.findById(app.getJob().getId())
+                .orElseThrow(() -> new RuntimeException("Not found job."));
+        EmailRequest emailRequest = expectedDay(app,job);
+        expectedInterview.sendEmail(emailRequest);
 
         return mapToResponse(app);
     }
@@ -127,7 +143,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     public List<ApplicationResponse> nextStage(List<UUID> ids) {
 
         if (ids == null || ids.isEmpty()) {
-            return List.of();
+            throw new IllegalArgumentException("No list to next status");
         }
 
         List<Application> applications = applicationRepository.findAllById(ids);
@@ -136,21 +152,19 @@ public class ApplicationServiceImpl implements ApplicationService {
             throw new RuntimeException("Applications not found");
         }
 
-        List<Interview> interviews = interviewRepository.findAllByApp_IdIn(ids);
-
-        for (Interview interview : interviews) {
-            interview.setStatus(InterviewStatus.COMPLETED);
-        }
-
         for (Application app : applications) {
+            if(app.getScore() == null){
+                throw new RuntimeException("Applications "+ app.getCandidate().getFullName() +" hasn't score!");
+            }
             app.setStatus(ApplicationStatus.OFFER);
         }
 
-        interviewRepository.saveAll(interviews);
         applicationRepository.saveAll(applications);
-
+        Job job = jobRepository.findById(applications.get(0).getJob().getId())
+                .orElseThrow(() -> new RuntimeException("Not found job."));
         for (Application app : applications) {
-            offerEmail.sendEmail(app);
+            EmailRequest emailRequest = offerGmail(app,job);
+            offerEmail.sendEmail(emailRequest);
         }
 
         return applications.stream()
@@ -162,10 +176,31 @@ public class ApplicationServiceImpl implements ApplicationService {
     public ApplicationResponse lastStage(UUID id) {
         Application app = applicationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Not found application!"));
+        Job job = jobRepository.findById(app.getJob().getId())
+                .orElseThrow(() -> new RuntimeException("Not found job"));
+        long count = applicationRepository.countByJob_IdAndStatus(app.getJob().getId(), ApplicationStatus.HIRED);
+        if(count==job.getJobDetail().getQuantity()){
+            throw new RuntimeException("Have full quantity in position!");
+        }
         if(app.getStatus().equals(ApplicationStatus.OFFER)){
             app.setStatus(ApplicationStatus.HIRED);
             applicationRepository.save(app);
         }
+
+        if((count+1)==job.getJobDetail().getQuantity()){
+            List<Application> list = applicationRepository.findByJob_IdAndStatusIsNot(app.getJob().getId(), ApplicationStatus.HIRED);
+            for(Application i: list){
+                if(i.getStatus().equals(ApplicationStatus.REJECTED)) continue;
+
+                i.setStatus(ApplicationStatus.REJECTED);
+                EmailRequest emailRequest = rejectGmail(i,job);
+                rejectEmail.sendEmail(emailRequest);
+
+            }
+            job.setStatus(JobStatus.CLOSED);
+            applicationRepository.saveAll(list);
+        }
+
         return mapToResponse(app);
     }
 
@@ -173,7 +208,15 @@ public class ApplicationServiceImpl implements ApplicationService {
     public void delete(UUID id) {
         Application app = applicationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Not found application!"));
+        fileService.deletePDF(app.getCvUrl());
+        if(!app.getStatus().equals(ApplicationStatus.APPLIED)){
+            cvReviewService.deleteReview(id);
+            interviewService.deleteInterview(id);
+        }
+        UUID candidateId = app.getCandidate().getId();
         applicationRepository.delete(app);
+        boolean check = applicationRepository.existsByCandidate_Id(candidateId);
+        if(!check) candidateRepository.deleteById(candidateId);
     }
 
     private void updateCandidate(Candidate candidate, ApplicationRequest request) {
@@ -181,6 +224,45 @@ public class ApplicationServiceImpl implements ApplicationService {
         candidate.setPhone(request.getPhone());
         candidate.setCreatedAt(OffsetDateTime.now());
         candidateRepository.save(candidate);
+    }
+
+    private EmailRequest sendCV(Application app, Job job){
+        EmailRequest request = new EmailRequest();
+        request.setTitle(job.getPos().getTitle());
+        request.setCandidateName(app.getCandidate().getFullName());
+        request.setCanEmail(app.getCandidate().getEmail());
+        request.setCanPhone(app.getCandidate().getPhone());
+        request.setCvUrl("/cv/"+app.getCvUrl());
+        return request;
+    }
+
+    private EmailRequest expectedDay(Application app, Job job){
+        EmailRequest request = new EmailRequest();
+        request.setTitle(job.getPos().getTitle());
+        request.setCandidateName(app.getCandidate().getFullName());
+        request.setCanEmail(app.getCandidate().getEmail());
+        request.setStart(app.getStart());
+        request.setEnd(app.getEnd());
+        request.setHrName(job.getEmployee().getFullName());
+        return request;
+    }
+
+    private EmailRequest offerGmail(Application app, Job job){
+        EmailRequest request = new EmailRequest();
+        request.setTitle(job.getPos().getTitle());
+        request.setCandidateName(app.getCandidate().getFullName());
+        request.setCanEmail(app.getCandidate().getEmail());
+        request.setHrName(job.getEmployee().getFullName());
+        return request;
+    }
+
+    private EmailRequest rejectGmail(Application app, Job job){
+        EmailRequest request = new EmailRequest();
+        request.setTitle(job.getPos().getTitle());
+        request.setCandidateName(app.getCandidate().getFullName());
+        request.setCanEmail(app.getCandidate().getEmail());
+        request.setHrName(job.getEmployee().getFullName());
+        return request;
     }
 
     private ApplicationResponse mapToResponse(Application entity) {
@@ -193,8 +275,9 @@ public class ApplicationServiceImpl implements ApplicationService {
         app.setFullName(entity.getCandidate().getFullName());
         app.setEmail(entity.getCandidate().getEmail());
         app.setPhone(entity.getCandidate().getPhone());
-        app.setCvUrl(entity.getCvUrl());
+        app.setCvUrl("/cv/"+entity.getCvUrl());
         app.setStatus(entity.getStatus());
+        app.setScore(entity.getScore());
         if(entity.getStart()!=null){
             app.setStart(entity.getStart());
         }

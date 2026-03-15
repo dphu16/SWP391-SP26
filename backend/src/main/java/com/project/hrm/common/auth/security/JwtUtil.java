@@ -14,9 +14,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
 @Component
@@ -72,6 +70,16 @@ public class JwtUtil {
     public boolean isValid(String token, UserDetails userDetails) {
         return extractUsername(token).equals(userDetails.getUsername())
                 && !isExpired(token);
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<String> extractRoles(String token) {
+        Claims claims = parseClaims(token);
+        Object rolesObj = claims.get("roles");
+        if (rolesObj instanceof List<?>) {
+            return (List<String>) rolesObj;
+        }
+        return Collections.emptyList();
     }
 
     private boolean isExpired(String token) {

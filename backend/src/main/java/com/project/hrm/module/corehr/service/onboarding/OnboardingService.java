@@ -6,7 +6,6 @@ import com.project.hrm.module.corehr.dto.response.OnboardingListResponseDTO;
 import com.project.hrm.module.corehr.dto.response.OnboardingResponseDTO;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
-import com.project.hrm.module.corehr.repository.RoleRepository;
 import com.project.hrm.module.recruitment.enums.ApplicationStatus;
 import com.project.hrm.module.corehr.mapper.OnboardingMapper;
 import com.project.hrm.module.corehr.repository.OnboardingRepository;
@@ -15,6 +14,7 @@ import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.exception.ErrorCode;
+import com.project.hrm.module.corehr.repository.RoleRepository;
 import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
 import com.project.hrm.module.request.entity.Request;
 import com.project.hrm.module.request.enums.RequestStatus;
@@ -25,9 +25,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -111,7 +111,7 @@ public class OnboardingService implements IOnboardingService {
         dto.setFullName(employee.getFullName());
         dto.setPhone(personal != null ? personal.getPhone() : null);
         dto.setEmail(personal != null ? personal.getEmail() : null);
-        dto.setGender(personal != null ? personal.getGender(): null);
+        dto.setGender(personal != null ? personal.getGender() : null);
         dto.setAddress(personal != null ? personal.getAddress() : null);
         dto.setCitizenId(personal != null ? personal.getCitizenId() : null);
         dto.setTaxCode(personal != null ? personal.getTaxCode() : null);
@@ -121,12 +121,7 @@ public class OnboardingService implements IOnboardingService {
         dto.setPositionId(employee.getPosition() != null ? employee.getPosition().getPositionId() : null);
         dto.setMentorId(employee.getManager() != null ? employee.getManager().getEmployeeId() : null);
         dto.setDateOfJoining(employee.getDateOfJoining());
-        if (employee.getUser() != null && employee.getUser().getRoles() != null) {
-            dto.setRole(employee.getUser().getRoles().stream()
-                .map(Role::getName)
-                .findFirst()
-                .orElse(null));
-        }
+        dto.setRole(resolvePrimaryRole(employee));
         dto.setStatus(employee.getStatus());
         dto.setContractNumber(contract != null ? contract.getContractNumber() : null);
         dto.setContractType(contract != null ? contract.getContractType() : null);
@@ -190,16 +185,15 @@ public class OnboardingService implements IOnboardingService {
         // Update user email if changed
         if (employee.getUser() != null && updatedData.getEmail() != null) {
             employee.getUser().setEmail(updatedData.getEmail());
-            employee.getUser().setFullName(updatedData.getFullName());
             employee.getUser().setStatus(UserStatus.INACTIVE);
         }
 
         if (employee.getUser() != null && updatedData.getRole() != null) {
-            Role mappedRole = roleRepository.findByName(updatedData.getRole())
+            Role role = roleRepository.findByName(updatedData.getRole())
                     .orElseThrow(() -> new BusinessRuleException(
-                        ErrorCode.INVALID_APPROVAL_ACTION,
-                            "Role không tồn tại: " + updatedData.getRole()));
-            employee.getUser().setRoles(new HashSet<>(List.of(mappedRole)));
+                            ErrorCode.INVALID_APPROVAL_ACTION,
+                            "Role not found: " + updatedData.getRole()));
+            employee.getUser().setRoles(Set.of(role));
         }
 
         // Reset status for re-approval
@@ -213,5 +207,18 @@ public class OnboardingService implements IOnboardingService {
                 .status(RequestStatus.PENDING)
                 .build();
         requestRepository.save(request);
+    }
+
+    private com.project.hrm.module.corehr.enums.EmployeeRole resolvePrimaryRole(Employee employee) {
+        if (employee == null || employee.getUser() == null || employee.getUser().getRoles() == null) {
+            return null;
+        }
+
+        return employee.getUser().getRoles().stream()
+                .map(Role::getName)
+                .filter(java.util.Objects::nonNull)
+                .sorted(Comparator.comparing(Enum::name))
+                .findFirst()
+                .orElse(null);
     }
 }

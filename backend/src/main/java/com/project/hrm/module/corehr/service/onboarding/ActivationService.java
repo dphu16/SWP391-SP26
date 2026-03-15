@@ -12,7 +12,6 @@ import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.exception.ErrorCode;
 import com.project.hrm.module.corehr.repository.*;
 import com.project.hrm.module.corehr.service.helper.EmailService;
-import com.project.hrm.module.corehr.service.helper.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,7 +35,6 @@ public class ActivationService {
         private final DependentRepository emergencyContactRepo;
         private final PasswordEncoder passwordEncoder;
         private final EmailService emailService;
-        private final NotificationService notificationService;
 
         private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -253,8 +251,7 @@ public class ActivationService {
                 log.info("Account fully activated for employee: {} ({})",
                                 employee.getFullName(), employee.getEmployeeId());
 
-                // Side effect: notify HR about new bank info
-                notifyHRAboutBankInfo(employee.getFullName());
+
 
                 return ActivationResponseDTO.builder()
                                 .message("Account activated successfully. You can now log in.")
@@ -275,7 +272,5 @@ public class ActivationService {
                 return Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
         }
 
-        private void notifyHRAboutBankInfo(String employeeName) {
-                notificationService.createNotificationForAllHR(employeeName);
-        }
+
 }

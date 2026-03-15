@@ -14,7 +14,13 @@ public interface OffboardingRepository extends JpaRepository<Offboarding, UUID> 
 
     boolean existsByEmployee_EmployeeIdAndStatusIn(UUID employeeId, List<OffboardingStatus> statuses);
 
-    @EntityGraph(attributePaths = { "employee", "employee.department", "employee.position", "employee.personal" })
+    @org.springframework.data.jpa.repository.Query("SELECT o FROM Offboarding o WHERE o.employee.employeeId = :employeeId AND o.expectedLastDay >= :start AND o.expectedLastDay <= :end AND o.status = 'APPROVED'")
+    java.util.Optional<Offboarding> findApprovedOffboardingInPeriod(
+            @org.springframework.data.repository.query.Param("employeeId") UUID employeeId,
+            @org.springframework.data.repository.query.Param("start") java.time.LocalDate start,
+            @org.springframework.data.repository.query.Param("end") java.time.LocalDate end);
+
+    @EntityGraph(attributePaths = {"employee", "employee.department", "employee.position", "employee.personal"})
     List<Offboarding> findByStatusIn(List<OffboardingStatus> statuses);
 
     @EntityGraph(attributePaths = { "employee", "employee.department", "employee.position", "employee.personal" })

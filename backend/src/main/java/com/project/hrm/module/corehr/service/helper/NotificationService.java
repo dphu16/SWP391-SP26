@@ -3,7 +3,6 @@ package com.project.hrm.module.corehr.service.helper;
 import com.project.hrm.module.corehr.dto.response.NotificationResponseDTO;
 import com.project.hrm.module.corehr.entity.Notification;
 import com.project.hrm.module.corehr.entity.User;
-import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.exception.ErrorCode;
 import com.project.hrm.module.corehr.repository.NotificationRepository;
@@ -24,77 +23,89 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final NotificationSpamGuard spamGuard;
+    private final NotificationWebSocketPublisher wsPublisher;
+
+    // ──────────────────────────────── Create ────────────────────────────────
 
     /**
-     * Create a system notification for all HR users (used when employee submits
-     * bank info).
+     * Create a notification targeted at a specific user by userId.
+     * Includes anti-spam check.
      */
     @Transactional
-    public void createNotificationForAllHR(String employeeName) {
-        List<User> hrUsers = userRepository.findByRoles_Name(EmployeeRole.ROLE_HR);
-        String message = "Nhân viên " + employeeName
-                + " vừa cập nhật thông tin ngân hàng. Vui lòng kiểm tra và xác nhận.";
-        for (User hrUser : hrUsers) {
-            Notification notification = Notification.builder()
-                    .recipient(hrUser)
-                    .message(message)
-                    .type("BANK_UPDATE")
-                    .isRead(false)
-                    .build();
-            notificationRepository.save(notification);
+    public void createForUser(UUID userId, String title, String message,
+                              String type, String entityType, String entityId) {
+        if (spamGuard.isDuplicate(type, entityType, entityId)) {
+            return;
         }
-        log.info("Created system notifications for {} HR user(s) about bank update by: {}", hrUsers.size(),
-                employeeName);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessRuleException(ErrorCode.USER_NOT_FOUND,
+                        "User not found: " + userId));
+
+        Notification notification = Notification.builder()
+                .recipient(user)
+                .title(title)
+                .message(message)
+                .type(type)
+                .entityType(entityType)
+                .entityId(entityId)
+                .isRead(false)
+                .build();
+
+        notificationRepository.save(notification);
+        log.info("Created notification [{}] for user: {}", type, user.getEmail());
+
+        // Push via WebSocket
+        wsPublisher.sendToUser(user.getEmail(), toDTO(notification));
     }
 
-    /**
-     * Create a system notification for all HR users when an employee changes their personal email.
-     */
-    @Transactional
-    public void createNotificationForEmailChange(String employeeName, String newEmail) {
-        List<User> hrUsers = userRepository.findByRoles_Name(EmployeeRole.ROLE_HR);
-        String message = "Nhân viên " + employeeName
-                + " vừa cập nhật email cá nhân thành " + newEmail + ". Email đăng nhập đã được hệ thống cập nhật tự động.";
-        for (User hrUser : hrUsers) {
-            Notification notification = Notification.builder()
-                    .recipient(hrUser)
-                    .message(message)
-                    .type("EMAIL_UPDATE")
-                    .isRead(false)
-                    .build();
-            notificationRepository.save(notification);
-        }
-        log.info("Created system notifications for {} HR user(s) about email update by: {}", hrUsers.size(),
-                employeeName);
-    }
+    // ──────────────────────────────── Read ──────────────────────────────────
 
     /**
      * Get all notifications for the currently logged-in user by email.
      */
     @Transactional(readOnly = true)
     public List<NotificationResponseDTO> getNotificationsForUser(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessRuleException(ErrorCode.EMPLOYEE_NOT_FOUND, "User not found: " + email));
-        return notificationRepository.findByRecipient_UserIdOrderByCreatedAtDesc(user.getUserId())
+        User user = findUserByEmail(email);
+        return notificationRepository
+                .findByRecipient_UserIdOrderByCreatedAtDesc(user.getUserId())
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
 
     /**
+     * Get unread notifications count for the current user.
+     */
+    @Transactional(readOnly = true)
+    public long getUnreadCount(String email) {
+        User user = findUserByEmail(email);
+        return notificationRepository.countByRecipient_UserIdAndIsReadFalse(user.getUserId());
+    }
+
+    // ──────────────────────────── Mark as read ──────────────────────────────
+
+    /**
      * Mark a single notification as read.
      */
     @Transactional
     public void markAsRead(UUID notificationId, String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessRuleException(ErrorCode.EMPLOYEE_NOT_FOUND, "User not found: " + email));
+        User user = findUserByEmail(email);
+
         Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new BusinessRuleException(ErrorCode.EMPLOYEE_NOT_FOUND,
+                .orElseThrow(() -> new BusinessRuleException(ErrorCode.NOTIFICATION_NOT_FOUND,
                         "Notification not found: " + notificationId));
-        if (!notification.getRecipient().getUserId().equals(user.getUserId())) {
-            throw new BusinessRuleException(ErrorCode.EMPLOYEE_NOT_FOUND, "Access denied");
+
+        // Verify ownership
+        boolean isRecipient = notification.getRecipient() != null
+                && notification.getRecipient().getUserId().equals(user.getUserId());
+
+        if (!isRecipient) {
+            throw new BusinessRuleException(ErrorCode.ACCESS_DENIED, "Access denied");
         }
-        notification.setRead(true);
+
+        notification.setIsRead(true);
         notificationRepository.save(notification);
     }
 
@@ -103,23 +114,27 @@ public class NotificationService {
      */
     @Transactional
     public void markAllAsRead(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessRuleException(ErrorCode.EMPLOYEE_NOT_FOUND, "User not found: " + email));
-        List<Notification> unread = notificationRepository
-                .findByRecipient_UserIdOrderByCreatedAtDesc(user.getUserId())
-                .stream()
-                .filter(n -> !n.isRead())
-                .collect(Collectors.toList());
-        unread.forEach(n -> n.setRead(true));
-        notificationRepository.saveAll(unread);
+        User user = findUserByEmail(email);
+        notificationRepository.markAllReadByUserId(user.getUserId());
+    }
+
+    // ──────────────────────────── Helpers ────────────────────────────────────
+
+    private User findUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessRuleException(ErrorCode.USER_NOT_FOUND,
+                        "User not found: " + email));
     }
 
     private NotificationResponseDTO toDTO(Notification n) {
         return NotificationResponseDTO.builder()
                 .notificationId(n.getNotificationId())
+                .title(n.getTitle())
                 .message(n.getMessage())
                 .type(n.getType())
-                .isRead(n.isRead())
+                .entityType(n.getEntityType())
+                .entityId(n.getEntityId())
+                .isRead(n.getIsRead())
                 .createdAt(n.getCreatedAt())
                 .build();
     }

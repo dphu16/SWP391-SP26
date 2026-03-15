@@ -6,6 +6,7 @@ import {
     type DepartmentOption,
 } from "../../services/attendanceService";
 import apiClient from "../../services/apiClient";
+import EmployeeLogsModal from "./EmployeeLogsModal";
 
 // ── Helpers ──
 const MONTHS = [
@@ -72,6 +73,9 @@ const AttendanceSummary: React.FC = () => {
     // ── Sort ──
     const [sortField, setSortField] = useState<keyof AttendanceSummaryDTO>("fullName");
     const [sortAsc, setSortAsc] = useState(true);
+
+    // ── Edit logs ──
+    const [editingEmployee, setEditingEmployee] = useState<{ id: string; name: string } | null>(null);
 
     // ── Load departments on mount ──
     useEffect(() => {
@@ -419,6 +423,9 @@ const AttendanceSummary: React.FC = () => {
                                             <th className="text-right px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider cursor-pointer hover:text-[#0f172a] transition-colors" onClick={() => handleSort("totalWorkingHours")}>
                                                 Total Hours<SortIcon field="totalWorkingHours" />
                                             </th>
+                                            <th className="text-right px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider cursor-pointer hover:text-[#0f172a] transition-colors" onClick={() => handleSort("totalOtHours")}>
+                                                OT Hours<SortIcon field="totalOtHours" />
+                                            </th>
                                             <th className="text-center px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider cursor-pointer hover:text-[#0f172a] transition-colors" onClick={() => handleSort("totalLateDays")}>
                                                 Late<SortIcon field="totalLateDays" />
                                             </th>
@@ -427,6 +434,9 @@ const AttendanceSummary: React.FC = () => {
                                             </th>
                                             <th className="text-center px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider cursor-pointer hover:text-[#0f172a] transition-colors" onClick={() => handleSort("totalMissingPunchDays")}>
                                                 Missing<SortIcon field="totalMissingPunchDays" />
+                                            </th>
+                                            <th className="text-center px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider">
+                                                Actions
                                             </th>
                                         </tr>
                                     </thead>
@@ -446,6 +456,9 @@ const AttendanceSummary: React.FC = () => {
                                                 </td>
                                                 <td className="px-5 py-3.5 text-right font-semibold text-[#0f172a]">
                                                     {formatHours(row.totalWorkingHours)}
+                                                </td>
+                                                <td className="px-5 py-3.5 text-right font-semibold text-[#0f172a]">
+                                                    {formatHours(row.totalOtHours || 0)}
                                                 </td>
                                                 <td className="px-5 py-3.5 text-center">
                                                     {row.totalLateDays > 0 ? (
@@ -474,6 +487,14 @@ const AttendanceSummary: React.FC = () => {
                                                         <span className="text-[#cbd5e1]">0</span>
                                                     )}
                                                 </td>
+                                                <td className="px-5 py-3.5 text-center">
+                                                    <button
+                                                        onClick={() => setEditingEmployee({ id: row.employeeId, name: row.fullName })}
+                                                        className="text-[#3b82f6] hover:text-[#2563eb] text-xs font-bold"
+                                                    >
+                                                        Edit Logs
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -485,6 +506,9 @@ const AttendanceSummary: React.FC = () => {
                                             </td>
                                             <td className="px-5 py-3.5 text-right font-bold text-[#0f172a]">
                                                 {formatHours(summaryData.reduce((sum, r) => sum + (r.totalWorkingHours ?? 0), 0))}
+                                            </td>
+                                            <td className="px-5 py-3.5 text-right font-bold text-[#0f172a]">
+                                                {formatHours(summaryData.reduce((sum, r) => sum + (r.totalOtHours ?? 0), 0))}
                                             </td>
                                             <td className="px-5 py-3.5 text-center">
                                                 <span className="font-bold text-[#dc2626]">
@@ -501,6 +525,7 @@ const AttendanceSummary: React.FC = () => {
                                                     {summaryData.reduce((sum, r) => sum + (r.totalMissingPunchDays ?? 0), 0)}
                                                 </span>
                                             </td>
+                                            <td></td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -523,6 +548,21 @@ const AttendanceSummary: React.FC = () => {
                         Choose month, year, and department above, then click <strong>"View Summary"</strong> to see the attendance report.
                     </p>
                 </div>
+            )}
+
+            {/* ── Modals ── */}
+            {editingEmployee && (
+                <EmployeeLogsModal
+                    employeeId={editingEmployee.id}
+                    employeeName={editingEmployee.name}
+                    month={appliedMonth}
+                    year={appliedYear}
+                    onClose={() => setEditingEmployee(null)}
+                    onUpdated={() => {
+                        // Refresh data directly
+                        handleSearch();
+                    }}
+                />
             )}
 
             <style>

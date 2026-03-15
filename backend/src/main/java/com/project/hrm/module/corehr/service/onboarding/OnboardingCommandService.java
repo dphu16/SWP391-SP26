@@ -41,8 +41,10 @@ public class OnboardingCommandService {
     protected NewHireResponseDTO createNewHire(CreateNewHireDTO request) {
         Position position = employeeHelper.findPositionOrThrow(request.getPositionId());
 
-        // Department is always derived from the Position's department (Job table source of truth).
-        // If the Position has a department, use it; otherwise fall back to the DTO's departmentId.
+        // Department is always derived from the Position's department (Job table source
+        // of truth).
+        // If the Position has a department, use it; otherwise fall back to the DTO's
+        // departmentId.
         Department department;
         if (position.getDepartment() != null) {
             department = position.getDepartment();
@@ -71,7 +73,6 @@ public class OnboardingCommandService {
         if (request.getEmail() != null && !request.getEmail().isEmpty()) {
             User newUser = User.builder()
                     .email(request.getEmail())
-                    .fullName(request.getFullName())
                     .avatarUrl(request.getAvatarUrl())
                     .status(UserStatus.INACTIVE)
                     .provider(AuthProvider.LOCAL)

@@ -1,24 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { getToken, removeToken } from "../../services/authService";
 import { decodeJwt } from "../../utils/jwtDecode";
 import apiClient from "../../services/apiClient";
-import {
-  getNotifications,
-  markNotificationAsRead,
-  markAllNotificationsAsRead,
-  type Notification as NotificationItem,
-} from "../../services/notificationService";
-// ─── Breadcrumb config ────────────────────────────────────────────────────────
-const breadcrumbMap: Record<
-  string,
-  { label: string; parent?: string; parentPath?: string }
-> = {
-  "/dashboard": { label: "Dashboard" },
-  "/employees": { label: "Directory", parent: "Employees" },
-  "/onboarding": { label: "Onboarding", parent: "Employees" },
-  "/offboarding": { label: "Offboarding", parent: "Employees" },
-};
+import NotificationBell from "../notifications/NotificationBell";
+import Breadcrumb from "../navigation/Breadcrumb";
+
 
 // ─── Current user derived from JWT ──────────────────────────────────────────
 function useCurrentUser() {
@@ -85,6 +72,12 @@ const LogoutIcon = () => (
   </svg>
 );
 
+const ChatIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
 // ─── Dropdown Menu Item ───────────────────────────────────────────────────────
 interface MenuItemProps {
   icon: React.ReactNode;
@@ -131,34 +124,12 @@ const MenuItem: React.FC<MenuItemProps> = ({
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 const Header: React.FC = () => {
-  const location = useLocation();
   const navigate = useNavigate();
   const currentUser = useCurrentUser(); // ← real JWT data
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const notifRef = useRef<HTMLDivElement>(null);
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
-  // ── Fetch notifications ──
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const data = await getNotifications();
-      setNotifications(data);
-    } catch {
-      // silently ignore fetch errors
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30_000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
 
   // ── Close dropdown on outside click ──
   useEffect(() => {
@@ -194,47 +165,6 @@ const Header: React.FC = () => {
     }
   }, [navigate, currentUser.employeeId]);
 
-  // ── Close notification panel on outside click ──
-  useEffect(() => {
-    if (!notifOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-        setNotifOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [notifOpen]);
-
-  const handleNotifButtonClick = () => {
-    setNotifOpen((o) => !o);
-  };
-
-  const handleMarkOneRead = async (id: string) => {
-    try {
-      await markNotificationAsRead(id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.notificationId === id ? { ...n, isRead: true } : n)),
-      );
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    try {
-      await markAllNotificationsAsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    } catch {
-      // ignore
-    }
-  };
-
-  const crumb =
-    breadcrumbMap[location.pathname] ??
-    (location.pathname.startsWith("/employee/")
-      ? { label: "Employee Detail", parent: "Employees" }
-      : { label: "Page" });
   const avatarColors = [
     "bg-primary/15 text-primary",
     "bg-blue-100 text-blue-600",
@@ -248,138 +178,21 @@ const Header: React.FC = () => {
     <>
       <header className="relative h-16 flex-shrink-0 bg-surface-light border-b border-border-light flex items-center justify-between px-6 z-30">
         {/* ── Left: Breadcrumb ── */}
-        <nav aria-label="Breadcrumb">
-          <ol className="flex items-center gap-1.5 text-sm">
-            {crumb.parent && (
-              <>
-                <li>
-                  <span className="font-medium text-text-secondary-light ">
-                    {crumb.parent}
-                  </span>
-                </li>
-                <li>
-                  <svg
-                    viewBox="0 0 16 16"
-                    fill="currentColor"
-                    className="w-3.5 h-3.5 text-text-muted-light "
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </li>
-              </>
-            )}
-            <li>
-              <span className="font-semibold text-text-primary-light ">
-                {crumb.label}
-              </span>
-            </li>
-          </ol>
-        </nav>
+        <Breadcrumb />
 
         {/* ── Right: Actions ── */}
         <div className="flex items-center gap-2">
-          {/* Notifications */}
-          <div className="relative" ref={notifRef}>
-            <button
-              className="relative p-2 rounded-lg text-text-secondary-light hover:bg-gray-100 hover:text-text-primary-light transition-colors cursor-pointer"
-              aria-label="Notifications"
-              onClick={handleNotifButtonClick}
-            >
-              <svg
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="w-[18px] h-[18px]"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4 8a6 6 0 1112 0c0 1.887.454 3.665 1.257 5.234a.75.75 0 01-.515 1.076 32.91 32.91 0 01-3.256.508 3.5 3.5 0 01-6.972 0 32.903 32.903 0 01-3.256-.508.75.75 0 01-.515-1.076A11.448 11.448 0 004 8zm6 7c-.655 0-1.305-.02-1.95-.057a2 2 0 003.9 0c-.645.038-1.295.057-1.95.057z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 min-w-[16px] h-4 flex items-center justify-center bg-rose-500 text-white text-[10px] font-bold rounded-full px-0.5 border border-surface-light">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-            </button>
+          {/* AI Chat */}
+          <button
+            className="relative p-2 rounded-lg text-text-secondary-light hover:bg-gray-100 hover:text-text-primary-light transition-colors cursor-pointer"
+            aria-label="AI Chat"
+            onClick={() => navigate("/ai-chat")}
+          >
+            <ChatIcon />
+          </button>
 
-            {/* Notification dropdown panel */}
-            <div
-              className={`absolute right-0 top-full mt-2 w-80 bg-surface-light rounded-2xl border border-border-light shadow-dropdown overflow-hidden transition-all duration-200 origin-top-right z-50 ${
-                notifOpen
-                  ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
-                  : "opacity-0 scale-95 -translate-y-1 pointer-events-none"
-              }`}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border-light">
-                <span className="text-sm font-semibold text-text-primary-light">
-                  Thông báo
-                  {unreadCount > 0 && (
-                    <span className="ml-1.5 inline-flex items-center justify-center bg-rose-100 text-rose-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                      {unreadCount}
-                    </span>
-                  )}
-                </span>
-                {unreadCount > 0 && (
-                  <button
-                    onClick={handleMarkAllRead}
-                    className="text-[11px] text-primary hover:underline cursor-pointer"
-                  >
-                    Đánh dấu tất cả đã đọc
-                  </button>
-                )}
-              </div>
-
-              {/* Notification list */}
-              <div className="max-h-80 overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-sm text-text-secondary-light">
-                    Không có thông báo nào
-                  </div>
-                ) : (
-                  notifications.map((n) => (
-                    <button
-                      key={n.notificationId}
-                      onClick={() => handleMarkOneRead(n.notificationId)}
-                      className={`w-full text-left px-4 py-3 border-b border-border-light last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer ${
-                        !n.isRead ? "bg-blue-50/60" : ""
-                      }`}
-                    >
-                      <div className="flex items-start gap-2">
-                        {!n.isRead && (
-                          <span className="mt-1.5 w-2 h-2 flex-shrink-0 bg-primary rounded-full" />
-                        )}
-                        {n.isRead && (
-                          <span className="mt-1.5 w-2 h-2 flex-shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p
-                            className={`text-xs leading-relaxed ${!n.isRead ? "font-medium text-text-primary-light" : "text-text-secondary-light"}`}
-                          >
-                            {n.message}
-                          </p>
-                          <p className="text-[10px] text-text-muted-light mt-0.5">
-                            {new Date(n.createdAt).toLocaleString("vi-VN", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
+          {/* Notifications — using the new NotificationBell component */}
+          <NotificationBell />
 
           {/* Divider */}
           <div className="w-px h-6 bg-border-light mx-1" />
@@ -473,7 +286,10 @@ const Header: React.FC = () => {
                   icon={<SettingsIcon />}
                   label="Settings"
                   
-                  onClick={() => setDropdownOpen(false)}
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    navigate("/settings/account");
+                  }}
                 />
               </div>
 

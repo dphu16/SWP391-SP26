@@ -42,11 +42,8 @@ public class User {
     private UserStatus status;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "provider" ,nullable = false)
+    @Column(name = "provider", nullable = false)
     private AuthProvider provider = AuthProvider.LOCAL;
-
-    @Column(name = "full_name", length = 100)
-    private String fullName;
 
     @Column(name = "avatar_url")
     private String avatarUrl;
@@ -54,4 +51,5 @@ public class User {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
+
 }

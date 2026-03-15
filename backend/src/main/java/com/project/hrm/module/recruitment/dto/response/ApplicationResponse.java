@@ -23,5 +23,6 @@ public class ApplicationResponse {
     private ApplicationStatus status;
     private OffsetDateTime start;
     private OffsetDateTime end;
+    private BigDecimal score;
 
 }

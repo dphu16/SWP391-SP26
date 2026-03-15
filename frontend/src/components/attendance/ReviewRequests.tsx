@@ -215,7 +215,6 @@ const parseOffboardingRequest = (
 
 const CHANGE_TYPE_LABELS: Record<string, string> = {
   DEPARTMENT_TRANSFER: "Department Transfer",
-  TITLE_CHANGE: "Title Change",
   SALARY_CHANGE: "Salary Change",
   DISCIPLINE: "Discipline",
   REWARD: "Reward",
@@ -248,8 +247,6 @@ const parsePersonnelChange = (
   let details = dto.departmentName || "Personnel Change";
   if (dto.changeType === "DEPARTMENT_TRANSFER") {
     details = `${dto.oldValues?.departmentName || "Old Dept"} ➡️ ${dto.newValues?.departmentName || "New Dept"}`;
-  } else if (dto.changeType === "TITLE_CHANGE") {
-    details = `${dto.oldValues?.title || "Old Title"} ➡️ ${dto.newValues?.title || "New Title"}`;
   } else if (dto.changeType === "SALARY_CHANGE") {
     details = `Salary update to ${dto.newValues?.baseSalary?.toLocaleString() || "N/A"}`;
   } else if (dto.changeType === "DISCIPLINE" || dto.changeType === "REWARD") {
@@ -444,23 +441,6 @@ const typeIcon: Record<string, React.ReactNode> = {
           strokeLinejoin="round"
           strokeWidth={2}
           d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-        />
-      </svg>
-    </span>
-  ),
-  "Title Change": (
-    <span className="w-8 h-8 rounded-lg bg-[#ede9fe] text-[#6d28d9] flex items-center justify-center flex-shrink-0">
-      <svg
-        className="w-4 h-4"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
         />
       </svg>
     </span>

@@ -5,8 +5,8 @@ import type { JobInput } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
 import { useToast } from "../ui/Toast";
 import { useAuth } from "../../hooks/useAuth";
-import { edpService } from "../../services/edpService";
-import type { Position, Department } from "../../services/edpService";
+import { departmentService } from "../../services/departmentService";
+import type { Position, Department } from "../../services/departmentService";
 
 const inputCls = "w-full px-4 py-2.5 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
 const labelCls = "block text-[11px] font-bold uppercase tracking-wider text-text-secondary-light mb-1.5";
@@ -47,14 +47,14 @@ const JobFormPage: React.FC = () => {
     });
 
     useEffect(() => {
-        edpService.getDepartments()
+        departmentService.getAll()
             .then((res: any) => setDepartments(res.data))
             .catch((err: any) => console.error("Could not fetch departments", err));
     }, []);
 
     useEffect(() => {
         if (selectedDeptId) {
-            edpService.getPositionsByDept(selectedDeptId)
+            departmentService.getPositionsByDept(selectedDeptId)
                 .then((res: any) => setPositions(res.data))
                 .catch((err: any) => console.error("Could not fetch positions", err));
         } else {
@@ -71,7 +71,7 @@ const JobFormPage: React.FC = () => {
 
                     if (job.deptName) {
                         try {
-                            const deptRes = await edpService.getDepartments();
+                            const deptRes = await departmentService.getAll();
                             const matchedDept = deptRes.data.find((d: any) => d.deptName === job.deptName);
                             if (matchedDept) {
                                 setSelectedDeptId(matchedDept.deptId);
@@ -97,9 +97,10 @@ const JobFormPage: React.FC = () => {
                         postedTime: job.postedAt ? new Date(job.postedAt).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
                         hrId: job.hrId || "",
                     });
-                } catch (err) {
-                    setError("Failed to load job details.");
-                    toastError("Error", "Could not fetch details.");
+                } catch (err: any) {
+                    const msg = err?.response?.data?.message || "Could not fetch details.";
+                    setError(msg);
+                    toastError("Error", msg);
                 } finally {
                     setLoading(false);
                 }
@@ -116,7 +117,7 @@ const JobFormPage: React.FC = () => {
         }));
     };
 
-    const handleSubmit = async (e: React.FormEvent, targetStatus: "DRAFT" | "OPEN") => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             setSubmitting(true);
@@ -124,7 +125,7 @@ const JobFormPage: React.FC = () => {
             // Format datetime properly if needed for API
             const payload = {
                 ...formData,
-                status: targetStatus,
+                status: "DRAFT" as const,
                 closedTime: formData.closedTime ? new Date(formData.closedTime).toISOString() : "",
                 postedTime: formData.postedTime ? new Date(formData.postedTime).toISOString() : new Date().toISOString()
             };
@@ -137,8 +138,8 @@ const JobFormPage: React.FC = () => {
                 toastSuccess("Created", "Job created successfully.");
             }
             navigate("/recruitment/jobs");
-        } catch (err) {
-            toastError("Error", "Failed to save job.");
+        } catch (err: any) {
+            toastError("Error", err?.response?.data?.message || "Failed to save job.");
         } finally {
             setSubmitting(false);
         }
@@ -165,7 +166,7 @@ const JobFormPage: React.FC = () => {
 
             {error && <ErrorMessage message={error} />}
 
-            <form onSubmit={(e) => handleSubmit(e, "OPEN")} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="rounded-2xl border border-border-light bg-white shadow-card p-6 md:p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -250,6 +251,7 @@ const JobFormPage: React.FC = () => {
                             >
                                 <option value="OFFICIAL">Official</option>
                                 <option value="PROBATION">Probation</option>
+                                <option value="INTERN">Intern</option>
                             </select>
                         </div>
 
@@ -341,14 +343,6 @@ const JobFormPage: React.FC = () => {
                         className="px-6 py-2.5 rounded-xl border border-border-light text-sm font-semibold text-text-secondary-light hover:bg-gray-100 transition-colors cursor-pointer"
                     >
                         Cancel
-                    </button>
-                    <button
-                        type="button"
-                        onClick={(e) => handleSubmit(e as unknown as React.FormEvent, "DRAFT")}
-                        disabled={submitting}
-                        className="px-6 py-2.5 rounded-xl border border-border-light text-sm font-semibold text-text-secondary-light hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                        Save as Draft
                     </button>
                     <button
                         type="submit"

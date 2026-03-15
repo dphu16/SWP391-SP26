@@ -18,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.UUID;
 
 @Aspect
@@ -31,29 +32,14 @@ public class AuditLogAspect {
     private final PersonnelChangeRepository personnelChangeRepository;
     private final UserRepository userRepository;
 
-    private String resolvePrimaryRole(Employee employee) {
-        if (employee == null || employee.getUser() == null || employee.getUser().getRoles() == null
-                || employee.getUser().getRoles().isEmpty()) {
-            return "";
-        }
-
-        return employee.getUser().getRoles().stream()
-                .map(role -> role.getName().name())
-                .sorted(Comparator.naturalOrder())
-                .findFirst()
-                .orElse("");
-    }
-
     private String getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated()) {
             String emailOrUsername = auth.getName();
             return userRepository.findByEmail(emailOrUsername)
                     .map(u -> {
-                        if (u.getFullName() != null && !u.getFullName().isBlank()) {
-                            return u.getFullName();
-                        }
-                        if (u.getEmployee() != null && u.getEmployee().getFullName() != null) {
+                        if (u.getEmployee() != null && u.getEmployee().getFullName() != null
+                                && !u.getEmployee().getFullName().isBlank()) {
                             return u.getEmployee().getFullName();
                         }
                         return emailOrUsername;
@@ -72,7 +58,7 @@ public class AuditLogAspect {
         Employee oldEmp = employeeRepository.findById(id).orElse(null);
 
         // PRE-CAPTURE old values to prevent Hibernate session auto-update issues
-        String oldRole = resolvePrimaryRole(oldEmp);
+        String oldRole = resolvePrimaryRoleName(oldEmp);
         String oldStatus = (oldEmp != null && oldEmp.getStatus() != null) ? oldEmp.getStatus().name() : "";
         String oldName = (oldEmp != null) ? oldEmp.getFullName() : "";
         String oldEmail = (oldEmp != null && oldEmp.getPersonal() != null) ? oldEmp.getPersonal().getEmail() : "";
@@ -90,7 +76,7 @@ public class AuditLogAspect {
             boolean specificFieldLogged = false;
 
             // Check Role change (only for updateEmployee)
-            String newRole = resolvePrimaryRole(newEmp);
+            String newRole = resolvePrimaryRoleName(newEmp);
             if (!oldRole.equals(newRole)) {
                 auditLogService.recordAction("Employee", id.toString(), id, "UPDATE", "role", oldRole, newRole, actor,
                         actor + " changed role from " + oldRole + " to " + newRole);
@@ -154,6 +140,20 @@ public class AuditLogAspect {
         }
 
         return result;
+    }
+
+    private String resolvePrimaryRoleName(Employee employee) {
+        if (employee == null || employee.getUser() == null || employee.getUser().getRoles() == null) {
+            return "";
+        }
+
+        return employee.getUser().getRoles().stream()
+                .map(com.project.hrm.module.corehr.entity.Role::getName)
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(Enum::name))
+                .map(Enum::name)
+                .findFirst()
+                .orElse("");
     }
 
     // Capture Request Creation

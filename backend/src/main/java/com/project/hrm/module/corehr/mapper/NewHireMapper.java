@@ -5,6 +5,8 @@ import com.project.hrm.module.corehr.dto.response.NewHireResponseDTO;
 import com.project.hrm.module.corehr.entity.*;
 import com.project.hrm.module.corehr.enums.EmployeeRole;
 
+import java.util.Comparator;
+
 public class NewHireMapper {
 
         private NewHireMapper() {
@@ -19,7 +21,8 @@ public class NewHireMapper {
                                 .build();
 
                 // Calculate endDate based on contractDuration
-                java.time.LocalDate computedStartDate = dto.getStartDate() != null ? dto.getStartDate() : java.time.LocalDate.now();
+                java.time.LocalDate computedStartDate = dto.getStartDate() != null ? dto.getStartDate()
+                                : java.time.LocalDate.now();
                 java.time.LocalDate computedEndDate = dto.getEndDate();
 
                 if (dto.getContractDuration() != null) {
@@ -75,13 +78,14 @@ public class NewHireMapper {
         }
 
         public static NewHireResponseDTO toResponseDTO(Employee e) {
-                EmployeeRole primaryRole = null;
-                if (e.getUser() != null && e.getUser().getRoles() != null) {
-                        primaryRole = e.getUser().getRoles().stream()
-                                        .map(Role::getName)
-                                        .findFirst()
-                                        .orElse(null);
-                }
+                EmployeeRole resolvedRole = e.getUser() != null && e.getUser().getRoles() != null
+                                ? e.getUser().getRoles().stream()
+                                                .map(Role::getName)
+                                                .filter(java.util.Objects::nonNull)
+                                                .sorted(Comparator.comparing(Enum::name))
+                                                .findFirst()
+                                                .orElse(null)
+                                : null;
 
                 return NewHireResponseDTO.builder()
                                 .employeeId(e.getEmployeeId())
@@ -93,7 +97,6 @@ public class NewHireMapper {
                                 .address(e.getPersonal() != null ? e.getPersonal().getAddress() : null)
                                 .departmentName(e.getDepartment() != null ? e.getDepartment().getDeptName() : null)
                                 .positionTitle(e.getPosition() != null ? e.getPosition().getTitle() : null)
-                                .role(primaryRole)
                                 .status(e.getEmpStatus())
                                 .dependentName((e.getDependents() != null && !e.getDependents().isEmpty())
                                                 ? e.getDependents().get(0).getContactName()
@@ -102,13 +105,15 @@ public class NewHireMapper {
                                                 ? e.getDependents().get(0).getRelationship()
                                                 : null)
                                 .baseSalary(e.getContract() != null &&
-                                        (e.getContract().getEndDate() == null || e.getContract().getEndDate().isAfter(java.time.LocalDate.now()))
-                                        ? e.getContract().getBaseSalary()
-                                        : null)
+                                                (e.getContract().getEndDate() == null || e.getContract().getEndDate()
+                                                                .isAfter(java.time.LocalDate.now()))
+                                                                                ? e.getContract().getBaseSalary()
+                                                                                : null)
                                 .citizenId(e.getPersonal() != null ? e.getPersonal().getCitizenId() : null)
                                 .taxCode(e.getPersonal() != null ? e.getPersonal().getTaxCode() : null)
                                 .dateOfBirth(e.getPersonal() != null ? e.getPersonal().getDateOfBirth() : null)
                                 .avatarUrl(e.getPersonal() != null ? e.getPersonal().getAvatar() : null)
+                                .role(resolvedRole)
                                 .build();
         }
 }
