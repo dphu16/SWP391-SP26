@@ -62,6 +62,12 @@ export const sidebarConfig: SidebarSection[] = [
             path: "/offboarding/requests",
             roles: allow("offboarding:manage"),
           },
+            {
+                key: "offboarding-approval",
+                label: "Approval",
+                path: "/offboarding/approval",
+                roles: allow("offboarding:manage"),
+            },
         ],
       },
       {

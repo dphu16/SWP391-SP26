@@ -1,6 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Sidebar from "./components/shared/sidebar";
+import Sidebar from "./components/shared/sidebar/Sidebar";
 import Header from "./components/shared/Header";
 import HRDashboard from "./components/coreHR/HRDashboard";
 import EmployeeDetail from "./components/coreHR/EmployeeDetail";
