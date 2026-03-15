@@ -84,7 +84,7 @@ public class JwtUtil {
     }
 
     /**
-     * Extract the employeeId claim embedded in the token (may be null for users
+     * Extract the employeeId claim embedded in the token (maybe null for users
      * without employee records).
      */
     public String extractEmployeeId(String token) {
