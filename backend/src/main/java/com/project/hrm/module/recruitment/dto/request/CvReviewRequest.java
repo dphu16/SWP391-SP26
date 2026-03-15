@@ -14,7 +14,6 @@ public class CvReviewRequest {
 
     private UUID appId;
     private UUID reviewerId;
-    private double interviewScore;
     private String comment;
     private ResultStatus result;
 

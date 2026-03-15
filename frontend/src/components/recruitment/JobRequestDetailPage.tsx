@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { jobRequestService } from "../../services/jobRequestService";
 import type { JobRequest } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
+import { useAuth } from "../../hooks/useAuth";
 
 const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-text-muted-light mb-1";
 const valueCls = "text-sm font-semibold text-text-primary-light";
@@ -15,6 +16,9 @@ const JobRequestDetailPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [hrComment, setHrComment] = useState("");
     const [updating, setUpdating] = useState(false);
+
+    const { user } = useAuth();
+    const isManager = user?.role === "MANAGER";
 
     useEffect(() => {
         const fetchDetail = async () => {
@@ -56,18 +60,16 @@ const JobRequestDetailPage: React.FC = () => {
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border-light">
                 <div className="space-y-2">
-                    <button
-                        onClick={() => navigate("/recruitment/job-requests")}
-                        className="group flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary hover:text-primary-hover transition-colors mb-4"
-                    >
-                        <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 transition-transform group-hover:-translate-x-1">
-                            <path fillRule="evenodd" d="M12.5 8a.5.5 0 01-.5.5H4.707l3.147 3.146a.5.5 0 01-.708.708l-4-4a.5.5 0 010-.708l4-4a.5.5 0 11.708.708L4.707 7.5H12a.5.5 0 01.5.5z" clipRule="evenodd" />
-                        </svg>
-                        Back to List
-                    </button>
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-text-secondary-light mb-4">
+                        <Link to="/dashboard" className="hover:text-primary transition-colors">Home</Link>
+                        <span className="mx-1">&gt;</span>
+                        <Link to="/recruitment/job-requests" className="hover:text-primary transition-colors">Job Requests</Link>
+                        <span className="mx-1">&gt;</span>
+                        <span className="text-text-primary-light">{request.posName}</span>
+                    </div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-black font-heading text-text-primary-light tracking-tight">
-                            {request.title}
+                            {request.posName}
                         </h1>
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${request.status === "SUBMITTED" ? "bg-amber-100 text-amber-700" :
                             request.status === "APPROVED" ? "bg-emerald-100 text-emerald-700" :
@@ -88,13 +90,17 @@ const JobRequestDetailPage: React.FC = () => {
                             Edit Request
                         </button>
                     )}
-                    {request.status === "APPROVED" && (
+                    {request.status === "APPROVED" && !isManager && (
                         <button
                             onClick={() => navigate(`/recruitment/jobs/new`, {
                                 state: {
                                     requestId: request.id,
-                                    title: request.title,
-                                    quantity: request.quantity
+                                    posId: request.posId,
+                                    quantity: request.quantity,
+                                    reportTo: request.reportTo,
+                                    type: request.type,
+                                    location: request.location,
+                                    deptId: request.deptId
                                 }
                             })}
                             className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 cursor-pointer"
@@ -119,7 +125,6 @@ const JobRequestDetailPage: React.FC = () => {
                             <div>
                                 <label className={labelCls}>Department</label>
                                 <div className={valueCls}>{request.deptName}</div>
-                                <div className="text-[10px] text-text-muted-light mt-0.5 font-mono">{request.deptId}</div>
                             </div>
                             <div>
                                 <label className={labelCls}>Employment Type</label>
@@ -128,20 +133,12 @@ const JobRequestDetailPage: React.FC = () => {
                                 </div>
                             </div>
                             <div>
-                                <label className={labelCls}>Headcount</label>
+                                <label className={labelCls}>Quantity</label>
                                 <div className="text-lg font-black text-primary">{request.quantity} Position(s)</div>
                             </div>
                             <div>
-                                <label className={labelCls}>Location</label>
+                                <label className={labelCls}>Work Location</label>
                                 <div className={valueCls}>{request.location}</div>
-                            </div>
-                            <div>
-                                <label className={labelCls}>Reports To</label>
-                                <div className={valueCls}>{request.reportTo || "None specified"}</div>
-                            </div>
-                            <div>
-                                <label className={labelCls}>Reviewer</label>
-                                <div className={valueCls}>{request.reviewer || "Not reviewed yet"}</div>
                             </div>
                         </div>
                     </section>
@@ -159,55 +156,64 @@ const JobRequestDetailPage: React.FC = () => {
 
                 {/* Sidebar Info */}
                 <div className="space-y-6">
-                    <section className="bg-white rounded-3xl p-6 border border-border-light shadow-sm">
-                        <label className={labelCls}>Internal ID</label>
-                        <div className="font-mono text-xs text-text-muted-light break-all">
-                            {request.id}
+                    <section className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-3xl p-6 border border-indigo-100/50 shadow-sm relative overflow-hidden">
+                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/40 rounded-full blur-2xl pointer-events-none" />
+                        <h2 className="text-[11px] font-black uppercase tracking-widest text-indigo-900 mb-3 relative z-10">
+                            Report To HR
+                        </h2>
+                        <div className="flex items-center gap-3 relative z-10">
+                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 shadow-sm">
+                                {request.reviewer ? request.reviewer.charAt(0).toUpperCase() : "H"}
+                            </div>
+                            <span className="font-semibold text-indigo-900 text-sm">
+                                {request.reviewer || "Not Assigned"}
+                            </span>
                         </div>
                     </section>
 
-                    <section className="bg-white rounded-3xl p-6 border border-border-light shadow-sm flex flex-col gap-4">
-                        <h2 className="text-[11px] font-black uppercase tracking-widest text-text-primary-light">
-                            Admin Feedback
-                        </h2>
-                        <div className="space-y-4">
-                            <div>
-                                <label className={labelCls}>HR Comment</label>
-                                {request.status === "SUBMITTED" ? (
-                                    <textarea
-                                        rows={3}
-                                        value={hrComment}
-                                        onChange={(e) => setHrComment(e.target.value)}
-                                        placeholder="Add internal notes or approval terms before deciding..."
-                                        className="w-full px-4 py-2 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none"
-                                    />
-                                ) : (
-                                    <div className="text-xs text-text-secondary-light leading-relaxed p-3 bg-gray-50 rounded-xl border border-gray-100 italic">
-                                        {request.comment || "No comments added."}
+                    {!(isManager && request.status === "SUBMITTED") && (
+                        <section className="bg-white rounded-3xl p-6 border border-border-light shadow-sm flex flex-col gap-4">
+                            <h2 className="text-[11px] font-black uppercase tracking-widest text-text-primary-light">
+                                HR Feedback
+                            </h2>
+                            <div className="space-y-4">
+                                <div>
+                                    {request.status === "SUBMITTED" ? (
+                                        <textarea
+                                            rows={3}
+                                            value={hrComment}
+                                            onChange={(e) => setHrComment(e.target.value)}
+                                            placeholder="Add internal notes or approval terms before deciding..."
+                                            className="w-full px-4 py-2 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none"
+                                        />
+                                    ) : (
+                                        <div className="text-xs text-text-secondary-light leading-relaxed p-3 bg-gray-50 rounded-xl border border-gray-100 italic">
+                                            {request.comment || "No comments added."}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {request.status === "SUBMITTED" && !isManager && (
+                                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                                        <button
+                                            onClick={() => handleStatusUpdate("REJECTED")}
+                                            disabled={updating}
+                                            className="px-4 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                                        >
+                                            Reject
+                                        </button>
+                                        <button
+                                            onClick={() => handleStatusUpdate("APPROVED")}
+                                            disabled={updating}
+                                            className="px-4 py-2 text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg transition-all shadow-md shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
+                                        >
+                                            Approve
+                                        </button>
                                     </div>
                                 )}
                             </div>
-
-                            {request.status === "SUBMITTED" && (
-                                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-                                    <button
-                                        onClick={() => handleStatusUpdate("REJECTED")}
-                                        disabled={updating}
-                                        className="px-4 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                                    >
-                                        Reject
-                                    </button>
-                                    <button
-                                        onClick={() => handleStatusUpdate("APPROVED")}
-                                        disabled={updating}
-                                        className="px-4 py-2 text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg transition-all shadow-md shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
-                                    >
-                                        Approve
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </section>
+                        </section>
+                    )}
                 </div>
             </div>
         </div>

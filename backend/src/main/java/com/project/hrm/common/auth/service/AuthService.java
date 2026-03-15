@@ -54,7 +54,7 @@ public class AuthService {
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(req.getEmail());
         User user = userRepo.findByEmail(req.getEmail()).orElseThrow();
-        String accessToken = jwtUtil.generateToken(userDetails, user.getFullName());
+        String accessToken = jwtUtil.generateToken(userDetails, user);
         String refreshToken = generateRefreshToken(req.getEmail());
 
         return new AuthResponse(accessToken, refreshToken);
@@ -72,7 +72,7 @@ public class AuthService {
         String email = saved.getUser().getEmail();
         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
         User user = userRepo.findByEmail(email).orElseThrow();
-        String newAccessToken = jwtUtil.generateToken(userDetails, user.getFullName());
+        String newAccessToken = jwtUtil.generateToken(userDetails, user);
 
         return new AuthResponse(newAccessToken, refreshToken);
     }

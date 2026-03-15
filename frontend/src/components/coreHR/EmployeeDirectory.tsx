@@ -38,7 +38,11 @@ const EmployeeDirectory: React.FC = () => {
         </div>
       </div>
 
-      <FilterBar onSearch={setSearchTerm} onFilterChange={handleFilterChange} />
+      <FilterBar 
+        onSearch={setSearchTerm} 
+        onFilterChange={handleFilterChange} 
+        searchPlaceholder="Search employees by name, code, or phone number..."
+      />
 
       <EmployeeTable
         searchQuery={debouncedSearch}

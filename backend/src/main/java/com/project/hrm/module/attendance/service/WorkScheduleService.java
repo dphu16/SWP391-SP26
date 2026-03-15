@@ -1,6 +1,8 @@
 package com.project.hrm.module.attendance.service;
 
 import com.project.hrm.module.attendance.dto.AttendanceEmployeeResponse;
+import com.project.hrm.module.attendance.repository.AttendanceLogRepository;
+import com.project.hrm.module.attendance.dto.ShiftRequest;
 import com.project.hrm.module.attendance.dto.ShiftResponse;
 import com.project.hrm.module.attendance.dto.WorkScheduleRequest;
 import com.project.hrm.module.attendance.dto.WorkScheduleResponse;
@@ -11,34 +13,33 @@ import com.project.hrm.module.attendance.repository.WorkScheduleRepository;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class WorkScheduleService {
 
-    @Autowired
-    private WorkScheduleRepository workScheduleRepository;
-
-    @Autowired
-    private ShiftRepository shiftRepository;
-
-    @Autowired
-    private EmployeeRepository employeeRepository;
+    private final WorkScheduleRepository workScheduleRepository;
+    private final ShiftRepository shiftRepository;
+    private final EmployeeRepository employeeRepository;
+    private final AttendanceLogRepository attendanceLogRepository;
 
     // =========================================================
-    // 1. API LẤY DANH SÁCH NHÂN VIÊN ĐỂ TẠO LỊCH (FIXED NAME)
+    // 1. GET EMPLOYEES FOR SCHEDULING (DROPDOWN)
     // =========================================================
     public Page<AttendanceEmployeeResponse> getEmployeesForScheduling(String search, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -53,49 +54,65 @@ public class WorkScheduleService {
         return employeePage.map(emp -> {
             AttendanceEmployeeResponse dto = new AttendanceEmployeeResponse();
             dto.setId(emp.getEmployeeId());
-
-            if (emp.getPersonal() != null && emp.getFullName() != null) {
-                dto.setFullName(emp.getFullName());
-            } else {
-                dto.setFullName("Chưa cập nhật tên");
-            }
-
-            if (emp.getEmployeeCode() != null) {
-                dto.setEmployeeCode(emp.getEmployeeCode());
-            } else {
-                dto.setEmployeeCode("EMP-" + emp.getEmployeeId().toString().substring(0, 8).toUpperCase());
-            }
-
-            if (emp.getDepartment() != null) {
-                dto.setDeptName(emp.getDepartment().getDeptName());
-            } else {
-                dto.setDeptName("Chưa xếp phòng");
-            }
-
+            dto.setFullName(emp.getFullName() != null ? emp.getFullName() : "Name not updated");
+            dto.setEmployeeCode(emp.getEmployeeCode() != null
+                    ? emp.getEmployeeCode()
+                    : "EMP-" + emp.getEmployeeId().toString().substring(0, 8).toUpperCase());
+            dto.setDeptName(emp.getDepartment() != null
+                    ? emp.getDepartment().getDeptName()
+                    : "No department assigned");
             return dto;
         });
     }
 
+    // =========================================================
+    // 2. CREATE SINGLE SCHEDULE
+    // =========================================================
     public WorkScheduleResponse createSchedule(WorkScheduleRequest request) {
+        if (request.getDate() == null) {
+            throw new RuntimeException("Schedule date is required.");
+        }
+        if (request.getDate().isBefore(LocalDate.now())) {
+            throw new RuntimeException("Cannot create a schedule for a past date: " + request.getDate());
+        }
+        if (request.getEmployeeId() == null) {
+            throw new RuntimeException("Employee ID is required.");
+        }
+
+        // Check for duplicate before hitting the DB constraint
+        WorkSchedule existing = workScheduleRepository.findByEmployeeIdAndDate(
+                request.getEmployeeId(), request.getDate());
+        if (existing != null) {
+            throw new RuntimeException(
+                    "A schedule already exists for this employee on " + request.getDate()
+                            + ". Use the update endpoint to change the shift.");
+        }
+
         WorkSchedule entity = new WorkSchedule();
         entity.setDate(request.getDate());
         entity.setEmployeeId(request.getEmployeeId());
 
         if (request.getShiftId() != null) {
-            Shift shift = shiftRepository.findById(request.getShiftId()).orElse(null);
+            Shift shift = shiftRepository.findById(request.getShiftId())
+                    .orElseThrow(() -> new RuntimeException("Shift not found: " + request.getShiftId()));
             entity.setShift(shift);
         }
 
-        WorkSchedule savedEntity = workScheduleRepository.save(entity);
-        return mapToResponse(savedEntity);
+        return mapToResponse(workScheduleRepository.save(entity));
     }
 
+    // =========================================================
+    // 3. GET ALL SCHEDULES (MANAGER VIEW)
+    // =========================================================
     public List<WorkScheduleResponse> getAllSchedules() {
         return workScheduleRepository.findAll().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    // =========================================================
+    // 4. GET MY SCHEDULES (EMPLOYEE VIEW)
+    // =========================================================
     public List<WorkScheduleResponse> getMySchedules(UUID employeeId, Integer month, Integer year) {
         LocalDate startDate;
         LocalDate endDate;
@@ -109,38 +126,53 @@ public class WorkScheduleService {
             endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
         }
 
-        return workScheduleRepository.findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId, startDate, endDate)
+        return workScheduleRepository
+                .findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId, startDate, endDate)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    // =========================================================
+    // 5. BULK CREATE SCHEDULES
+    // =========================================================
     @Transactional
-    public List<WorkScheduleResponse> createBulkSchedules(UUID employeeId, LocalDate startDate, LocalDate endDate,
-            UUID shiftId) {
+    public List<WorkScheduleResponse> createBulkSchedules(UUID employeeId, LocalDate startDate,
+            LocalDate endDate, UUID shiftId) {
+        LocalDate today = LocalDate.now();
+
+        if (startDate == null || endDate == null) {
+            throw new RuntimeException("Start date and end date are required.");
+        }
+        if (startDate.isBefore(today)) {
+            throw new RuntimeException("Start date cannot be in the past: " + startDate);
+        }
+        if (endDate.isBefore(startDate)) {
+            throw new RuntimeException(
+                    "End date (" + endDate + ") must not be before start date (" + startDate + ").");
+        }
+
         Shift shift = shiftRepository.findById(shiftId)
-                .orElseThrow(() -> new RuntimeException("Ca làm việc không tồn tại!"));
+                .orElseThrow(() -> new RuntimeException("Shift not found: " + shiftId));
 
-        List<WorkSchedule> existingSchedules = workScheduleRepository
-                .findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId, startDate, endDate);
-
-        Set<LocalDate> existingDates = existingSchedules.stream()
+        Set<LocalDate> existingDates = workScheduleRepository
+                .findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId, startDate, endDate)
+                .stream()
                 .map(WorkSchedule::getDate)
                 .collect(Collectors.toSet());
 
         List<WorkSchedule> newSchedules = new ArrayList<>();
-        LocalDate currentDate = startDate;
-
-        while (!currentDate.isAfter(endDate)) {
-            // Không xếp lịch vào Chủ Nhật và những ngày đã có lịch
-            if (currentDate.getDayOfWeek() != DayOfWeek.SUNDAY && !existingDates.contains(currentDate)) {
+        LocalDate current = startDate;
+        while (!current.isAfter(endDate)) {
+            // Skip Sundays and dates that already have a schedule
+            if (current.getDayOfWeek() != DayOfWeek.SUNDAY && !existingDates.contains(current)) {
                 WorkSchedule ws = new WorkSchedule();
                 ws.setEmployeeId(employeeId);
-                ws.setDate(currentDate);
+                ws.setDate(current);
                 ws.setShift(shift);
                 newSchedules.add(ws);
             }
-            currentDate = currentDate.plusDays(1);
+            current = current.plusDays(1);
         }
 
         return workScheduleRepository.saveAll(newSchedules).stream()
@@ -148,59 +180,72 @@ public class WorkScheduleService {
                 .collect(Collectors.toList());
     }
 
+    // =========================================================
+    // 6. UPDATE SCHEDULE (CHANGE SHIFT)
+    // =========================================================
     public WorkScheduleResponse updateSchedule(UUID scheduleId, UUID newShiftId) {
         WorkSchedule ws = workScheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch làm việc này!"));
+                .orElseThrow(() -> new RuntimeException("Work schedule not found: " + scheduleId));
+
+        if (ws.getDate().isBefore(LocalDate.now())) {
+            throw new RuntimeException("Cannot modify a schedule for a past date: " + ws.getDate());
+        }
 
         Shift newShift = shiftRepository.findById(newShiftId)
-                .orElseThrow(() -> new RuntimeException("Ca làm việc mới không tồn tại!"));
+                .orElseThrow(() -> new RuntimeException("Shift not found: " + newShiftId));
 
         ws.setShift(newShift);
-        WorkSchedule updatedWs = workScheduleRepository.save(ws);
-        return mapToResponse(updatedWs);
+        return mapToResponse(workScheduleRepository.save(ws));
     }
 
+    // =========================================================
+    // 7. COPY SCHEDULE FROM PREVIOUS MONTH
+    // =========================================================
     @Transactional
     public List<WorkScheduleResponse> copyFromPreviousMonth(UUID employeeId, int targetMonth, int targetYear) {
         LocalDate targetDate = LocalDate.of(targetYear, targetMonth, 1);
-        LocalDate sourceDate = targetDate.minusMonths(1);
 
-        List<WorkSchedule> sourceSchedules = workScheduleRepository
-                .findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId,
-                        sourceDate.withDayOfMonth(1),
-                        sourceDate.withDayOfMonth(sourceDate.lengthOfMonth()));
-
-        if (sourceSchedules.isEmpty()) {
-            throw new RuntimeException("Tháng trước không có dữ liệu để copy!");
+        if (targetDate.isBefore(LocalDate.now().withDayOfMonth(1))) {
+            throw new RuntimeException(
+                    "Cannot copy schedules to a past month: " + targetMonth + "/" + targetYear);
         }
 
-        List<WorkSchedule> existingTarget = workScheduleRepository
-                .findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId,
-                        targetDate.withDayOfMonth(1),
-                        targetDate.withDayOfMonth(targetDate.lengthOfMonth()));
+        LocalDate sourceStart = targetDate.minusMonths(1).withDayOfMonth(1);
+        LocalDate sourceEnd = sourceStart.withDayOfMonth(sourceStart.lengthOfMonth());
 
-        Set<LocalDate> existingDates = existingTarget.stream()
+        List<WorkSchedule> sourceSchedules = workScheduleRepository
+                .findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId, sourceStart, sourceEnd);
+
+        if (sourceSchedules.isEmpty()) {
+            throw new RuntimeException("No schedule data found for "
+                    + sourceStart.getMonth() + " " + sourceStart.getYear() + " to copy from.");
+        }
+
+        Set<LocalDate> existingTargetDates = workScheduleRepository
+                .findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId,
+                        targetDate, targetDate.withDayOfMonth(targetDate.lengthOfMonth()))
+                .stream()
                 .map(WorkSchedule::getDate)
                 .collect(Collectors.toSet());
 
-        java.util.Map<DayOfWeek, Shift> shiftByDayOfWeek = new java.util.HashMap<>();
+        // Build a day-of-week → shift map from source month
+        Map<DayOfWeek, Shift> shiftByDayOfWeek = new HashMap<>();
         for (WorkSchedule ws : sourceSchedules) {
             shiftByDayOfWeek.putIfAbsent(ws.getDate().getDayOfWeek(), ws.getShift());
         }
+        Shift fallbackShift = sourceSchedules.get(0).getShift();
 
         List<WorkSchedule> newSchedules = new ArrayList<>();
         for (int day = 1; day <= targetDate.lengthOfMonth(); day++) {
-            LocalDate currentDate = targetDate.withDayOfMonth(day);
-            if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY || existingDates.contains(currentDate))
+            LocalDate current = targetDate.withDayOfMonth(day);
+            if (current.getDayOfWeek() == DayOfWeek.SUNDAY || existingTargetDates.contains(current))
                 continue;
 
-            Shift shift = shiftByDayOfWeek.get(currentDate.getDayOfWeek());
-            if (shift == null)
-                shift = sourceSchedules.get(0).getShift();
+            Shift shift = shiftByDayOfWeek.getOrDefault(current.getDayOfWeek(), fallbackShift);
 
             WorkSchedule newWs = new WorkSchedule();
             newWs.setEmployeeId(employeeId);
-            newWs.setDate(currentDate);
+            newWs.setDate(current);
             newWs.setShift(shift);
             newSchedules.add(newWs);
         }
@@ -209,6 +254,115 @@ public class WorkScheduleService {
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
+
+    // =========================================================
+    // 8. GET ALL SHIFTS (FOR DROPDOWN)
+    // =========================================================
+    public List<ShiftResponse> getAllShifts() {
+        return shiftRepository.findAll().stream().map(s -> {
+            ShiftResponse dto = new ShiftResponse();
+            dto.setId(s.getShiftId());
+            dto.setName(s.getShiftName());
+            dto.setStartTime(s.getStartTime());
+            dto.setEndTime(s.getEndTime());
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    // =========================================================
+    // 9. CREATE NEW SHIFT
+    // =========================================================
+    public ShiftResponse createShift(ShiftRequest request) {
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            throw new RuntimeException("Shift name is required.");
+        }
+        if (request.getStartTime() == null || request.getStartTime().trim().isEmpty()) {
+            throw new RuntimeException("Start time is required.");
+        }
+        if (request.getEndTime() == null || request.getEndTime().trim().isEmpty()) {
+            throw new RuntimeException("End time is required.");
+        }
+
+        boolean nameTaken = shiftRepository.findAll().stream()
+                .anyMatch(s -> s.getShiftName() != null
+                        && s.getShiftName().equalsIgnoreCase(request.getName().trim()));
+        if (nameTaken) {
+            throw new RuntimeException("A shift with the name '" + request.getName() + "' already exists.");
+        }
+
+        Shift shift = new Shift();
+        shift.setShiftName(request.getName().trim());
+        shift.setStartTime(java.time.LocalTime.parse(request.getStartTime()));
+        shift.setEndTime(java.time.LocalTime.parse(request.getEndTime()));
+
+        Shift saved = shiftRepository.save(shift);
+        ShiftResponse dto = new ShiftResponse();
+        dto.setId(saved.getShiftId());
+        dto.setName(saved.getShiftName());
+        dto.setStartTime(saved.getStartTime());
+        dto.setEndTime(saved.getEndTime());
+        return dto;
+    }
+
+    // =========================================================
+    // 10. DELETE SHIFT
+    // =========================================================
+    public void deleteShift(UUID shiftId) {
+        Shift shift = shiftRepository.findById(shiftId)
+                .orElseThrow(() -> new RuntimeException("Shift not found: " + shiftId));
+
+        boolean inUse = workScheduleRepository.findAll().stream()
+                .anyMatch(ws -> ws.getShift() != null
+                        && ws.getShift().getShiftId().equals(shiftId));
+        if (inUse) {
+            throw new RuntimeException("Cannot delete shift '" + shift.getShiftName()
+                    + "' because it is currently assigned to one or more schedules.");
+        }
+
+        shiftRepository.deleteById(shiftId);
+    }
+
+    // =========================================================
+    // 11. DELETE SCHEDULE
+    // =========================================================
+    @Transactional
+    public void deleteSchedule(UUID scheduleId) {
+        if (!workScheduleRepository.existsById(scheduleId)) {
+            throw new RuntimeException("Work schedule not found: " + scheduleId);
+        }
+        // Xóa attendance logs liên quan trước (tránh FK constraint)
+        attendanceLogRepository.deleteAll(
+                attendanceLogRepository.findByWorkSchedule_ScheduleId(scheduleId));
+        workScheduleRepository.deleteById(scheduleId);
+    }
+
+    // =========================================================
+    // 12. DELETE ALL SCHEDULES IN A MONTH FOR AN EMPLOYEE
+    // =========================================================
+    @Transactional
+    public void deleteSchedulesByMonth(UUID employeeId, int month, int year) {
+        LocalDate startDate = LocalDate.of(year, month, 1);
+        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+
+        List<WorkSchedule> schedulesToDelete = workScheduleRepository
+                .findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId, startDate, endDate);
+
+        if (schedulesToDelete.isEmpty()) {
+            throw new RuntimeException("No schedules found for this employee in "
+                    + startDate.getMonth() + " " + year + ".");
+        }
+
+        for (WorkSchedule ws : schedulesToDelete) {
+            attendanceLogRepository.deleteAll(
+                    attendanceLogRepository.findByWorkSchedule_ScheduleId(ws.getScheduleId()));
+        }
+
+        workScheduleRepository.deleteAll(schedulesToDelete);
+    }
+
+    // =========================================================
+    // PRIVATE: MAP ENTITY → RESPONSE DTO
+    // =========================================================
 
     private WorkScheduleResponse mapToResponse(WorkSchedule entity) {
         WorkScheduleResponse dto = new WorkScheduleResponse();
@@ -224,16 +378,5 @@ public class WorkScheduleService {
             dto.setShift(shiftDto);
         }
         return dto;
-    }
-
-    public List<ShiftResponse> getAllShifts() {
-        return shiftRepository.findAll().stream().map(s -> {
-            ShiftResponse dto = new ShiftResponse();
-            dto.setId(s.getShiftId());
-            dto.setName(s.getShiftName());
-            dto.setStartTime(s.getStartTime());
-            dto.setEndTime(s.getEndTime());
-            return dto;
-        }).collect(Collectors.toList());
     }
 }

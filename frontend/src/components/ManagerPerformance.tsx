@@ -648,7 +648,15 @@ const ManagerPerformance = () => {
                                             <input
                                                 type="number"
                                                 value={kpiScoreInput}
-                                                onChange={e => setKpiScoreInput(e.target.value)}
+                                                onChange={e => {
+                                                    let val = e.target.value;
+                                                    if (val !== '') {
+                                                        const num = parseFloat(val);
+                                                        if (num > 100) val = '100';
+                                                        if (num < 0) val = '0';
+                                                    }
+                                                    setKpiScoreInput(val);
+                                                }}
                                                 disabled={activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED'}
                                                 className={`w-full px-4 py-2 text-xl font-black rounded-lg outline-none transition-all placeholder:italic [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${activeReview?.status === 'SUBMITTED' || activeReview?.status === 'APPROVED' ? 'bg-surface-2-light/50 cursor-not-allowed opacity-50' : 'bg-surface-2-light border-none focus:ring-2 focus:ring-primary/20'}`}
                                                 placeholder="---"

@@ -79,4 +79,7 @@ public interface AttendanceLogRepository extends JpaRepository<AttendanceLog, UU
         List<AttendanceAggregationDTO> aggregateAttendanceByPeriod(
                         @Param("startDate") LocalDate startDate,
                         @Param("endDate") LocalDate endDate);
+
+        // Tìm logs theo schedule_id (để xóa trước khi xóa schedule)
+        List<AttendanceLog> findByWorkSchedule_ScheduleId(UUID scheduleId);
 }

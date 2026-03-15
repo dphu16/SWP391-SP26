@@ -29,6 +29,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
         List<Employee> findByPosition_Department_DeptId(UUID deptId);
 
         @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal" })
+        Optional<Employee> findByPersonal_Email(String email);
+
+        @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal" })
         @Override
         Optional<Employee> findById(UUID uuid);
 

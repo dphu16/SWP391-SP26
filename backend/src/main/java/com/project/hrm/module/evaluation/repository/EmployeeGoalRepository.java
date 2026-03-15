@@ -29,6 +29,9 @@ public interface EmployeeGoalRepository
     @Query("SELECT SUM(eg.targetValue) FROM EmployeeGoal eg WHERE eg.cycle.cycleId = :cycleId")
     Double sumTargetValueByCycle(@Param("cycleId") UUID cycleId);
     
+    @Query("SELECT SUM(eg.targetValue) FROM EmployeeGoal eg")
+    Double sumAllTargetValues();
+    
     @Modifying
     @Transactional
     @Query("DELETE FROM EmployeeGoal eg WHERE eg.employee.employeeId IN :employeeIds AND eg.cycle.cycleId = :cycleId")

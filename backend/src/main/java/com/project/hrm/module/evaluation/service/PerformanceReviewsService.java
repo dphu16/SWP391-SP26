@@ -14,6 +14,8 @@ import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.project.hrm.module.corehr.enums.EmployeeStatus;
+import com.project.hrm.module.corehr.enums.EmployeeRole;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -98,7 +100,11 @@ public class PerformanceReviewsService {
     }
 
     public List<PerformanceReviews> getByCycle(UUID cycleId){
-        return repository.findByCycle_CycleId(cycleId);
+        return repository.findByCycle_CycleId(cycleId).stream()
+                .filter(r -> r.getEmployee() != null 
+                        && r.getEmployee().getStatus() == EmployeeStatus.OFFICIAL
+                        && r.getEmployee().getRole() == EmployeeRole.ROLE_EMPLOYEE)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     // API 15

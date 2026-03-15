@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
+import com.project.hrm.module.corehr.enums.EmployeeRole;
 
 @Service
 public class TeamStatsService {
@@ -56,7 +57,10 @@ public class TeamStatsService {
 
         UUID deptId = manager.getDepartment().getDeptId();
         List<Employee> team = employeeRepo.findByDepartment_DeptId(deptId).stream()
-                .filter(e -> e.getEmployeeId() != null && !e.getEmployeeId().equals(managerId) && e.getStatus() == EmployeeStatus.OFFICIAL)
+                .filter(e -> e.getEmployeeId() != null 
+                        && !e.getEmployeeId().equals(managerId) 
+                        && e.getStatus() == EmployeeStatus.OFFICIAL
+                        && e.getRole() == EmployeeRole.ROLE_EMPLOYEE)
                 .collect(Collectors.toList());
 
         long totalMembers = team.size();
@@ -77,28 +81,20 @@ public class TeamStatsService {
     }
 
     public GlobalPerformanceStatsResponse getGlobalPerformanceStats() {
-        var activeCycle = cycleRepo.findFirstByStatusOrderByCreatedAtDesc(CycleStatus.ACTIVE)
-                .orElse(null);
-
-        if (activeCycle == null)
-            return new GlobalPerformanceStatsResponse(0.0, 0.0, java.util.Collections.emptyList());
-
-        UUID cycleId = activeCycle.getCycleId();
-
-        // 1. Org Average Score: Average of department averages
-        List<Double> deptAverages = reviewRepo.findDepartmentAveragesByCycle(cycleId);
+        // 1. Org Average Score: Average of department averages across all cycles
+        List<Double> deptAverages = reviewRepo.findDepartmentAveragesAllCycles();
         Double orgAvg = 0.0;
         if (deptAverages != null && !deptAverages.isEmpty()) {
             orgAvg = deptAverages.stream().mapToDouble(d -> d).average().orElse(0.0);
         }
 
-        // 2. Total KPIs Assigned: Sum of targetValue
-        Double totalTarget = goalRepo.sumTargetValueByCycle(cycleId);
+        // 2. Total KPIs Assigned: Sum of targetValue across all cycles
+        Double totalTarget = goalRepo.sumAllTargetValues();
         if (totalTarget == null)
             totalTarget = 0.0;
 
-        // 3. Score Distribution (Bell Curve): Count staff in 10 bins (0-10, 11-20, ..., 91-100)
-        List<Double> allScores = reviewRepo.findAllScoresByCycle(cycleId);
+        // 3. Score Distribution (Bell Curve): All cycles
+        List<Double> allScores = reviewRepo.findAllScoresAllCycles();
         Integer[] distribution = new Integer[10];
         Arrays.fill(distribution, 0);
         
@@ -115,16 +111,8 @@ public class TeamStatsService {
     }
 
     public List<DepartmentScoreResponse> getDepartmentLeaderboard() {
-        var activeCycle = cycleRepo.findFirstByStatusOrderByCreatedAtDesc(CycleStatus.ACTIVE)
-                .orElse(null);
-
-        if (activeCycle == null) {
-            return Collections.emptyList();
-        }
-
-        UUID cycleId = activeCycle.getCycleId();
         List<Department> allDepts = deptRepo.findAll();
-        List<Object[]> scores = reviewRepo.findDepartmentAveragesWithNamesByCycle(cycleId);
+        List<Object[]> scores = reviewRepo.findDepartmentAveragesWithNamesAllCycles();
         
         java.util.Map<String, Double> scoreMap = scores.stream()
                 .collect(Collectors.toMap(
