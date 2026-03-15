@@ -28,13 +28,4 @@ public class DepartmentController {
     public ResponseEntity<DepartmentResponse> getDepartmentById(@PathVariable UUID id) {
         return ResponseEntity.ok(departmentService.getDepartmentById(id));
     }
-
-    @GetMapping("/{id}/manager")
-    public ResponseEntity<DepartmentResponse> getDepartmentByManager(
-            @PathVariable UUID id) {
-
-        DepartmentResponse responses = departmentService.getDepartmentByManagerId(id);
-
-        return ResponseEntity.ok(responses);
-    }
 }

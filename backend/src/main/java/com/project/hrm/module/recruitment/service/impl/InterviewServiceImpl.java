@@ -3,8 +3,6 @@ package com.project.hrm.module.recruitment.service.impl;
 import com.project.hrm.module.corehr.entity.Department;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.enums.EmployeeRole;
-import com.project.hrm.module.corehr.repository.DepartmentRepository;
-import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.recruitment.dto.request.EmailRequest;
 import com.project.hrm.module.recruitment.dto.request.InterviewRequest;
 import com.project.hrm.module.recruitment.dto.response.InterviewResponse;
@@ -32,8 +30,8 @@ import java.util.UUID;
 public class InterviewServiceImpl implements InterviewService {
     private final ApplicationRepository applicationRepository;
     private final InterviewRepository interviewRepository;
-    private final EmployeeRepository employeeRepository;
-    private final DepartmentRepository departmentRepository;
+    private final REmployeeRepository employeeRepository;
+    private final RDepartmentRepository departmentRepository;
     private final RealInterview realInterview;
     private final JobRepository jobRepository;
 
@@ -107,7 +105,12 @@ public class InterviewServiceImpl implements InterviewService {
                 double weight;
                 double appScore = entity.getApp().getScore().doubleValue();
                 double score = request.getScore().doubleValue();
-                if (employee.getUser().getRole().equals(EmployeeRole.ROLE_HR)) {
+                boolean isHrInterviewer = employee.getUser() != null
+                        && employee.getUser().getRoles() != null
+                        && employee.getUser().getRoles().stream()
+                        .anyMatch(r -> r.getName() == EmployeeRole.ROLE_HR);
+
+                if (isHrInterviewer) {
                     weight = 0.3;
                 } else {
                     weight = 0.7;
@@ -149,7 +152,7 @@ public class InterviewServiceImpl implements InterviewService {
             if(i.getScheduleTime() == null){
                 throw new RuntimeException(i.getApp().getCandidate().getFullName()+" hasn't interview day!");
             }
-            check = interviewRepository.existsByApp_IdAndInterviewer_User_Role(i.getApp().getId(), role);
+            check = interviewRepository.existsByApp_IdAndInterviewer_User_Roles_Name(i.getApp().getId(), role);
             if(check) {
                 throw new RuntimeException("This app has name "+i.getApp().getCandidate().getFullName()+" is existed!");
             };

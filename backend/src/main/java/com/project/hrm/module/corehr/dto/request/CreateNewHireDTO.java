@@ -1,56 +1,44 @@
-
 package com.project.hrm.module.corehr.dto.request;
 
+import com.project.hrm.module.corehr.entity.Contract;
 import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
-import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.enums.Gender;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+
 import java.util.UUID;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class CreateNewHireDTO {
-
     @NotBlank
     private String fullName;
     private String phone;
-    @Email
     private String email;
     private Gender gender;
     private String address;
-    @NotNull
-    private UUID departmentId;
-    @NotNull
-    private UUID positionId;
     private String citizenId;
     private String taxCode;
     private LocalDate dateOfBirth;
-    private String avatarUrl;
-    private UUID sourceApplicationId;
-    private UUID mentorId;
-    private LocalDate dateOfJoining;
-
-    @NotNull
-    private EmployeeRole role;
-
-    @NotNull
-    private EmployeeStatus status;
-
-    @NotNull
-    private BigDecimal baseSalary;
-
     private String contractNumber;
     private String contractType;
     private LocalDate startDate;
+    private String contractDuration; // 6_MONTHS, 1_YEAR, 2_YEARS, INDEFINITE, CUSTOM
     private LocalDate endDate;
+    private EmployeeRole role;
+    private EmployeeStatus status;
+    private UUID departmentId;
+    private UUID positionId;
+    private UUID mentorId;
+    private UUID sourceApplicationId;
+    private String avatarUrl;
+    private LocalDate dateOfJoining;
+    private BigDecimal baseSalary;
+    private String departmentName;
+    private String positionName;
+    private String fileBase64;
+    private Contract contract;
 }

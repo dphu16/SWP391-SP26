@@ -10,7 +10,7 @@ import type { CreateNewHireDTO } from "../hooks/types";
 import type { FieldErrors } from "../hooks/useCandidateOnboarding";
 import { numberToVietnameseWords } from "../../../utils/numberToVietnameseWords";
 
-import { useEmploymentData, useJobAutoFill, type DepartmentOption, type PositionOption } from "./hooks/useEmploymentData";
+import { useEmploymentData, useJobAutoFill, usePositionDepartmentSync, type DepartmentOption, type PositionOption } from "./hooks/useEmploymentData";
 import { useManagerSearch, type ManagerOption } from "./hooks/useManagerSearch";
 
 interface EmploymentDetailsFormProps {
@@ -19,6 +19,8 @@ interface EmploymentDetailsFormProps {
   jobId?: string;
   fieldErrors: FieldErrors;
   clearFieldError: (field: string) => void;
+  onFileChange: (file: File | null) => void;
+  contractFileName: string | null;
 }
 
 // =======================
@@ -42,7 +44,9 @@ const DepartmentPositionSection: React.FC<SharedProps & {
   positions: PositionOption[];
   loading: boolean;
   fetchError: string | null;
-}> = ({ formData, fieldErrors, update, departments, positions, loading, fetchError }) => (
+  isDeptLocked: boolean;
+  isPosLocked: boolean;
+}> = ({ formData, fieldErrors, update, departments, positions, loading, fetchError, isDeptLocked, isPosLocked }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div>
       <label className={labelCls}>
@@ -55,8 +59,8 @@ const DepartmentPositionSection: React.FC<SharedProps & {
           <select
             value={formData.departmentId}
             onChange={(e) => update("departmentId", e.target.value)}
-            disabled={!!fetchError}
-            className={`${inputCls} appearance-none pr-9 cursor-pointer ${errorBorder(fieldErrors, "departmentId")}`}
+            disabled={!!fetchError || isDeptLocked}
+            className={`${inputCls} appearance-none pr-9 ${isDeptLocked ? 'cursor-not-allowed bg-gray-50 text-text-secondary-light' : 'cursor-pointer'} ${errorBorder(fieldErrors, "departmentId")}`}
           >
             <option value="" disabled>Select department…</option>
             {departments.map((d) => (
@@ -64,6 +68,9 @@ const DepartmentPositionSection: React.FC<SharedProps & {
             ))}
           </select>
         </SelectWrapper>
+      )}
+      {isDeptLocked && (
+        <p className="mt-1 text-[11px] text-primary font-medium"></p>
       )}
       <FieldError message={fieldErrors.departmentId} />
     </div>
@@ -79,8 +86,8 @@ const DepartmentPositionSection: React.FC<SharedProps & {
           <select
             value={formData.positionId}
             onChange={(e) => update("positionId", e.target.value)}
-            disabled={!!fetchError}
-            className={`${inputCls} appearance-none pr-9 cursor-pointer ${errorBorder(fieldErrors, "positionId")}`}
+            disabled={!!fetchError || isPosLocked}
+            className={`${inputCls} appearance-none pr-9 ${isPosLocked ? 'cursor-not-allowed bg-gray-50 text-text-secondary-light' : 'cursor-pointer'} ${errorBorder(fieldErrors, "positionId")}`}
           >
             <option value="" disabled>Select position…</option>
             {positions.map((p) => (
@@ -88,6 +95,9 @@ const DepartmentPositionSection: React.FC<SharedProps & {
             ))}
           </select>
         </SelectWrapper>
+      )}
+      {isPosLocked && (
+        <p className="mt-1 text-[11px] text-primary font-medium"></p>
       )}
       <FieldError message={fieldErrors.positionId} />
     </div>
@@ -208,7 +218,7 @@ const RoleStatusSection: React.FC<SharedProps> = ({ formData, fieldErrors, updat
   </div>
 );
 
-const ContractSection: React.FC<SharedProps> = ({ formData, fieldErrors, update }) => (
+const ContractSection: React.FC<SharedProps & { onFileChange: (file: File | null) => void; contractFileName: string | null; }> = ({ formData, fieldErrors, update, onFileChange, contractFileName }) => (
   <>
     <div className="pt-1 pb-2 border-b border-border-light">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
@@ -259,15 +269,97 @@ const ContractSection: React.FC<SharedProps> = ({ formData, fieldErrors, update 
         <FieldError message={fieldErrors.startDate} />
       </div>
       <div>
-        <label className={labelCls}>End Date</label>
-        <input
-          type="date"
-          value={formData.endDate ?? ""}
-          onChange={(e) => update("endDate", e.target.value)}
-          className={`${inputCls} ${errorBorder(fieldErrors, "endDate")}`}
-        />
-        <FieldError message={fieldErrors.endDate} />
+        <label className={labelCls}>Contract Duration</label>
+        <SelectWrapper>
+          <select
+            value={formData.contractDuration ?? ""}
+            onChange={(e) => {
+              update("contractDuration", e.target.value);
+              // Clear endDate when switching away from CUSTOM
+              if (e.target.value !== "CUSTOM") {
+                update("endDate", "");
+              }
+            }}
+            className={`${inputCls} appearance-none pr-9 cursor-pointer`}
+          >
+            <option value="" disabled>Select duration…</option>
+            <option value="6_MONTHS">6 Months</option>
+            <option value="1_YEAR">1 Year</option>
+            <option value="2_YEARS">2 Years</option>
+            <option value="INDEFINITE">Indefinite</option>
+            <option value="CUSTOM">Custom</option>
+          </select>
+        </SelectWrapper>
+        {/* Show computed end date preview */}
+        {formData.startDate && formData.contractDuration && formData.contractDuration !== "CUSTOM" && formData.contractDuration !== "INDEFINITE" && (() => {
+          const start = new Date(formData.startDate);
+          let end: Date | null = null;
+          if (formData.contractDuration === "6_MONTHS") { end = new Date(start); end.setMonth(end.getMonth() + 6); }
+          else if (formData.contractDuration === "1_YEAR") { end = new Date(start); end.setFullYear(end.getFullYear() + 1); }
+          else if (formData.contractDuration === "2_YEARS") { end = new Date(start); end.setFullYear(end.getFullYear() + 2); }
+          return end ? (
+            <p className="mt-1 text-[11px] text-primary font-medium">
+              End Date: {end.toLocaleDateString("vi-VN")}
+            </p>
+          ) : null;
+        })()}
+        {formData.contractDuration === "INDEFINITE" && (
+          <p className="mt-1 text-[11px] text-text-secondary-light font-medium">No end date</p>
+        )}
       </div>
+    </div>
+
+    {/* Show End Date picker only for CUSTOM duration */}
+    {formData.contractDuration === "CUSTOM" && (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className={labelCls}>End Date</label>
+          <input
+            type="date"
+            value={formData.endDate ?? ""}
+            onChange={(e) => update("endDate", e.target.value)}
+            className={`${inputCls} ${errorBorder(fieldErrors, "endDate")}`}
+          />
+          <FieldError message={fieldErrors.endDate} />
+        </div>
+      </div>
+    )}
+
+    {/* Contract PDF Upload */}
+    <div>
+      <label className={labelCls}>Contract File (PDF)</label>
+      <label
+        className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-border-light bg-gray-50 hover:border-primary hover:bg-emerald-50 transition-colors cursor-pointer group"
+      >
+        <input
+          type="file"
+          accept=".pdf"
+          className="hidden"
+          onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+        />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-text-muted-light group-hover:text-primary flex-shrink-0">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+        </svg>
+        <div className="flex-1 min-w-0">
+          {contractFileName ? (
+            <p className="text-sm font-semibold text-emerald-700 truncate">✓ {contractFileName}</p>
+          ) : (
+            <p className="text-sm text-text-muted-light">Click to upload contract PDF <span className="text-text-secondary-light">(optional)</span></p>
+          )}
+        </div>
+        {contractFileName && (
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); onFileChange(null); }}
+            className="text-xs text-rose-500 hover:text-rose-700 font-medium flex-shrink-0"
+          >
+            Remove
+          </button>
+        )}
+      </label>
     </div>
   </>
 );
@@ -310,7 +402,22 @@ const InformationSummarySection: React.FC<{
     { label: "Contract Number", value: formData.contractNumber },
     { label: "Contract Type", value: formData.contractType },
     { label: "Start Date", value: formData.startDate },
-    { label: "End Date", value: formData.endDate },
+    { label: "Contract Duration", value: formData.contractDuration === "6_MONTHS" ? "6 Months"
+        : formData.contractDuration === "1_YEAR" ? "1 Year"
+        : formData.contractDuration === "2_YEARS" ? "2 Years"
+        : formData.contractDuration === "INDEFINITE" ? "Indefinite"
+        : formData.contractDuration === "CUSTOM" ? "Custom"
+        : undefined },
+    { label: "End Date", value: formData.contractDuration === "INDEFINITE" ? "—"
+        : formData.contractDuration === "CUSTOM" ? formData.endDate
+        : formData.startDate && formData.contractDuration ? (() => {
+            const s = new Date(formData.startDate);
+            if (formData.contractDuration === "6_MONTHS") s.setMonth(s.getMonth() + 6);
+            else if (formData.contractDuration === "1_YEAR") s.setFullYear(s.getFullYear() + 1);
+            else if (formData.contractDuration === "2_YEARS") s.setFullYear(s.getFullYear() + 2);
+            return s.toLocaleDateString("vi-VN");
+          })()
+        : undefined },
     {
       label: "Base Salary",
       value: formData.baseSalary ? `${formData.baseSalary.toLocaleString()} VND` : undefined,
@@ -354,9 +461,19 @@ const EmploymentDetailsForm: React.FC<EmploymentDetailsFormProps> = ({
   jobId,
   fieldErrors,
   clearFieldError,
+  onFileChange,
+  contractFileName,
 }) => {
   const { departments, positions, loading, fetchError } = useEmploymentData();
-  useJobAutoFill(jobId, loading, departments, positions, setFormData);
+  const { jobAutoFilled } = useJobAutoFill(jobId, loading, departments, positions, setFormData);
+  usePositionDepartmentSync(positions, departments, formData, setFormData);
+
+  // Position is locked when it was auto-filled from the Job table
+  const isPosLocked = jobAutoFilled && !!formData.positionId;
+
+  // Department is locked when position has a known department
+  const selectedPos = positions.find((p) => p.id === formData.positionId);
+  const isDeptLocked = !!selectedPos?.deptId;
   
   const managerSearchProps = useManagerSearch(setFormData, clearFieldError);
 
@@ -382,6 +499,8 @@ const EmploymentDetailsForm: React.FC<EmploymentDetailsFormProps> = ({
         positions={positions}
         loading={loading}
         fetchError={fetchError}
+        isDeptLocked={isDeptLocked}
+        isPosLocked={isPosLocked}
       />
 
       <ManagerDateSection
@@ -391,7 +510,7 @@ const EmploymentDetailsForm: React.FC<EmploymentDetailsFormProps> = ({
 
       <RoleStatusSection {...sharedProps} />
 
-      <ContractSection {...sharedProps} />
+      <ContractSection {...sharedProps} onFileChange={onFileChange} contractFileName={contractFileName} />
 
       <SalarySection {...sharedProps} />
 

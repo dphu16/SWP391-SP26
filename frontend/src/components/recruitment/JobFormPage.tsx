@@ -5,8 +5,8 @@ import type { JobInput } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
 import { useToast } from "../ui/Toast";
 import { useAuth } from "../../hooks/useAuth";
-import { departmentService } from "../../services/departmentService";
-import type { Position, Department } from "../../services/departmentService";
+import { edpService } from "../../services/edpService";
+import type { Position, Department } from "../../services/edpService";
 
 const inputCls = "w-full px-4 py-2.5 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
 const labelCls = "block text-[11px] font-bold uppercase tracking-wider text-text-secondary-light mb-1.5";
@@ -47,14 +47,14 @@ const JobFormPage: React.FC = () => {
     });
 
     useEffect(() => {
-        departmentService.getAll()
+        edpService.getDepartments()
             .then((res: any) => setDepartments(res.data))
             .catch((err: any) => console.error("Could not fetch departments", err));
     }, []);
 
     useEffect(() => {
         if (selectedDeptId) {
-            departmentService.getPositionsByDept(selectedDeptId)
+            edpService.getPositionsByDept(selectedDeptId)
                 .then((res: any) => setPositions(res.data))
                 .catch((err: any) => console.error("Could not fetch positions", err));
         } else {
@@ -71,7 +71,7 @@ const JobFormPage: React.FC = () => {
 
                     if (job.deptName) {
                         try {
-                            const deptRes = await departmentService.getAll();
+                            const deptRes = await edpService.getDepartments();
                             const matchedDept = deptRes.data.find((d: any) => d.deptName === job.deptName);
                             if (matchedDept) {
                                 setSelectedDeptId(matchedDept.deptId);

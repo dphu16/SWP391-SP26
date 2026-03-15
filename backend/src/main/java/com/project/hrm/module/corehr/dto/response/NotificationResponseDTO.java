@@ -11,8 +11,12 @@ import java.util.UUID;
 public class NotificationResponseDTO {
 
     private UUID notificationId;
+    private String title;
     private String message;
     private String type;
-    private boolean isRead;
+    private String entityType;
+    private String entityId;
+    private Boolean isRead;
     private OffsetDateTime createdAt;
 }
+

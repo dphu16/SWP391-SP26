@@ -1,17 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import apiClient from "../../services/apiClient";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
-// FIX 1: Removed the duplicate import block. Merged into a single import that
-// includes all required exports: getLeaveBalance and LeaveBalanceResponse.
 import {
   getMyRequests,
   createRequest,
   updateRequest,
   deleteRequest,
-  getLeaveBalance,
   type RequestRecord as RequestRecordApi,
   type CreateRequestDTO,
-  type LeaveBalanceResponse,
 } from "../../services/requestService";
 import {
   offboardingService,
@@ -21,26 +17,36 @@ import { personnelChangeService } from "../../services/personnelChangeService";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type AppStatus = "Pending" | "Approved" | "Rejected";
-type AppType = "Leave" | "OT" | "Other" | "Resignation" | "PersonnelChange";
+type AppType =
+  | "Leave"
+  | "OT"
+  | "ChangeShift"
+  | "Resignation"
+  | "PersonnelChange";
 type ModalType =
   | "Leave"
   | "OT"
-  | "Other"
+  | "ChangeShift"
   | "Resignation"
   | "PersonnelChange"
   | null;
 
-// FIX 4: Defined the AttendanceEmployee type that was used but never declared.
 interface AttendanceEmployee {
   employeeId: string;
-  employeeCode: string;
   fullName: string;
   position: string;
   deptName: string;
+  employeeCode: string;
+}
+
+interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
 }
 
 interface RequestRecord {
-  id: string;
+  id: string; // Updated from number
   type: AppType;
   typeLabel: string;
   dateRequested: string;
@@ -49,15 +55,16 @@ interface RequestRecord {
   raw: RequestRecordApi;
 }
 
+// Map from API RequestRecord to UI RequestRecord
 const mapApiRequest = (r: RequestRecordApi): RequestRecord => {
   let type: AppType = "Leave";
   let typeLabel = "Leave Application";
   if (r.requestType === "OT") {
     type = "OT";
     typeLabel = "Overtime Request";
-  } else if (r.requestType === "OTHER") {
-    type = "Other";
-    typeLabel = "Other Request";
+  } else if (r.requestType === "SHIFT_CHANGE") {
+    type = "ChangeShift";
+    typeLabel = "Change Shift";
   }
 
   let status: AppStatus = "Pending";
@@ -123,7 +130,7 @@ const typeIcon: Record<AppType, React.ReactNode> = {
       />
     </svg>
   ),
-  Other: (
+  ChangeShift: (
     <svg
       className="w-4 h-4"
       fill="none"
@@ -134,7 +141,7 @@ const typeIcon: Record<AppType, React.ReactNode> = {
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={2}
-        d="M4 6h16M4 12h16m-7 6h7"
+        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
       />
     </svg>
   ),
@@ -173,7 +180,7 @@ const typeIcon: Record<AppType, React.ReactNode> = {
 const typeBg: Record<AppType, string> = {
   Leave: "bg-[#ccfbf1] text-[#0f766e]",
   OT: "bg-[#dcfce7] text-[#15803d]",
-  Other: "bg-[#e0f2fe] text-[#0369a1]",
+  ChangeShift: "bg-[#e0f2fe] text-[#0369a1]",
   Resignation: "bg-[#fee2e2] text-[#b91c1c]",
   PersonnelChange: "bg-[#e0e7ff] text-[#4338ca]",
 };
@@ -184,8 +191,7 @@ const statusBadge: Record<AppStatus, string> = {
   Rejected: "bg-[#fee2e2] text-[#dc2626]",
 };
 
-// FIX 5: Defined a minimal EmployeeSearch component inline so the file is
-// self-contained. Replace with your real import if it lives in another module.
+// ── EmployeeSearch subcomponent ────────────────────────────────────────────
 const EmployeeSearch: React.FC<{
   value: AttendanceEmployee | null;
   onChange: (emp: AttendanceEmployee | null) => void;
@@ -193,93 +199,152 @@ const EmployeeSearch: React.FC<{
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<AttendanceEmployee[]>([]);
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!query.trim()) {
+  // Fetch employees from the same endpoint as CreateSchedule
+  const fetchEmployees = async (q: string) => {
+    setLoading(true);
+    try {
+      const res = await apiClient.get<PageResponse<AttendanceEmployee>>(
+        "/api/v1/attendance/work-schedules/employees",
+        { params: { page: 0, size: 10, search: q || undefined } },
+      );
+      setResults(res.data.content);
+      setOpen(true);
+    } catch {
       setResults([]);
-      return;
+    } finally {
+      setLoading(false);
     }
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await apiClient.get(
-          `/api/employees/search?q=${encodeURIComponent(query)}`,
-        );
-        setResults(res.data || []);
-      } catch {
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query]);
+  };
+
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const q = e.target.value;
+    setQuery(q);
+    if (value) onChange(null); // clear selection when typing
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchEmployees(q), 300);
+  };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      )
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const select = (emp: AttendanceEmployee) => {
+    onChange(emp);
+    setQuery(emp.fullName);
+    setOpen(false);
+  };
 
   return (
-    <div className="relative">
-      <input
-        type="text"
-        value={value ? value.fullName : query}
-        onChange={(e) => {
-          onChange(null);
-          setQuery(e.target.value);
-        }}
-        placeholder="Search employee name or code..."
-        className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-      />
-      {!value && results.length > 0 && (
-        <ul className="absolute z-20 mt-1 w-full bg-white border border-[#e2e8f0] rounded-lg shadow-lg max-h-48 overflow-y-auto">
-          {loading && (
-            <li className="px-3 py-2 text-sm text-[#64748b]">Searching…</li>
-          )}
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <input
+          type="text"
+          value={value ? value.fullName : query}
+          onChange={handleInput}
+          onFocus={() => {
+            if (!value) fetchEmployees(query);
+          }}
+          placeholder="Tìm theo tên hoặc mã nhân viên..."
+          className="w-full border border-[#e2e8f0] rounded-lg pl-3 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+        />
+        {loading && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2">
+            <svg
+              className="w-4 h-4 animate-spin text-[#0d9488]"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
+            </svg>
+          </span>
+        )}
+        {value && (
+          <button
+            onClick={() => {
+              onChange(null);
+              setQuery("");
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#64748b]"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {open && results.length > 0 && !value && (
+        <ul className="absolute z-10 w-full mt-1 bg-white border border-[#e2e8f0] rounded-xl shadow-lg overflow-auto max-h-52 text-sm">
           {results.map((emp) => (
             <li
               key={emp.employeeId}
-              onClick={() => {
-                onChange(emp);
-                setQuery("");
-                setResults([]);
-              }}
-              className="px-3 py-2 text-sm hover:bg-[#f8fafc] cursor-pointer"
+              onMouseDown={() => select(emp)}
+              className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-[#f0fdf4] transition-colors"
             >
-              <span className="font-semibold text-[#1e293b]">
-                {emp.fullName}
-              </span>
-              <span className="ml-2 text-xs text-[#94a3b8]">
-                {emp.employeeCode} · {emp.deptName}
-              </span>
+              <div className="w-8 h-8 rounded-full bg-[#0d9488]/10 text-[#0d9488] flex items-center justify-center font-bold text-xs flex-shrink-0">
+                {emp.fullName.charAt(0)}
+              </div>
+              <div>
+                <p className="font-semibold text-[#0f172a]">{emp.fullName}</p>
+                <p className="text-xs text-[#64748b]">
+                  {emp.employeeCode} · {emp.deptName}
+                </p>
+              </div>
             </li>
           ))}
         </ul>
       )}
+      {open && !loading && results.length === 0 && !value && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-[#e2e8f0] rounded-xl shadow-lg px-4 py-3 text-sm text-[#94a3b8]">
+          Không tìm thấy nhân viên nào.
+        </div>
+      )}
     </div>
   );
-};
-
-// ── Canonical blank form state ─────────────────────────────────────────────
-// FIX 3: Centralised the reset object so closeModal and handleEdit always use
-// the exact same shape — no phantom fields (shiftDate, targetShiftDate) and no
-// missing fields (otherDate).
-const BLANK_FORM = {
-  leaveType: "Annual Leave",
-  startDate: "",
-  endDate: "",
-  reason: "",
-  otDate: "",
-  otStartTime: "",
-  otEndTime: "",
-  otherDate: "",
-  pcType: "DEPARTMENT_TRANSFER",
-  newDepartmentId: "",
-  newPositionId: "",
-  newTitle: "",
-  newSalary: "",
 };
 
 // ── Main component ─────────────────────────────────────────────────────────
 const Applications: React.FC = () => {
   const currentUser = useCurrentUser();
   const [modal, setModal] = useState<ModalType>(null);
+  const [swapEmployee, setSwapEmployee] = useState<AttendanceEmployee | null>(
+    null,
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const [requests, setRequests] = useState<RequestRecord[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
@@ -289,15 +354,26 @@ const Applications: React.FC = () => {
   const [departments, setDepartments] = useState<
     { id: string; name: string }[]
   >([]);
-  const [positions, setPositions] = useState<{ id: string; name: string }[]>(
-    [],
-  );
+  const [positions, setPositions] = useState<
+    { id: string; name: string; deptId?: string }[]
+  >([]);
   const [pcEmployee, setPcEmployee] = useState<AttendanceEmployee | null>(null);
-  const [formData, setFormData] = useState(BLANK_FORM);
-  const [leaveBalance, setLeaveBalance] = useState<LeaveBalanceResponse | null>(
-    null,
-  );
-  const [leaveBalanceLoading, setLeaveBalanceLoading] = useState(false);
+
+  const [formData, setFormData] = useState({
+    leaveType: "Annual Leave",
+    startDate: "",
+    endDate: "",
+    reason: "",
+    otDate: "",
+    otStartTime: "",
+    otEndTime: "",
+    shiftDate: "",
+    targetShiftDate: "",
+    pcType: "DEPARTMENT_TRANSFER",
+    newDepartmentId: "",
+    newPositionId: "",
+    newSalary: "",
+  });
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -324,6 +400,7 @@ const Applications: React.FC = () => {
 
       const mappedRegular = regularReqs.map(mapApiRequest);
 
+      // Map offboarding requests if they belong to this user
       const myOffboarding = (offboardingReqs.data || [])
         .filter(
           (o: OffboardingResponse) =>
@@ -350,7 +427,7 @@ const Applications: React.FC = () => {
               : o.status === "CANCELLED"
                 ? "Rejected"
                 : "Approved") as AppStatus,
-            raw: {} as any,
+            raw: {} as any, // Dummy since we are mapping it differently
           }),
         );
 
@@ -382,18 +459,36 @@ const Applications: React.FC = () => {
         .get("/api/lookup/positions")
         .then((res) => {
           setPositions(
-            res.data?.map((p: any) => ({ id: p.id, name: p.name || p.title })),
+            res.data?.map((p: any) => ({
+              id: p.id,
+              name: p.name || p.title,
+              deptId: p.deptId,
+            })),
           );
         })
         .catch(() => {});
     }
   }, [modal]);
 
-  // FIX 3 (cont.): closeModal now uses BLANK_FORM — no phantom fields.
   const closeModal = () => {
     setModal(null);
+    setSwapEmployee(null);
     setPcEmployee(null);
-    setFormData(BLANK_FORM);
+    setFormData({
+      leaveType: "Annual Leave",
+      startDate: "",
+      endDate: "",
+      reason: "",
+      otDate: "",
+      otStartTime: "",
+      otEndTime: "",
+      shiftDate: "",
+      targetShiftDate: "",
+      pcType: "DEPARTMENT_TRANSFER",
+      newDepartmentId: "",
+      newPositionId: "",
+      newSalary: "",
+    });
     setSubmitError(null);
     setEditRequestId(null);
   };
@@ -402,13 +497,6 @@ const Applications: React.FC = () => {
     setModal(type);
     setMenuOpen(false);
     setEditRequestId(null);
-    if (type === "Leave" && currentUser?.employeeId) {
-      setLeaveBalanceLoading(true);
-      getLeaveBalance(currentUser.employeeId, new Date().getFullYear())
-        .then(setLeaveBalance)
-        .catch(() => setLeaveBalance(null))
-        .finally(() => setLeaveBalanceLoading(false));
-    }
   };
 
   const handleSubmit = async () => {
@@ -437,17 +525,17 @@ const Applications: React.FC = () => {
           endDate: formData.otDate,
           reason: `${formData.otStartTime} - ${formData.otEndTime} | ${formData.reason}`,
         };
-      } else if (modal === "Other") {
-        if (!formData.otherDate || !formData.reason)
+      } else if (modal === "ChangeShift") {
+        if (!formData.shiftDate || !formData.targetShiftDate || !swapEmployee)
           throw new Error(
-            "Please fill in the date and reason for the request.",
+            "Please fill in all shift dates and select an employee.",
           );
         dto = {
           employeeId: currentUser.employeeId,
-          requestType: "OTHER",
-          startDate: formData.otherDate,
-          endDate: formData.otherDate,
-          reason: formData.reason,
+          requestType: "SHIFT_CHANGE",
+          startDate: formData.shiftDate,
+          endDate: formData.targetShiftDate,
+          reason: `Swap with ${swapEmployee.fullName} | ${formData.reason}`,
         };
       } else if (modal === "Resignation") {
         if (!formData.startDate)
@@ -471,7 +559,6 @@ const Applications: React.FC = () => {
           reason: formData.reason,
           newDepartmentId: formData.newDepartmentId || undefined,
           newPositionId: formData.newPositionId || undefined,
-          newTitle: formData.newTitle || undefined,
           newSalary: formData.newSalary
             ? Number(formData.newSalary)
             : undefined,
@@ -542,14 +629,15 @@ const Applications: React.FC = () => {
         otEndTime = match[2];
         parsedReason = match[3];
       }
-    } else if (r.type === "Other") {
-      parsedReason = raw.reason || "";
+    } else if (r.type === "ChangeShift") {
+      const match = parsedReason.match(/^Swap with (.*?) \| (.*)$/);
+      if (match) {
+        parsedReason = match[2];
+      }
+      setSwapEmployee(null);
     }
 
-    // FIX 3 (cont.): handleEdit resets to BLANK_FORM first then overlays only
-    // the fields that are relevant — no phantom shiftDate/targetShiftDate keys.
     setFormData({
-      ...BLANK_FORM,
       leaveType,
       startDate: r.type === "Leave" ? raw.startDate || "" : "",
       endDate: r.type === "Leave" ? raw.endDate || "" : "",
@@ -557,18 +645,13 @@ const Applications: React.FC = () => {
       otDate: r.type === "OT" ? raw.startDate || "" : "",
       otStartTime,
       otEndTime,
-      otherDate: r.type === "Other" ? raw.startDate || "" : "",
+      shiftDate: r.type === "ChangeShift" ? raw.startDate || "" : "",
+      targetShiftDate: r.type === "ChangeShift" ? raw.endDate || "" : "",
+      pcType: "DEPARTMENT_TRANSFER",
+      newDepartmentId: "",
+      newPositionId: "",
+      newSalary: "",
     });
-  };
-
-  // FIX 2: Rewrote the modal title as a plain lookup object to avoid the broken
-  // nested ternary that had mismatched braces and caused a syntax error.
-  const modalTitle: Record<NonNullable<ModalType>, string> = {
-    Leave: "Leave Application",
-    OT: "OT Application",
-    Other: "Other Request",
-    Resignation: "Resignation Request",
-    PersonnelChange: "Personnel Change",
   };
 
   return (
@@ -615,10 +698,10 @@ const Applications: React.FC = () => {
                 OT Application
               </button>
               <button
-                onClick={() => handleDropdownItemClick("Other")}
-                className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#0f172a] hover:bg-[#f8fafc] transition-colors"
+                onClick={() => handleDropdownItemClick("ChangeShift")}
+                className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#0f172a] hover:bg-[#f8fafc] transition-colors border-b border-[#f1f5f9]"
               >
-                Other Request
+                Change Shift
               </button>
               <button
                 onClick={() => handleDropdownItemClick("Resignation")}
@@ -645,13 +728,16 @@ const Applications: React.FC = () => {
       <div className="bg-white border border-[#e2e8f0] rounded-2xl shadow-sm overflow-hidden">
         <div className="flex justify-between items-center p-5 border-b border-[#e2e8f0]">
           <h2 className="text-lg font-bold text-[#0f172a]">Recent Activity</h2>
+          <button className="text-sm font-semibold text-[#0d9488] hover:text-[#0f766e]">
+            View All History
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
                 {[
-                  "Request Type",
+                  "Application Type",
                   "Date Requested",
                   "Dates Affected",
                   "Status",
@@ -785,16 +871,24 @@ const Applications: React.FC = () => {
             {/* Header */}
             <div className="flex justify-between items-center px-6 py-5 border-b border-[#e2e8f0]">
               <div>
-                {/* FIX 2: Clean title lookup — no broken nested ternary. */}
                 <h3 className="text-lg font-bold text-[#0f172a]">
-                  {editRequestId ? "Edit" : "New"} {modalTitle[modal]}
+                  {editRequestId ? "Edit" : "New"}{" "}
+                  {modal === "Leave"
+                    ? "Leave Application"
+                    : modal === "OT"
+                      ? "OT Application"
+                      : modal === "Resignation"
+                        ? "Resignation Request"
+                        : modal === "PersonnelChange"
+                          ? "Personnel Change Request"
+                          : "Shift Change Request"}
                 </h3>
                 <p className="text-sm text-[#64748b] mt-0.5">
                   {modal === "Leave" && "Submit a leave request for approval."}
                   {modal === "OT" &&
                     "Register your overtime hours for approval."}
-                  {modal === "Other" &&
-                    "Submit a general request for approval."}
+                  {modal === "ChangeShift" &&
+                    "Request a shift swap with another employee."}
                   {modal === "Resignation" &&
                     "Submit your resignation request to HR/Manager."}
                   {modal === "PersonnelChange" &&
@@ -822,60 +916,14 @@ const Applications: React.FC = () => {
             </div>
 
             {/* Body */}
-            <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="px-6 py-5 space-y-4">
               {submitError && (
                 <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
                   {submitError}
                 </div>
               )}
-
               {modal === "Leave" && (
                 <>
-                  {leaveBalanceLoading ? (
-                    <div className="p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm text-[#64748b]">
-                      Loading leave balance...
-                    </div>
-                  ) : leaveBalance ? (
-                    <div className="p-4 bg-gradient-to-r from-[#f0fdf4] to-[#ecfdf5] border border-[#86efac] rounded-xl">
-                      <p className="text-xs font-bold text-[#15803d] uppercase tracking-wider mb-2">
-                        Leave Balance {leaveBalance.year}
-                      </p>
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1 text-center">
-                          <p className="text-2xl font-bold text-[#0f766e]">
-                            {leaveBalance.annualLeaveTotal -
-                              leaveBalance.annualLeaveUsed}
-                          </p>
-                          <p className="text-[10px] text-[#64748b] font-medium">
-                            Annual Leave Left
-                          </p>
-                        </div>
-                        <div className="w-px h-10 bg-[#86efac]" />
-                        <div className="flex-1 text-center">
-                          <p className="text-2xl font-bold text-[#64748b]">
-                            {leaveBalance.annualLeaveUsed}
-                          </p>
-                          <p className="text-[10px] text-[#64748b] font-medium">
-                            Annual Used
-                          </p>
-                        </div>
-                        <div className="w-px h-10 bg-[#86efac]" />
-                        <div className="flex-1 text-center">
-                          <p className="text-2xl font-bold text-[#64748b]">
-                            {leaveBalance.sickLeaveUsed}
-                          </p>
-                          <p className="text-[10px] text-[#64748b] font-medium">
-                            Sick Used
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-3 bg-[#fef3c7] border border-[#fcd34d] rounded-lg text-sm text-[#92400e]">
-                      ⚠️ Could not load leave balance. You can still submit but
-                      approval may be rejected.
-                    </div>
-                  )}
                   <div>
                     <label className="block text-sm font-semibold text-[#334155] mb-1.5">
                       Leave Type
@@ -889,6 +937,8 @@ const Applications: React.FC = () => {
                     >
                       <option>Annual Leave</option>
                       <option>Sick Leave</option>
+                      <option>Casual Leave</option>
+                      <option>Maternity/Paternity Leave</option>
                     </select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -1005,17 +1055,61 @@ const Applications: React.FC = () => {
                 </>
               )}
 
-              {modal === "Other" && (
+              {modal === "ChangeShift" && (
                 <>
                   <div>
                     <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                      Date
+                      Your Current Shift Date
                     </label>
                     <input
                       type="date"
-                      value={formData.otherDate}
+                      value={formData.shiftDate}
                       onChange={(e) =>
-                        setFormData({ ...formData, otherDate: e.target.value })
+                        setFormData({ ...formData, shiftDate: e.target.value })
+                      }
+                      className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#334155] mb-1.5">
+                      Swap With{" "}
+                      <span className="text-[#94a3b8] font-normal">
+                        (search nhân viên từ DB)
+                      </span>
+                    </label>
+                    <EmployeeSearch
+                      value={swapEmployee}
+                      onChange={setSwapEmployee}
+                    />
+                    {swapEmployee && (
+                      <div className="mt-2 p-3 bg-[#f0fdf4] border border-[#86efac] rounded-lg flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#0d9488]/10 text-[#0d9488] flex items-center justify-center font-bold text-xs flex-shrink-0">
+                          {swapEmployee.fullName.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-[#15803d] text-sm">
+                            {swapEmployee.fullName}
+                          </p>
+                          <p className="text-xs text-[#64748b]">
+                            {swapEmployee.employeeCode} ·{" "}
+                            {swapEmployee.position} · {swapEmployee.deptName}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#334155] mb-1.5">
+                      Target Shift Date (của họ)
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.targetShiftDate}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          targetShiftDate: e.target.value,
+                        })
                       }
                       className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
                     />
@@ -1025,18 +1119,17 @@ const Applications: React.FC = () => {
                       Reason
                     </label>
                     <textarea
-                      rows={4}
+                      rows={2}
                       value={formData.reason}
                       onChange={(e) =>
                         setFormData({ ...formData, reason: e.target.value })
                       }
-                      placeholder="Please provide details for your request..."
+                      placeholder="Reason for the shift change..."
                       className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
                     />
                   </div>
                 </>
               )}
-
               {modal === "Resignation" && (
                 <>
                   <div className="bg-red-50 p-4 rounded-xl border border-red-100 flex items-start gap-3">
@@ -1094,7 +1187,6 @@ const Applications: React.FC = () => {
                   </div>
                 </>
               )}
-
               {modal === "PersonnelChange" && (
                 <div className="space-y-4">
                   <div>
@@ -1136,12 +1228,12 @@ const Applications: React.FC = () => {
                       <option value="DEPARTMENT_TRANSFER">
                         Department Transfer
                       </option>
-                      <option value="TITLE_CHANGE">Title Change</option>
                       <option value="SALARY_CHANGE">Salary Change</option>
                       <option value="DISCIPLINE">Discipline</option>
                       <option value="REWARD">Reward</option>
                     </select>
                   </div>
+
                   {formData.pcType === "DEPARTMENT_TRANSFER" && (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -1154,6 +1246,7 @@ const Applications: React.FC = () => {
                             setFormData({
                               ...formData,
                               newDepartmentId: e.target.value,
+                              newPositionId: "",
                             })
                           }
                           className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
@@ -1178,61 +1271,30 @@ const Applications: React.FC = () => {
                               newPositionId: e.target.value,
                             })
                           }
-                          className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+                          disabled={!formData.newDepartmentId}
+                          className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <option value="">Select Position...</option>
-                          {positions.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name}
-                            </option>
-                          ))}
+                          <option value="">
+                            {formData.newDepartmentId
+                              ? "Select Position..."
+                              : "Select department first..."}
+                          </option>
+                          {positions
+                            .filter(
+                              (p: any) =>
+                                !formData.newDepartmentId ||
+                                p.deptId === formData.newDepartmentId,
+                            )
+                            .map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
                         </select>
                       </div>
                     </div>
                   )}
-                  {formData.pcType === "TITLE_CHANGE" && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                          New Position
-                        </label>
-                        <select
-                          value={formData.newPositionId}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              newPositionId: e.target.value,
-                            })
-                          }
-                          className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                        >
-                          <option value="">Select Position...</option>
-                          {positions.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                          New Title
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.newTitle}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              newTitle: e.target.value,
-                            })
-                          }
-                          placeholder="e.g. Senior Backend Dev"
-                          className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                        />
-                      </div>
-                    </div>
-                  )}
+
                   {formData.pcType === "SALARY_CHANGE" && (
                     <div>
                       <label className="block text-sm font-semibold text-[#334155] mb-1.5">
@@ -1252,6 +1314,7 @@ const Applications: React.FC = () => {
                       />
                     </div>
                   )}
+
                   <div>
                     <label className="block text-sm font-semibold text-[#334155] mb-1.5">
                       Reason / Description
