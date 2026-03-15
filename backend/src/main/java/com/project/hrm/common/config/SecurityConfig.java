@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -38,12 +37,14 @@ public class SecurityConfig {
                         throws Exception {
                 http
                                 .authenticationProvider(authenticationProvider)
-                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                                .csrf(csrf -> csrf.disable())
+                        .cors(cors -> {}) //Có thể xóa
+                        .csrf(csrf -> csrf.disable())
+                        .headers(headers -> headers  //Có thể xóa
+                                .frameOptions(frame -> frame.disable())  //Có thể xóa
+                        )   //Có thể xóa
                                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                                 .authorizeHttpRequests(auth -> auth
-                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                                 .requestMatchers("/api/auth/**").permitAll()
                                                 .requestMatchers("/api/activation/verify").permitAll()
                                                 .requestMatchers("/api/activation/set-password").permitAll()
@@ -52,7 +53,8 @@ public class SecurityConfig {
                                                 .requestMatchers("/oauth2/**").permitAll()
                                                 .requestMatchers("/api/jobs/candidate/**").permitAll()
                                                 .requestMatchers("/api/app/candidate/**").permitAll()
-                                                .requestMatchers("/ws/**").permitAll()
+                                                .requestMatchers("/error").permitAll()
+                                                .requestMatchers("/cv/**").permitAll()
 
                                                 .anyRequest().authenticated())
 
@@ -77,20 +79,6 @@ public class SecurityConfig {
                                                 }));
 
                 return http.build();
-        }
-
-        @Bean
-        public CorsConfigurationSource corsConfigurationSource() {
-                CorsConfiguration config = new CorsConfiguration();
-                config.setAllowedOrigins(List.of("http://localhost:5173"));
-                config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-                config.setAllowedHeaders(List.of("*"));
-                config.setAllowCredentials(true);
-                config.setMaxAge(3600L);
-
-                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-                source.registerCorsConfiguration("/**", config);
-                return source;
         }
 
         @Bean

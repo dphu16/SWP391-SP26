@@ -1,7 +1,11 @@
 package com.project.hrm.module.corehr.dto.request;
 
+import com.project.hrm.module.corehr.dto.response.ContractResponseDTO;
+import com.project.hrm.module.corehr.entity.Contract;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.Gender;
+
+import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +13,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 

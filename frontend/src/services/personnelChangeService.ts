@@ -4,12 +4,14 @@ export interface PersonnelChangeRequestDTO {
   employeeId: string;
   changeType:
     | "DEPARTMENT_TRANSFER"
+    | "TITLE_CHANGE"
     | "SALARY_CHANGE"
     | "DISCIPLINE"
     | "REWARD";
   reason: string;
   newDepartmentId?: string;
   newPositionId?: string;
+  newTitle?: string;
   newSalary?: number;
   description?: string;
 }
@@ -22,6 +24,7 @@ export interface PersonnelChangeResponseDTO {
   departmentName: string;
   changeType:
     | "DEPARTMENT_TRANSFER"
+    | "TITLE_CHANGE"
     | "SALARY_CHANGE"
     | "DISCIPLINE"
     | "REWARD";

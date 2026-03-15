@@ -8,11 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "notifications", indexes = {
-        @Index(name = "idx_notif_recipient", columnList = "recipient_id"),
-        @Index(name = "idx_notif_entity", columnList = "entity_type, entity_id"),
-        @Index(name = "idx_notif_created", columnList = "created_at")
-})
+@Table(name = "notifications")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -29,24 +25,15 @@ public class Notification {
     @JoinColumn(name = "recipient_id", nullable = false)
     private User recipient;
 
-    @Column(length = 200)
-    private String title;
-
     @Column(nullable = false, length = 500)
     private String message;
 
     @Column(length = 50)
     private String type;
 
-    @Column(name = "entity_type", length = 50)
-    private String entityType;
-
-    @Column(name = "entity_id", length = 100)
-    private String entityId;
-
     @Column(name = "is_read", nullable = false)
     @Builder.Default
-    private Boolean isRead = false;
+    private boolean isRead = false;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

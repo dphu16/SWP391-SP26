@@ -1,7 +1,7 @@
 package com.project.hrm.common.auth.security;
 
-import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.module.corehr.repository.EmployeeRepository;
+
+import com.project.hrm.module.corehr.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -13,9 +13,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.function.Function;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
 
 @Component
 public class JwtUtil {
@@ -26,10 +28,10 @@ public class JwtUtil {
     @Value("${app.jwt.access-token-expiry}")
     private long expirationMs;
 
-    private final EmployeeRepository employeeRepository;
+    private final UserRepository userRepository;
 
-    public JwtUtil(EmployeeRepository employeeRepository) {
-        this.employeeRepository = employeeRepository;
+    public JwtUtil(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
     private SecretKey key() {
@@ -41,17 +43,31 @@ public class JwtUtil {
         return generateToken(userDetails, null);
     }
 
-    public String generateToken(UserDetails userDetails, String fullName) {
+    public String generateToken(UserDetails userDetails, com.project.hrm.module.corehr.entity.User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", userDetails.getAuthorities()
                 .stream().map(GrantedAuthority::getAuthority).toList());
-        if (fullName != null && !fullName.isBlank()) {
-            claims.put("fullName", fullName);
+
+        if (user != null) {
+            if (user.getFullName() != null && !user.getFullName().trim().isEmpty()) {
+                claims.put("fullName", user.getFullName());
+            }
+            if (user.getRole() != null) {
+                claims.put("role", user.getRole().name().replace("ROLE_", ""));
+            }
+            if (user.getAvatarUrl() != null && !user.getAvatarUrl().trim().isEmpty()) {
+                claims.put("avatarUrl", user.getAvatarUrl());
+            }
+            if (user.getEmployee() != null && user.getEmployee().getEmployeeId() != null) {
+                claims.put("employeeId", user.getEmployee().getEmployeeId().toString());
+            }
         }
 
-        // Add employeeId to JWT
-        employeeRepository.findByUser_Email(userDetails.getUsername())
-                .ifPresent(emp -> claims.put("employeeId", emp.getEmployeeId().toString()));
+        // Add employeeId to JWT directly from User table
+        // Đoạn code đã sửa
+        userRepository.findByEmail(userDetails.getUsername())
+                .filter(u -> u.getEmployee() != null && u.getEmployee().getEmployeeId() != null)
+                .ifPresent(u -> claims.put("employeeId", u.getEmployee().getEmployeeId().toString()));
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -67,19 +83,18 @@ public class JwtUtil {
         return parseClaims(token).getSubject();
     }
 
+    /**
+     * Extract the employeeId claim embedded in the token (maybe null for users
+     * without employee records).
+     */
+    public String extractEmployeeId(String token) {
+        Object empId = parseClaims(token).get("employeeId");
+        return empId != null ? empId.toString() : null;
+    }
+
     public boolean isValid(String token, UserDetails userDetails) {
         return extractUsername(token).equals(userDetails.getUsername())
                 && !isExpired(token);
-    }
-
-    @SuppressWarnings("unchecked")
-    public List<String> extractRoles(String token) {
-        Claims claims = parseClaims(token);
-        Object rolesObj = claims.get("roles");
-        if (rolesObj instanceof List<?>) {
-            return (List<String>) rolesObj;
-        }
-        return Collections.emptyList();
     }
 
     private boolean isExpired(String token) {

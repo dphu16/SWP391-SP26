@@ -1,13 +1,6 @@
-import React, { useSyncExternalStore, useEffect, useState } from "react";
+import React, { useSyncExternalStore, useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import {
-  getToken,
-  getRefreshToken,
-  removeToken,
-  saveToken,
-  saveRefreshToken,
-  refreshAccessToken,
-} from "../../services/authService";
+import { getToken, removeToken } from "../../services/authService";
 import { decodeJwt } from "../../utils/jwtDecode";
 import type { UserRole } from "../../hooks/useAuth";
 import { canAccessPath } from "../shared/sidebar/roleCapabilities";
@@ -62,47 +55,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     .map(normalizeRole)
     .filter((role: UserRole | null): role is UserRole => role !== null);
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // When the access token is missing or invalid, try to restore session
-  // using the refresh token before forcing a redirect to login.
+  // Clean up corrupt/expired tokens in an effect (not during render)
   useEffect(() => {
-    if (!payload && !isRefreshing) {
-      const refreshToken = getRefreshToken();
-      if (refreshToken) {
-        setIsRefreshing(true);
-        refreshAccessToken(refreshToken)
-          .then((data) => {
-            saveToken(data.accessToken);
-            if (data.refreshToken) {
-              const isPersistent =
-                localStorage.getItem("remember_me") === "true";
-              saveRefreshToken(data.refreshToken, isPersistent);
-            }
-          })
-          .catch(() => {
-            removeToken();
-          })
-          .finally(() => {
-            setIsRefreshing(false);
-          });
-      }
+    if (token && !decodeJwt(token)) {
+      removeToken();
     }
-  }, [payload, isRefreshing]);
-
-  // While refreshing, show nothing (or a spinner) instead of redirecting
-  if (isRefreshing) {
-    return null;
-  }
+  }, [token]);
 
   if (!token || !payload) {
-    // No token at all, or token expired and no refresh token available
-    const refreshToken = getRefreshToken();
-    if (refreshToken && !isRefreshing) {
-      // There's a refresh token — the useEffect above will handle it.
-      // Return null to avoid flashing the login redirect.
-      return null;
-    }
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

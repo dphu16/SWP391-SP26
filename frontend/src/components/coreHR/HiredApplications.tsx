@@ -59,7 +59,20 @@ const HiredApplications: React.FC<HiredApplicationsProps> = ({ onAction }) => {
                     key={col.key}
                     className={`px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light ${idx === 0 ? "pl-6" : ""}`}
                   >
-                    {col.label}
+                    <button className="flex items-center gap-1.5 hover:text-text-primary-light transition-colors cursor-pointer group">
+                      {col.label}
+                      <svg
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                        className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400 transition-colors"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M8 2a.75.75 0 01.75.75v8.69l3.22-3.22a.75.75 0 111.06 1.06l-4.5 4.5a.75.75 0 01-1.06 0l-4.5-4.5a.75.75 0 111.06-1.06l3.22 3.22V2.75A.75.75 0 018 2z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
                   </th>
                 ))}
                 <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light text-center sticky right-0 bg-surface-light">

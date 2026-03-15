@@ -38,7 +38,6 @@ public class InterviewController {
     }
 
     @PatchMapping("/{id}/result")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<InterviewResponse> inputResult(
             @PathVariable UUID id,
             @RequestBody InterviewRequest request) {

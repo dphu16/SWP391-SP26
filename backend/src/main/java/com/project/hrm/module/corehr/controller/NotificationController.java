@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -22,24 +21,12 @@ public class NotificationController {
 
     /**
      * GET /api/notifications
-     * Returns all notifications for the currently logged-in user
-     * (both direct and role-based).
+     * Returns all notifications for the currently logged-in user.
      */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<NotificationResponseDTO>> getMyNotifications(Principal principal) {
         return ResponseEntity.ok(notificationService.getNotificationsForUser(principal.getName()));
-    }
-
-    /**
-     * GET /api/notifications/unread-count
-     * Returns the unread notification count for the current user.
-     */
-    @GetMapping("/unread-count")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Map<String, Long>> getUnreadCount(Principal principal) {
-        long count = notificationService.getUnreadCount(principal.getName());
-        return ResponseEntity.ok(Map.of("count", count));
     }
 
     /**

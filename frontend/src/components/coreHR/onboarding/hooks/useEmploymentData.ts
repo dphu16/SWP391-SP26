@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import apiClient from "../../../../services/apiClient";
 import type { CreateNewHireDTO } from "../../hooks/types";
 
@@ -10,8 +10,6 @@ export interface DepartmentOption {
 export interface PositionOption {
   id: string;
   title: string;
-  deptId?: string;
-  deptName?: string;
 }
 
 export interface JobData {
@@ -99,38 +97,3 @@ export const useJobAutoFill = (
 
   return { jobAutoFilled };
 };
-
-/**
- * When the user selects a position, automatically set the department
- * to match the position's department_id from the Position table.
- * This ensures Department always corresponds to the selected Position.
- */
-export const usePositionDepartmentSync = (
-  positions: PositionOption[],
-  departments: DepartmentOption[],
-  formData: CreateNewHireDTO,
-  setFormData: React.Dispatch<React.SetStateAction<CreateNewHireDTO>>
-) => {
-  const prevPositionId = useRef(formData.positionId);
-
-  useEffect(() => {
-    // Only react when positionId actually changes
-    if (formData.positionId === prevPositionId.current) return;
-    prevPositionId.current = formData.positionId;
-
-    if (!formData.positionId || positions.length === 0) return;
-
-    const selectedPosition = positions.find((p) => p.id === formData.positionId);
-    if (!selectedPosition?.deptId) return;
-
-    // Only update if the department doesn't already match
-    const matchingDept = departments.find((d) => d.id === selectedPosition.deptId);
-    if (matchingDept && formData.departmentId !== matchingDept.id) {
-      setFormData((prev) => ({
-        ...prev,
-        departmentId: matchingDept.id,
-      }));
-    }
-  }, [formData.positionId, positions, departments, formData.departmentId, setFormData]);
-};
-

@@ -31,18 +31,15 @@ public class EmployeeController {
     private final EmployeeSelfUpdateService selfUpdateService;
     private final ContractService contractService;
     private final DependentService dependentService;
-    private final com.project.hrm.module.corehr.service.AuditLogService auditLogService;
 
     public EmployeeController(IEmployeeService employeeService,
                               EmployeeSelfUpdateService selfUpdateService,
                               ContractService contractService,
-                              DependentService dependentService,
-                              com.project.hrm.module.corehr.service.AuditLogService auditLogService) {
+                              DependentService dependentService) {
         this.employeeService = employeeService;
         this.selfUpdateService = selfUpdateService;
         this.contractService = contractService;
         this.dependentService = dependentService;
-        this.auditLogService = auditLogService;
     }
 
     @GetMapping("/hr/employees")
@@ -74,21 +71,21 @@ public class EmployeeController {
 
     @GetMapping("/employees/search")
     public ResponseEntity<Page<EmployeeDTO>> searchEmployees(
-            @RequestParam(value = "fullName",     required = false) String fullName,
-            @RequestParam(value = "employeeCode", required = false) String employeeCode,
-            @RequestParam(value = "phoneNumber",  required = false) String phoneNumber,
-            @RequestParam(value = "department",   required = false) String department,
-            @RequestParam(value = "position",     required = false) String position,
-            @RequestParam(value = "role",         required = false) String role,
-            @RequestParam(value = "status",       required = false) String status,
+            @RequestParam(required = false) String fullName,
+            @RequestParam(required = false) String employeeCode,
+            @RequestParam(required = false) String phoneNumber,
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) String position,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) String status,
             @PageableDefault(size = 10, sort = "fullName") Pageable pageable) {
 
         if (phoneNumber != null && !phoneNumber.matches("^[0-9\\-\\s]+$")) {
             throw new IllegalArgumentException("Phone number contains invalid characters.");
         }
 
-        Page<EmployeeDTO> result = employeeService.searchEmployees(
-                fullName, employeeCode, phoneNumber, department, position, role, status, pageable);
+        Page<EmployeeDTO> result = employeeService.searchEmployees(fullName, employeeCode, phoneNumber, department,
+                position, role, status, pageable);
         return ResponseEntity.ok(result);
     }
 
@@ -129,13 +126,5 @@ public class EmployeeController {
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<ContractResponseDTO>> getExpiringContracts() {
         return ResponseEntity.ok(contractService.getExpiringContracts());
-    }
-
-    // Get Employee Activity Logs
-    @GetMapping("/employees/{id}/activity-logs")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE')")
-    public ResponseEntity<List<com.project.hrm.module.corehr.dto.response.AuditLogResponseDTO>> getEmployeeActivityLogs(
-            @PathVariable("id") UUID employeeId) {
-        return ResponseEntity.ok(auditLogService.getEmployeeActivityLogs(employeeId));
     }
 }

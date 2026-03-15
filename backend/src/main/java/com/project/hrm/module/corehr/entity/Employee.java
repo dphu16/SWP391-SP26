@@ -1,5 +1,6 @@
 package com.project.hrm.module.corehr.entity;
 
+import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import jakarta.persistence.*;
@@ -41,6 +42,10 @@ public class Employee {
         @ManyToOne(fetch = FetchType.LAZY)
         @JoinColumn(name = "position_id")
         private Position position;
+
+        @Enumerated(EnumType.STRING)
+        @Column(name = "role")
+        private EmployeeRole role;
 
         @Enumerated(EnumType.STRING)
         @Column(name = "progress_status")

@@ -5,7 +5,9 @@ import { getToken } from "../../../services/authService";
 import { decodeJwt } from "../../../utils/jwtDecode";
 import type { EmployeeDetailDTO, DependentDTO } from "../detail/types";
 import { API_BASE } from "../detail/types";
-export type TabType = "General" | "Job" | "Activity Log";
+
+export type TabType = "General" | "Job";
+
 const isValidUUID = (val?: string) =>
   !!val &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);

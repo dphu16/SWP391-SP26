@@ -3,13 +3,13 @@ import { getToken } from "../services/authService";
 import { decodeJwt, type JwtPayload } from "../utils/jwtDecode";
 
 export interface CurrentUser {
-  token: string;
-  username: string; // JWT sub — dùng để gọi các API cần username
-  employeeId?: string; // Optional — chỉ có nếu backend đã link user ↔ employee
-  fullName: string;
-  role: string;
-  roles: string[];
-  avatarUrl?: string;
+    token: string;
+    username: string;     // JWT sub — dùng để gọi các API cần username
+    employeeId?: string;  // Optional — chỉ có nếu backend đã link user ↔ employee
+    fullName: string;
+    role: string;
+    roles: string[];
+    avatarUrl?: string;
 }
 
 /**
@@ -17,28 +17,20 @@ export interface CurrentUser {
  * Returns null if no valid token is present.
  */
 export function useCurrentUser(): CurrentUser | null {
-  return useMemo(() => {
-    const token = getToken();
-    if (!token) return null;
+    return useMemo(() => {
+        const token = getToken();
+        if (!token) return null;
 
-    const payload: JwtPayload | null = decodeJwt(token);
-    if (!payload?.sub) return null;
+        const payload: JwtPayload | null = decodeJwt(token);
+        if (!payload?.sub) return null;
 
-    const roles =
-      payload.roles && payload.roles.length > 0
-        ? payload.roles
-        : payload.role
-          ? [payload.role]
-          : ["EMPLOYEE"];
-
-    return {
-      token,
-      username: payload.sub, // always present in JWT
-      employeeId: payload.employeeId ?? undefined, // present only if linked
-      fullName: payload.fullName ?? payload.sub,
-      role: roles[0],
-      roles,
-      avatarUrl: payload.avatarUrl,
-    };
-  }, []);
+        return {
+            token,
+            username: payload.sub,                          // always present in JWT
+            employeeId: payload.employeeId ?? undefined,    // present only if linked
+            fullName: payload.fullName ?? payload.sub,
+            role: payload.roles?.[0] ?? "EMPLOYEE",
+            avatarUrl: payload.avatarUrl,
+        };
+    }, []);
 }

@@ -13,7 +13,7 @@ const DetailTabs: React.FC<DetailTabsProps> = ({ activeTab, setActiveTab }) => {
         aria-label="Employee detail tabs"
         className="flex overflow-x-auto no-scrollbar"
       >
-        {(["General", "Job", "Activity Log"] as const).map((tab) => (
+        {(["General", "Job"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}

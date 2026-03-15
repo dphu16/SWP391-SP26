@@ -125,20 +125,19 @@ public class PersonnelChangeService {
 
         switch (change.getChangeType()) {
             case DEPARTMENT_TRANSFER -> {
-                if (newValues.containsKey("positionId")) {
-                    UUID posId = UUID.fromString(newValues.get("positionId").toString());
-                    Position position = employeeHelper.findPositionOrThrow(posId);
-                    employee.setPosition(position);
-                    // Department is derived from the position's department
-                    if (position.getDepartment() != null) {
-                        employee.setDepartment(position.getDepartment());
-                    } else if (newValues.containsKey("departmentId")) {
-                        UUID deptId = UUID.fromString(newValues.get("departmentId").toString());
-                        employee.setDepartment(employeeHelper.findDepartmentOrThrow(deptId));
-                    }
-                } else if (newValues.containsKey("departmentId")) {
+                if (newValues.containsKey("departmentId")) {
                     UUID deptId = UUID.fromString(newValues.get("departmentId").toString());
                     employee.setDepartment(employeeHelper.findDepartmentOrThrow(deptId));
+                }
+                if (newValues.containsKey("positionId")) {
+                    UUID posId = UUID.fromString(newValues.get("positionId").toString());
+                    employee.setPosition(employeeHelper.findPositionOrThrow(posId));
+                }
+            }
+            case TITLE_CHANGE -> {
+                if (newValues.containsKey("positionId")) {
+                    UUID posId = UUID.fromString(newValues.get("positionId").toString());
+                    employee.setPosition(employeeHelper.findPositionOrThrow(posId));
                 }
             }
             case SALARY_CHANGE -> {
@@ -172,6 +171,12 @@ public class PersonnelChangeService {
                     old.put("positionTitle", employee.getPosition().getTitle());
                 }
             }
+            case TITLE_CHANGE -> {
+                if (employee.getPosition() != null) {
+                    old.put("positionId", employee.getPosition().getPositionId().toString());
+                    old.put("positionTitle", employee.getPosition().getTitle());
+                }
+            }
             case SALARY_CHANGE -> {
                 if (employee.getContract() != null) {
                     Contract contract = employee.getContract();
@@ -191,23 +196,22 @@ public class PersonnelChangeService {
         Map<String, Object> newVals = new HashMap<>();
         switch (dto.getChangeType()) {
             case DEPARTMENT_TRANSFER -> {
+                if (dto.getNewDepartmentId() != null) {
+                    Department dept = employeeHelper.findDepartmentOrThrow(dto.getNewDepartmentId());
+                    newVals.put("departmentId", dto.getNewDepartmentId().toString());
+                    newVals.put("departmentName", dept.getDeptName());
+                }
                 if (dto.getNewPositionId() != null) {
                     Position pos = employeeHelper.findPositionOrThrow(dto.getNewPositionId());
                     newVals.put("positionId", dto.getNewPositionId().toString());
                     newVals.put("positionTitle", pos.getTitle());
-                    // Department is derived from the position's department
-                    if (pos.getDepartment() != null) {
-                        newVals.put("departmentId", pos.getDepartment().getDeptId().toString());
-                        newVals.put("departmentName", pos.getDepartment().getDeptName());
-                    } else if (dto.getNewDepartmentId() != null) {
-                        Department dept = employeeHelper.findDepartmentOrThrow(dto.getNewDepartmentId());
-                        newVals.put("departmentId", dto.getNewDepartmentId().toString());
-                        newVals.put("departmentName", dept.getDeptName());
-                    }
-                } else if (dto.getNewDepartmentId() != null) {
-                    Department dept = employeeHelper.findDepartmentOrThrow(dto.getNewDepartmentId());
-                    newVals.put("departmentId", dto.getNewDepartmentId().toString());
-                    newVals.put("departmentName", dept.getDeptName());
+                }
+            }
+            case TITLE_CHANGE -> {
+                if (dto.getNewPositionId() != null) {
+                    Position pos = employeeHelper.findPositionOrThrow(dto.getNewPositionId());
+                    newVals.put("positionId", dto.getNewPositionId().toString());
+                    newVals.put("positionTitle", pos.getTitle());
                 }
             }
             case SALARY_CHANGE -> {

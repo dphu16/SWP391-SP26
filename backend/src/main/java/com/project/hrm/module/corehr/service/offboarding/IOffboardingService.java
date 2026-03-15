@@ -12,6 +12,8 @@ import java.util.UUID;
 
 public interface IOffboardingService {
 
+    // ── BRD 3.1: Khởi tạo yêu cầu nghỉ việc ──
+
     /** Nhân viên tự tạo yêu cầu nghỉ việc (voluntary resignation) */
     OffboardingResponseDTO createResignationRequest(UUID employeeId, OffboardingRequestDTO dto, UUID requestedBy);
 
@@ -24,8 +26,12 @@ public interface IOffboardingService {
     /** HR điền ngày nghỉ chính thức & xác nhận */
     OffboardingResponseDTO hrConfirm(UUID offboardingId, HRConfirmOffboardingDTO dto, UUID hrEmployeeId);
 
+    // ── BRD 3.2: Hủy yêu cầu ──
+
     /** Hủy yêu cầu offboarding (HR, Manager, hoặc Employee) */
     OffboardingResponseDTO cancelOffboarding(UUID offboardingId, CancelOffboardingDTO dto, UUID cancelledBy);
+
+    // ── Query ──
 
     List<OffboardingResponseDTO> getActiveRequests();
 
@@ -34,6 +40,8 @@ public interface IOffboardingService {
     OffboardingResponseDTO getOffboardingById(UUID offboardingId);
 
     List<InactiveEmployeeResponseDTO> getInactiveEmployees();
+
+    // ── Legacy ──
 
     EmployeeDetailDTO terminateEmployee(UUID id);
 

@@ -19,6 +19,14 @@ public class EmployeeDetailMapper {
                     .collect(Collectors.toSet());
         }
 
+        if (user != null && user.getRole() != null) {
+            return Set.of(user.getRole().name());
+        }
+
+        if (employee.getRole() != null) {
+            return Set.of(employee.getRole().name());
+        }
+
         return Collections.emptySet();
     }
 

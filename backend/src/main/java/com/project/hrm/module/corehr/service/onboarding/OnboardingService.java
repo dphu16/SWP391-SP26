@@ -14,7 +14,6 @@ import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.exception.ErrorCode;
-import com.project.hrm.module.corehr.repository.RoleRepository;
 import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
 import com.project.hrm.module.request.entity.Request;
 import com.project.hrm.module.request.enums.RequestStatus;
@@ -27,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -39,20 +37,17 @@ public class OnboardingService implements IOnboardingService {
     private final OnboardingCommandService onboaringCommandService;
     private final RequestRepository requestRepository;
     private final EmployeeHelper employeeHelper;
-    private final RoleRepository roleRepository;
 
     public OnboardingService(OnboardingRepository applicationRepository,
             EmployeeRepository employeeRepository,
             OnboardingCommandService onboaringCommandService,
             RequestRepository requestRepository,
-            EmployeeHelper employeeHelper,
-            RoleRepository roleRepository) {
+            EmployeeHelper employeeHelper) {
         this.applicationRepository = applicationRepository;
         this.employeeRepository = employeeRepository;
         this.onboaringCommandService = onboaringCommandService;
         this.requestRepository = requestRepository;
         this.employeeHelper = employeeHelper;
-        this.roleRepository = roleRepository;
     }
 
     @Override
@@ -121,7 +116,7 @@ public class OnboardingService implements IOnboardingService {
         dto.setPositionId(employee.getPosition() != null ? employee.getPosition().getPositionId() : null);
         dto.setMentorId(employee.getManager() != null ? employee.getManager().getEmployeeId() : null);
         dto.setDateOfJoining(employee.getDateOfJoining());
-        dto.setRole(resolvePrimaryRole(employee));
+        dto.setRole(employee.getRole());
         dto.setStatus(employee.getStatus());
         dto.setContractNumber(contract != null ? contract.getContractNumber() : null);
         dto.setContractType(contract != null ? contract.getContractType() : null);
@@ -157,6 +152,7 @@ public class OnboardingService implements IOnboardingService {
         if (updatedData.getMentorId() != null) {
             employee.setManager(employeeHelper.findEmployeeOrThrow(updatedData.getMentorId()));
         }
+        employee.setRole(updatedData.getRole());
         employee.setDateOfJoining(updatedData.getDateOfJoining());
 
         // Update personal info
@@ -185,15 +181,8 @@ public class OnboardingService implements IOnboardingService {
         // Update user email if changed
         if (employee.getUser() != null && updatedData.getEmail() != null) {
             employee.getUser().setEmail(updatedData.getEmail());
+            employee.getUser().setFullName(updatedData.getFullName());
             employee.getUser().setStatus(UserStatus.INACTIVE);
-        }
-
-        if (employee.getUser() != null && updatedData.getRole() != null) {
-            Role role = roleRepository.findByName(updatedData.getRole())
-                    .orElseThrow(() -> new BusinessRuleException(
-                            ErrorCode.INVALID_APPROVAL_ACTION,
-                            "Role not found: " + updatedData.getRole()));
-            employee.getUser().setRoles(Set.of(role));
         }
 
         // Reset status for re-approval
@@ -207,18 +196,5 @@ public class OnboardingService implements IOnboardingService {
                 .status(RequestStatus.PENDING)
                 .build();
         requestRepository.save(request);
-    }
-
-    private com.project.hrm.module.corehr.enums.EmployeeRole resolvePrimaryRole(Employee employee) {
-        if (employee == null || employee.getUser() == null || employee.getUser().getRoles() == null) {
-            return null;
-        }
-
-        return employee.getUser().getRoles().stream()
-                .map(Role::getName)
-                .filter(java.util.Objects::nonNull)
-                .sorted(Comparator.comparing(Enum::name))
-                .findFirst()
-                .orElse(null);
     }
 }

@@ -144,7 +144,6 @@ export const makeDefaultFormData = (
   contractNumber: "",
   contractType: "",
   startDate: "",
-  contractDuration: "",
   endDate: "",
   baseSalary: 0,
 });

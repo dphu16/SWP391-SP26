@@ -2,7 +2,6 @@ import React from "react";
 import ProfileCard from "./detail/ProfileCard";
 import GeneralTab from "./detail/GeneralTab";
 import JobTab from "./detail/JobTab";
-import EmployeeActivityLog from "./detail/EmployeeActivityLog";
 import DetailSkeleton from "./detail/DetailSkeleton";
 import DetailError from "./detail/DetailError";
 import DetailTabs from "./detail/DetailTabs";
@@ -54,8 +53,6 @@ const EmployeeDetail: React.FC = () => {
           )}
 
           {activeTab === "Job" && detail && <JobTab detail={detail} />}
-          
-          {activeTab === "Activity Log" && id && <EmployeeActivityLog employeeId={id} />}
         </div>
       </div>
     </div>

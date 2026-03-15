@@ -1,0 +1,39 @@
+[33m1174750[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdevelop[m[33m, [m[1;31morigin/develop[m[33m)[m HEAD@{0}: pull origin develop: Merge made by the 'ort' strategy.
+[33m9e9916b[m HEAD@{1}: commit: save payroll
+[33mbc260fd[m HEAD@{2}: pull origin develop: Merge made by the 'ort' strategy.
+[33m61fe010[m HEAD@{3}: reset: moving to HEAD
+[33m61fe010[m HEAD@{4}: commit: test api succesfull
+[33m0f4d40f[m HEAD@{5}: commit: fix login
+[33m3a89039[m HEAD@{6}: commit (merge): merge thanh cong
+[33m0452872[m HEAD@{7}: checkout: moving from feature/payroll to develop
+[33m99e2244[m[33m ([m[1;32mfeature/payroll[m[33m)[m HEAD@{8}: checkout: moving from develop to feature/payroll
+[33m0452872[m HEAD@{9}: commit: update payroll function
+[33m25330a5[m HEAD@{10}: commit (merge): merge successfull
+[33m99e2244[m[33m ([m[1;32mfeature/payroll[m[33m)[m HEAD@{11}: checkout: moving from feature/payroll to develop
+[33m99e2244[m[33m ([m[1;32mfeature/payroll[m[33m)[m HEAD@{12}: merge develop: Fast-forward
+[33mbb96021[m[33m ([m[1;31morigin/feature/payroll[m[33m)[m HEAD@{13}: checkout: moving from develop to feature/payroll
+[33m99e2244[m[33m ([m[1;32mfeature/payroll[m[33m)[m HEAD@{14}: commit: all function payroll complete
+[33m7a5c453[m HEAD@{15}: commit: update payroll service
+[33md8530b1[m HEAD@{16}: commit: merge code successfull
+[33m72ff5ad[m HEAD@{17}: commit: feat(payroll): restore FinancePayrollView, add Finance DTOs/APIs, fix PaymentRequestResponseDTO
+[33m4676135[m HEAD@{18}: reset: moving to origin/develop
+[33m68332d0[m HEAD@{19}: commit: fix(build): resolve lints and complete requested HR filtering
+[33m01b5f94[m HEAD@{20}: reset: moving to 01b5f94
+[33m4676135[m HEAD@{21}: commit (amend): feat(payroll): Enhance HR view with department filter, pagination, and robust component layout
+[33m01b5f94[m HEAD@{22}: reset: moving to 01b5f94
+[33m01427d1[m HEAD@{23}: checkout: moving from develop to develop
+[33m01427d1[m HEAD@{24}: reset: moving to develop
+[33m01427d1[m HEAD@{25}: checkout: moving from develop to develop
+[33m01427d1[m HEAD@{26}: reset: moving to HEAD~1
+[33m01b5f94[m HEAD@{27}: checkout: moving from develop to develop
+[33m01b5f94[m HEAD@{28}: commit: feat(payroll): Enhance HR view with department filter, pagination, and robust component layout
+[33m01427d1[m HEAD@{29}: reset: moving to HEAD
+[33m01427d1[m HEAD@{30}: pull origin develop: Merge made by the 'ort' strategy.
+[33m7bfbceb[m HEAD@{31}: commit: Finance function
+[33m641d56d[m HEAD@{32}: commit: update HR and tax
+[33m117cb90[m HEAD@{33}: commit (merge): merger develop successful
+[33mb1d7f32[m HEAD@{34}: commit: complete tax & insurance report
+[33m6929a47[m HEAD@{35}: commit (merge): Merge branch 'feature/payroll' into develop, add payroll components and fix EmployeeStatus conflict
+[33m82f7a13[m HEAD@{36}: checkout: moving from feature/payroll to develop
+[33mbb96021[m[33m ([m[1;31morigin/feature/payroll[m[33m)[m HEAD@{37}: checkout: moving from main to feature/payroll
+[33m64cf2fc[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{38}: clone: from https://github.com/dphu16/SWP391-SP26.git

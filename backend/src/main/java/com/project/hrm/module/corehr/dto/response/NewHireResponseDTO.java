@@ -55,9 +55,4 @@ public class NewHireResponseDTO {
 
     private BigDecimal baseSalary;
 
-    /**
-     * UUID của Contract vừa được tạo — dùng để ContractStorageService
-     * load Contract entity và lưu file PDF gắn đúng với hợp đồng.
-     */
-    private UUID contractId;
 }

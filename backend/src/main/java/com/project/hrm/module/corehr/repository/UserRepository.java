@@ -10,7 +10,6 @@ import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
 
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"roles", "employee"})
     Optional<User> findByEmail(String email);
 
     List<User> findByRoles_Name(EmployeeRole name);
