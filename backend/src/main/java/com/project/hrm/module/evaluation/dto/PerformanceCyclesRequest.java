@@ -16,4 +16,6 @@ public class PerformanceCyclesRequest {
 
     @NotNull(message = "endDate is required")
     private LocalDate endDate;
+
 }
+
