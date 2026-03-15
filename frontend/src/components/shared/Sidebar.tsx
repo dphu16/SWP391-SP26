@@ -1,7 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import type { UserRole } from "../../hooks/useAuth";
+import { getToken } from "../../services/authService";
+import { applicationService } from "../../services/applicationService";
+import { decodeJwt } from "../../utils/jwtDecode";
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 const Icons = {
@@ -160,13 +163,38 @@ const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { hasRole } = useAuth();
-  
+
+  const token = getToken();
+  const payload = useMemo(() => decodeJwt(token), [token]);
+  const userRoles = useMemo(() => payload?.roles?.map(r => r.replace(/^ROLE_/, "")) ?? [], [payload]);
+  const hasRole = (...roles: string[]) => roles.some(r => userRoles.includes(r));
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [employeesExpanded, setEmployeesExpanded] = useState(true);
   const [requestExpanded, setRequestExpanded] = useState(true);
   const [recruitmentExpanded, setRecruitmentExpanded] = useState(true);
   const [attendanceExpanded, setAttendanceExpanded] = useState(true);
   const [payrollExpanded, setPayrollExpanded] = useState(true);
+  const [scheduleCount, setScheduleCount] = useState(0);
+
+  useEffect(() => {
+    const fetchScheduleCount = async () => {
+      if (payload?.employeeId && hasRole("HR", "MANAGER")) {
+        try {
+          const res = await applicationService.getInterviewByHr(payload.employeeId);
+          // Only count interviews with status "SCHEDULED"
+          const pendingCount = res.data.filter(item => item.status === "SCHEDULED").length;
+          setScheduleCount(pendingCount);
+        } catch (err) {
+          console.error("Failed to fetch schedule count", err);
+        }
+      }
+    };
+
+    fetchScheduleCount();
+    // Optional: Refresh periodically or on some events
+    const interval = setInterval(fetchScheduleCount, 60000); // refresh every minute
+    return () => clearInterval(interval);
+  }, [payload?.employeeId, userRoles]);
 
   const isPath = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
@@ -369,20 +397,22 @@ const Sidebar: React.FC = () => {
               {[
                 { label: "My Requests", path: "/requests/my-requests" },
                 { label: "Create Request", path: "/attendance/applications" },
-                { label: "Review Request", path: "/attendance/review" },
-              ].map((item) => (
-                <NavItem
-                  key={item.path}
-                  icon={
-                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />
-                  }
-                  label={item.label}
-                  isActive={location.pathname === item.path}
-                  isCollapsed={false}
-                  indent
-                  onClick={() => navigate(item.path)}
-                />
-              ))}
+                { label: "Review Request", path: "/attendance/review", roles: ["MANAGER"] as const },
+              ]
+                .filter((item) => !("roles" in item) || !item.roles || hasRole(...item.roles))
+                .map((item) => (
+                  <NavItem
+                    key={item.path}
+                    icon={
+                      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />
+                    }
+                    label={item.label}
+                    isActive={location.pathname === item.path}
+                    isCollapsed={false}
+                    indent
+                    onClick={() => navigate(item.path)}
+                  />
+                ))}
             </div>
           )}
         </div>
@@ -390,7 +420,7 @@ const Sidebar: React.FC = () => {
         {/* Management */}
         <SectionLabel label="Management" isCollapsed={isCollapsed} />
 
-        {/* 3. Submenu: Attendance */}
+        {/* Attendance with submenu */}
         <div>
           <button
             onClick={() => {
@@ -434,33 +464,27 @@ const Sidebar: React.FC = () => {
                 {
                   label: "Create Schedule",
                   path: "/attendance/create-schedule",
+                  roles: ["MANAGER"] as const,
                 },
-                { label: "Attendance Summary", path: "/attendance/summary" },
-              ].map((item) => (
-                <NavItem
-                  key={item.path}
-                  icon={
-                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />
-                  }
-                  label={item.label}
-                  isActive={location.pathname === item.path}
-                  isCollapsed={false}
-                  indent
-                  onClick={() => navigate(item.path)}
-                />
-              ))}
+                { label: "Attendance Summary", path: "/attendance/summary", roles: ["MANAGER"] as const },
+              ]
+                .filter((item) => !("roles" in item) || !item.roles || hasRole(...item.roles))
+                .map((item) => (
+                  <NavItem
+                    key={item.path}
+                    icon={
+                      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />
+                    }
+                    label={item.label}
+                    isActive={location.pathname === item.path}
+                    isCollapsed={false}
+                    indent
+                    onClick={() => navigate(item.path)}
+                  />
+                ))}
             </div>
           )}
         </div>
-
-        <NavItem
-          icon={Icons.timeoff}
-          label="Check-in/Out"
-          isActive={isPath("/attendance/check-in-out")}
-          isCollapsed={isCollapsed}
-          badge={3}
-          onClick={() => navigate("/attendance/check-in-out")}
-        />
 
         {/* Payroll with submenu */}
         {hasRole("HR" as UserRole, "MANAGER" as UserRole, "FINANCE" as UserRole, "EMPLOYEE" as UserRole) && (
@@ -520,6 +544,31 @@ const Sidebar: React.FC = () => {
           </div>
         )}
 
+        {/* Check-in/Out and Performance */}
+        {[
+          {
+            label: "Check-in/Out",
+            icon: Icons.timeoff,
+            path: "/attendance/check-in-out",
+          },
+          {
+            label: "Performance",
+            icon: Icons.performance,
+            path: "/performance",
+            roles: ["HR", "MANAGER", "FINANCE"] as const,
+          },
+        ]
+          .filter((item) => !item.roles || hasRole(...item.roles))
+          .map((item) => (
+            <NavItem
+              key={item.label}
+              icon={item.icon}
+              label={item.label}
+              isActive={item.path ? isPath(item.path) : false}
+              isCollapsed={isCollapsed}
+              onClick={item.path ? () => navigate(item.path) : undefined}
+            />
+          ))}
         {hasRole("HR" as UserRole, "MANAGER" as UserRole, "FINANCE" as UserRole) && (
           <NavItem
             icon={Icons.performance}
@@ -574,22 +623,35 @@ const Sidebar: React.FC = () => {
                     {
                       label: "Job Requests",
                       path: "/recruitment/job-requests",
+                      roles: ["HR", "MANAGER"],
                     },
-                    { label: "Job Openings", path: "/recruitment/jobs" },
-                    { label: "Schedules", path: "/recruitment/schedules" },
-                  ].map((item) => (
-                    <NavItem
-                      key={item.path}
-                      icon={
-                        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />
-                      }
-                      label={item.label}
-                      isActive={location.pathname === item.path}
-                      isCollapsed={false}
-                      indent
-                      onClick={() => navigate(item.path)}
-                    />
-                  ))}
+                    {
+                      label: "Job Openings",
+                      path: "/recruitment/jobs",
+                      roles: ["HR"],
+                    },
+                    {
+                      label: "Schedules",
+                      path: "/recruitment/schedules",
+                      roles: ["HR", "MANAGER"],
+                      badge: scheduleCount > 0 ? scheduleCount : undefined,
+                    },
+                  ]
+                    .filter((item) => hasRole(...(item.roles as string[])))
+                    .map((item: any) => (
+                      <NavItem
+                        key={item.path}
+                        icon={
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />
+                        }
+                        label={item.label}
+                        isActive={location.pathname === item.path}
+                        isCollapsed={false}
+                        indent
+                        badge={item.badge}
+                        onClick={() => navigate(item.path)}
+                      />
+                    ))}
                 </div>
               )}
             </div>

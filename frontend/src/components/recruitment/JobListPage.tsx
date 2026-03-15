@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { jobService } from "../../services/jobService";
 import type { Job, JobStatus } from "../ui/types";
 import { useToast } from "../ui/Toast";
+import { useAuth } from "../../hooks/useAuth";
 
 const ITEMS_PER_PAGE = 5;
 
@@ -13,38 +14,44 @@ const JobListPage: React.FC = () => {
     const [jobs, setJobs] = useState<Job[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
+    const [selectedTab, setSelectedTab] = useState<"ALL" | "MY_JOB">("ALL");
+    const { user } = useAuth();
 
     const fetchJobs = useCallback(async () => {
         try {
-            const res = await jobService.getAll();
+            let res;
+            if (selectedTab === "MY_JOB" && user?.employeeId) {
+                res = await jobService.getByHR(user.employeeId);
+            } else {
+                res = await jobService.getAll();
+            }
+
             const now = new Date();
             const processedJobs = res.data.map(job => {
                 let currentStatus = job.status;
+                // Auto-close if past closedTime
                 if (currentStatus !== "CLOSED" && job.closedTime && new Date(job.closedTime) < now) {
                     currentStatus = "CLOSED";
+                }
+                // Auto-open if past postedAt
+                if (currentStatus === "DRAFT" && job.postedAt && new Date(job.postedAt) <= now) {
+                    currentStatus = "OPEN";
                 }
                 return { ...job, status: currentStatus };
             });
             setJobs(processedJobs);
         } catch (err: any) {
-            toastError("Error", "Could not fetch jobs.");
+            toastError("Error", err?.response?.data?.message || "Could not fetch jobs.");
         }
-    }, [toastError]);
+    }, [toastError, selectedTab, user?.employeeId]);
 
     useEffect(() => {
         fetchJobs();
     }, [fetchJobs]);
 
-    const handleToggleStatus = async (e: React.MouseEvent, job: Job) => {
+    const handleToggleStatus = async (e: React.MouseEvent, job: Job, nextStatus: JobStatus) => {
         e.stopPropagation();
-        if (job.status === "CLOSED") return;
-
-        let nextStatus: JobStatus = "CLOSED";
-        if (job.status === "DRAFT") {
-            nextStatus = "OPEN";
-        } else if (job.status === "OPEN") {
-            nextStatus = "CLOSED";
-        }
+        if (job.status === nextStatus) return;
 
         if (!window.confirm(`Are you sure you want to change status from ${job.status} to ${nextStatus}?`)) return;
 
@@ -52,8 +59,8 @@ const JobListPage: React.FC = () => {
             await jobService.updateStatus(job.id, nextStatus);
             setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: nextStatus } : j));
             toastSuccess("Success", `Job status updated to ${nextStatus}`);
-        } catch (err) {
-            toastError("Error", "Failed to update job status.");
+        } catch (err: any) {
+            toastError("Error", err?.response?.data?.message || "Failed to update job status.");
         }
     };
 
@@ -64,8 +71,8 @@ const JobListPage: React.FC = () => {
             await jobService.delete(id);
             setJobs(prev => prev.filter(j => j.id !== id));
             toastSuccess("Success", "Job deleted successfully");
-        } catch (err) {
-            toastError("Error", "Failed to delete job.");
+        } catch (err: any) {
+            toastError("Error", err?.response?.data?.message || "Failed to delete job.");
         }
     };
 
@@ -102,6 +109,26 @@ const JobListPage: React.FC = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
+                    <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-100 mr-2">
+                        <button
+                            onClick={() => setSelectedTab("ALL")}
+                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedTab === "ALL"
+                                ? "bg-white text-primary shadow-sm ring-1 ring-black/5"
+                                : "text-text-secondary-light hover:text-primary"
+                                }`}
+                        >
+                            All
+                        </button>
+                        <button
+                            onClick={() => setSelectedTab("MY_JOB")}
+                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedTab === "MY_JOB"
+                                ? "bg-white text-primary shadow-sm ring-1 ring-black/5"
+                                : "text-text-secondary-light hover:text-primary"
+                                }`}
+                        >
+                            My Job
+                        </button>
+                    </div>
                     <div className="relative">
                         <input
                             type="text"
@@ -158,21 +185,21 @@ const JobListPage: React.FC = () => {
                                             </div>
                                         </td>
                                         <td className="px-4 py-4">
-                                            <button
-                                                onClick={(e) => handleToggleStatus(e, job)}
-                                                disabled={job.status === "CLOSED"}
-                                                className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${job.status === "CLOSED" ? "opacity-60 cursor-not-allowed bg-rose-50 text-rose-700 ring-rose-200" : "hover:ring-2 hover:ring-offset-1"
+                                            <div
+                                                className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold ${job.status === "CLOSED" ? "bg-rose-50 text-rose-700 ring-rose-200" : ""
                                                     } ${job.status === "OPEN"
                                                         ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
                                                         : job.status === "DRAFT"
                                                             ? "bg-amber-50 text-amber-700 ring-amber-200"
-                                                            : ""
+                                                            : job.status === "FILLED"
+                                                                ? "bg-indigo-50 text-indigo-700 ring-indigo-200"
+                                                                : ""
                                                     }`}
                                             >
-                                                <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${job.status === "OPEN" ? "bg-emerald-500" : job.status === "DRAFT" ? "bg-amber-500" : "bg-rose-500"
+                                                <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${job.status === "OPEN" ? "bg-emerald-500" : job.status === "DRAFT" ? "bg-amber-500" : job.status === "FILLED" ? "bg-indigo-500" : "bg-rose-500"
                                                     }`}></span>
                                                 {job.status}
-                                            </button>
+                                            </div>
                                         </td>
                                         <td className="px-4 py-4">
                                             <div className="flex flex-col gap-1">
@@ -194,7 +221,7 @@ const JobListPage: React.FC = () => {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    navigate(`/recruitment/cvs?jobId=${job.id}`);
+                                                    navigate(`/recruitment/cvs?jobId=${job.id}&deptId=${job.deptId}`);
                                                 }}
                                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-text-secondary-light font-medium transition-all group/btn"
                                             >
@@ -206,25 +233,59 @@ const JobListPage: React.FC = () => {
                                         </td>
                                         <td className="px-4 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2 text-text-tertiary-light">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        navigate(`/recruitment/jobs/edit/${job.id}`);
-                                                    }}
-                                                    className="p-1.5 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-all title='Change'"
-                                                >
-                                                    <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                </button>
                                                 {job.status === "DRAFT" && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                navigate(`/recruitment/jobs/edit/${job.id}`);
+                                                            }}
+                                                            className="p-1.5 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-all cursor-pointer"
+                                                            title="Edit"
+                                                        >
+                                                            <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => handleDelete(e, job.id)}
+                                                            className="p-1.5 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all cursor-pointer"
+                                                            title="Delete"
+                                                        >
+                                                            <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {job.status === "OPEN" && user?.employeeId === job.hrId && (
                                                     <button
-                                                        onClick={(e) => handleDelete(e, job.id)}
-                                                        className="p-1.5 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all title='Delete'"
+                                                        onClick={(e) => handleToggleStatus(e, job, "CLOSED")}
+                                                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all cursor-pointer"
+                                                        title="Close Job"
                                                     >
-                                                        <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
+                                                        Close
+                                                    </button>
+                                                )}
+                                                {job.status === "FILLED" && user?.employeeId === job.hrId && (
+                                                    <button
+                                                        onClick={(e) => handleToggleStatus(e, job, "CLOSED")}
+                                                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all cursor-pointer"
+                                                        title="Close Job"
+                                                    >
+                                                        Close
+                                                    </button>
+                                                )}
+                                                {job.status === "CLOSED" && user?.employeeId === job.hrId && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            navigate(`/recruitment/jobs/edit/${job.id}`);
+                                                        }}
+                                                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all cursor-pointer"
+                                                        title="Reopen Job"
+                                                    >
+                                                        Reopen
                                                     </button>
                                                 )}
                                             </div>

@@ -30,7 +30,8 @@ public class ActivationController {
     }
 
     @GetMapping("/verify")
-    public ResponseEntity<ActivationResponseDTO> verifyToken(@RequestParam String token) {
+    public ResponseEntity<ActivationResponseDTO> verifyToken(
+            @RequestParam(name = "token") String token) {
         return ResponseEntity.ok(activationService.verifyActivationToken(token));
     }
 
@@ -42,14 +43,14 @@ public class ActivationController {
 
     @PostMapping("/emergency-contact")
     public ResponseEntity<ActivationResponseDTO> submitEmergencyContact(
-            @RequestParam String token,
+            @RequestParam(name = "token") String token,
             @Valid @RequestBody EmergencyContactDTO dto) {
         return ResponseEntity.ok(activationService.submitEmergencyContact(token, dto));
     }
 
     @PostMapping("/bank-account")
     public ResponseEntity<ActivationResponseDTO> submitBankAccount(
-            @RequestParam String token,
+            @RequestParam(name = "token") String token,
             @Valid @RequestBody BankAccountDTO dto) {
         return ResponseEntity.ok(activationService.submitBankAccountAndActivate(token, dto));
     }

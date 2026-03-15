@@ -1,6 +1,5 @@
 import apiClient from "./apiClient";
 import type { Application } from "../types";
-
 export const applicationService = {
     getByJobId: (jobId: string, status?: string) => apiClient.get<Application[]>(`/api/app/job/${jobId}`, status ? { params: { status } } : undefined),
 
@@ -49,12 +48,12 @@ export const applicationService = {
         }),
 
     getInterview: (appId: string) =>
-        apiClient.get<{ id: string; appId: string; interviewerId: string; interviewerName: string; scheduleTime: string; status: string; feedback: string | null; score: number | null; }>(`/api/interview/${appId}`),
+        apiClient.get<{ id: string; appId: string; interviewerId: string; interviewerName: string; scheduleTime: string; status: string; feedback: string | null; score: number | null; }[]>(`/api/interview/${appId}`),
 
     getInterviewByHr: (hrId: string) =>
         apiClient.get<{ id: string; appId: string; interviewerId: string; interviewerName: string; scheduleTime: string; status: string; feedback: string | null; score: number | null; }[]>(`/api/interview/list/${hrId}`),
 
-    updateInterviewResult: (id: string, data: { appId: string; interviewerId: string; scheduleTime: string; feedback: string; score: number; status: string }) =>
+    updateInterviewResult: (id: string, data: { appId: string; interviewerId: string; scheduleTime: string; status: "COMPLETED" | "CANCELLED"; feedback: string; score: number }) =>
         apiClient.patch<{ id: string; appId: string; interviewerId: string; interviewerName: string; scheduleTime: string; status: string; feedback: string | null; score: number | null; }>(`/api/interview/${id}/result`, data),
 
     nextStage: (ids: string[]) =>
@@ -62,4 +61,7 @@ export const applicationService = {
 
     lastStage: (id: string) =>
         apiClient.put(`/api/app/last-stage/${id}`),
+
+    sendList: (deptId: string, ids: string[]) =>
+        apiClient.post(`/api/interview/send/${deptId}`, ids),
 };

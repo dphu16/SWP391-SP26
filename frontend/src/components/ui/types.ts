@@ -1,4 +1,4 @@
-export type EmploymentType = "PROBATION" | "OFFICIAL";
+export type EmploymentType = "PROBATION" | "OFFICIAL" | "INTERN";
 export type RequestStatus = "SUBMITTED" | "APPROVED" | "REJECTED" | "COMPLETED";
 
 export interface JobRequest {
@@ -35,6 +35,7 @@ export interface Job {
     id: string;
     reqId: string;
     posId: string;
+    deptId: string;
     deptName: string;
     posName: string;
     description: string;

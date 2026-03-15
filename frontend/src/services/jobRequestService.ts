@@ -9,6 +9,8 @@ export const jobRequestService = {
     delete: (id: string) => apiClient.delete(`/api/job-requests/${id}`),
     updateStatus: (id: string, status: string, comment?: string) =>
         apiClient.post<JobRequest>(`/api/job-requests/${id}/status`, null, { params: { status, comment } }),
-    getByDepartment: (name: string) => apiClient.get<JobRequest[]>(`/api/job-requests/department-name/${name}`),
-    getByHR: (id: string) => apiClient.get<JobRequest[]>(`/api/job-requests/hr/${id}`),
+    getByDepartment: (name: string, status: string) => apiClient.get<JobRequest[]>(`/api/job-requests/department-name/${name}`, { params: { status } }),
+    getByHR: (id: string, status: string) => apiClient.get<JobRequest[]>(`/api/job-requests/hr/${id}`, { params: { status } }),
+    getUnassignedSubmitted: () => apiClient.get<JobRequest[]>("/api/job-requests/hr/null/submit"),
+    choiceRequest: (hrId: string, ids: string[]) => apiClient.patch<JobRequest[]>(`/api/job-requests/hr/list/${hrId}`, ids),
 };

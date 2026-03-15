@@ -36,6 +36,7 @@ const PublicJobList: React.FC = () => {
             const now = new Date();
             // Filter out any expired jobs from the list returned by backend
             const openJobs = res.data.filter(job => {
+                if (job.status !== "OPEN") return false;
                 if (job.closedTime && new Date(job.closedTime) < now) {
                     return false;
                 }

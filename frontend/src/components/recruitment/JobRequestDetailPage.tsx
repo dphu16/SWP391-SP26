@@ -82,7 +82,7 @@ const JobRequestDetailPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {request.status === "SUBMITTED" && (
+                    {request.status === "SUBMITTED" && user?.role !== "HR" && (
                         <button
                             onClick={() => navigate(`/recruitment/job-requests/${request.id}/edit`)}
                             className="px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 cursor-pointer"

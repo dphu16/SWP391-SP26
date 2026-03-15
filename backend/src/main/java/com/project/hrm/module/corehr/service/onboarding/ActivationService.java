@@ -5,7 +5,6 @@ import com.project.hrm.module.corehr.dto.request.EmergencyContactDTO;
 import com.project.hrm.module.corehr.dto.request.SetPasswordDTO;
 import com.project.hrm.module.corehr.dto.response.ActivationResponseDTO;
 import com.project.hrm.module.corehr.entity.*;
-import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
@@ -13,6 +12,7 @@ import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.exception.ErrorCode;
 import com.project.hrm.module.corehr.repository.*;
 import com.project.hrm.module.corehr.service.helper.EmailService;
+import com.project.hrm.module.corehr.service.helper.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.Base64;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -37,6 +36,7 @@ public class ActivationService {
         private final DependentRepository emergencyContactRepo;
         private final PasswordEncoder passwordEncoder;
         private final EmailService emailService;
+        private final NotificationService notificationService;
 
         private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -52,6 +52,17 @@ public class ActivationService {
                                                 "Employee not found with id: " + employeeId));
 
                 User user = employee.getUser();
+                if (user == null && employee.getPersonal() != null && employee.getPersonal().getEmail() != null) {
+                        String email = employee.getPersonal().getEmail();
+                        user = userRepo.findByEmail(email).orElse(null);
+
+                        if (user != null && user.getEmployee() == null) {
+                                user.setEmployee(employee);
+                                userRepo.save(user);
+                                employee.setUser(user);
+                        }
+                }
+
                 if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
                         throw new BusinessRuleException(
                                         ErrorCode.ACTIVATION_NO_USER_ACCOUNT,
@@ -265,9 +276,6 @@ public class ActivationService {
         }
 
         private void notifyHRAboutBankInfo(String employeeName) {
-                List<User> hrUsers = userRepo.findByRoles_Name(EmployeeRole.ROLE_HR);
-                for (User hrUser : hrUsers) {
-                        emailService.sendBankInfoNotificationToHR(hrUser.getEmail(), employeeName);
-                }
+                notificationService.createNotificationForAllHR(employeeName);
         }
 }

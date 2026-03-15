@@ -23,16 +23,22 @@ public interface OffboardingRepository extends JpaRepository<Offboarding, UUID> 
     @EntityGraph(attributePaths = {"employee", "employee.department", "employee.position", "employee.personal"})
     List<Offboarding> findByStatusIn(List<OffboardingStatus> statuses);
 
-    @EntityGraph(attributePaths = {"employee", "employee.department", "employee.position", "employee.personal"})
+    @EntityGraph(attributePaths = { "employee", "employee.department", "employee.position", "employee.personal" })
     List<Offboarding> findByEmployee_EmployeeId(UUID employeeId);
 
-    @EntityGraph(attributePaths = {"employee", "employee.department", "employee.position", "employee.personal"})
+    @EntityGraph(attributePaths = { "employee", "employee.department", "employee.position", "employee.personal" })
     Optional<Offboarding> findByOffboardingId(UUID offboardingId);
 
-    /** Tìm các request đã HR_CONFIRMED và officialLastDay <= today → để scheduled job xử lý */
+    /**
+     * Tìm các request đã HR_CONFIRMED và officialLastDay <= today → để scheduled
+     * job xử lý
+     */
     List<Offboarding> findByStatusAndOfficialLastDayLessThanEqual(
             OffboardingStatus status, LocalDate date);
 
-    /** Tìm requests theo employee và trạng thái đang active (PENDING hoặc MANAGER_APPROVED hoặc HR_CONFIRMED) */
+    /**
+     * Tìm requests theo employee và trạng thái đang active (PENDING hoặc
+     * MANAGER_APPROVED hoặc HR_CONFIRMED)
+     */
     Optional<Offboarding> findByEmployee_EmployeeIdAndStatusIn(UUID employeeId, List<OffboardingStatus> statuses);
 }

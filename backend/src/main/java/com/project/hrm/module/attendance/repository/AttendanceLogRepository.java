@@ -92,4 +92,7 @@ public interface AttendanceLogRepository extends JpaRepository<AttendanceLog, UU
                         @Param("empId") UUID empId,
                         @Param("start") LocalDate start,
                         @Param("end") LocalDate end);
+
+        // Tìm logs theo schedule_id (để xóa trước khi xóa schedule)
+        List<AttendanceLog> findByWorkSchedule_ScheduleId(UUID scheduleId);
 }

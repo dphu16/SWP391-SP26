@@ -43,12 +43,24 @@ public class JwtUtil {
         return generateToken(userDetails, null);
     }
 
-    public String generateToken(UserDetails userDetails, String fullName) {
+    public String generateToken(UserDetails userDetails, com.project.hrm.module.corehr.entity.User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", userDetails.getAuthorities()
                 .stream().map(GrantedAuthority::getAuthority).toList());
-        if (fullName != null && !fullName.isBlank()) {
-            claims.put("fullName", fullName);
+
+        if (user != null) {
+            if (user.getFullName() != null && !user.getFullName().trim().isEmpty()) {
+                claims.put("fullName", user.getFullName());
+            }
+            if (user.getRole() != null) {
+                claims.put("role", user.getRole().name().replace("ROLE_", ""));
+            }
+            if (user.getAvatarUrl() != null && !user.getAvatarUrl().trim().isEmpty()) {
+                claims.put("avatarUrl", user.getAvatarUrl());
+            }
+            if (user.getEmployee() != null && user.getEmployee().getEmployeeId() != null) {
+                claims.put("employeeId", user.getEmployee().getEmployeeId().toString());
+            }
         }
 
         // Add employeeId to JWT directly from User table

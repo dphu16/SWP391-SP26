@@ -20,5 +20,7 @@ public class InterviewResponse {
     private InterviewStatus status;
     private String feedback;
     private BigDecimal score;
+    private String fullName;
+    private String jobTitle;
 
 }

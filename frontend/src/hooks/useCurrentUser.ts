@@ -8,6 +8,7 @@ export interface CurrentUser {
     employeeId?: string;  // Optional — chỉ có nếu backend đã link user ↔ employee
     fullName: string;
     role: string;
+    roles: string[];
     avatarUrl?: string;
 }
 

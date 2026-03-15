@@ -39,8 +39,8 @@ public class OffboardingCommandService {
             OffboardingStatus.PENDING, OffboardingStatus.MANAGER_APPROVED, OffboardingStatus.HR_CONFIRMED);
 
     public OffboardingCommandService(EmployeeHelper employeeHelper,
-                                     OffboardingRepository offboardingRepository,
-                                     EmployeeRepository employeeRepository) {
+            OffboardingRepository offboardingRepository,
+            EmployeeRepository employeeRepository) {
         this.employeeHelper = employeeHelper;
         this.offboardingRepository = offboardingRepository;
         this.employeeRepository = employeeRepository;
@@ -49,7 +49,8 @@ public class OffboardingCommandService {
     // ── BRD 3.1: Nghỉ tự nguyện ──
     // Nhân viên tự tạo → Quản lý duyệt → HR điền ngày & xác nhận
     @Transactional
-    public OffboardingResponseDTO createResignationRequest(UUID employeeId, OffboardingRequestDTO dto, UUID requestedBy) {
+    public OffboardingResponseDTO createResignationRequest(UUID employeeId, OffboardingRequestDTO dto,
+            UUID requestedBy) {
         Employee employee = employeeHelper.findEmployeeOrThrow(employeeId);
         validateCanOffboard(employee);
 
@@ -70,7 +71,8 @@ public class OffboardingCommandService {
     // ── BRD 3.1: Sa thải / Hết HĐ / Không vào làm ──
     // Quản lý đề xuất → HR điền ngày & xác nhận (skip manager approve)
     @Transactional
-    public OffboardingResponseDTO createManagerProposedRequest(UUID employeeId, OffboardingRequestDTO dto, UUID managerId) {
+    public OffboardingResponseDTO createManagerProposedRequest(UUID employeeId, OffboardingRequestDTO dto,
+            UUID managerId) {
         Employee employee = employeeHelper.findEmployeeOrThrow(employeeId);
         validateCanOffboard(employee);
 

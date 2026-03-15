@@ -3,7 +3,7 @@ import apiClient from "./apiClient";
 export interface RequestRecord {
     requestId: string;
     employeeId: string;
-    requestType: "LEAVE" | "OT" | "SHIFT_CHANGE";
+    requestType: "LEAVE" | "OT" | "OTHER";
     reason: string;
     startDate: string;
     endDate: string;
@@ -23,7 +23,7 @@ export interface RequestResponseDTO {
     requestId: string;
     employeeName: string;
     deptName: string;
-    requestType: "LEAVE" | "OT" | "SHIFT_CHANGE" | "APPROVAL";
+    requestType: "LEAVE" | "OT" | "OTHER" | "APPROVAL";
     status: "PENDING" | "APPROVED" | "REJECTED";
     reason: string;
     startDate: string;
@@ -48,7 +48,7 @@ export const rejectRequest = async (id: string, managerComment?: string): Promis
 
 export interface CreateRequestDTO {
     employeeId: string;
-    requestType: "LEAVE" | "OT" | "SHIFT_CHANGE";
+    requestType: "LEAVE" | "OT" | "OTHER";
     reason: string;
     startDate: string;
     endDate?: string;
@@ -66,4 +66,20 @@ export const updateRequest = async (id: string, dto: CreateRequestDTO): Promise<
 
 export const deleteRequest = async (id: string): Promise<void> => {
     await apiClient.delete(`/api/v1/requests/${id}`);
+};
+
+export interface LeaveBalanceResponse {
+    balanceId: string;
+    employeeId: string;
+    year: number;
+    annualLeaveTotal: number;
+    annualLeaveUsed: number;
+    sickLeaveUsed: number;
+}
+
+export const getLeaveBalance = async (employeeId: string, year: number): Promise<LeaveBalanceResponse> => {
+    const response = await apiClient.get(`/api/v1/requests/leave-balance`, {
+        params: { employeeId, year },
+    });
+    return response.data;
 };
