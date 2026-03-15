@@ -61,12 +61,6 @@ export const sidebarConfig: SidebarSection[] = [
             path: "/offboarding/requests",
             roles: allow("offboarding:manage"),
           },
-          {
-            key: "offboarding-approval",
-            label: "Approval",
-            path: "/offboarding/approval",
-            roles: allow("offboarding:manage"),
-          },
         ],
       },
       {
@@ -75,12 +69,6 @@ export const sidebarConfig: SidebarSection[] = [
         icon: Icons.checklist,
         // All authenticated users can submit requests; HR/MANAGER can review
         children: [
-          {
-            key: "my-requests",
-            label: "My Requests",
-            path: "/requests/my-requests",
-            // GET /api/v1/requests?mine=true → any authenticated
-          },
           {
             key: "create-request",
             label: "Create Request",
