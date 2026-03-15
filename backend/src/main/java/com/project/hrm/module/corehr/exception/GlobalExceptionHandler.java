@@ -4,12 +4,13 @@ import com.project.hrm.module.payroll.dto.ResponseDTO.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.project.hrm.module.payroll.exception.PayrollException;
 import com.project.hrm.module.payroll.exception.ResourceNotFoundException;
-import com.project.hrm.module.payroll.exception.AccessDeniedException;
 
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
@@ -73,6 +74,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<?> handleSpringAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("Bạn không có quyền truy cập chức năng này."));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
         Map<String, Object> body = new LinkedHashMap<>();
@@ -94,8 +101,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(ex.getMessage()));
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<?> handleAccessDenied(AccessDeniedException ex) {
+    @ExceptionHandler(com.project.hrm.module.payroll.exception.AccessDeniedException.class)
+    public ResponseEntity<?> handlePayrollAccessDenied(com.project.hrm.module.payroll.exception.AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ServletRequestBindingException.class)
+    public ResponseEntity<?> handleMissingRequestAttribute(ServletRequestBindingException ex) {
+        if (ex.getMessage() != null && ex.getMessage().contains("employeeId")) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Tài khoản của bạn chưa được liên kết với hồ sơ nhân viên. Vui lòng liên hệ HR."));
+        }
+        return ResponseEntity.badRequest().body(ApiResponse.error("Thiếu thông tin bắt buộc: " + ex.getMessage()));
     }
 }

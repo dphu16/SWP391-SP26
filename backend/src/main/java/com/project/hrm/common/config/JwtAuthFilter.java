@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -51,17 +52,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     authToken.setDetails(
                             new WebAuthenticationDetailsSource().buildDetails(req));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    
-                    // Inject claims vào request attribute
-                    String employeeId = jwtUtil.extractClaim(token, claims -> claims.get("employeeId", String.class));
-                    if (employeeId != null && !employeeId.isBlank()) {
-                        try {
-                            request.setAttribute("employeeId", java.util.UUID.fromString(employeeId));
-                        } catch (IllegalArgumentException ignored) {}
-                    }
-                    String role = jwtUtil.extractRole(token);
-                    if (role != null) {
-                        request.setAttribute("role", role);
+
+                    // Extract employeeId from JWT claims and set as request attribute
+                    // so that payroll controllers can use @RequestAttribute("employeeId")
+                    try {
+                        String empId = jwtUtil.extractEmployeeId(token);
+                        if (empId != null && !empId.isBlank()) {
+                            req.setAttribute("employeeId", UUID.fromString(empId));
+                        }
+                    } catch (Exception ignored) {
+                        // employeeId is optional (e.g. Admin/HR may not have one)
                     }
                 }
             }

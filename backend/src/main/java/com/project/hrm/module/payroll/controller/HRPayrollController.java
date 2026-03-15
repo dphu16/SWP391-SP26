@@ -2,6 +2,8 @@ package com.project.hrm.module.payroll.controller;
 
 import com.project.hrm.module.payroll.dto.RequestDTO.*;
 import com.project.hrm.module.payroll.dto.ResponseDTO.*;
+import com.project.hrm.module.payroll.entity.FinanceAccount;
+import com.project.hrm.module.payroll.repository.FinanceAccountRepository;
 import com.project.hrm.module.payroll.service.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +30,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/hr/payroll")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('HR')")
+@PreAuthorize("hasRole('ROLE_HR')")
 public class HRPayrollController {
 
     private final PayrollPeriodService periodService;
@@ -36,6 +38,7 @@ public class HRPayrollController {
     private final SalaryInquiryService inquiryService;
     private final PaymentRequestService paymentRequestService;
     private final PayrollCalculationService calculationService;
+    private final FinanceAccountRepository financeAccountRepository;
 
     // ===================== PERIOD =====================
 
@@ -104,6 +107,17 @@ public class HRPayrollController {
     @PutMapping("/payslips/{payslipId}/cancel")
     public ResponseEntity<ApiResponse<PayslipResponse>> cancelPayslip(@PathVariable("payslipId") UUID payslipId) {
         return ResponseEntity.ok(ApiResponse.ok("Huỷ phiếu lương thành công.", payslipService.cancelPayslip(payslipId)));
+    }
+
+    // ===================== FINANCE ACCOUNTS =====================
+
+    /**
+     * GET /api/v1/hr/payroll/finance-accounts/active
+     * HR lấy danh sách tài khoản nguồn đang hoạt động để chọn khi gửi yêu cầu thanh toán.
+     */
+    @GetMapping("/finance-accounts/active")
+    public ResponseEntity<ApiResponse<List<FinanceAccount>>> getActiveFinanceAccounts() {
+        return ResponseEntity.ok(ApiResponse.ok(financeAccountRepository.findAllByStatus("ACTIVE")));
     }
 
     // ===================== PAYMENT REQUEST =====================

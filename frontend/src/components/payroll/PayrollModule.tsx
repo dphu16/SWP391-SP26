@@ -124,7 +124,7 @@ const PayrollModule: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { hasRole, user } = useAuth();
-    
+
     const canViewHR = hasRole("HR", "MANAGER");
     const canViewFinance = hasRole("FINANCE");
 

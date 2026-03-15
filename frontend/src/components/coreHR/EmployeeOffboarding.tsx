@@ -651,8 +651,8 @@ const EmployeeOffboarding: React.FC = () => {
       viewBox="0 0 16 16"
       fill="currentColor"
       className={`w-3.5 h-3.5 transition-colors ${sortField === field
-          ? "text-primary"
-          : "text-gray-300 group-hover:text-gray-400"
+        ? "text-primary"
+        : "text-gray-300 group-hover:text-gray-400"
         }`}
     >
       {sortField === field && sortDir === "asc" ? (

@@ -138,8 +138,10 @@ const EmployeePayrollView: React.FC = () => {
         setLoading(true); setError(null);
         try {
             const data = await getMyPayslips();
-            setList(data);
-            if (data.length > 0) setSelId(data[0].payslipId);
+            // Sort newest first (year desc, month desc)
+            const sorted = [...data].sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month);
+            setList(sorted);
+            if (sorted.length > 0) setSelId(sorted[0].payslipId);
         } catch (e: unknown) {
             const err = e as { response?: { status?: number; data?: { message?: string } } };
             const status = err?.response?.status;

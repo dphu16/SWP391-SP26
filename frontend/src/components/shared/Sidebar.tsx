@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import type { UserRole } from "../../hooks/useAuth";
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 const Icons = {
@@ -157,7 +159,8 @@ const SectionLabel: React.FC<{ label: string; isCollapsed: boolean }> = ({
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const hasRole = (..._args: any[]) => true; // Auth removed
+  const { hasRole } = useAuth();
+  
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [employeesExpanded, setEmployeesExpanded] = useState(true);
   const [requestExpanded, setRequestExpanded] = useState(true);
@@ -244,7 +247,7 @@ const Sidebar: React.FC = () => {
         />
 
         {/* Employees with submenu — HR and MANAGER only */}
-        {hasRole("HR", "MANAGER") && (
+        {hasRole("HR" as UserRole, "MANAGER" as UserRole) && (
           <div>
             <button
               onClick={() => {
@@ -306,7 +309,7 @@ const Sidebar: React.FC = () => {
                     roles: ["HR", "MANAGER"] as const,
                   },
                 ]
-                  .filter((item) => hasRole(...item.roles))
+                  .filter((item) => hasRole(...(item.roles as unknown as UserRole[])))
                   .map((item) => (
                     <NavItem
                       key={item.path}
@@ -460,7 +463,7 @@ const Sidebar: React.FC = () => {
         />
 
         {/* Payroll with submenu */}
-        {hasRole("HR", "MANAGER", "FINANCE") && (
+        {hasRole("HR" as UserRole, "MANAGER" as UserRole, "FINANCE" as UserRole, "EMPLOYEE" as UserRole) && (
           <div>
             <button
               onClick={() => {
@@ -495,12 +498,12 @@ const Sidebar: React.FC = () => {
             {!isCollapsed && payrollExpanded && (
               <div className="mt-0.5 space-y-0.5 animate-slide-up">
                 {[
-                  { label: "My Payslips", path: "/payroll/employee" },
+                  { label: "My Payslips", path: "/payroll/employee", roles: ["HR", "MANAGER", "FINANCE", "EMPLOYEE"] as const },
                   { label: "Payroll Management", path: "/payroll/hr", roles: ["HR", "MANAGER"] as const },
-                  { label: "Tax & Insurance Report", path: "/payroll/tax-report", roles: ["HR", "MANAGER", "FINANCE"] as const },
+                  { label: "Tax & Insurance Report", path: "/payroll/tax-report", roles: ["HR", "MANAGER"] as const },
                   { label: "Finance Payment", path: "/payroll/finance", roles: ["MANAGER", "FINANCE"] as const },
                 ]
-                  .filter((item) => !item.roles || hasRole(...item.roles))
+                  .filter((item) => !item.roles || hasRole(...(item.roles as unknown as UserRole[])))
                   .map((item) => (
                     <NavItem
                       key={item.path}
@@ -517,7 +520,7 @@ const Sidebar: React.FC = () => {
           </div>
         )}
 
-        {hasRole("HR", "MANAGER", "FINANCE") && (
+        {hasRole("HR" as UserRole, "MANAGER" as UserRole, "FINANCE" as UserRole) && (
           <NavItem
             icon={Icons.performance}
             label="Performance"
@@ -528,7 +531,7 @@ const Sidebar: React.FC = () => {
         )}
 
         {/* Growth — HR only */}
-        {hasRole("HR") && (
+        {hasRole("HR" as UserRole) && (
           <>
             <SectionLabel label="Growth" isCollapsed={isCollapsed} />
 

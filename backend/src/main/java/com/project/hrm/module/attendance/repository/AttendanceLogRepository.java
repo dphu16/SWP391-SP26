@@ -79,4 +79,17 @@ public interface AttendanceLogRepository extends JpaRepository<AttendanceLog, UU
         List<AttendanceAggregationDTO> aggregateAttendanceByPeriod(
                         @Param("startDate") LocalDate startDate,
                         @Param("endDate") LocalDate endDate);
+
+        /**
+         * Lấy danh sách ngày cụ thể mà nhân viên vắng mặt trong kỳ lương.
+         * Dùng để lọc ngày lễ không trừ lương trong PayrollCalculationService.
+         */
+        @Query("SELECT a.date FROM AttendanceLog a " +
+               "WHERE a.employeeId = :empId " +
+               "AND a.date BETWEEN :start AND :end " +
+               "AND a.status = 'ABSENT'")
+        List<LocalDate> findAbsentDates(
+                        @Param("empId") UUID empId,
+                        @Param("start") LocalDate start,
+                        @Param("end") LocalDate end);
 }

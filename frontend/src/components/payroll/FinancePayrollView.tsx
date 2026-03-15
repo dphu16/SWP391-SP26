@@ -161,22 +161,39 @@ const ReportDetailModal: React.FC<{
                         </div>
                     ) : (
                         <div className="bg-white border border-[#e2e8f0] rounded-xl overflow-hidden shadow-sm">
-                            <table className="w-full text-sm">
+                            <table className="w-full text-sm table-fixed">
+                                <colgroup>
+                                    <col style={{ width: "12%" }} />  {/* Emp ID */}
+                                    <col style={{ width: "28%" }} />  {/* Full Name */}
+                                    {request.type === "SALARY" ? (
+                                        <>
+                                            <col style={{ width: "25%" }} />  {/* Bank */}
+                                            <col style={{ width: "20%" }} />  {/* Account No */}
+                                            <col style={{ width: "15%" }} />  {/* Net Salary */}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <col style={{ width: "20%" }} />  {/* Gross */}
+                                            <col style={{ width: "20%" }} />  {/* Insurance */}
+                                            <col style={{ width: "20%" }} />  {/* Tax */}
+                                        </>
+                                    )}
+                                </colgroup>
                                 <thead>
                                     <tr className="border-b border-[#e2e8f0]">
-                                        <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Emp ID</th>
-                                        <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Full Name</th>
+                                        <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Emp ID</th>
+                                        <th className="px-4 py-3 text-left text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Full Name</th>
                                         {request.type === "SALARY" ? (
                                             <>
-                                                <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Bank</th>
-                                                <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Account No.</th>
-                                                <th className="px-4 py-3 text-center text-[11px] font-bold text-[#0f172a] uppercase tracking-widest">Net Salary</th>
+                                                <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Bank</th>
+                                                <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Account No.</th>
+                                                <th className="px-4 py-3 text-center text-[11px] font-bold text-[#0f172a] uppercase tracking-widest whitespace-nowrap">Net Salary</th>
                                             </>
                                         ) : (
                                             <>
-                                                <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Gross Salary</th>
-                                                <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Insurance</th>
-                                                <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Tax (PIT)</th>
+                                                <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Gross Salary</th>
+                                                <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Insurance</th>
+                                                <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Tax (PIT)</th>
                                             </>
                                         )}
                                     </tr>
@@ -184,20 +201,20 @@ const ReportDetailModal: React.FC<{
                                 <tbody className="divide-y divide-[#f1f5f9]">
                                     {request.type === "SALARY" && payslips.map(p => (
                                         <tr key={p.payslipId} className="border-b border-[#f1f5f9] hover:bg-slate-50 transition-colors">
-                                            <td className="px-4 py-3 font-mono text-[11px] text-slate-400 text-center">#{p.employeeId.substring(0, 8)}</td>
+                                            <td className="px-4 py-3 font-mono text-[11px] text-slate-400 text-center whitespace-nowrap">#{p.employeeId.substring(0, 8)}</td>
                                             <td className="px-4 py-4">
-                                                <div className="flex items-center justify-center gap-3 text-left">
+                                                <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-xl bg-[#e6faf3] flex items-center justify-center flex-shrink-0">
                                                         <svg className="w-4 h-4 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                                         </svg>
                                                     </div>
-                                                    <div className="font-semibold text-slate-800 text-[13px]">{p.employeeName}</div>
+                                                    <div className="font-semibold text-slate-800 text-[13px] whitespace-nowrap">{p.employeeName}</div>
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 text-slate-300 text-[11px] text-center font-medium">—</td>
                                             <td className="px-4 py-3 text-slate-300 text-[11px] text-center font-medium">—</td>
-                                            <td className="px-4 py-3 text-center">
+                                            <td className="px-4 py-3 text-center whitespace-nowrap">
                                                 <span className="inline-block px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-[13px] tabular-nums">
                                                     {fmt(p.netSalary)}
                                                 </span>
@@ -206,24 +223,24 @@ const ReportDetailModal: React.FC<{
                                     ))}
                                     {request.type === "TAX_INSURANCE" && taxReports.map(r => (
                                         <tr key={r.employeeId} className="border-b border-[#f1f5f9] hover:bg-slate-50 transition-colors">
-                                            <td className="px-4 py-3 font-mono text-[11px] text-slate-400 text-center">#{r.employeeId.substring(0, 8)}</td>
+                                            <td className="px-4 py-3 font-mono text-[11px] text-slate-400 text-center whitespace-nowrap">#{r.employeeId.substring(0, 8)}</td>
                                             <td className="px-4 py-4">
-                                                <div className="flex items-center justify-center gap-3 text-left">
+                                                <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-xl bg-[#e6faf3] flex items-center justify-center flex-shrink-0">
                                                         <svg className="w-4 h-4 text-[#10b981]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                                         </svg>
                                                     </div>
-                                                    <div className="font-semibold text-slate-800 text-[13px]">{r.employeeName}</div>
+                                                    <div className="font-semibold text-slate-800 text-[13px] whitespace-nowrap">{r.employeeName}</div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3 text-center font-bold text-slate-800 text-[13px] tabular-nums">{fmt(r.grossSalary)}</td>
-                                            <td className="px-4 py-3 text-center">
+                                            <td className="px-4 py-3 text-center font-semibold text-slate-800 text-[13px] tabular-nums whitespace-nowrap">{fmt(r.grossSalary)}</td>
+                                            <td className="px-4 py-3 text-center whitespace-nowrap">
                                                 <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-50 text-sky-600 border border-sky-100">
                                                     {fmt(r.insuranceAmount)}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-center">
+                                            <td className="px-4 py-3 text-center whitespace-nowrap">
                                                 <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-600 border border-rose-100">
                                                     {fmt(r.taxAmount)}
                                                 </span>

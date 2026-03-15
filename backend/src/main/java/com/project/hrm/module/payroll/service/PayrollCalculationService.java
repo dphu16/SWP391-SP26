@@ -1,12 +1,14 @@
 package com.project.hrm.module.payroll.service;
 
 import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.payroll.entity.*;
 import com.project.hrm.module.payroll.enums.PayrollBatchStatus;
 import com.project.hrm.module.payroll.enums.PayslipDetailType;
 import com.project.hrm.module.payroll.exception.PayrollException;
 import com.project.hrm.module.payroll.exception.ResourceNotFoundException;
 import com.project.hrm.module.payroll.repository.*;
+import com.project.hrm.module.payroll.util.VietnamPublicHoliday;
 import com.project.hrm.module.attendance.repository.AttendanceLogRepository;
 import com.project.hrm.module.attendance.dto.AttendanceAggregationDTO;
 import com.project.hrm.module.evaluation.repository.PerformanceReviewsRepository;
@@ -25,6 +27,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -131,10 +134,19 @@ public class PayrollCalculationService {
                 .multiply(attendance.getTotalOtHours())
                 .setScale(2, RoundingMode.HALF_UP);
 
-        // 4. Tính khấu trừ ngày vắng 
+        // 4. Lọc ngày vắng: chỉ trừ những ngày ABSENT không phải ngày lễ quốc gia
+        List<LocalDate> absentDates = attendanceLogRepository.findAbsentDates(employeeId, startDate, calculationDate);
+        Set<LocalDate> publicHolidays = VietnamPublicHoliday.getHolidays(startDate.getYear());
+
+        long holidayAbsences = absentDates.stream().filter(publicHolidays::contains).count();
+        long unpaidAbsentDays = Math.max(0, absentDates.size() - holidayAbsences);
+
         BigDecimal dailyRate = baseSalary.divide(BigDecimal.valueOf(standardWorkingDays), 2, RoundingMode.HALF_UP);
-        BigDecimal absentDeduction = dailyRate.multiply(BigDecimal.valueOf(attendance.getTotalAbsentDays()))
+        BigDecimal absentDeduction = dailyRate.multiply(BigDecimal.valueOf(unpaidAbsentDays))
                 .setScale(2, RoundingMode.HALF_UP);
+
+        log.info("Nhân viên {}: {} ngày vắng, {} ngày lễ (không trừ), {} ngày trừ lương",
+                employeeId, absentDates.size(), holidayAbsences, unpaidAbsentDays);
 
         // 5. Thưởng KPI
         BigDecimal kpiBonus = BigDecimal.ZERO;
@@ -154,7 +166,7 @@ public class PayrollCalculationService {
 
         // Nếu Employee đã Resigned hoặc ngày end_date trong kỳ lương nhỏ hơn ngày nghỉ -> nghỉ giữa chừng -> Không đóng Thuế/BH.
         Employee employee = profile.getEmployee();
-        boolean isResignedMidMonth = employee.getEmpStatus() != null && employee.getEmpStatus().name().equals("RESIGNED");
+        boolean isResignedMidMonth = employee.getStatus() == EmployeeStatus.RESIGNED;
         
         if (!isResignedMidMonth) {
             if (profile.getTaxCode() != null) {

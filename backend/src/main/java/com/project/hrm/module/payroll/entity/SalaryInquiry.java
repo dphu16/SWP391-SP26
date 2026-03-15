@@ -6,6 +6,8 @@ import com.project.hrm.module.payroll.enums.SalaryInquiryStatus;
 import com.project.hrm.module.corehr.entity.Employee;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -42,6 +44,7 @@ public class SalaryInquiry {
     private String message;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false)
     @Builder.Default
     private SalaryInquiryStatus status = SalaryInquiryStatus.OPEN;

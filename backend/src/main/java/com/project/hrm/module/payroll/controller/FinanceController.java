@@ -36,7 +36,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/finance/payroll")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('FINANCE')")
+@PreAuthorize("hasRole('ROLE_FINANCE')")
 public class FinanceController {
 
     private final PaymentRequestService paymentRequestService;

@@ -17,9 +17,14 @@ export function useAuth() {
         const payload = decodeJwt(getToken());
         if (!payload) return null;
 
+        // JWT stores roles as array: ["ROLE_HR"], ["ROLE_EMPLOYEE"], etc.
+        // Strip the "ROLE_" prefix and take the first role
+        const rawRoles: string[] = Array.isArray(payload.roles) ? payload.roles : [];
+        const firstRole = rawRoles[0]?.replace(/^ROLE_/, "") as UserRole ?? "EMPLOYEE";
+
         return {
             username: payload.sub,
-            role: (payload.role as UserRole) ?? "EMPLOYEE",
+            role: firstRole,
             fullName: payload.fullName,
             employeeId: payload.employeeId,
             avatarUrl: payload.avatarUrl,

@@ -41,9 +41,9 @@ public class PaymentRequestService {
         PayrollBatch batch = payrollBatchRepository.findById(request.getPayrollBatchId())
                 .orElseThrow(() -> new ResourceNotFoundException("Batch không tồn tại."));
 
-        if (batch.getStatus() != PayrollBatchStatus.VALIDATED && 
-            batch.getStatus() != PayrollBatchStatus.PROCESSED && 
-            batch.getStatus() != PayrollBatchStatus.LOCKED) {
+        if (batch.getStatus() != PayrollBatchStatus.VALIDATED &&
+                batch.getStatus() != PayrollBatchStatus.PROCESSED &&
+                batch.getStatus() != PayrollBatchStatus.LOCKED) {
             throw new PayrollException(
                     "Batch phải ở trạng thái VALIDATED, PROCESSED hoặc LOCKED trước khi thực hiện hành động này.");
         }
@@ -59,8 +59,10 @@ public class PaymentRequestService {
         BigDecimal totalAmount;
         if (request.getType() == com.project.hrm.module.payroll.enums.PaymentRequestType.TAX_INSURANCE) {
             // [RULE] Báo cáo bảo hiểm/thuế chỉ được gửi 1 lần duy nhất cho mỗi kỳ (batch)
-            if (paymentRequestRepository.existsByPayrollBatch_BatchIdAndType(batch.getBatchId(), com.project.hrm.module.payroll.enums.PaymentRequestType.TAX_INSURANCE)) {
-                throw new PayrollException("Báo cáo Thuế & Bảo hiểm cho kỳ lương này đã được gửi. Không thể gửi lại để tránh trùng lặp.");
+            if (paymentRequestRepository.existsByPayrollBatch_BatchIdAndType(batch.getBatchId(),
+                    com.project.hrm.module.payroll.enums.PaymentRequestType.TAX_INSURANCE)) {
+                throw new PayrollException(
+                        "Báo cáo Thuế & Bảo hiểm cho kỳ lương này đã được gửi. Không thể gửi lại để tránh trùng lặp.");
             }
             BigDecimal pit = payslipRepository.sumTaxAmountByBatchId(batch.getBatchId());
             BigDecimal ins = payslipRepository.sumInsuranceAmountByBatchId(batch.getBatchId());

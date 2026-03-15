@@ -347,9 +347,9 @@ export async function reviewPaymentRequest(
     ));
 }
 
-/** GET /api/v1/finance/payroll/accounts/active — Lấy danh sách tài khoản nguồn đang hoạt động */
+/** GET /api/v1/hr/payroll/finance-accounts/active — Lấy danh sách tài khoản nguồn đang hoạt động */
 export async function getActiveFinanceAccounts(): Promise<any[]> {
-    return unwrap(apiClient.get<ApiResponse<any[]>>("/api/v1/finance/payroll/accounts/active"));
+    return unwrap(apiClient.get<ApiResponse<any[]>>("/api/v1/hr/payroll/finance-accounts/active"));
 }
 
 /** GET /api/v1/finance/payroll/batches/:batchId/tax-report — Xem chi tiết Thuế & Bảo hiểm */
