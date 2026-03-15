@@ -3,6 +3,9 @@ package com.project.hrm.module.recruitment.service.impl;
 import com.project.hrm.module.corehr.entity.Department;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.entity.Position;
+import com.project.hrm.module.corehr.repository.DepartmentRepository;
+import com.project.hrm.module.corehr.repository.EmployeeRepository;
+import com.project.hrm.module.corehr.repository.PositionRepository;
 import com.project.hrm.module.recruitment.dto.request.JobRequestRequest;
 import com.project.hrm.module.recruitment.dto.response.JobRequestResponse;
 import com.project.hrm.module.recruitment.entity.JobRequest;
@@ -24,9 +27,9 @@ import java.util.UUID;
 public class JobRequestServiceImpl implements JobRequestService {
 
     private final JobRequestRepository jobRequestRepository;
-    private final RDepartmentRepository RDepartmentRepository;
-    private final RPositionRepository RPositionRepository;
-    private final REmployeeRepository REmployeeRepository;
+    private final DepartmentRepository departmentRepository;
+    private final PositionRepository positionRepository;
+    private final EmployeeRepository employeeRepository;
 
     @Override
     public JobRequestResponse create(JobRequestRequest request) {
@@ -80,7 +83,7 @@ public class JobRequestServiceImpl implements JobRequestService {
     @Override
     public List<JobRequestResponse> choiceHr(UUID employeeId, List<UUID> ids) {
         List<JobRequest> list = jobRequestRepository.findAllById(ids);
-        Employee employee = REmployeeRepository.findById(employeeId)
+        Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Job request not found with id: " + employeeId));
         for(JobRequest i: list){
             i.setReportsTo(employee);
@@ -146,14 +149,14 @@ public class JobRequestServiceImpl implements JobRequestService {
         }
 
         if (request.getDeptId() != null) {
-            Department department = RDepartmentRepository.findById(request.getDeptId())
+            Department department = departmentRepository.findById(request.getDeptId())
                     .orElseThrow(() ->
                             new RuntimeException("Department not found"));
             entity.setDept(department);
         }
 
         if (request.getPosId() != null) {
-            Position position = RPositionRepository.findById(request.getPosId())
+            Position position = positionRepository.findById(request.getPosId())
                     .orElseThrow(() ->
                             new RuntimeException("Position not found"));
             entity.setPos(position);

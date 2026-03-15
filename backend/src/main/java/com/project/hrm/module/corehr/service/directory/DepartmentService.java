@@ -32,6 +32,12 @@ public class DepartmentService {
         return mapToResponse(dept);
     }
 
+    @Transactional(readOnly = true)
+    public DepartmentResponse getDepartmentByManagerId(UUID id) {
+        Department department = departmentRepository.findByManager_EmployeeId(id);
+        return mapToResponse(department);
+    }
+
     private DepartmentResponse mapToResponse(Department dept) {
         return DepartmentResponse.builder()
                 .deptId(dept.getDeptId())

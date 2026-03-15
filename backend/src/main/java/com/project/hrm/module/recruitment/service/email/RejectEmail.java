@@ -15,7 +15,7 @@ public class RejectEmail {
     @Async
     public void sendEmail(EmailRequest request) {
 
-        String subject = "Interview Invitation - " + request.getTitle();
+        String subject = "Thank You for Applying - " + request.getTitle() + " Position";
 
         String body = """
                 Dear %s,
