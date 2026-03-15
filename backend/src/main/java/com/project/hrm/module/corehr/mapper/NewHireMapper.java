@@ -3,6 +3,7 @@ package com.project.hrm.module.corehr.mapper;
 import com.project.hrm.module.corehr.dto.request.CreateNewHireDTO;
 import com.project.hrm.module.corehr.dto.response.NewHireResponseDTO;
 import com.project.hrm.module.corehr.entity.*;
+import com.project.hrm.module.corehr.enums.EmployeeRole;
 
 public class NewHireMapper {
 
@@ -14,9 +15,33 @@ public class NewHireMapper {
                                 .fullName(dto.getFullName())
                                 .department(department)
                                 .position(position)
-                                .role(dto.getRole())
                                 .dateOfJoining(dto.getDateOfJoining())
                                 .build();
+
+                // Calculate endDate based on contractDuration
+                java.time.LocalDate computedStartDate = dto.getStartDate() != null ? dto.getStartDate() : java.time.LocalDate.now();
+                java.time.LocalDate computedEndDate = dto.getEndDate();
+
+                if (dto.getContractDuration() != null) {
+                        switch (dto.getContractDuration()) {
+                                case "6_MONTHS":
+                                        computedEndDate = computedStartDate.plusMonths(6);
+                                        break;
+                                case "1_YEAR":
+                                        computedEndDate = computedStartDate.plusYears(1);
+                                        break;
+                                case "2_YEARS":
+                                        computedEndDate = computedStartDate.plusYears(2);
+                                        break;
+                                case "INDEFINITE":
+                                        computedEndDate = null;
+                                        break;
+                                case "CUSTOM":
+                                default:
+                                        // Use the endDate from the DTO as-is
+                                        break;
+                        }
+                }
 
                 Contract contract = Contract.builder()
                                 .employee(employee)
@@ -24,8 +49,8 @@ public class NewHireMapper {
                                                 : "CTR-" + java.util.UUID.randomUUID().toString().substring(0, 8)
                                                                 .toUpperCase())
                                 .contractType(dto.getContractType() != null ? dto.getContractType() : "PROBATION")
-                                .startDate(dto.getStartDate() != null ? dto.getStartDate() : java.time.LocalDate.now())
-                                .endDate(dto.getEndDate())
+                                .startDate(computedStartDate)
+                                .endDate(computedEndDate)
                                 .baseSalary(dto.getBaseSalary())
                                 .status("ACTIVE")
                                 .build();
@@ -50,6 +75,14 @@ public class NewHireMapper {
         }
 
         public static NewHireResponseDTO toResponseDTO(Employee e) {
+                EmployeeRole primaryRole = null;
+                if (e.getUser() != null && e.getUser().getRoles() != null) {
+                        primaryRole = e.getUser().getRoles().stream()
+                                        .map(Role::getName)
+                                        .findFirst()
+                                        .orElse(null);
+                }
+
                 return NewHireResponseDTO.builder()
                                 .employeeId(e.getEmployeeId())
                                 .employeeCode(e.getEmployeeCode())
@@ -60,7 +93,7 @@ public class NewHireMapper {
                                 .address(e.getPersonal() != null ? e.getPersonal().getAddress() : null)
                                 .departmentName(e.getDepartment() != null ? e.getDepartment().getDeptName() : null)
                                 .positionTitle(e.getPosition() != null ? e.getPosition().getTitle() : null)
-                                .role(e.getRole())
+                                .role(primaryRole)
                                 .status(e.getEmpStatus())
                                 .dependentName((e.getDependents() != null && !e.getDependents().isEmpty())
                                                 ? e.getDependents().get(0).getContactName()

@@ -28,7 +28,7 @@ public class EDPServiceImpl implements EDPService {
 
     @Override
     public List<EmployeeResponse> getEmployeeByRole(EmployeeRole role) {
-        List<Employee> employees = REmployeeRepository.findByUser_Role(role);
+        List<Employee> employees = REmployeeRepository.findByUser_Roles_Name(role);
 
         return employees.stream()
                 .map(this::mapToEResponse)

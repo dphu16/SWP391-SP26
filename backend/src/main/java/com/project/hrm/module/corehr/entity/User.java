@@ -1,7 +1,6 @@
 package com.project.hrm.module.corehr.entity;
 
 import com.project.hrm.module.corehr.enums.AuthProvider;
-import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -34,10 +33,6 @@ public class User {
 
     @Column(nullable = false, unique = true, length = 100)
     private String email;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "role", length = 50)
-    private EmployeeRole role;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))

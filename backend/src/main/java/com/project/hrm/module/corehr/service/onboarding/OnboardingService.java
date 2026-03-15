@@ -6,6 +6,7 @@ import com.project.hrm.module.corehr.dto.response.OnboardingListResponseDTO;
 import com.project.hrm.module.corehr.dto.response.OnboardingResponseDTO;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
+import com.project.hrm.module.corehr.repository.RoleRepository;
 import com.project.hrm.module.recruitment.enums.ApplicationStatus;
 import com.project.hrm.module.corehr.mapper.OnboardingMapper;
 import com.project.hrm.module.corehr.repository.OnboardingRepository;
@@ -24,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -37,17 +39,20 @@ public class OnboardingService implements IOnboardingService {
     private final OnboardingCommandService onboaringCommandService;
     private final RequestRepository requestRepository;
     private final EmployeeHelper employeeHelper;
+    private final RoleRepository roleRepository;
 
     public OnboardingService(OnboardingRepository applicationRepository,
             EmployeeRepository employeeRepository,
             OnboardingCommandService onboaringCommandService,
             RequestRepository requestRepository,
-            EmployeeHelper employeeHelper) {
+            EmployeeHelper employeeHelper,
+            RoleRepository roleRepository) {
         this.applicationRepository = applicationRepository;
         this.employeeRepository = employeeRepository;
         this.onboaringCommandService = onboaringCommandService;
         this.requestRepository = requestRepository;
         this.employeeHelper = employeeHelper;
+        this.roleRepository = roleRepository;
     }
 
     @Override
@@ -106,7 +111,7 @@ public class OnboardingService implements IOnboardingService {
         dto.setFullName(employee.getFullName());
         dto.setPhone(personal != null ? personal.getPhone() : null);
         dto.setEmail(personal != null ? personal.getEmail() : null);
-        dto.setGender(personal != null ? personal.getGender() : null);
+        dto.setGender(personal != null ? personal.getGender(): null);
         dto.setAddress(personal != null ? personal.getAddress() : null);
         dto.setCitizenId(personal != null ? personal.getCitizenId() : null);
         dto.setTaxCode(personal != null ? personal.getTaxCode() : null);
@@ -116,7 +121,12 @@ public class OnboardingService implements IOnboardingService {
         dto.setPositionId(employee.getPosition() != null ? employee.getPosition().getPositionId() : null);
         dto.setMentorId(employee.getManager() != null ? employee.getManager().getEmployeeId() : null);
         dto.setDateOfJoining(employee.getDateOfJoining());
-        dto.setRole(employee.getRole());
+        if (employee.getUser() != null && employee.getUser().getRoles() != null) {
+            dto.setRole(employee.getUser().getRoles().stream()
+                .map(Role::getName)
+                .findFirst()
+                .orElse(null));
+        }
         dto.setStatus(employee.getStatus());
         dto.setContractNumber(contract != null ? contract.getContractNumber() : null);
         dto.setContractType(contract != null ? contract.getContractType() : null);
@@ -152,7 +162,6 @@ public class OnboardingService implements IOnboardingService {
         if (updatedData.getMentorId() != null) {
             employee.setManager(employeeHelper.findEmployeeOrThrow(updatedData.getMentorId()));
         }
-        employee.setRole(updatedData.getRole());
         employee.setDateOfJoining(updatedData.getDateOfJoining());
 
         // Update personal info
@@ -183,6 +192,14 @@ public class OnboardingService implements IOnboardingService {
             employee.getUser().setEmail(updatedData.getEmail());
             employee.getUser().setFullName(updatedData.getFullName());
             employee.getUser().setStatus(UserStatus.INACTIVE);
+        }
+
+        if (employee.getUser() != null && updatedData.getRole() != null) {
+            Role mappedRole = roleRepository.findByName(updatedData.getRole())
+                    .orElseThrow(() -> new BusinessRuleException(
+                        ErrorCode.INVALID_APPROVAL_ACTION,
+                            "Role không tồn tại: " + updatedData.getRole()));
+            employee.getUser().setRoles(new HashSet<>(List.of(mappedRole)));
         }
 
         // Reset status for re-approval

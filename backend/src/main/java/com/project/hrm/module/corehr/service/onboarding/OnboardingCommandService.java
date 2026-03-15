@@ -39,8 +39,16 @@ public class OnboardingCommandService {
 
     @Transactional
     protected NewHireResponseDTO createNewHire(CreateNewHireDTO request) {
-        Department department = employeeHelper.findDepartmentOrThrow(request.getDepartmentId());
         Position position = employeeHelper.findPositionOrThrow(request.getPositionId());
+
+        // Department is always derived from the Position's department (Job table source of truth).
+        // If the Position has a department, use it; otherwise fall back to the DTO's departmentId.
+        Department department;
+        if (position.getDepartment() != null) {
+            department = position.getDepartment();
+        } else {
+            department = employeeHelper.findDepartmentOrThrow(request.getDepartmentId());
+        }
 
         // Validate target status: must be one of OFFICIAL, INTERN, PROBATION
         Set<EmployeeStatus> allowedTargetStatuses = Set.of(
@@ -67,7 +75,6 @@ public class OnboardingCommandService {
                     .avatarUrl(request.getAvatarUrl())
                     .status(UserStatus.INACTIVE)
                     .provider(AuthProvider.LOCAL)
-                    .role(request.getRole() != null ? request.getRole() : null)
                     .roles(new java.util.HashSet<>())
                     .build();
 
