@@ -70,6 +70,21 @@ export interface TeamStats {
 export interface GlobalStats {
     orgAverageScore: number;
     totalKpiTargetValue: number;
+    scoreDistribution?: number[];
+}
+
+export interface DepartmentLeaderboardItem {
+    departmentName: string;
+    averageScore: number;
+}
+
+export interface PlanTrainingRequest {
+    employeeId: string;
+    reviewId: string;
+    courseName: string;
+    courseUrl: string;
+    deadline: string;
+    reason: string;
 }
 
 export const kpiService = {
@@ -88,6 +103,15 @@ export const kpiService = {
             return res.data;
         } catch {
             return { totalMembers: 0, submittedMembers: 0, averageScore: null };
+        }
+    },
+    
+    getDepartmentLeaderboard: async (): Promise<DepartmentLeaderboardItem[]> => {
+        try {
+            const res = await apiClient.get<DepartmentLeaderboardItem[]>("/api/manager/hr/leaderboard");
+            return res.data || [];
+        } catch {
+            return [];
         }
     },
 
@@ -173,6 +197,16 @@ export const kpiService = {
         }
     },
 
+    getGoalsByEmployeeAndCycle: async (employeeId: string, cycleId: string): Promise<any[]> => {
+        try {
+            const response = await apiClient.get<any[]>(`/api/employees/${employeeId}/cycles/${cycleId}/goals`);
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching goals for employee in cycle", error);
+            return [];
+        }
+    },
+
     assignEmployeeGoal: async (data: { employeeId: string, cycleId: string, kpiLibraryId: string, targetValue: number, title: string, weight: number }): Promise<any> => {
         const response = await apiClient.post("/api/employee-goals", data);
         return response.data;
@@ -247,6 +281,15 @@ export const kpiService = {
         }
     },
 
+    getMentorAssessment: async (reviewId: string): Promise<any> => {
+        try {
+            const res = await apiClient.get(`/api/mentor/review/${reviewId}/assessment`);
+            return res.data;
+        } catch {
+            return null;
+        }
+    },
+
     // Mentor specific actions
     getMentees: async (mentorId: string): Promise<any[]> => {
         const response = await apiClient.get(`/api/mentor/mentees/${mentorId}`);
@@ -280,8 +323,8 @@ export const kpiService = {
         return response.data;
     },
 
-    updateEmployeeGoalStatus: async (goalId: string, status: string): Promise<any> => {
-        const response = await apiClient.patch(`/api/employee-goals/${goalId}`, { status });
+    updateEmployeeGoalStatus: async (goalId: string, status: string, comment?: string): Promise<any> => {
+        const response = await apiClient.patch(`/api/employee-goals/${goalId}`, { status, comment });
         return response.data;
     },
 
@@ -295,4 +338,38 @@ export const kpiService = {
         });
         return response.data; // This is the public URL string
     },
+
+    planTraining: async (data: PlanTrainingRequest): Promise<any> => {
+        const response = await apiClient.post('/api/training-participants/plan', data);
+        return response.data;
+    },
+
+    getTrainingForEmployee: async (employeeId: string): Promise<any[]> => {
+        try {
+            const response = await apiClient.get(`/api/training-participants/employee/${employeeId}`);
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching training for employee", error);
+            return [];
+        }
+    },
+
+    submitTrainingCertificate: async (participantId: string, certificateUrl: string): Promise<any> => {
+        const response = await apiClient.put(`/api/training-participants/${participantId}/submit-certificate`, { certificateUrl });
+        return response.data;
+    },
+
+    getAllTrainings: async (): Promise<any[]> => {
+        const response = await apiClient.get('/api/training-participants');
+        return response.data;
+    },
+
+    confirmTrainingCertificate: async (participantId: string): Promise<any> => {
+        const response = await apiClient.put(`/api/training-participants/${participantId}/confirm-certificate`);
+        return response.data;
+    },
+    rejectTrainingCertificate: async (participantId: string): Promise<any> => {
+        const response = await apiClient.put(`/api/training-participants/${participantId}/reject-certificate`);
+        return response.data;
+    }
 };

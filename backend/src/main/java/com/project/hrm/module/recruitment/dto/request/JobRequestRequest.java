@@ -12,8 +12,8 @@ import java.util.UUID;
 @Setter
 public class JobRequestRequest {
 
-    private String title;
     private UUID deptId;
+    private  UUID posId;
     private int quantity;
     private String location;
     private EmploymentType type;

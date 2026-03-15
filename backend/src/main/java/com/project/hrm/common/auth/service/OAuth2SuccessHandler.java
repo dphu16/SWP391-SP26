@@ -53,7 +53,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         }
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-        String token = jwtUtil.generateToken(userDetails, user.getFullName());
+        String token = jwtUtil.generateToken(userDetails, user);
 
         String redirectUrl = frontendUrl + "/oauth2/callback?token=" + token;
         getRedirectStrategy().sendRedirect(req, res, redirectUrl);

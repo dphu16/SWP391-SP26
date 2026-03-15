@@ -11,6 +11,6 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
 
     List<Job> findByEmployee_EmployeeId(UUID employeeId);
 
-    List<Job> findByStatus(String status);
+    List<Job> findByStatus(JobStatus status);
 
 }

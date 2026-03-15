@@ -42,25 +42,6 @@ public class EmailService {
         }
     }
 
-    @Async
-    public void sendBankInfoNotificationToHR(String hrEmail, String employeeName) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setTo(hrEmail);
-            helper.setSubject("Thông báo: Nhân viên cập nhật thông tin ngân hàng");
-
-            String htmlContent = buildBankInfoNotificationHtml(employeeName);
-            helper.setText(htmlContent, true);
-            mailSender.send(message);
-
-            log.info("Bank info notification sent to HR: {}", hrEmail);
-        } catch (MessagingException e) {
-            log.error("Failed to send bank info notification to HR: {}", hrEmail, e);
-        }
-    }
-
     private String buildActivationEmailHtml(String employeeName, String activationLink) {
         return "<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">"
                 + "<h2 style=\"color: #2563eb;\">Chào mừng " + escapeHtml(employeeName) + " đến với công ty!</h2>"
@@ -77,15 +58,6 @@ public class EmailService {
                 + "</div>";
     }
 
-    private String buildBankInfoNotificationHtml(String employeeName) {
-        return "<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">"
-                + "<h3 style=\"color: #f59e0b;\">Thông báo cập nhật thông tin</h3>"
-                + "<p>Nhân viên <strong>" + escapeHtml(employeeName) + "</strong> vừa cập nhật thông tin ngân hàng.</p>"
-                + "<p>Vui lòng kiểm tra và xác nhận thông tin.</p>"
-                + "<hr style=\"border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;\">"
-                + "<p style=\"color: #9ca3af; font-size: 12px;\">HRM System - Human Resource Management</p>"
-                + "</div>";
-    }
 
     private String escapeHtml(String input) {
         if (input == null)

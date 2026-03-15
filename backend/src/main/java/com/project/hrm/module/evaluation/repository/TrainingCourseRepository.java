@@ -8,5 +8,7 @@ import java.util.UUID;
 
 @Repository
 public interface TrainingCourseRepository extends JpaRepository<TrainingCourse, UUID> {
+    boolean existsByCourseName(String name);
+    boolean existsByCourseUrl(String url);
 }
 

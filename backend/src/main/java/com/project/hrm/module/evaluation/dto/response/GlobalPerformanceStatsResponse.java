@@ -10,4 +10,5 @@ import lombok.NoArgsConstructor;
 public class GlobalPerformanceStatsResponse {
     private Double orgAverageScore;
     private Double totalKpiTargetValue;
+    private java.util.List<Integer> scoreDistribution;
 }

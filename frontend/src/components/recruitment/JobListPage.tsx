@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { jobService } from "../../services/jobService";
 import type { Job, JobStatus } from "../ui/types";
 import { useToast } from "../ui/Toast";
@@ -71,7 +71,7 @@ const JobListPage: React.FC = () => {
 
     const filteredJobs = useMemo(() => {
         return jobs.filter(job =>
-            job.title.toLowerCase().includes(searchTerm.toLowerCase())
+            job.posName.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [jobs, searchTerm]);
 
@@ -95,8 +95,10 @@ const JobListPage: React.FC = () => {
                     <h1 className="text-2xl font-bold font-heading text-text-primary-light tracking-tight">
                         Job Openings
                     </h1>
-                    <p className="mt-0.5 text-sm text-text-secondary-light">
-                        Manage your public job postings and recruitment progress
+                    <p className="mt-0.5 text-sm font-medium text-text-secondary-light">
+                        <Link to="/dashboard" className="hover:text-primary transition-colors">Home</Link>
+                        <span className="mx-2">&gt;</span>
+                        <span className="text-text-primary-light">Job Postings</span>
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -129,7 +131,7 @@ const JobListPage: React.FC = () => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-gray-100 bg-white">
-                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Job Detail</th>
+                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Job Title</th>
                                 <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Status</th>
                                 <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Dates</th>
                                 <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-text-secondary-light">Applications</th>
@@ -152,10 +154,7 @@ const JobListPage: React.FC = () => {
                                     >
                                         <td className="px-6 py-4">
                                             <div className="font-semibold text-text-primary-light text-sm mb-0.5">
-                                                {job.title}
-                                            </div>
-                                            <div className="text-[10px] text-text-tertiary-light uppercase tracking-wide">
-                                                ID: {job.id.substring(0, 8)}...
+                                                {job.posName}
                                             </div>
                                         </td>
                                         <td className="px-4 py-4">
@@ -180,7 +179,7 @@ const JobListPage: React.FC = () => {
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="text-[10px] text-text-tertiary-light w-8">Start:</span>
                                                     <span className="text-text-secondary-light">
-                                                        {job.createAt ? new Date(job.createAt).toLocaleDateString() : "—"}
+                                                        {job.postedAt ? new Date(job.postedAt).toLocaleDateString() : "—"}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-1.5 text-rose-600/80">

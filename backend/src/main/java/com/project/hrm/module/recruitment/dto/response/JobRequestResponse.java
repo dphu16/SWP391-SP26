@@ -14,9 +14,10 @@ import java.util.UUID;
 public class JobRequestResponse {
 
     private UUID id;
-    private String title;
     private UUID deptId;
     private String deptName;
+    private UUID posId;
+    private String posName;
     private int quantity;
     private String location;
     private EmploymentType type;

@@ -111,10 +111,24 @@ public class KpiStructureService {
      */
     @Transactional
     public void publishToEmployees(KpiStructure savedStructure, AssignKpiRequest request) {
-        PerformanceCycles activeCycle = cycleRepository.findFirstByStatusOrderByCreatedAtDesc(CycleStatus.ACTIVE)
+        java.time.LocalDate now = java.time.LocalDate.now();
+        
+        // Find an ACTIVE cycle that covers "now"
+        PerformanceCycles activeCycle = cycleRepository.findAll().stream()
+                .filter(c -> c.getStatus() == CycleStatus.ACTIVE)
+                .filter(c -> (!now.isBefore(c.getStartDate()) && !now.isAfter(c.getEndDate())))
+                .findFirst()
                 .orElse(null);
 
-        if (activeCycle == null) return;
+        if (activeCycle == null) {
+            // Check if there is ANY active cycle at all to provide better feedback
+            PerformanceCycles anyActive = cycleRepository.findFirstByStatusOrderByCreatedAtDesc(CycleStatus.ACTIVE).orElse(null);
+            if (anyActive == null) {
+                throw new RuntimeException("No active performance review cycles were found.");
+            } else {
+                throw new RuntimeException("The system date is " + now + ". There are no ACTIVE cycles covering this date.");
+            }
+        }
 
         List<Employee> employees = employeeRepository.findByPosition_Department_DeptId(request.getDepartmentId());
         if (employees.isEmpty()) return;

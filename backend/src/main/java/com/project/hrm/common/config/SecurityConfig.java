@@ -46,7 +46,10 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/activation/set-password").permitAll()
                                                 .requestMatchers("/api/activation/emergency-contact").permitAll()
                                                 .requestMatchers("/api/activation/bank-account").permitAll()
+                                                .requestMatchers("/api/files/download/**").permitAll()
                                                 .requestMatchers("/oauth2/**").permitAll()
+                                                .requestMatchers("/api/jobs/candidate/**").permitAll()
+                                                .requestMatchers("/api/app/candidate/**").permitAll()
 
                                                 .anyRequest().authenticated())
 

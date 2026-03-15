@@ -25,8 +25,8 @@ public class Contract {
     private UUID contractId;
 
     @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id", unique = true)
     private Employee employee;
 
     @Column(name = "contract_number", unique = true)

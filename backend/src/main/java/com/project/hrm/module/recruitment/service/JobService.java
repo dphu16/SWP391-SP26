@@ -13,7 +13,7 @@ public interface JobService {
     List<JobResponse> getAllJob();
     List<JobResponse> getJobByEmployeeId(UUID id);
     JobResponse getJobById(UUID id);
-    List<JobResponse> getJobByStatus(String status);
+    List<JobResponse> getJobByStatus(JobStatus status);
     JobResponse update(UUID id, CreateJobRequest request);
     JobResponse updateStatus(UUID id, JobStatus status);
     void delete(UUID id);

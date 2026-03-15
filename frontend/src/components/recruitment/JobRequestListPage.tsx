@@ -1,14 +1,21 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, {useState, useEffect, useCallback, useRef} from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { jobRequestService } from "../../services/jobRequestService";
 import type { JobRequest } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
 import { DeleteConfirmation } from "./DeleteConfirmation";
 import { useToast } from "../ui/Toast";
-
+import { useAuth } from "../../hooks/useAuth";
+import { employeeService } from "../../services/employeeService";
 const JobRequestListPage: React.FC = () => {
     const navigate = useNavigate();
     const { error: toastError, success: toastSuccess } = useToast();
+    const toastErrorRef = useRef(toastError);
+    const toastSuccessRef = useRef(toastSuccess);
+
+    useEffect(() => { toastErrorRef.current = toastError; }, [toastError]);
+    useEffect(() => { toastSuccessRef.current = toastSuccess; }, [toastSuccess]);
+    const { user } = useAuth();
 
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -26,15 +33,34 @@ const JobRequestListPage: React.FC = () => {
         try {
             setLoading(true);
             setError(null);
-            const res = await jobRequestService.getAll();
-            setRequests(res.data);
+
+            if (user?.role === "MANAGER" && user.employeeId) {
+                // Fetch employee detail to get department
+                const employeeRes = await employeeService.getEmployeeDetail(user.employeeId);
+                const deptName = employeeRes.data.deptName;
+
+                if (deptName) {
+                    const reqRes = await jobRequestService.getByDepartment(deptName);
+                    setRequests(reqRes.data);
+                } else {
+                    setRequests([]);
+                }
+            } else if (user?.role === "HR" && user.employeeId) {
+                // HR gets their assigned requests
+                const reqRes = await jobRequestService.getByHR(user.employeeId);
+                setRequests(reqRes.data);
+            } else {
+                // Admin or others get all requests
+                const res = await jobRequestService.getAll();
+                setRequests(res.data);
+            }
         } catch (err: any) {
             setError("Failed to load job requests. Please try again later.");
-            toastError("Error", "Could not fetch job requests.");
+            toastErrorRef.current("Error", "Could not fetch job requests.");
         } finally {
             setLoading(false);
         }
-    }, [toastError]);
+    }, [user]);
 
     useEffect(() => {
         fetchRequests();
@@ -69,7 +95,7 @@ const JobRequestListPage: React.FC = () => {
 
     // Filter and Paginate
     const filteredRequests = requests.filter(req =>
-        req.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        req.posName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         req.deptName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (req.reviewer && req.reviewer.toLowerCase().includes(searchTerm.toLowerCase()))
     );
@@ -87,8 +113,10 @@ const JobRequestListPage: React.FC = () => {
                     <h1 className="text-2xl font-bold font-heading text-text-primary-light tracking-tight">
                         Job Requests
                     </h1>
-                    <p className="mt-0.5 text-sm text-text-secondary-light">
-                        Internal hiring requests from departments
+                    <p className="mt-0.5 text-sm font-medium text-text-secondary-light">
+                        <Link to="/dashboard" className="hover:text-primary transition-colors">Home</Link>
+                        <span className="mx-2">&gt;</span>
+                        <span className="text-text-primary-light">Job Requests</span>
                     </p>
                 </div>
                 <button
@@ -111,7 +139,7 @@ const JobRequestListPage: React.FC = () => {
                     </span>
                     <input
                         type="text"
-                        placeholder="Search by title, department, or report to..."
+                        placeholder="Search by position, department, or report to..."
                         value={searchTerm}
                         onChange={(e) => {
                             setSearchTerm(e.target.value);
@@ -133,7 +161,7 @@ const JobRequestListPage: React.FC = () => {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-gray-100 bg-white">
-                                        <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-text-secondary-light">Title</th>
+                                        <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-text-secondary-light">Position Title</th>
                                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-text-secondary-light">Department</th>
                                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-text-secondary-light">Report To</th>
                                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-text-secondary-light">Status</th>
@@ -156,7 +184,7 @@ const JobRequestListPage: React.FC = () => {
                                             >
                                                 <td className="px-6 py-4">
                                                     <div className="font-semibold text-text-primary-light">
-                                                        {req.title}
+                                                        {req.posName}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-text-secondary-light">

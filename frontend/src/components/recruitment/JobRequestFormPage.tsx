@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { jobRequestService } from "../../services/jobRequestService";
 import type { JobRequestInput } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
 import { useToast } from "../ui/Toast";
-import { departmentService } from "../../services/departmentService";
-import type { Department } from "../../services/departmentService";
+import { edpService } from "../../services/edpService";
+import type { Position, Department, HrEmployee } from "../../services/edpService";
+import { useAuth } from "../../hooks/useAuth";
 
 const inputCls = "w-full px-4 py-2.5 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
 const labelCls = "block text-[11px] font-bold uppercase tracking-wider text-text-secondary-light mb-1.5";
@@ -14,20 +15,24 @@ const JobRequestFormPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { error: toastError, success: toastSuccess } = useToast();
+    const { user } = useAuth();
 
     const isEdit = Boolean(id);
     const [loading, setLoading] = useState(isEdit);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [departments, setDepartments] = useState<Department[]>([]);
+    const [employees, setEmployees] = useState<HrEmployee[]>([]);
+    const [positions, setPositions] = useState<Position[]>([]);
+    const [managerDeptId, setManagerDeptId] = useState<string | null>(null);
 
     const [formData, setFormData] = useState<JobRequestInput>({
-        title: "",
+        posId: "",
         deptId: "",
         quantity: 1,
-        location: "Hanoi",
-        type: "FULL_TIME",
-        reportTo: "01111111-1111-1111-1111-111111111111",
+        location: "",
+        type: "OFFICIAL",
+        reportTo: "",
         reason: "",
         status: "SUBMITTED",
         comment: "",
@@ -36,13 +41,31 @@ const JobRequestFormPage: React.FC = () => {
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
-                // Fetch departments first
-                const deptRes = await departmentService.getAll();
-                setDepartments(deptRes.data);
+                // Fetch departments and employees
+                const [deptRes, empRes] = await Promise.all([
+                    edpService.getDepartments(),
+                    edpService.getHr()
+                ]);
+                const depts = deptRes.data;
+                setDepartments(depts);
+                setEmployees(empRes.data);
+
+                let autoDeptId: string | null = null;
+                if (user?.role === "MANAGER" && user.employeeId) {
+                    try {
+                        const deptData = await edpService.getManagerDepartment(user.employeeId);
+                        autoDeptId = deptData.data.deptId;
+                        setManagerDeptId(autoDeptId);
+                    } catch (e) {
+                        console.error("Failed to fetch manager department");
+                    }
+                }
 
                 if (isEdit && id) {
                     const res = await jobRequestService.getById(id);
                     setFormData(res.data);
+                } else if (!isEdit && autoDeptId) {
+                    setFormData(prev => ({ ...prev, deptId: autoDeptId as string }));
                 }
             } catch (err) {
                 setError("Failed to load necessary data.");
@@ -53,7 +76,18 @@ const JobRequestFormPage: React.FC = () => {
         };
 
         fetchInitialData();
-    }, [id, isEdit, toastError]);
+    }, [id, isEdit, toastError, user]);
+
+    // Fetch positions when department changes
+    useEffect(() => {
+        if (formData.deptId) {
+            edpService.getPositionsByDept(formData.deptId)
+                .then((res: any) => setPositions(res.data))
+                .catch((err: any) => console.error("Failed to load positions", err));
+        } else {
+            setPositions([]);
+        }
+    }, [formData.deptId]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -88,20 +122,16 @@ const JobRequestFormPage: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
             <div className="flex items-center gap-4">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="p-2 rounded-xl text-text-secondary-light hover:bg-gray-100 transition-colors cursor-pointer"
-                >
-                    <svg viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
-                        <path fillRule="evenodd" d="M7.78 12.53a.75.75 0 01-1.06 0L2.47 8.28a.75.75 0 010-1.06l4.25-4.25a.75.75 0 011.06 1.06L4.81 7h7.44a.75.75 0 010 1.5H4.81l2.97 2.97a.75.75 0 010 1.06z" clipRule="evenodd" />
-                    </svg>
-                </button>
                 <div>
                     <h1 className="text-2xl font-bold font-heading text-text-primary-light tracking-tight">
                         {isEdit ? "Update Job Request" : "Post Job Request"}
                     </h1>
-                    <p className="text-sm text-text-secondary-light">
-                        {isEdit ? "Modify existing hiring request details" : "Create a new hiring request for approval"}
+                    <p className="text-sm font-medium text-text-secondary-light mb-2">
+                        <Link to="/dashboard" className="hover:text-primary transition-colors">Home</Link>
+                        <span className="mx-2">&gt;</span>
+                        <Link to="/recruitment/job-requests" className="hover:text-primary transition-colors">Job Requests</Link>
+                        <span className="mx-2">&gt;</span>
+                        <span className="text-text-primary-light">{isEdit ? "Update Request" : "New Request"}</span>
                     </p>
                 </div>
             </div>
@@ -111,18 +141,6 @@ const JobRequestFormPage: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="rounded-2xl border border-border-light bg-white shadow-card p-6 md:p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="md:col-span-2">
-                            <label className={labelCls}>Job Title / Role Name</label>
-                            <input
-                                required
-                                name="title"
-                                value={formData.title}
-                                onChange={handleChange}
-                                placeholder="e.g. Senior Product Designer"
-                                className={inputCls}
-                            />
-                        </div>
-
                         <div>
                             <label className={labelCls}>Department</label>
                             <select
@@ -131,6 +149,7 @@ const JobRequestFormPage: React.FC = () => {
                                 value={formData.deptId}
                                 onChange={handleChange}
                                 className={inputCls}
+                                disabled={user?.role === "MANAGER" && !!managerDeptId}
                             >
                                 <option value="" disabled>Select a department</option>
                                 {departments.map(dept => (
@@ -142,7 +161,44 @@ const JobRequestFormPage: React.FC = () => {
                         </div>
 
                         <div>
-                            <label className={labelCls}>Headcount (Quantity)</label>
+                            <label className={labelCls}>Position Title</label>
+                            <select
+                                required
+                                name="posId"
+                                value={formData.posId}
+                                onChange={handleChange}
+                                className={inputCls}
+                                disabled={!formData.deptId}
+                            >
+                                <option value="" disabled>Select a position</option>
+                                {positions.map(pos => (
+                                    <option key={pos.posId} value={pos.posId}>
+                                        {pos.posName}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className={labelCls}>Report To HR</label>
+                            <select
+                                required
+                                name="reportTo"
+                                value={formData.reportTo}
+                                onChange={handleChange}
+                                className={inputCls}
+                            >
+                                <option value="" disabled>Select a HR</option>
+                                {employees.map(emp => (
+                                    <option key={emp.empId} value={emp.empId}>
+                                        {emp.empName}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className={labelCls}>Quantity</label>
                             <input
                                 required
                                 type="number"
@@ -161,7 +217,7 @@ const JobRequestFormPage: React.FC = () => {
                                 name="location"
                                 value={formData.location}
                                 onChange={handleChange}
-                                placeholder="e.g. Remote, Hanoi, Office"
+                                placeholder="e.g. Hanoi"
                                 className={inputCls}
                             />
                         </div>
@@ -174,10 +230,8 @@ const JobRequestFormPage: React.FC = () => {
                                 onChange={handleChange}
                                 className={inputCls}
                             >
-                                <option value="FULL_TIME">Full-time</option>
-                                <option value="PART_TIME">Part-time</option>
-                                <option value="CONTRACT">Contract</option>
-                                <option value="INTERNSHIP">Internship</option>
+                                <option value="OFFICIAL">Official</option>
+                                <option value="PROBATION">Probation</option>
                             </select>
                         </div>
 
@@ -186,7 +240,7 @@ const JobRequestFormPage: React.FC = () => {
 
 
                         <div className="md:col-span-2">
-                            <label className={labelCls}>Business Reason / Justification</label>
+                            <label className={labelCls}>Reason</label>
                             <textarea
                                 required
                                 name="reason"

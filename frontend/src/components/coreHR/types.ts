@@ -38,26 +38,18 @@ export interface NavItem {
   subItems?: string[];
 }
 
-// Application (hired candidates for onboarding)
 export interface Application {
   id: string;
-  candidateName: string;
-  candidateEmail: string;
-  candidatePhone: string;
   jobId: string;
-  jobTitle: string;
+  jobTitle?: string;
+  candidateId?: string;
+  fullName: string;
+  email: string;
+  phone: string;
   cvUrl: string;
   status: string;
-  onboardingStatus: string;
-  progressStatus: string | null;
-  rejectionReason: string | null;
-  createdAt: string;
-}
-
-// New API response: GET /api/applications/hired
-export interface OnboardingListResponse {
-  hiredApplications: Application[];
-  onboardingEmployees: Application[];
+  onboardingStatus?: "PENDING" | "IN_PROGRESS" | "COMPLETED";
+  createdAt?: string;
 }
 
 // DTO để tạo nhân viên mới (POST /api/employees/new)
@@ -73,17 +65,8 @@ export interface CreateNewHireDTO {
   taxCode: string;
   dateOfBirth: string;
   avatarUrl?: string;
-  /** UUID của Application trong module tuyển dụng. */
-  sourceApplicationId?: string | null;
-  managerId?: string;
-  dateOfJoining?: string;
-  role: string;
-  status: string;
-  contractNumber?: string;
-  contractType?: string;
-  startDate?: string;
-  endDate?: string;
-  baseSalary: number;
+  /** UUID của Application trong module tuyển dụng. Nếu có, backend sẽ xóa khỏi danh sách onboarding sau khi tạo nhân viên thành công. */
+  sourceApplicationId?: string;
 }
 
 // Offboarding employee DTO (TERMINATED / RESIGNED employees)
@@ -98,33 +81,4 @@ export interface OffboardingEmployee {
   positionTitle: string;
   employeeStatus: "TERMINATED" | "RESIGNED" | string;
   dateOfJoining: string;
-}
-
-// Offboarding request response from API
-export interface OffboardingRequest {
-  offboardingId: string;
-  employeeId: string;
-  employeeCode: string;
-  employeeName: string;
-  departmentName: string;
-  positionTitle: string;
-  avatarUrl?: string;
-  type: "RESIGNATION" | "TERMINATED" | "CONTRACT_EXPIRED";
-  status: "PENDING" | "MANAGER_APPROVED" | "HR_CONFIRMED" | "CANCELLED" | "COMPLETED";
-  reason: string;
-  requestDate: string;
-  expectedLastDay?: string;
-  officialLastDay?: string;
-  requestedBy?: string;
-  requestedByName?: string;
-  approvedByManager?: string;
-  approvedByManagerName?: string;
-  managerApprovedDate?: string;
-  confirmedByHr?: string;
-  confirmedByHrName?: string;
-  hrConfirmedDate?: string;
-  cancelReason?: string;
-  cancelledBy?: string;
-  cancelledByName?: string;
-  cancelledDate?: string;
 }

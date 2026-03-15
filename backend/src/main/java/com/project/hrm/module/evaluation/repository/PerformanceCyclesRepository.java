@@ -10,4 +10,6 @@ import com.project.hrm.module.evaluation.enums.CycleStatus;
 public interface PerformanceCyclesRepository
         extends JpaRepository<PerformanceCycles, UUID> {
     Optional<PerformanceCycles> findFirstByStatusOrderByCreatedAtDesc(CycleStatus status);
+    boolean existsByCycleNameIgnoreCase(String cycleName);
+    boolean existsByCycleNameIgnoreCaseAndCycleIdNot(String cycleName, UUID cycleId);
 }
