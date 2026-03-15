@@ -24,7 +24,6 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -47,7 +46,7 @@ public class InterviewServiceImpl implements InterviewService {
         Application app = applicationRepository.findById(request.getAppId())
                 .orElseThrow(() -> new RuntimeException("Not found application!"));
         boolean check = false;
-        if (entity == null) {
+        if(entity == null){
             check = true;
 
             entity = new Interview();
@@ -63,7 +62,7 @@ public class InterviewServiceImpl implements InterviewService {
         entity.setScheduleTime(time);
         entity.setStatus(InterviewStatus.SCHEDULED);
         interviewRepository.save(entity);
-        if (check) {
+        if(check){
             Job job = jobRepository.findById(app.getJob().getId())
                     .orElseThrow(() -> new RuntimeException("Not found job."));
             EmailRequest emailRequest = realDay(app, job, entity);
@@ -82,26 +81,27 @@ public class InterviewServiceImpl implements InterviewService {
     }
 
     @Override
-    public InterviewResponse inputResult(UUID id, InterviewRequest request) {
+    public InterviewResponse inputResult(UUID id,InterviewRequest request) {
         Interview entity = interviewRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Not found interview"));
         Employee employee = employeeRepository.findById(request.getInterviewerId())
                 .orElseThrow(() -> new RuntimeException("Interviewer not found!"));
         entity.setInterviewer(employee);
         entity.setStatus(request.getStatus());
-        if (request.getStatus().equals(InterviewStatus.CANCELLED)) {
+        if(request.getStatus().equals(InterviewStatus.CANCELLED)){
             entity.getApp().setStatus(ApplicationStatus.REJECTED);
         } else {
-            if (request.getScore() == null) {
+            if(request.getScore() == null){
                 throw new RuntimeException("Score is not empty!");
             }
-            if (request.getScore().doubleValue() <= 0
-                    || request.getScore().doubleValue() > 10) {
+            if(request.getScore().doubleValue()<=0
+                    || request.getScore().doubleValue()>10
+            ){
                 throw new RuntimeException("Score must be between 0 and 10!");
             }
             entity.setScore(request.getScore());
 
-            if (entity.getApp().getScore() == null) {
+            if(entity.getApp().getScore() == null){
                 entity.getApp().setScore(request.getScore());
             } else {
                 double weight;
@@ -110,15 +110,14 @@ public class InterviewServiceImpl implements InterviewService {
                 boolean isHrInterviewer = employee.getUser() != null
                         && employee.getUser().getRoles() != null
                         && employee.getUser().getRoles().stream()
-                                .map(role -> role.getName())
-                                .anyMatch(roleName -> Objects.equals(roleName, EmployeeRole.ROLE_HR));
+                        .anyMatch(r -> r.getName() == EmployeeRole.ROLE_HR);
 
                 if (isHrInterviewer) {
                     weight = 0.3;
                 } else {
                     weight = 0.7;
                 }
-                double total = score * weight + appScore * (1 - weight);
+                double total = score*weight+appScore*(1-weight);
 
                 BigDecimal totalScore = BigDecimal.valueOf(total);
 
@@ -130,14 +129,13 @@ public class InterviewServiceImpl implements InterviewService {
         return mapToResponse(entity);
     }
 
+
     @Override
     public List<InterviewResponse> getInterviewList(UUID interviewer) {
-        List<Interview> interviews = interviewRepository
-                .findByInterviewer_EmployeeIdAndStatusOrderByScheduleTime(interviewer, InterviewStatus.SCHEDULED);
-        for (Interview i : interviews) {
+        List<Interview> interviews = interviewRepository.findByInterviewer_EmployeeIdAndStatusOrderByScheduleTime(interviewer, InterviewStatus.SCHEDULED);
+        for(Interview i: interviews){
             boolean check = i.getApp().getStatus().equals(ApplicationStatus.OFFER);
-            if (check)
-                interviewRepository.deleteById(i.getId());
+            if(check) interviewRepository.deleteById(i.getId());
         }
         return interviews.stream()
                 .map(this::mapToResponse)
@@ -152,16 +150,14 @@ public class InterviewServiceImpl implements InterviewService {
         List<Interview> sendList = new ArrayList<>();
         boolean check;
         EmployeeRole role = EmployeeRole.ROLE_MANAGER;
-        for (Interview i : list) {
-            if (i.getScheduleTime() == null) {
-                throw new RuntimeException(i.getApp().getCandidate().getFullName() + " hasn't interview day!");
+        for(Interview i: list){
+            if(i.getScheduleTime() == null){
+                throw new RuntimeException(i.getApp().getCandidate().getFullName()+" hasn't interview day!");
             }
             check = interviewRepository.existsByApp_IdAndInterviewer_User_Roles_Name(i.getApp().getId(), role);
-            if (check) {
-                throw new RuntimeException(
-                        "This app has name " + i.getApp().getCandidate().getFullName() + " is existed!");
-            }
-            ;
+            if(check) {
+                throw new RuntimeException("This app has name "+i.getApp().getCandidate().getFullName()+" is existed!");
+            };
             Interview entity = new Interview();
             entity.setApp(i.getApp());
             entity.setInterviewer(dept.getManager());
@@ -178,11 +174,11 @@ public class InterviewServiceImpl implements InterviewService {
     @Override
     public void deleteInterview(UUID appId) {
         Application application = applicationRepository.findById(appId)
-                .orElseThrow(() -> new RuntimeException("Not found application"));
+                        .orElseThrow(() -> new RuntimeException("Not found application"));
         interviewRepository.deleteAllByApp_Id(appId);
     }
 
-    private EmailRequest realDay(Application app, Job job, Interview interview) {
+    private EmailRequest realDay(Application app, Job job, Interview interview){
         EmailRequest request = new EmailRequest();
         request.setTitle(job.getPos().getTitle());
         request.setCandidateName(app.getCandidate().getFullName());
@@ -192,7 +188,7 @@ public class InterviewServiceImpl implements InterviewService {
         return request;
     }
 
-    private InterviewResponse mapToResponse(Interview entity) {
+    private InterviewResponse mapToResponse(Interview entity){
         InterviewResponse response = new InterviewResponse();
         response.setId(entity.getId());
         response.setAppId(entity.getApp().getId());
@@ -200,7 +196,7 @@ public class InterviewServiceImpl implements InterviewService {
         response.setInterviewerName(entity.getInterviewer().getFullName());
         response.setScheduleTime(entity.getScheduleTime());
         response.setStatus(entity.getStatus());
-        if (entity.getFeedback() != null) {
+        if(entity.getFeedback() != null){
             response.setFeedback(entity.getFeedback());
             response.setScore(entity.getScore());
         }
