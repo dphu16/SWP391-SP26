@@ -29,9 +29,10 @@ export function decodeJwt(token: string | null): JwtPayload | null {
 
     const jsonStr = base64UrlDecode(parts[1]);
     const payload = JSON.parse(jsonStr) as JwtPayload;
-    if (payload.exp && payload.exp * 1000 < Date.now()) {
-      return null;
-    }
+    
+    // We intentionally removed the frontend `exp` check here. 
+    // Always trust the JWT structure if it parses, and let the 
+    // backend return 401 to trigger the actual refresh cycle.
 
     return payload;
   } catch {

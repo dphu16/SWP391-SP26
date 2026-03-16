@@ -1,50 +1,39 @@
 import { useMemo, useCallback } from "react";
+import { useSyncExternalStore } from "react";
 import { getToken } from "../services/authService";
 import { decodeJwt } from "../utils/jwtDecode";
 
-export type UserRole =
-  | "HR"
-  | "MANAGER"
-  | "EMPLOYEE"
-  | "FINANCE"
-  | "MENTOR"
-  | "INTERN"
-  | "PROBATION";
-
-export interface AuthUser {
-  username: string;
-  role: UserRole;
-  fullName?: string;
-  employeeId?: string;
-  avatarUrl?: string;
+// Giống pattern trong ProtectedRoute.tsx — subscribe localStorage changes
+function subscribeToStorage(callback: () => void) {
+    window.addEventListener("storage", callback);
+    window.addEventListener("auth-change", callback);
+    return () => {
+        window.removeEventListener("storage", callback);
+        window.removeEventListener("auth-change", callback);
+    };
 }
 
-function normalizeRole(rawRole?: string): UserRole | null {
-  if (!rawRole) return null;
+export type UserRole =
+    | "HR" | "MANAGER" | "EMPLOYEE"
+    | "FINANCE" | "MENTOR" | "INTERN" | "PROBATION";
 
-  const normalized = rawRole.replace("ROLE_", "") as UserRole;
-  const allowedRoles: UserRole[] = [
-    "HR",
-    "MANAGER",
-    "EMPLOYEE",
-    "FINANCE",
-    "MENTOR",
-    "INTERN",
-    "PROBATION",
-  ];
-
-  return allowedRoles.includes(normalized) ? normalized : null;
+export interface AuthUser {
+    username: string;
+    role: UserRole;
+    fullName?: string;
+    employeeId?: string;
+    avatarUrl?: string;
 }
 
 export function useAuth() {
-  const token = getToken();
+    // ✅ Reactive: re-render khi token thay đổi
+    const token = useSyncExternalStore(subscribeToStorage, getToken);
 
-  const user: AuthUser | null = useMemo(() => {
-    const payload = decodeJwt(token);
-    if (!payload) return null;
+    // ✅ token nằm trong dependency array
+    const user: AuthUser | null = useMemo(() => {
+        const payload = decodeJwt(token);
+        if (!payload) return null;
 
-        // JWT stores roles as array: ["ROLE_HR"], ["ROLE_EMPLOYEE"], etc.
-        // Strip the "ROLE_" prefix and take the first role
         const rawRoles: string[] = Array.isArray(payload.roles) ? payload.roles : [];
         const firstRole = rawRoles[0]?.replace(/^ROLE_/, "") as UserRole ?? "EMPLOYEE";
 
@@ -55,16 +44,15 @@ export function useAuth() {
             employeeId: payload.employeeId,
             avatarUrl: payload.avatarUrl,
         };
-    }, []);
+    }, [token]); // ✅ [token] thay vì []
 
+    const hasRole = useCallback(
+        (...roles: UserRole[]): boolean => {
+            if (!user) return false;
+            return roles.includes(user.role);
+        },
+        [user],
+    );
 
-  const hasRole = useCallback(
-    (...roles: UserRole[]): boolean => {
-      if (!user) return false;
-      return roles.includes(user.role);
-    },
-    [user],
-  );
-
-  return { user, hasRole };
+    return { user, hasRole };
 }

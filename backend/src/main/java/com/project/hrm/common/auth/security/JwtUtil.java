@@ -1,7 +1,7 @@
 package com.project.hrm.common.auth.security;
 
-
-import com.project.hrm.module.corehr.repository.UserRepository;
+import com.project.hrm.module.corehr.entity.Employee;
+import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -13,11 +13,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.function.Function;
 
 @Component
 public class JwtUtil {
@@ -28,10 +26,10 @@ public class JwtUtil {
     @Value("${app.jwt.access-token-expiry}")
     private long expirationMs;
 
-    private final UserRepository userRepository;
+    private final EmployeeRepository employeeRepository;
 
-    public JwtUtil(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public JwtUtil(EmployeeRepository employeeRepository) {
+        this.employeeRepository = employeeRepository;
     }
 
     private SecretKey key() {
@@ -39,35 +37,22 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
+
     public String generateToken(UserDetails userDetails) {
         return generateToken(userDetails, null);
     }
 
-    public String generateToken(UserDetails userDetails, com.project.hrm.module.corehr.entity.User user) {
+    public String generateToken(UserDetails userDetails, String fullName) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", userDetails.getAuthorities()
                 .stream().map(GrantedAuthority::getAuthority).toList());
-
-        if (user != null) {
-            if (user.getFullName() != null && !user.getFullName().trim().isEmpty()) {
-                claims.put("fullName", user.getFullName());
-            }
-            if (user.getRole() != null) {
-                claims.put("role", user.getRole().name().replace("ROLE_", ""));
-            }
-            if (user.getAvatarUrl() != null && !user.getAvatarUrl().trim().isEmpty()) {
-                claims.put("avatarUrl", user.getAvatarUrl());
-            }
-            if (user.getEmployee() != null && user.getEmployee().getEmployeeId() != null) {
-                claims.put("employeeId", user.getEmployee().getEmployeeId().toString());
-            }
+        if (fullName != null && !fullName.isBlank()) {
+            claims.put("fullName", fullName);
         }
 
-        // Add employeeId to JWT directly from User table
-        // Đoạn code đã sửa
-        userRepository.findByEmail(userDetails.getUsername())
-                .filter(u -> u.getEmployee() != null && u.getEmployee().getEmployeeId() != null)
-                .ifPresent(u -> claims.put("employeeId", u.getEmployee().getEmployeeId().toString()));
+        // Add employeeId to JWT
+        employeeRepository.findByUser_Email(userDetails.getUsername())
+                .ifPresent(emp -> claims.put("employeeId", emp.getEmployeeId().toString()));
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -83,18 +68,24 @@ public class JwtUtil {
         return parseClaims(token).getSubject();
     }
 
-    /**
-     * Extract the employeeId claim embedded in the token (maybe null for users
-     * without employee records).
-     */
-    public String extractEmployeeId(String token) {
-        Object empId = parseClaims(token).get("employeeId");
-        return empId != null ? empId.toString() : null;
-    }
-
     public boolean isValid(String token, UserDetails userDetails) {
         return extractUsername(token).equals(userDetails.getUsername())
                 && !isExpired(token);
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<String> extractRoles(String token) {
+        Claims claims = parseClaims(token);
+        Object rolesObj = claims.get("roles");
+        if (rolesObj instanceof List<?>) {
+            return (List<String>) rolesObj;
+        }
+        return Collections.emptyList();
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        Claims claims = parseClaims(token);
+        return claimsResolver.apply(claims);
     }
 
     private boolean isExpired(String token) {

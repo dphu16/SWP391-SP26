@@ -30,7 +30,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/hr/payroll")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ROLE_HR')")
+@PreAuthorize("hasRole('HR')")
 public class HRPayrollController {
 
     private final PayrollPeriodService periodService;

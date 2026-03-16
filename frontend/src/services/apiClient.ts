@@ -1,54 +1,121 @@
-import axios from "axios";
-import { getToken, removeToken } from "./authService";
-import { decodeJwt } from "../utils/jwtDecode";
+import axios, { AxiosError } from "axios";
+import type { InternalAxiosRequestConfig } from "axios";
+import {
+  getToken,
+  getRefreshToken,
+  saveToken,
+  saveRefreshToken,
+  removeToken,
+  refreshAccessToken,
+} from "./authService";
 
 const apiClient = axios.create({
- baseURL: "/",
- headers: { "Content-Type": "application/json" },
+  baseURL: "/",
+  headers: { "Content-Type": "application/json" },
 });
 
-// ── Request interceptor: attach token if valid ──
+// ── Refresh-lock: prevent multiple concurrent refresh calls ──
+let isRefreshing = false;
+let failedQueue: {
+  resolve: (token: string) => void;
+  reject: (err: unknown) => void;
+}[] = [];
+
+function processQueue(error: unknown, token: string | null) {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token!);
+    }
+  });
+  failedQueue = [];
+}
+
+// ── Request interceptor: attach access token ──
 apiClient.interceptors.request.use(
- (config) => {
- const token = getToken();
- if (token) {
- const payload = decodeJwt(token);
- if (!payload) {
- // Token is expired/corrupt client-side → clean up
- removeToken();
- } else {
- config.headers.Authorization = `Bearer ${token}`;
- }
- }
- return config;
- },
- (error) => Promise.reject(error),
+  (config) => {
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
 );
 
-// ── Response interceptor: handle 401 carefully ──
+// ── Response interceptor: auto-refresh on 401 ──
 apiClient.interceptors.response.use(
- (response) => response,
- (error) => {
- if (error.response?.status === 401) {
- // Only clear the token when the server explicitly says it's invalid.
- // Check if we still have a token that the server rejected — meaning
- // the token itself is bad (expired server-side, revoked, tampered).
- // Do NOT remove token for 403 (authorized but insufficient role).
- const token = getToken();
- if (token) {
- const payload = decodeJwt(token);
- if (!payload) {
- // Token is already expired/invalid client-side too → remove
- removeToken();
- }
- // If payload is still valid client-side but server says 401,
- // the server may be rejecting for a specific reason (e.g.
- // endpoint auth issue). Don't nuke a valid session.
- // Components should handle the error in their catch blocks.
- }
- }
- return Promise.reject(error);
- },
+  (response) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
+
+    // Only handle 401 and only retry once
+    if (error.response?.status !== 401 || originalRequest._retry) {
+      return Promise.reject(error);
+    }
+
+    // Don't try to refresh on auth endpoints themselves (prevents infinite loops)
+    const url = originalRequest.url || "";
+    if (url.includes("/api/auth/")) {
+      return Promise.reject(error);
+    }
+
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      // No refresh token available → force logout
+      removeToken();
+      window.location.href = "/login";
+      return Promise.reject(error);
+    }
+
+    // If already refreshing, queue this request until the refresh completes
+    if (isRefreshing) {
+      return new Promise<string>((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      }).then((newToken) => {
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return apiClient(originalRequest);
+      });
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    try {
+      const data = await refreshAccessToken(refreshToken);
+
+      // Save the new access token
+      saveToken(data.accessToken);
+
+      // If the server returned a new refresh token, persist it with
+      // the same strategy (localStorage vs sessionStorage).
+      if (data.refreshToken) {
+        const isPersistent =
+          localStorage.getItem("remember_me") === "true";
+        saveRefreshToken(data.refreshToken, isPersistent);
+      }
+
+      const newAccessToken = data.accessToken;
+
+      // Resolve all queued requests with the new token
+      processQueue(null, newAccessToken);
+
+      // Retry the original request with the new token
+      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+      return apiClient(originalRequest);
+    } catch (refreshError) {
+      // Refresh failed → clear everything and redirect to login
+      processQueue(refreshError, null);
+      removeToken();
+      window.location.href = "/login";
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
+  },
 );
 
 export default apiClient;

@@ -134,7 +134,7 @@ export const kpiService = {
 
     getAllDepartments: async (): Promise<Department[]> => {
         try {
-            const response = await apiClient.get<any[]>("/api/departments");
+            const response = await apiClient.get<any[]>("/api/lookup/departments");
             return response.data.map(d => ({
                 id: d.deptId,
                 name: d.deptName

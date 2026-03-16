@@ -26,18 +26,21 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         System.out.println(">>> Password from DB: " + user.getPassword());
         List<GrantedAuthority> authorities = user.getRoles().stream()
-                .map(r -> new SimpleGrantedAuthority(r.getName().name()))
+                .map(r -> new SimpleGrantedAuthority(toRoleAuthority(r.getName().name())))
                 .collect(Collectors.toList());
-
-        // Fallback: if user_roles table is empty, use the 'role' column directly
-        if (authorities.isEmpty() && user.getRole() != null) {
-            authorities = List.of(new SimpleGrantedAuthority(user.getRole().name()));
-        }
 
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword() == null ? "" : user.getPassword(),
-                authorities
-        );
+                authorities);
+    }
+
+    private String toRoleAuthority(String rawRoleName) {
+        if (rawRoleName == null || rawRoleName.isBlank()) {
+            throw new IllegalArgumentException("Role name cannot be null or blank");
+        }
+
+        String normalized = rawRoleName.trim().toUpperCase();
+        return normalized.startsWith("ROLE_") ? normalized : "ROLE_" + normalized;
     }
 }

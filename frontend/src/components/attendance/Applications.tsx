@@ -17,11 +17,14 @@ import {
   offboardingService,
   type OffboardingResponse,
 } from "../../services/offboardingService";
-import { personnelChangeService } from "../../services/personnelChangeService";
+import {personnelChangeService, type PositionLookup} from "../../services/personnelChangeService";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type AppStatus = "Pending" | "Approved" | "Rejected";
-type AppType = "Leave" | "OT" | "Other" | "Resignation" | "PersonnelChange";
+type AppType =
+  | "Leave"
+  | "OT"
+  | "Other" | "Resignation" | "PersonnelChange";
 type ModalType =
   | "Leave"
   | "OT"
@@ -184,8 +187,6 @@ const statusBadge: Record<AppStatus, string> = {
   Rejected: "bg-[#fee2e2] text-[#dc2626]",
 };
 
-// FIX 5: Defined a minimal EmployeeSearch component inline so the file is
-// self-contained. Replace with your real import if it lives in another module.
 const EmployeeSearch: React.FC<{
   value: AttendanceEmployee | null;
   onChange: (emp: AttendanceEmployee | null) => void;
@@ -350,7 +351,7 @@ const Applications: React.FC = () => {
               : o.status === "CANCELLED"
                 ? "Rejected"
                 : "Approved") as AppStatus,
-            raw: {} as any,
+              raw: {} as RequestRecordApi,
           }),
         );
 
@@ -382,7 +383,10 @@ const Applications: React.FC = () => {
         .get("/api/lookup/positions")
         .then((res) => {
           setPositions(
-            res.data?.map((p: any) => ({ id: p.id, name: p.name || p.title })),
+              res.data?.map((p: PositionLookup) => ({
+                  id: p.id,
+                  name: p.name || p.title || "",
+              })),
           );
         })
         .catch(() => {});
@@ -690,8 +694,8 @@ const Applications: React.FC = () => {
                   <tr
                     key={r.id}
                     className="hover:bg-[#f8fafc] transition-colors"
-                  >
-                    <td className="px-5 py-4">
+
+                  >  <td className="px-5 py-4">
                       <div className="flex items-center space-x-3">
                         <div
                           className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${typeBg[r.type]}`}
@@ -722,8 +726,8 @@ const Applications: React.FC = () => {
                           onClick={() => handleEdit(r)}
                           disabled={
                             r.status !== "Pending" || r.type === "Resignation"
-                          }
-                          className={`transition-colors ${r.status !== "Pending" || r.type === "Resignation" ? "text-gray-300 cursor-not-allowed" : "text-[#94a3b8] hover:text-[#0ea5e9]"}`}
+
+                          }className={`transition-colors ${r.status !== "Pending" || r.type === "Resignation" ? "text-gray-300 cursor-not-allowed" : "text-[#94a3b8] hover:text-[#0ea5e9]"}`}
                           title={
                             r.status === "Pending"
                               ? "Edit request"
@@ -1136,7 +1140,6 @@ const Applications: React.FC = () => {
                       <option value="DEPARTMENT_TRANSFER">
                         Department Transfer
                       </option>
-                      <option value="TITLE_CHANGE">Title Change</option>
                       <option value="SALARY_CHANGE">Salary Change</option>
                       <option value="DISCIPLINE">Discipline</option>
                       <option value="REWARD">Reward</option>
@@ -1190,49 +1193,7 @@ const Applications: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  {formData.pcType === "TITLE_CHANGE" && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                          New Position
-                        </label>
-                        <select
-                          value={formData.newPositionId}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              newPositionId: e.target.value,
-                            })
-                          }
-                          className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                        >
-                          <option value="">Select Position...</option>
-                          {positions.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                          New Title
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.newTitle}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              newTitle: e.target.value,
-                            })
-                          }
-                          placeholder="e.g. Senior Backend Dev"
-                          className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                        />
-                      </div>
-                    </div>
-                  )}
+
                   {formData.pcType === "SALARY_CHANGE" && (
                     <div>
                       <label className="block text-sm font-semibold text-[#334155] mb-1.5">

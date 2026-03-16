@@ -42,7 +42,6 @@ const parseRequest = (dto: RequestResponseDTO): ReviewEntry => {
     if (dto.requestType === "OT") appType = "Overtime";
     if (dto.requestType === "OTHER") appType = "Other Request";
     if (dto.requestType === "APPROVAL") appType = "Onboarding Approval";
-    if (dto.requestType === "SHIFT_CHANGE") appType = "Shift Change";
 
     let status: AppStatus = "Pending";
     if (dto.status === "APPROVED") status = "Approved";
@@ -96,20 +95,6 @@ const parseRequest = (dto: RequestResponseDTO): ReviewEntry => {
             day: "numeric",
         });
         sub = rawReason || "Other Request";
-    } else if (dto.requestType === "SHIFT_CHANGE") {
-        const dStart = dto.startDate ? new Date(dto.startDate) : new Date();
-        const dEnd = dto.endDate ? new Date(dto.endDate) : new Date();
-        const match = rawReason.match(/^Swap with (.*?) \| (.*)$/);
-        if (match) {
-            details = `${dStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} 🔄 ${dEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-            sub = `Swap with ${match[1]} | ${match[2]}`;
-        } else {
-            sub = rawReason;
-            details = dStart.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-            });
-        }
     } else if (dto.requestType === "APPROVAL") {
         details = "New Employee Onboarding";
         sub = "Review and approve profile setup";
@@ -223,11 +208,10 @@ const parseOffboardingRequest = (
 };
 
 const CHANGE_TYPE_LABELS: Record<string, string> = {
-    DEPARTMENT_TRANSFER: "Department Transfer",
-    TITLE_CHANGE: "Title Change",
-    SALARY_CHANGE: "Salary Change",
-    DISCIPLINE: "Discipline",
-    REWARD: "Reward",
+  DEPARTMENT_TRANSFER: "Department Transfer",
+  SALARY_CHANGE: "Salary Change",
+  DISCIPLINE: "Discipline",
+  REWARD: "Reward",
 };
 
 const parsePersonnelChange = (
@@ -254,16 +238,14 @@ const parsePersonnelChange = (
 
     const appType = CHANGE_TYPE_LABELS[dto.changeType] || dto.changeType;
 
-    let details = dto.departmentName || "Personnel Change";
-    if (dto.changeType === "DEPARTMENT_TRANSFER") {
-        details = `${dto.oldValues?.departmentName || "Old Dept"} ➡️ ${dto.newValues?.departmentName || "New Dept"}`;
-    } else if (dto.changeType === "TITLE_CHANGE") {
-        details = `${dto.oldValues?.title || "Old Title"} ➡️ ${dto.newValues?.title || "New Title"}`;
-    } else if (dto.changeType === "SALARY_CHANGE") {
-        details = `Salary update to ${dto.newValues?.baseSalary?.toLocaleString() || "N/A"}`;
-    } else if (dto.changeType === "DISCIPLINE" || dto.changeType === "REWARD") {
-        details = dto.reason;
-    }
+  let details = dto.departmentName || "Personnel Change";
+  if (dto.changeType === "DEPARTMENT_TRANSFER") {
+    details = `${dto.oldValues?.departmentName || "Old Dept"} ➡️ ${dto.newValues?.departmentName || "New Dept"}`;
+  } else if (dto.changeType === "SALARY_CHANGE") {
+    details = `Salary update to ${dto.newValues?.baseSalary?.toLocaleString() || "N/A"}`;
+  } else if (dto.changeType === "DISCIPLINE" || dto.changeType === "REWARD") {
+    details = dto.reason;
+  }
 
     const sub = dto.reason || "No reason provided";
 
@@ -366,18 +348,21 @@ const typeIcon: Record<string, React.ReactNode> = {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
       </svg>
     </span>
-    ),
-    "Department Transfer": (
-        <span className="w-8 h-8 rounded-lg bg-[#dbeafe] text-[#1d4ed8] flex items-center justify-center flex-shrink-0">
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-      </svg>
-    </span>
-    ),
-    "Title Change": (
-        <span className="w-8 h-8 rounded-lg bg-[#ede9fe] text-[#6d28d9] flex items-center justify-center flex-shrink-0">
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+  ),
+  "Department Transfer": (
+    <span className="w-8 h-8 rounded-lg bg-[#dbeafe] text-[#1d4ed8] flex items-center justify-center flex-shrink-0">
+      <svg
+        className="w-4 h-4"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+        />
       </svg>
     </span>
     ),
@@ -613,9 +598,6 @@ const ReviewRequests: React.FC = () => {
                     <table className="w-full text-left">
                         <thead>
                         <tr className="border-b border-[#e2e8f0]">
-                            {/* FIX 3: Single set of column headers — "Details" column removed
-                    since we replaced it with a "View Details" modal button in a
-                    dedicated column. Headers now match rendered <td> columns exactly. */}
                             {["Employee Name", "Request Type", "Date Requested", "Details", "Action"].map(
                                 (h) => (
                                     <th

@@ -7,6 +7,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,11 +17,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthFilter.class);
 
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
@@ -42,30 +45,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             String email = jwtUtil.extractUsername(token);
 
-            if (email != null && SecurityContextHolder.getContext()
-                    .getAuthentication() == null) {
+            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails user = userDetailsService.loadUserByUsername(email);
 
                 if (jwtUtil.isValid(token, user)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            user, null, user.getAuthorities());
-                    authToken.setDetails(
-                            new WebAuthenticationDetailsSource().buildDetails(req));
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
 
-                    // Extract employeeId from JWT claims and set as request attribute
-                    // so that payroll controllers can use @RequestAttribute("employeeId")
-                    try {
-                        String empId = jwtUtil.extractEmployeeId(token);
-                        if (empId != null && !empId.isBlank()) {
-                            req.setAttribute("employeeId", UUID.fromString(empId));
-                        }
-                    } catch (Exception ignored) {
-                        // employeeId is optional (e.g. Admin/HR may not have one)
+                    String employeeId = jwtUtil.extractClaim(token,
+                            claims -> claims.get("employeeId", String.class));
+                    if (employeeId != null) {
+                        req.setAttribute("employeeId", employeeId);
                     }
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            logger.warn("JWT filter error: {}", e.getMessage());
         }
 
         chain.doFilter(req, res);

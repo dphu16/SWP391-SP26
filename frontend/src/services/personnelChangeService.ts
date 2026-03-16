@@ -2,16 +2,11 @@ import apiClient from "./apiClient";
 
 export interface PersonnelChangeRequestDTO {
   employeeId: string;
-  changeType:
-    | "DEPARTMENT_TRANSFER"
-    | "TITLE_CHANGE"
-    | "SALARY_CHANGE"
-    | "DISCIPLINE"
-    | "REWARD";
+  changeType: "DEPARTMENT_TRANSFER" | "SALARY_CHANGE" | "DISCIPLINE" | "REWARD";
   reason: string;
   newDepartmentId?: string;
   newPositionId?: string;
-  newTitle?: string;
+  newTitle?:string;
   newSalary?: number;
   description?: string;
 }
@@ -22,12 +17,7 @@ export interface PersonnelChangeResponseDTO {
   employeeName: string;
   employeeCode: string;
   departmentName: string;
-  changeType:
-    | "DEPARTMENT_TRANSFER"
-    | "TITLE_CHANGE"
-    | "SALARY_CHANGE"
-    | "DISCIPLINE"
-    | "REWARD";
+  changeType: "DEPARTMENT_TRANSFER" | "SALARY_CHANGE" | "DISCIPLINE" | "REWARD";
   status: "PENDING" | "MANAGER_APPROVED" | "HR_CONFIRMED" | "REJECTED";
   reason: string;
   oldValues: Record<string, unknown>;
@@ -59,6 +49,11 @@ export interface ContractResponseDTO {
   endDate: string;
   baseSalary: number;
   status: string;
+}
+export interface PositionLookup {
+    id: string;
+    name?: string;
+    title?: string;
 }
 
 const getEmployeeId = (): string => {

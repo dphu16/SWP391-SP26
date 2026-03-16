@@ -30,6 +30,8 @@ const CandidateProfileCompletion: React.FC = () => {
     setFormData,
     fieldErrors,
     clearFieldError,
+    contractFileName,
+    handleFileChange,
     handleNext,
     handleBack,
     handleGoBack,
@@ -95,6 +97,8 @@ const CandidateProfileCompletion: React.FC = () => {
                         jobId={jobId}
                         fieldErrors={fieldErrors}
                         clearFieldError={clearFieldError}
+                        onFileChange={handleFileChange}
+                        contractFileName={contractFileName}
                       />
                     )}
 
