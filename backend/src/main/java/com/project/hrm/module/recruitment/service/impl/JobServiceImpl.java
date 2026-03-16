@@ -2,6 +2,8 @@ package com.project.hrm.module.recruitment.service.impl;
 
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.entity.Position;
+import com.project.hrm.module.corehr.repository.EmployeeRepository;
+import com.project.hrm.module.corehr.repository.PositionRepository;
 import com.project.hrm.module.recruitment.dto.request.CreateJobRequest;
 import com.project.hrm.module.recruitment.dto.response.JobResponse;
 import com.project.hrm.module.recruitment.entity.Job;
@@ -27,8 +29,8 @@ public class JobServiceImpl implements JobService {
     private final JobRepository jobRepository;
     private final ApplicationRepository applicationRepository;
     private final JobDetailRepository jobDetailRepository;
-    private final REmployeeRepository REmployeeRepository;
-    private final RPositionRepository RPositionRepository;
+    private final EmployeeRepository employeeRepository;
+    private final PositionRepository positionRepository;
     private final JobRequestRepository jobRequestRepository;
 
     @Override
@@ -172,9 +174,9 @@ public class JobServiceImpl implements JobService {
             entity.setPos(jobRequest.getPos());
             entity.setEmployee(jobRequest.getReportsTo());
         } else {
-            Employee employee = REmployeeRepository.findById(request.getHrId())
+            Employee employee = employeeRepository.findById(request.getHrId())
                     .orElseThrow(() -> new RuntimeException("Employee not found"));
-            Position position = RPositionRepository.findById(request.getPosId())
+            Position position = positionRepository.findById(request.getPosId())
                     .orElseThrow(() -> new RuntimeException("Position not found"));
             entity.setEmployee(employee);
             entity.setPos(position);

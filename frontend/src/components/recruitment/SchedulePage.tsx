@@ -112,7 +112,7 @@ const SchedulePage: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-bold font-heading text-text-primary-light tracking-tight">
-                        My Interview Schedule
+                        My Interview Schedule {interviews.length > 0 && `(${interviews.length})`}
                     </h1>
                     <p className="text-text-secondary-light">
                         View upcoming and past interviews assigned to you.

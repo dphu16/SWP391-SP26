@@ -10,6 +10,7 @@ interface SidebarGroupProps {
   isCollapsed: boolean;
   onExpandSidebar: () => void;
   hasRole: (...roles: UserRole[]) => boolean;
+  badges?: Record<string, number>;
 }
 
 const SidebarGroup: React.FC<SidebarGroupProps> = ({
@@ -17,6 +18,7 @@ const SidebarGroup: React.FC<SidebarGroupProps> = ({
   isCollapsed,
   onExpandSidebar,
   hasRole,
+  badges,
 }) => {
   const location = useLocation();
   const [expanded, setExpanded] = useState(true);
@@ -54,10 +56,9 @@ const SidebarGroup: React.FC<SidebarGroupProps> = ({
         title={isCollapsed ? group.label : undefined}
         className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer focus-ring
           ${isCollapsed ? "justify-center" : ""}
-          ${
-            isGroupActive
-              ? "text-primary bg-primary/10"
-              : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
+          ${isGroupActive
+            ? "text-primary bg-primary/10"
+            : "text-text-secondary-light hover:bg-gray-50/80 hover:text-text-primary-light"
           }`}
       >
         <span className="shrink-0">{group.icon}</span>
@@ -79,7 +80,7 @@ const SidebarGroup: React.FC<SidebarGroupProps> = ({
           {visibleChildren.map((child) => (
             <SidebarItem
               key={child.key}
-              item={child}
+              item={{ ...child, badge: badges?.[child.key] }}
               isCollapsed={false}
               indent
             />

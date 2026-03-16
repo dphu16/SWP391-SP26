@@ -5,6 +5,7 @@ import SidebarGroup from "./SidebarGroup";
 import { sidebarConfig } from "./sidebarConfig";
 import { isMenuGroup } from "./types";
 import { useAuth } from "../../../hooks/useAuth";
+import { useScheduleCount } from "../../../hooks/useScheduleCount";
 
 const SectionLabel: React.FC<{ label: string; isCollapsed: boolean }> = ({
   label,
@@ -20,7 +21,12 @@ const SectionLabel: React.FC<{ label: string; isCollapsed: boolean }> = ({
 
 const Sidebar: React.FC = () => {
   const { hasRole } = useAuth();
+  const { count: scheduleCount } = useScheduleCount();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const badges = {
+    schedules: scheduleCount,
+  };
 
   return (
     <aside
@@ -100,11 +106,15 @@ const Sidebar: React.FC = () => {
                       isCollapsed={isCollapsed}
                       onExpandSidebar={() => setIsCollapsed(false)}
                       hasRole={hasRole}
+                      badges={badges}
                     />
                   ) : (
                     <SidebarItem
                       key={item.key}
-                      item={item}
+                      item={{
+                        ...item,
+                        badge: (badges as Record<string, number>)[item.key],
+                      }}
                       isCollapsed={isCollapsed}
                     />
                   ),

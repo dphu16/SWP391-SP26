@@ -3,12 +3,15 @@ package com.project.hrm.module.corehr.service.lookup;
 
 import com.project.hrm.module.corehr.dto.request.DepartmentOptionDTO;
 import com.project.hrm.module.corehr.dto.request.PositionOptionDTO;
+import com.project.hrm.module.corehr.entity.Department;
+import com.project.hrm.module.corehr.entity.Position;
 import com.project.hrm.module.corehr.repository.DepartmentRepository;
 import com.project.hrm.module.corehr.repository.PositionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class DropdownService {
@@ -44,5 +47,27 @@ public class DropdownService {
                         p.getBaseSalaryMin(),
                         p.getBaseSalaryMax()))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PositionOptionDTO> getPositionByDeptId(UUID deptId) {
+        List<Position> position = positionRepository.findByDepartment_DeptId(deptId);
+        return position.stream()
+                .sorted((a, b) -> a.getTitle().compareToIgnoreCase(b.getTitle()))
+                .map(p -> new PositionOptionDTO(
+                        p.getPositionId(),
+                        p.getTitle(),
+                        p.getDepartment() != null ? p.getDepartment().getDeptId() : null,
+                        p.getDepartment() != null ? p.getDepartment().getDeptName() : null,
+                        p.getBaseSalaryMin(),
+                        p.getBaseSalaryMax()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public DepartmentOptionDTO getDepartmentByManagerId(UUID id) {
+        Department department = departmentRepository.findByManager_EmployeeId(id);
+
+        return new DepartmentOptionDTO(department.getDeptId(), department.getDeptName());
     }
 }

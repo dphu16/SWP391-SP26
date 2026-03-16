@@ -3,6 +3,8 @@ package com.project.hrm.module.recruitment.service.impl;
 import com.project.hrm.module.corehr.entity.Department;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.enums.EmployeeRole;
+import com.project.hrm.module.corehr.repository.DepartmentRepository;
+import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.recruitment.dto.request.EmailRequest;
 import com.project.hrm.module.recruitment.dto.request.InterviewRequest;
 import com.project.hrm.module.recruitment.dto.response.InterviewResponse;
@@ -30,8 +32,8 @@ import java.util.UUID;
 public class InterviewServiceImpl implements InterviewService {
     private final ApplicationRepository applicationRepository;
     private final InterviewRepository interviewRepository;
-    private final REmployeeRepository employeeRepository;
-    private final RDepartmentRepository departmentRepository;
+    private final EmployeeRepository employeeRepository;
+    private final DepartmentRepository departmentRepository;
     private final RealInterview realInterview;
     private final JobRepository jobRepository;
 
@@ -150,7 +152,7 @@ public class InterviewServiceImpl implements InterviewService {
             check = interviewRepository.existsByApp_IdAndInterviewer_User_Role(i.getApp().getId(), role);
             if(check) {
                 throw new RuntimeException("This app has name "+i.getApp().getCandidate().getFullName()+" is existed!");
-            };
+            }
             Interview entity = new Interview();
             entity.setApp(i.getApp());
             entity.setInterviewer(dept.getManager());
@@ -166,8 +168,6 @@ public class InterviewServiceImpl implements InterviewService {
 
     @Override
     public void deleteInterview(UUID appId) {
-        Application application = applicationRepository.findById(appId)
-                        .orElseThrow(() -> new RuntimeException("Not found application"));
         interviewRepository.deleteAllByApp_Id(appId);
     }
 
