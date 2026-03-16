@@ -191,7 +191,7 @@ export const sidebarConfig: SidebarSection[] = [
             key: "job-openings",
             label: "Job Openings",
             path: "/recruitment/jobs",
-            roles: allow("recruitment:view"),
+            roles: allow("recruitment:manage"),
           },
           {
             key: "schedules",

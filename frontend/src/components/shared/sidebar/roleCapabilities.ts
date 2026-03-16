@@ -12,7 +12,8 @@ export type SidebarCapability =
   | "payroll:hr"
   | "payroll:tax"
   | "performance:view"
-  | "recruitment:view";
+  | "recruitment:view"
+  | "recruitment:manage";
 
 const allAuthenticatedRoles: UserRole[] = [
   "HR",
@@ -36,31 +37,32 @@ const capabilityRoles: Record<SidebarCapability, UserRole[]> = {
   "payroll:hr": ["HR", "MANAGER"],
   "payroll:tax": ["HR", "MANAGER"],
   "performance:view": ["HR", "MANAGER", "FINANCE"],
-  "recruitment:view": ["HR"],
+    "recruitment:view": ["HR", "MANAGER"],
+    "recruitment:manage": ["HR"],
 };
 
 const routeCapabilityMap: Array<{
   prefix: string;
   capability: SidebarCapability;
 }> = [
-  { prefix: "/onboarding/hired", capability: "candidate:view" },
-  { prefix: "/onboarding/progress", capability: "onboarding:manage" },
-  { prefix: "/employees", capability: "employees:view" },
-  { prefix: "/offboarding/requests", capability: "offboarding:manage" },
-  { prefix: "/offboarding/approval", capability: "offboarding:manage" },
+    { prefix: "/onboarding/hired", capability: "candidate:view" },
+    { prefix: "/onboarding/progress", capability: "onboarding:manage" },
+    { prefix: "/employees", capability: "employees:view" },
+    { prefix: "/offboarding/requests", capability: "offboarding:manage" },
+    { prefix: "/offboarding/approval", capability: "offboarding:manage" },
   { prefix: "/attendance/review", capability: "request:review" },
-  { prefix: "/attendance/create-schedule", capability: "attendance:manage" },
-  { prefix: "/attendance/summary", capability: "attendance:manage" },
-  { prefix: "/payroll/employee", capability: "payroll:group" },
+    { prefix: "/attendance/create-schedule", capability: "attendance:manage" },
+    { prefix: "/attendance/summary", capability: "attendance:manage" },
+    { prefix: "/payroll/employee", capability: "payroll:group" },
   { prefix: "/payroll/finance", capability: "payroll:finance" },
-  { prefix: "/payroll/hr", capability: "payroll:hr" },
-  { prefix: "/payroll/tax-report", capability: "payroll:tax" },
-  { prefix: "/performance", capability: "performance:view" },
-  { prefix: "/recruitment", capability: "recruitment:view" },
-  { prefix: "/recruitment/jobs", capability: "recruitment:view" },
-  { prefix: "/recruitment/job-requests", capability: "recruitment:view" },
-  { prefix: "/recruitment/schedules", capability: "recruitment:view" },
-];
+    { prefix: "/payroll/hr", capability: "payroll:hr" },
+    { prefix: "/payroll/tax-report", capability: "payroll:tax" },
+    { prefix: "/performance", capability: "performance:view" },
+    { prefix: "/recruitment", capability: "recruitment:view" },
+    { prefix: "/recruitment/jobs", capability: "recruitment:manage" },
+    { prefix: "/recruitment/job-requests", capability: "recruitment:view" },
+    { prefix: "/recruitment/schedules", capability: "recruitment:view" },
+  ];
 
 export function allow(capability: SidebarCapability): UserRole[] {
   return capabilityRoles[capability];
