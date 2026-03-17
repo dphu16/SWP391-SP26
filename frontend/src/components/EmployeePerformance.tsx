@@ -5,7 +5,6 @@ import { getToken } from "../services/authService";
 import { decodeJwt } from "../utils/jwtDecode";
 
 const Icons = {
-    // ... existing icons ...
     checkCircle: (
         <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-emerald-500">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
@@ -44,6 +43,12 @@ const EmployeePerformance = () => {
     const [activeReview, setActiveReview] = useState<any>(null);
     const [showEvaluationModal, setShowEvaluationModal] = useState(false);
     const [actionMessage, setActionMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
+
+    // Certificate preview states
+    const [previewCertUrl, setPreviewCertUrl] = useState<string | null>(null);
+    const [certBlobUrl, setCertBlobUrl] = useState<string | null>(null);
+    const [certFetchLoading, setCertFetchLoading] = useState(false);
+    const [certFetchError, setCertFetchError] = useState<string | null>(null);
 
     // Get real employee ID from session
     const employeeId = useMemo(() => {
@@ -108,6 +113,49 @@ const EmployeePerformance = () => {
         fetchGoals();
     }, [employeeId]);
 
+    // Handle fetching certificate blob with authentication
+    useEffect(() => {
+        if (!previewCertUrl) {
+            setCertBlobUrl(null);
+            setCertFetchError(null);
+            return;
+        }
+
+        const fetchBlob = async () => {
+            setCertFetchLoading(true);
+            setCertFetchError(null);
+            try {
+                const token = getToken();
+                const response = await fetch(previewCertUrl!, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to load file: ${response.status} ${response.statusText}`);
+                }
+
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                setCertBlobUrl(blobUrl);
+            } catch (err: any) {
+                console.error("Fetch certificate error:", err);
+                setCertFetchError(err.message || 'Error loading file');
+            } finally {
+                setCertFetchLoading(false);
+            }
+        };
+
+        fetchBlob();
+
+        return () => {
+            if (certBlobUrl) {
+                URL.revokeObjectURL(certBlobUrl);
+            }
+        };
+    }, [previewCertUrl]);
+
     const getProgressPercentage = (goalId: string, currentVal: string) => {
         const goal = kpis.find(k => k.id === goalId);
         if (!goal || !goal.target) return 0;
@@ -155,9 +203,7 @@ const EmployeePerformance = () => {
     const handleAcknowledge = async (id: string) => {
         try {
             await kpiService.updateEmployeeGoalStatus(id, 'ACKNOWLEDGED');
-            // Optimistic update to UI state immediately
             setKpis(prev => prev.map(k => k.id === id ? { ...k, status: 'ACKNOWLEDGED' } : k));
-            // Silent refresh in background to ensure data sync
             await fetchGoalsForEmployee(true);
         } catch (e: any) {
             console.error("Failed to acknowledge goal", e);
@@ -186,7 +232,6 @@ const EmployeePerformance = () => {
             const uploadedUrl = await kpiService.uploadFile(file);
             await kpiService.submitTrainingCertificate(participantId, uploadedUrl);
             setActionMessage({ type: 'success', text: 'Certificate uploaded successfully!' });
-            // Refresh trainings
             if (employeeId) {
                 const empTrainings = await kpiService.getTrainingForEmployee(employeeId);
                 setTrainings(empTrainings);
@@ -206,7 +251,6 @@ const EmployeePerformance = () => {
         const comm = goalComments[goalId];
         const file = selectedFiles[goalId];
 
-        // Frontend validation
         if (res === undefined || res === null || res.trim() === '') {
             setActionMessage({ type: 'error', text: 'Please enter an actual value.' });
             return;
@@ -248,7 +292,6 @@ const EmployeePerformance = () => {
         try {
             await kpiService.finalizeReview(activeReview.reviewId);
             setActionMessage({ type: 'success', text: 'Final review submitted successfully!' });
-            // Refresh 
             const review = await kpiService.getActiveReview(employeeId!);
             setActiveReview(review);
         } catch (e) {
@@ -260,7 +303,6 @@ const EmployeePerformance = () => {
 
     return (
         <div className="flex flex-col h-full space-y-8 animate-fade-in font-sans pb-10">
-            {/* Header & Breadcrumb */}
             <div className="space-y-1">
                 <nav className="flex text-xs font-bold text-text-muted-light uppercase tracking-widest gap-2">
                     <span className="hover:text-primary transition-colors cursor-pointer"></span>
@@ -272,20 +314,7 @@ const EmployeePerformance = () => {
                         <h1 className="text-4xl font-black text-text-primary-light dark:text-text-primary-dark tracking-tight uppercase">
                             My Learning & Goals
                         </h1>
-                        <p className="mt-2 text-sm text-text-secondary-light dark:text-text-secondary-dark max-w-2xl leading-relaxed">
-                        </p>
                     </div>
-                    <button
-                        onClick={() => activeReview?.status === 'DRAFT' && handleFinalSubmit()}
-                        disabled={!activeReview || activeReview.status !== 'DRAFT'}
-                        className={`flex items-center gap-2 px-6 py-3 text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg transition-all ${activeReview?.status === 'DRAFT'
-                            ? 'bg-primary shadow-primary/20 hover:scale-[1.02] active:scale-95'
-                            : 'bg-emerald-500 shadow-emerald-500/10 opacity-80 cursor-default'
-                            }`}
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                        {activeReview?.status === 'DRAFT' ? 'Submit Final Review' : 'Final Review Submitted'}
-                    </button>
                 </div>
             </div>
 
@@ -302,7 +331,6 @@ const EmployeePerformance = () => {
                 </div>
             )}
 
-            {/* Performance Results Summary (Visible when graded and submitted) */}
             {(activeReview?.status !== 'DRAFT' && activeReview?.kpiScore !== null && activeReview?.attitudeScore !== null) && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-in-up">
                     <div className="bg-white dark:bg-surface-dark p-6 rounded-2xl border border-border-light shadow-sm">
@@ -324,7 +352,6 @@ const EmployeePerformance = () => {
                 </div>
             )}
 
-            {/* Assigned Trainings Section */}
             {trainings.length > 0 && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -380,14 +407,12 @@ const EmployeePerformance = () => {
                                                         Confirmed
                                                     </span>
                                                     {t.certificateUrl && (
-                                                        <a
-                                                            href={t.certificateUrl.startsWith('http') ? t.certificateUrl : `http://localhost:8080${t.certificateUrl}`}
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            className="text-[10px] font-bold text-primary hover:underline"
+                                                        <button
+                                                            onClick={() => setPreviewCertUrl(t.certificateUrl)}
+                                                            className="text-[10px] font-bold text-primary hover:underline bg-transparent border-none p-0 cursor-pointer"
                                                         >
                                                             View Certificate
-                                                        </a>
+                                                        </button>
                                                     )}
                                                 </div>
                                             ) : t.status === 'COMPLETED' ? (
@@ -441,7 +466,6 @@ const EmployeePerformance = () => {
                 </div>
             )}
 
-            {/* KPI List Section */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <h2 className="text-lg font-black text-text-primary-light uppercase tracking-tight flex items-center gap-3">
@@ -546,49 +570,25 @@ const EmployeePerformance = () => {
                 </div>
             </div>
 
-            {/* Update Progress Modal */}
             {selectedUpdateKpiId && createPortal(
                 <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
                     <div className="bg-white dark:bg-surface-dark border border-border-light rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-4xl max-h-[95vh] relative animate-fade-in group hover:border-primary/30 transition-all bento-card">
-
                         <button
                             onClick={() => setSelectedUpdateKpiId(null)}
                             className="absolute top-5 right-5 p-2 rounded-full bg-surface-2-light dark:bg-surface-2-dark text-text-muted-light hover:text-red-500 transition-all z-10"
                         >
                             <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                         </button>
-
                         <div className="space-y-1 text-center mb-6">
                             <h2 className="text-xl font-black text-text-primary-light uppercase tracking-tight">Update My Progress</h2>
                             <p className="text-[10px] text-text-muted-light font-bold uppercase tracking-widest leading-none">Submit Current Results & Evidence</p>
                         </div>
-
-                        {actionMessage && (
-                            <div className={`mb-6 flex items-center gap-3 text-xs font-bold rounded-xl px-5 py-3 animate-fade-in ${actionMessage.type === 'error' ? 'text-red-600 bg-red-50 border border-red-100 shadow-sm shadow-red-500/10' : 'text-emerald-600 bg-emerald-50 border border-emerald-100 shadow-sm shadow-emerald-500/10'}`}>
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${actionMessage.type === 'error' ? 'bg-red-100' : 'bg-emerald-100'}`}>
-                                    {actionMessage.type === 'error'
-                                        ? <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
-                                        : <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
-                                    }
-                                </div>
-                                <div className="flex-1">{actionMessage.text}</div>
-                                <button onClick={() => setActionMessage(null)} className="p-1 hover:bg-black/5 rounded-lg transition-colors">
-                                    <svg className="w-4 h-4 opacity-50" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                                </button>
-                            </div>
-                        )}
 
                         {(() => {
                             const kpi = kpis.find(k => k.id === selectedUpdateKpiId);
                             if (!kpi) return null;
                             return (
                                 <div className="flex flex-col lg:flex-row gap-8 relative overflow-hidden">
-                                    {/* Watermark/Index */}
-                                    <div className="absolute -top-10 -right-10 text-[100px] font-black text-primary opacity-[0.03] select-none pointer-events-none">
-                                        {kpi.category.charAt(0)}
-                                    </div>
-
-                                    {/* Left: Input Fields */}
                                     <div className="flex-[1.4] space-y-6 relative z-10">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
@@ -596,9 +596,7 @@ const EmployeePerformance = () => {
                                                 <span className="text-[9px] font-black uppercase tracking-widest text-primary/60">{kpi.category}</span>
                                             </div>
                                             <h3 className="text-xl font-black text-text-primary-light leading-tight">{kpi.name}</h3>
-                                            <p className="text-xs text-text-secondary-light font-medium italic opacity-70">"{kpi.measurement}"</p>
                                         </div>
-
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-[9px] font-black uppercase text-text-muted-light tracking-widest">Target Objective</label>
@@ -612,116 +610,52 @@ const EmployeePerformance = () => {
                                                     <select
                                                         value={results[kpi.id] || '1'}
                                                         onChange={(e) => setResults(prev => ({ ...prev, [kpi.id]: e.target.value }))}
-                                                        disabled={kpi.status === 'COMPLETED'}
                                                         className="w-full px-5 py-3.5 bg-surface-2-light/50 border border-border-light rounded-xl text-lg font-black transition-all outline-none"
                                                     >
                                                         <option value="1">Yes</option>
                                                         <option value="0">No</option>
                                                     </select>
                                                 ) : (
-                                                    <div className="relative">
-                                                        <input
-                                                            type="number"
-                                                            value={results[kpi.id] || ''}
-                                                            onChange={(e) => {
-                                                                let val = e.target.value;
-                                                                if (kpi.measurementType === 'PERCENTAGE' && val !== '') {
-                                                                    if (Number(val) > 100) val = '100';
-                                                                    if (Number(val) < 0) val = '0';
-                                                                }
-                                                                setResults(prev => ({ ...prev, [kpi.id]: val }));
-                                                            }}
-                                                            disabled={kpi.status === 'COMPLETED'}
-                                                            className={`w-full px-5 py-3.5 bg-surface-2-light/50 border border-border-light focus:border-primary focus:ring-4 focus:ring-primary/5 rounded-xl text-lg font-black transition-all outline-none ${kpi.measurementType === 'PERCENTAGE' ? 'pr-10' : ''}`}
-                                                            placeholder="0"
-                                                        />
-                                                        {kpi.measurementType === 'PERCENTAGE' && (
-                                                            <div className="absolute right-5 top-1/2 -translate-y-1/2 text-text-muted-light font-bold text-lg pointer-events-none">%</div>
-                                                        )}
-                                                    </div>
+                                                    <input
+                                                        type="number"
+                                                        value={results[kpi.id] || ''}
+                                                        onChange={(e) => setResults(prev => ({ ...prev, [kpi.id]: e.target.value }))}
+                                                        className="w-full px-5 py-3.5 bg-surface-2-light/50 border border-border-light rounded-xl text-lg font-black outline-none"
+                                                    />
                                                 )}
                                             </div>
                                         </div>
-
-                                        <div className="space-y-4">
-                                            <div className="flex justify-between items-end">
-                                                <label className="text-[9px] font-black uppercase text-text-muted-light tracking-widest">Progress Visualization</label>
-                                                <span className="text-xl font-black text-emerald-500">{getProgressPercentage(kpi.id, results[kpi.id] || '0')}%</span>
-                                            </div>
-                                            <div className="h-3 w-full bg-surface-2-light rounded-full overflow-hidden border border-border-light shadow-inner p-0.5">
-                                                <div
-                                                    className="h-full bg-emerald-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(16,185,129,0.3)] relative"
-                                                    style={{ width: `${getProgressPercentage(kpi.id, results[kpi.id] || '0')}%` }}
-                                                >
-                                                    <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-
                                         <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase text-text-muted-light tracking-widest">Self Assessment & Context</label>
+                                            <label className="text-[9px] font-black uppercase text-text-muted-light tracking-widest">Self Assessment</label>
                                             <textarea
                                                 value={goalComments[kpi.id] || ''}
                                                 onChange={(e) => setGoalComments(prev => ({ ...prev, [kpi.id]: e.target.value }))}
-                                                disabled={kpi.status === 'COMPLETED'}
-                                                className="w-full px-5 py-3.5 bg-surface-2-light/50 border border-border-light focus:border-primary focus:ring-4 focus:ring-primary/5 rounded-xl text-xs font-medium transition-all outline-none min-h-[90px]"
-                                                placeholder="Briefly explain your progress..."
+                                                className="w-full px-5 py-3.5 bg-surface-2-light/50 border border-border-light rounded-xl text-xs font-medium min-h-[90px] outline-none"
                                             />
                                         </div>
                                     </div>
-
-                                    {/* Right: Evidence & Finalize */}
                                     <div className="flex-1 flex flex-col bg-surface-2-light/30 rounded-2xl p-6 border border-border-light/50 relative z-10">
-                                        <label className="text-[9px] font-black uppercase text-text-muted-light tracking-widest mb-4 block">Evidence Documentation</label>
-
-                                        <div className="flex-1 flex flex-col">
-                                            <input
-                                                type="file"
-                                                id={`file-upload-${kpi.id}`}
-                                                className="hidden"
-                                                onChange={(e) => handleFileChange(kpi.id, e.target.files?.[0] || null)}
-                                                accept="image/*,.pdf"
-                                            />
-                                            <div
-                                                onClick={() => document.getElementById(`file-upload-${kpi.id}`)?.click()}
-                                                className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center group transition-all cursor-pointer mb-6 ${selectedFiles[kpi.id]
-                                                    ? 'border-emerald-500 bg-emerald-50/30'
-                                                    : 'border-border-light bg-white hover:border-primary'
-                                                    }`}
-                                            >
-                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${selectedFiles[kpi.id] ? 'bg-emerald-100' : 'bg-primary/10'
-                                                    }`}>
-                                                    {selectedFiles[kpi.id] ? Icons.checkCircle : Icons.upload}
-                                                </div>
-                                                <h4 className="text-[11px] font-black text-text-primary-light truncate w-full">
-                                                    {selectedFiles[kpi.id] ? selectedFiles[kpi.id]?.name : 'Upload Proof'}
-                                                </h4>
-                                                <p className="text-[9px] font-bold text-text-muted-light uppercase mt-1">
-                                                    {selectedFiles[kpi.id] ? 'File selected' : 'PDF/Images Max 10MB'}
-                                                </p>
-                                            </div>
-
-                                            <div className="mt-auto space-y-3">
-                                                <div className="flex items-center justify-between text-[9px] font-black uppercase text-text-muted-light mb-2">
-                                                    <span>Status</span>
-                                                    <span className={`px-2 py-0.5 rounded-full ${kpi.status === 'SUBMITTED' ? 'bg-indigo-100 text-indigo-600' : 'bg-amber-100 text-amber-600'}`}>
-                                                        {kpi.status}
-                                                    </span>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleProgressUpdate(kpi.id)}
-                                                    disabled={kpi.status === 'COMPLETED' || submitLoading[kpi.id] || isExpired(kpi.cycleEndDate)}
-                                                    className="w-full py-3.5 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.15em] rounded-xl shadow-lg shadow-emerald-500/10 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30 disabled:scale-100 flex items-center justify-center gap-2"
-                                                >
-                                                    {submitLoading[kpi.id] ? (
-                                                        <>
-                                                            <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                                                            Processing
-                                                        </>
-                                                    ) : isExpired(kpi.cycleEndDate) ? 'Capturing Ended' : 'Submit Progress'}
-                                                </button>
-                                            </div>
+                                        <input
+                                            type="file"
+                                            id={`file-upload-${kpi.id}`}
+                                            className="hidden"
+                                            onChange={(e) => handleFileChange(kpi.id, e.target.files?.[0] || null)}
+                                            accept="image/*,.pdf"
+                                        />
+                                        <div
+                                            onClick={() => document.getElementById(`file-upload-${kpi.id}`)?.click()}
+                                            className="border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer mb-6"
+                                        >
+                                            {selectedFiles[kpi.id] ? Icons.checkCircle : Icons.upload}
+                                            <h4 className="text-[11px] font-black mt-2">{selectedFiles[kpi.id] ? selectedFiles[kpi.id]?.name : 'Upload Proof'}</h4>
                                         </div>
+                                        <button
+                                            onClick={() => handleProgressUpdate(kpi.id)}
+                                            disabled={submitLoading[kpi.id]}
+                                            className="w-full py-3.5 bg-emerald-500 text-white text-[10px] font-black uppercase rounded-xl"
+                                        >
+                                            {submitLoading[kpi.id] ? 'Processing...' : 'Submit Progress'}
+                                        </button>
                                     </div>
                                 </div>
                             );
@@ -729,7 +663,7 @@ const EmployeePerformance = () => {
                     </div>
                 </div>, document.body
             )}
-            {/* View Evaluation Modal */}
+
             {showEvaluationModal && activeReview && createPortal(
                 <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
                     <div className="bg-white dark:bg-surface-dark border border-border-light rounded-[2.5rem] p-10 shadow-2xl w-full max-w-2xl relative animate-scale-in bento-card">
@@ -739,12 +673,9 @@ const EmployeePerformance = () => {
                         >
                             <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                         </button>
-
                         <div className="text-center mb-10 space-y-2">
                             <h2 className="text-3xl font-black text-text-primary-light uppercase tracking-tight">Performance Appraisal</h2>
-                            <p className="text-xs text-text-muted-light font-bold uppercase tracking-[0.2em]">Final Review Results</p>
                         </div>
-
                         <div className="space-y-8">
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="p-6 bg-surface-2-light rounded-2xl border border-border-light flex flex-col items-center">
@@ -756,20 +687,7 @@ const EmployeePerformance = () => {
                                     <span className="text-4xl font-black text-text-primary-light">{activeReview.attitudeScore?.toFixed(1) || '0.0'}</span>
                                 </div>
                             </div>
-
-                            <div className="relative p-10 bg-primary/5 rounded-[2rem] border-2 border-primary/10 overflow-hidden flex flex-col items-center">
-                                <div className="absolute top-0 right-0 p-4 opacity-5">
-                                    <svg className="w-32 h-32 text-primary" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" /><path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" /></svg>
-                                </div>
-                                <span className="text-[11px] font-black text-primary/60 uppercase tracking-[0.3em] mb-4">Overall Performance</span>
-                                <div className="text-7xl font-black text-primary italic leading-none">{activeReview.overallScore?.toFixed(1) || '0.0'}</div>
-                            </div>
-
                             <div className="bg-amber-50 dark:bg-amber-900/10 p-6 rounded-2xl border border-amber-200/50">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <svg className="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
-                                    <span className="text-xs font-black text-amber-800 uppercase tracking-widest">Note from Management</span>
-                                </div>
                                 <p className="text-sm text-amber-900/70 font-medium italic whitespace-pre-wrap">
                                     {activeReview.rating}
                                 </p>
@@ -778,7 +696,47 @@ const EmployeePerformance = () => {
                     </div>
                 </div>, document.body
             )}
+
+            <CertPreviewModal 
+                url={previewCertUrl}
+                blobUrl={certBlobUrl}
+                loading={certFetchLoading}
+                error={certFetchError}
+                onClose={() => setPreviewCertUrl(null)}
+            />
         </div>
+    );
+};
+
+const CertPreviewModal = ({ url, blobUrl, loading, error, onClose }: any) => {
+    if (!url) return null;
+    return createPortal(
+        <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+            <div className="relative bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-scale-in" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-8 py-5 border-b border-border-light">
+                    <h3 className="font-black text-sm text-text-primary-light uppercase tracking-widest">Certificate Preview</h3>
+                    <div className="flex items-center gap-4">
+                        <a href={blobUrl || url} download="training-certificate" className={`px-5 py-2.5 text-[10px] font-black uppercase text-primary bg-primary/10 rounded-xl ${!blobUrl ? 'opacity-50 pointer-events-none' : ''}`}>↓ Download</a>
+                        <button onClick={onClose} className="p-2.5 rounded-xl text-text-muted-light hover:text-red-500">
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                        </button>
+                    </div>
+                </div>
+                <div className="flex-1 overflow-auto p-6 bg-surface-2-light flex items-center justify-center min-h-[500px]">
+                    {loading ? (
+                        <div className="animate-spin w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full"></div>
+                    ) : error ? (
+                        <div className="text-rose-500 text-center">{error}</div>
+                    ) : blobUrl ? (
+                        url.toLowerCase().includes('.pdf') ? (
+                            <iframe src={blobUrl} className="w-full h-[650px] border-none" title="Cert" />
+                        ) : (
+                            <img src={blobUrl} className="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-xl" alt="Cert" />
+                        )
+                    ) : null}
+                </div>
+            </div>
+        </div>, document.body
     );
 };
 

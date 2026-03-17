@@ -336,6 +336,10 @@ public class EmployeeGoalService {
 
         goal.setCurrentValue(req.getActualValue());
         
+        if (req.getComment() != null) {
+            goal.setEmployeeNote(req.getComment());
+        }
+        
         if (req.getImageUrl() != null && !req.getImageUrl().isBlank()) {
             goal.setImageUrl(req.getImageUrl());
             com.project.hrm.module.evaluation.entity.GoalEvidence evidence = new com.project.hrm.module.evaluation.entity.GoalEvidence();

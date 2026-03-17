@@ -34,7 +34,8 @@ public class KpiLibraryService {
     public void cleanupInvalidCategories() {
         try {
             // Update old categories to new ones to prevent startup crash
-            jdbcTemplate.update("UPDATE kpi_libraries SET category = 'PROCESS' WHERE category IN ('EVALUATION', 'OPERATIONAL', 'BEHAVIORAL')");
+            jdbcTemplate.update(
+                    "UPDATE kpi_libraries SET category = 'PROCESS' WHERE category IN ('EVALUATION', 'OPERATIONAL', 'BEHAVIORAL')");
             jdbcTemplate.update("UPDATE kpi_libraries SET category = 'PROCESS' WHERE category = 'PROCESs'");
             jdbcTemplate.update("UPDATE kpi_libraries SET category = UPPER(category)");
         } catch (Exception e) {
@@ -43,7 +44,7 @@ public class KpiLibraryService {
     }
 
     @Transactional
-    public KpiLibraryResponse create(KpiLibraryRequest request){
+    public KpiLibraryResponse create(KpiLibraryRequest request) {
         KpiLibrary kpi = new KpiLibrary();
         kpi.setName(request.getName());
         kpi.setDescription(request.getDescription());
@@ -52,7 +53,7 @@ public class KpiLibraryService {
         kpi.setMeasurementType(request.getMeasurementType() != null
                 ? request.getMeasurementType()
                 : com.project.hrm.module.evaluation.enums.MeasurementType.NUMERIC);
-        
+
         KpiLibrary saved = repository.save(kpi);
 
         // Auto-assign to department structure if provided
@@ -63,13 +64,13 @@ public class KpiLibraryService {
                         newStructure.setDepartmentId(request.getDepartmentId());
                         newStructure.setTotalWeight(0.0);
                         newStructure.setCreatedAt(LocalDateTime.now());
-                        
+
                         // Fetch department name for structureName
                         String deptName = departmentRepository.findById(request.getDepartmentId())
-                            .map(Department::getDeptName)
-                            .orElse("Unknown Department");
+                                .map(Department::getDeptName)
+                                .orElse("Unknown Department");
                         newStructure.setStructureName("KPI Structure - " + deptName);
-                        
+
                         return structureRepository.save(newStructure);
                     });
 
@@ -93,7 +94,7 @@ public class KpiLibraryService {
         structureRepository.save(structure);
     }
 
-    public List<KpiLibraryResponse> getAll(UUID departmentId){
+    public List<KpiLibraryResponse> getAll(UUID departmentId) {
         if (departmentId != null) {
             // Find KPIs associated with this department's structure
             List<KpiStructureDetail> details = detailRepository.findByStructure_DepartmentId(departmentId);
@@ -106,14 +107,14 @@ public class KpiLibraryService {
                 .collect(Collectors.toList());
     }
 
-    public KpiLibraryResponse getById(UUID kpiId){
+    public KpiLibraryResponse getById(UUID kpiId) {
         KpiLibrary kpi = repository.findById(kpiId)
                 .orElseThrow(() -> new RuntimeException("KPI not found"));
         return mapToResponse(kpi);
     }
 
     @Transactional
-    public KpiLibraryResponse updateKpi(UUID idKpi, KpiLibraryRequest request){
+    public KpiLibraryResponse updateKpi(UUID idKpi, KpiLibraryRequest request) {
         KpiLibrary updateKpi = repository.findById(idKpi)
                 .orElseThrow(() -> new RuntimeException("KPI not found"));
         updateKpi.setName(request.getName());
@@ -123,12 +124,12 @@ public class KpiLibraryService {
         if (request.getMeasurementType() != null) {
             updateKpi.setMeasurementType(request.getMeasurementType());
         }
-        
+
         KpiLibrary saved = repository.save(updateKpi);
         return mapToResponse(saved);
     }
 
-    public void delete(UUID idKpi){
+    public void delete(UUID idKpi) {
         repository.deleteById(idKpi);
     }
 

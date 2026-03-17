@@ -34,11 +34,11 @@ public class KpiStructureService {
     private final EmployeeGoalRepository employeeGoalRepository;
 
     public KpiStructureService(KpiStructureRepository structureRepository,
-                               KpiStructureDetailRepository detailRepository,
-                               KpiLibraryRepository libraryRepository,
-                               EmployeeRepository employeeRepository,
-                               PerformanceCyclesRepository cycleRepository,
-                               EmployeeGoalRepository employeeGoalRepository) {
+            KpiStructureDetailRepository detailRepository,
+            KpiLibraryRepository libraryRepository,
+            EmployeeRepository employeeRepository,
+            PerformanceCyclesRepository cycleRepository,
+            EmployeeGoalRepository employeeGoalRepository) {
         this.structureRepository = structureRepository;
         this.detailRepository = detailRepository;
         this.libraryRepository = libraryRepository;
@@ -54,20 +54,24 @@ public class KpiStructureService {
         return saved;
     }
 
-    /** Saves the KPI structure template ONLY — does NOT publish to employee goals. */
+    /**
+     * Saves the KPI structure template ONLY — does NOT publish to employee goals.
+     */
     @Transactional
     public KpiStructure saveStructureOnly(AssignKpiRequest request) {
         KpiStructure structure = structureRepository.findByDepartmentId(request.getDepartmentId())
                 .orElseGet(() -> {
                     KpiStructure newStructure = new KpiStructure();
                     newStructure.setDepartmentId(request.getDepartmentId());
-                    newStructure.setStructureName(request.getStructureName() != null ? request.getStructureName() : "General KPI Structure");
+                    newStructure.setStructureName(
+                            request.getStructureName() != null ? request.getStructureName() : "General KPI Structure");
                     newStructure.setCreatedAt(LocalDateTime.now());
                     return newStructure;
                 });
 
-        double totalWeight = request.getDetails() != null ?
-                request.getDetails().stream().mapToDouble(AssignKpiRequest.KpiDetailDto::getWeight).sum() : 0.0;
+        double totalWeight = request.getDetails() != null
+                ? request.getDetails().stream().mapToDouble(AssignKpiRequest.KpiDetailDto::getWeight).sum()
+                : 0.0;
 
         if (totalWeight != 100.0) {
             throw new RuntimeException("Total weight of all KPIs in the structure must equal 100%");
@@ -103,16 +107,18 @@ public class KpiStructureService {
         return savedStructure;
     }
 
-    /** Publishes the saved KPI structure to employee goals for the active cycle.
-     *  Smart upsert logic:
-     *  - Existing goals for a KPI: update weight only (preserve targetValue, status, etc.)
-     *  - New KPIs in structure: create fresh goal
-     *  - KPIs removed from structure: delete their goals
+    /**
+     * Publishes the saved KPI structure to employee goals for the active cycle.
+     * Smart upsert logic:
+     * - Existing goals for a KPI: update weight only (preserve targetValue, status,
+     * etc.)
+     * - New KPIs in structure: create fresh goal
+     * - KPIs removed from structure: delete their goals
      */
     @Transactional
     public void publishToEmployees(KpiStructure savedStructure, AssignKpiRequest request) {
         java.time.LocalDate now = java.time.LocalDate.now();
-        
+
         // Find an ACTIVE cycle that covers "now"
         PerformanceCycles activeCycle = cycleRepository.findAll().stream()
                 .filter(c -> c.getStatus() == CycleStatus.ACTIVE)
@@ -122,22 +128,25 @@ public class KpiStructureService {
 
         if (activeCycle == null) {
             // Check if there is ANY active cycle at all to provide better feedback
-            PerformanceCycles anyActive = cycleRepository.findFirstByStatusOrderByCreatedAtDesc(CycleStatus.ACTIVE).orElse(null);
+            PerformanceCycles anyActive = cycleRepository.findFirstByStatusOrderByCreatedAtDesc(CycleStatus.ACTIVE)
+                    .orElse(null);
             if (anyActive == null) {
                 throw new RuntimeException("No active performance review cycles were found.");
             } else {
-                throw new RuntimeException("The system date is " + now + ". There are no ACTIVE cycles covering this date.");
+                throw new RuntimeException(
+                        "The system date is " + now + ". There are no ACTIVE cycles covering this date.");
             }
         }
 
         List<Employee> employees = employeeRepository.findByPosition_Department_DeptId(request.getDepartmentId());
-        if (employees.isEmpty()) return;
+        if (employees.isEmpty())
+            return;
 
         List<UUID> employeeIds = employees.stream().map(Employee::getEmployeeId).collect(Collectors.toList());
 
         // Collect the set of KPI lib IDs in the new structure
-        List<UUID> newKpiLibIds = request.getDetails() == null ? List.of() :
-                request.getDetails().stream()
+        List<UUID> newKpiLibIds = request.getDetails() == null ? List.of()
+                : request.getDetails().stream()
                         .map(AssignKpiRequest.KpiDetailDto::getKpiLibraryId)
                         .collect(Collectors.toList());
 
@@ -152,12 +161,14 @@ public class KpiStructureService {
             return;
         }
 
-        // Step 2: Upsert each KPI for each employee (with dedup for pre-existing duplicate rows)
+        // Step 2: Upsert each KPI for each employee (with dedup for pre-existing
+        // duplicate rows)
         if (request.getDetails() != null) {
             for (Employee employee : employees) {
                 for (AssignKpiRequest.KpiDetailDto dto : request.getDetails()) {
                     KpiLibrary library = libraryRepository.findById(dto.getKpiLibraryId()).orElse(null);
-                    if (library == null) continue;
+                    if (library == null)
+                        continue;
 
                     // Fetch ALL matching goals (may include pre-existing duplicates)
                     List<EmployeeGoal> allMatching = employeeGoalRepository
@@ -206,15 +217,18 @@ public class KpiStructureService {
         KpiStructure structure = structureRepository.findByDepartmentId(departmentId)
                 .orElse(null);
 
-        if (structure == null) return List.of();
+        if (structure == null)
+            return List.of();
 
         List<KpiStructureDetail> details = detailRepository.findByStructure_StructureId(structure.getStructureId());
-        
-        return details.stream().map(detail -> {
-            AssignKpiRequest.KpiDetailDto dto = new AssignKpiRequest.KpiDetailDto();
-            dto.setKpiLibraryId(detail.getKpiLibrary().getLibId());
-            dto.setWeight(detail.getWeight());
-            return dto;
-        }).collect(Collectors.toList());
+
+        return details.stream()
+                .filter(detail -> detail.getKpiLibrary() != null)
+                .map(detail -> {
+                    AssignKpiRequest.KpiDetailDto dto = new AssignKpiRequest.KpiDetailDto();
+                    dto.setKpiLibraryId(detail.getKpiLibrary().getLibId());
+                    dto.setWeight(detail.getWeight());
+                    return dto;
+                }).collect(Collectors.toList());
     }
 }

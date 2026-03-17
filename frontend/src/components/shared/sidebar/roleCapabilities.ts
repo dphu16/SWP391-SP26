@@ -36,9 +36,9 @@ const capabilityRoles: Record<SidebarCapability, UserRole[]> = {
   "payroll:finance": ["FINANCE"],
   "payroll:hr": ["HR", "MANAGER"],
   "payroll:tax": ["HR", "MANAGER"],
-  "performance:view": ["HR", "MANAGER", "FINANCE"],
-    "recruitment:view": ["HR", "MANAGER"],
-    "recruitment:manage": ["HR"],
+  "performance:view": ["HR", "MANAGER", "EMPLOYEE", "MENTOR"],
+  "recruitment:view": ["HR", "MANAGER"],
+  "recruitment:manage": ["HR"],
 };
 
 const routeCapabilityMap: Array<{
@@ -50,11 +50,11 @@ const routeCapabilityMap: Array<{
     { prefix: "/employees", capability: "employees:view" },
     { prefix: "/offboarding/requests", capability: "offboarding:manage" },
     { prefix: "/offboarding/approval", capability: "offboarding:manage" },
-  { prefix: "/attendance/review", capability: "request:review" },
+    { prefix: "/attendance/review", capability: "request:review" },
     { prefix: "/attendance/create-schedule", capability: "attendance:manage" },
     { prefix: "/attendance/summary", capability: "attendance:manage" },
     { prefix: "/payroll/employee", capability: "payroll:group" },
-  { prefix: "/payroll/finance", capability: "payroll:finance" },
+    { prefix: "/payroll/finance", capability: "payroll:finance" },
     { prefix: "/payroll/hr", capability: "payroll:hr" },
     { prefix: "/payroll/tax-report", capability: "payroll:tax" },
     { prefix: "/performance", capability: "performance:view" },
