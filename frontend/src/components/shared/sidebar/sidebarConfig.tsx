@@ -36,6 +36,7 @@ export const sidebarConfig: SidebarSection[] = [
         path: "/onboarding/hired",
         icon: Icons.recruitment,
         // GET /api/applications/hired
+        roles: allow("candidate:view"),
       },
       {
         key: "employees",
@@ -97,11 +98,13 @@ export const sidebarConfig: SidebarSection[] = [
         key: "attendance",
         label: "Attendance",
         icon: Icons.attendance,
+        roles: allow("attendance:manage"),
         children: [
           {
             key: "view-schedule",
             label: "View Schedule",
             path: "/attendance/view-schedule",
+            roles: allow("attendance:manage"),
           },
           {
             key: "create-schedule",
@@ -121,8 +124,7 @@ export const sidebarConfig: SidebarSection[] = [
         key: "payroll",
         label: "Payroll",
         icon: Icons.payroll,
-        roles: allow("payroll:group"),
-        // Payroll visible for HR/FINANCE group; tax report is limited to HR/MANAGER
+        // Payroll visible to everyone (self payslips) + HR/MANAGER/FINANCE for admin
         children: [
           {
             key: "my-payslips",
@@ -131,22 +133,28 @@ export const sidebarConfig: SidebarSection[] = [
             // Self-service — any authenticated
           },
           {
-            key: "finance-payment",
-            label: "Finance Payment",
-            path: "/payroll/finance",
-            roles: allow("payroll:finance"),
+            key: "my-trs",
+            label: "My Benefits",
+            path: "/payroll/my-trs",
+            roles: allow("cnb:view"),
           },
           {
             key: "hr-payroll",
-            label: "Payroll Management",
+            label: "HR Payroll",
             path: "/payroll/hr",
-            roles: allow("payroll:hr"),
+            roles: allow("payroll:admin"),
           },
           {
             key: "tax-insurance",
-            label: "Tax & Insurance Reports",
+            label: "Tax & Insurance",
             path: "/payroll/tax-report",
-            roles: allow("payroll:tax"),
+            roles: allow("payroll:admin"),
+          },
+          {
+            key: "cnb-manager",
+            label: "C&B Manager",
+            path: "/payroll/cnb-manager",
+            roles: allow("cnb:manage"),
           },
         ],
       },
@@ -191,7 +199,7 @@ export const sidebarConfig: SidebarSection[] = [
             key: "job-openings",
             label: "Job Openings",
             path: "/recruitment/jobs",
-            roles: allow("recruitment:manage"),
+            roles: allow("recruitment:view"),
           },
           {
             key: "schedules",

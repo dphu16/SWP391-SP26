@@ -16,6 +16,7 @@ import com.project.hrm.module.evaluation.repository.PerformanceCyclesRepository;
 import com.project.hrm.module.evaluation.entity.PerformanceCycles;
 import com.project.hrm.module.evaluation.entity.PerformanceReviews;
 import com.project.hrm.module.evaluation.enums.CycleStatus;
+import com.project.hrm.module.payroll.enums.BenefitType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,7 @@ public class PayrollCalculationService {
     private final AttendanceLogRepository attendanceLogRepository;
     private final PerformanceCyclesRepository performanceCyclesRepository;
     private final PerformanceReviewsRepository performanceReviewsRepository;
+    private final EmployeeBenefitRepository employeeBenefitRepository;
 
     /**
      * Chạy lương cho toàn bộ nhân viên trong một batch.
@@ -154,8 +156,20 @@ public class PayrollCalculationService {
             kpiBonus = BigDecimal.valueOf(2000000);
         }
 
-        // Khác: tổng phụ cấp từ profile 
-        BigDecimal totalAllowances = kpiBonus; 
+        // 5.5 FETCH DYNAMIC BENEFITS
+        List<EmployeeBenefit> activeBenefits = employeeBenefitRepository.findActiveBenefitsForPeriod(employeeId, startDate, calculationDate);
+        BigDecimal dynamicAllowances = BigDecimal.ZERO;
+        for (EmployeeBenefit eb : activeBenefits) {
+            if (eb.getBenefit().getBenefitType() == BenefitType.ALLOWANCE) {
+                BigDecimal value = eb.getAppliedValue() != null ? eb.getAppliedValue() : eb.getBenefit().getStandardValue();
+                if (value != null) {
+                    dynamicAllowances = dynamicAllowances.add(value);
+                }
+            }
+        }
+
+        // Khác: tổng phụ cấp từ profile + dynamic benefits + KPI
+        BigDecimal totalAllowances = kpiBonus.add(dynamicAllowances); 
 
         // 6. Tính gross
         BigDecimal grossSalary = baseSalary.add(otPay).add(totalAllowances).subtract(absentDeduction);
@@ -227,6 +241,19 @@ public class PayrollCalculationService {
                     .payslip(payslip).itemName("Lương tăng ca")
                     .amount(otPay).type(PayslipDetailType.ALLOWANCE).build());
         }
+        
+        // Add dynamic allowances to payslip details
+        for (EmployeeBenefit eb : activeBenefits) {
+            if (eb.getBenefit().getBenefitType() == BenefitType.ALLOWANCE) {
+                BigDecimal value = eb.getAppliedValue() != null ? eb.getAppliedValue() : eb.getBenefit().getStandardValue();
+                if (value != null && value.compareTo(BigDecimal.ZERO) > 0) {
+                    details.add(PayslipDetail.builder()
+                            .payslip(payslip).itemName(eb.getBenefit().getName())
+                            .amount(value).type(PayslipDetailType.ALLOWANCE).build());
+                }
+            }
+        }
+
         payslip.setDetails(details);
 
         return payslip;

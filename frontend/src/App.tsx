@@ -82,8 +82,17 @@ const AppShell: React.FC = () => {
                                     <Route path="/attendance/review" element={<ReviewRequests />} />
                                     <Route path="/attendance/summary" element={<AttendanceSummary />} />
 
-                                    {/* Payroll */}
-                                    <Route path="/payroll/*" element={<PayrollModule />} />
+                            {/* Payroll routes — PayrollModule handles /payroll, /payroll/employee, /payroll/hr, /payroll/finance */}
+                            <Route path="/payroll/*" element={<PayrollModule />} />
+              {/* Payroll routes — PayrollModule handles /payroll, /payroll/employee, /payroll/hr */}
+              <Route path="/payroll" element={<PayrollModule />} />
+              <Route path="/payroll/employee" element={<PayrollModule />} />
+              <Route path="/payroll/hr" element={<PayrollModule />} />
+              <Route path="/payroll/tax-report" element={<PayrollModule />} />
+              <Route path="/payroll/cnb-manager" element={<PayrollModule />} />
+              <Route path="/payroll/my-trs" element={<PayrollModule />} />
+              {/* Payroll — single wildcard route, PayrollModule handles sub-routes internally */}
+              <Route path="/payroll/*" element={<PayrollModule />} />
 
                                     {/* Performance */}
                                     <Route path="/performance" element={<PerformanceModule />} />

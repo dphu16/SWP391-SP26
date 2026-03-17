@@ -5,6 +5,8 @@ import EmployeePayrollView from "./EmployeePayrollView";
 import HRPayrollView from "./HRPayrollView";
 import TaxInsuranceReport from "./TaxInsuranceReport";
 import FinancePayrollView from "./FinancePayrollView";
+import HRBenefitManagementView from "./HRBenefitManagementView";
+import EmployeeTRSView from "./EmployeeTRSView";
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 export const fmt = (n?: number | null) =>
@@ -57,67 +59,44 @@ export const Icon = {
     eye: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>,
 };
 
-// ─── Page Header dùng chung ────────────────────────────────────────────────────
-export const PayrollHeader: React.FC<{
-    title: string;
-    subtitle: string;
-    activeTab?: "employee" | "hr";
-    roleLabel?: string;
-    roleIcon?: React.ReactNode;
-}> = ({ title, subtitle, activeTab, roleLabel, roleIcon }) => {
-    const navigate = useNavigate();
-    const { hasRole } = useAuth();
+// ─── Breadcrumb navigation thay thế banner cũ ──────────────────────────────────
+const PAYROLL_ROUTE_META: Record<string, { label: string; icon: React.ReactNode }> = {
+    "/payroll/employee":    { label: "My Payslips",           icon: Icon.user },
+    "/payroll/hr":          { label: "Payroll Management",    icon: Icon.layers },
+    "/payroll/tax-report":  { label: "Tax & Insurance",       icon: Icon.shield },
+    "/payroll/finance":     { label: "Finance Payment",       icon: Icon.wallet },
+    "/payroll/cnb-manager": { label: "C&B Manager",           icon: Icon.layers },
+    "/payroll/my-trs":      { label: "My Benefits",           icon: Icon.trendUp },
+};
 
-    // HR, MANAGER có thể xem HR tab
-    const canViewHR = hasRole("HR", "MANAGER");
-
+export const PayrollBreadcrumb: React.FC<{ path: string }> = ({ path }) => {
+    const meta = PAYROLL_ROUTE_META[path] ?? { label: "Payroll", icon: Icon.money };
     return (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-6 shadow-lg mb-5">
-            <div className="absolute top-0 right-0 w-72 h-72 bg-emerald-500/5 rounded-full -translate-y-1/3 translate-x-1/4 pointer-events-none" />
-            <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-                {/* Title */}
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg flex-shrink-0"
-                        style={{ boxShadow: "0 0 24px rgba(16,185,129,0.35)" }}>
-                        <span className="text-white scale-125">{Icon.layers}</span>
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-400/80">HRM System</span>
-                        </div>
-                        <h1 className="text-2xl font-bold text-white tracking-tight">{title}</h1>
-                        <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>
-                    </div>
+        <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+                {/* Breadcrumb text */}
+                <div className="flex items-center gap-1.5 text-sm">
+                    <span className="text-slate-400 font-medium">Payroll</span>
+                    <svg className="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span className="flex items-center gap-1.5 font-bold text-slate-800">
+                        {meta.icon}
+                        {meta.label}
+                    </span>
                 </div>
-
-                {/* Right side: role badge OR tab switcher */}
-                {roleLabel ? (
-                    // Static role badge (for Tax Report, Finance)
-                    <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-semibold shadow-md self-start sm:self-auto flex-shrink-0">
-                        <span className="text-white">{roleIcon ?? Icon.user}</span>
-                        {roleLabel}
-                    </div>
-                ) : (
-                    // Tab switcher (for Employee / HR)
-                    <div className="flex items-center bg-white/5 backdrop-blur-sm rounded-xl p-1 border border-white/10 self-start sm:self-auto gap-1">
-                        <button onClick={() => navigate("/payroll/employee")}
-                            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${activeTab === "employee" ? "bg-emerald-500 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-white/5"
-                                }`}>
-                            {Icon.user} Employee
-                        </button>
-                        {canViewHR && (
-                            <button onClick={() => navigate("/payroll/hr")}
-                                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${activeTab === "hr" ? "bg-emerald-500 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-white/5"
-                                    }`}>
-                                {Icon.users} HR Manager
-                            </button>
-                        )}
-                    </div>
-                )}
             </div>
+            
+            {/* Big Page Title */}
+            <h1 className="text-[28px] font-bold text-slate-900 tracking-tight">
+                {meta.label}
+            </h1>
         </div>
     );
 };
+
+/** @deprecated use PayrollBreadcrumb — kept for backwards compatibility */
+export const PayrollHeader = PayrollBreadcrumb as unknown as React.FC<any>;
 
 // ─── /payroll → redirect to /payroll/employee ─────────────────────────────────
 const PayrollModule: React.FC = () => {
@@ -131,6 +110,8 @@ const PayrollModule: React.FC = () => {
     const isHR = location.pathname.startsWith("/payroll/hr");
     const isTaxReport = location.pathname.startsWith("/payroll/tax-report");
     const isFinance = location.pathname.startsWith("/payroll/finance");
+    const isCnBManager = location.pathname.startsWith("/payroll/cnb-manager");
+    const isMyTRS = location.pathname.startsWith("/payroll/my-trs");
 
     // Redirect dựa trên quyền và pathname
     useEffect(() => {
@@ -154,33 +135,44 @@ const PayrollModule: React.FC = () => {
         if (isFinance && !canViewFinance) {
             navigate("/payroll/employee", { replace: true });
         }
-    }, [location.pathname, navigate, canViewHR, canViewFinance, isHR, isTaxReport, isFinance, user]);
+        if (isCnBManager && !canViewHR) {
+            navigate("/payroll/employee", { replace: true });
+        }
+    }, [location.pathname, navigate, canViewHR, canViewFinance, isHR, isTaxReport, isFinance, isCnBManager, isMyTRS, user]);
 
     if (isTaxReport && canViewHR) {
         return (
-            <div className="space-y-0">
-                <PayrollHeader
-                    title="Tax & Insurance Report"
-                    subtitle="Tổng hợp thuế TNCN & bảo hiểm — Gửi tờ khai cho Finance"
-                    roleLabel="HR Manager"
-                    roleIcon={Icon.users}
-                />
+            <>
+                <PayrollBreadcrumb path="/payroll/tax-report" />
                 <TaxInsuranceReport />
-            </div>
+            </>
+        );
+    }
+
+    if (isCnBManager && canViewHR) {
+        return (
+            <>
+                <PayrollBreadcrumb path="/payroll/cnb-manager" />
+                <HRBenefitManagementView />
+            </>
+        );
+    }
+
+    if (isMyTRS) {
+        return (
+            <>
+                <PayrollBreadcrumb path="/payroll/my-trs" />
+                <EmployeeTRSView />
+            </>
         );
     }
 
     if (isFinance && canViewFinance) {
         return (
-            <div className="space-y-0">
-                <PayrollHeader
-                    title="Finance Payment"
-                    subtitle="Xét duyệt và giải ngân lương & thuế — Chỉ đọc và in báo cáo"
-                    roleLabel="Finance"
-                    roleIcon={Icon.wallet}
-                />
+            <>
+                <PayrollBreadcrumb path="/payroll/finance" />
                 <FinancePayrollView />
-            </div>
+            </>
         );
     }
 
@@ -188,14 +180,10 @@ const PayrollModule: React.FC = () => {
     if (isHR && !canViewHR) return null;
 
     return (
-        <div className="space-y-0">
-            <PayrollHeader
-                title={isHR ? "Payroll Management (HR)" : "My Payslips"}
-                subtitle={isHR ? "Create, calculate and approve payroll batches" : "View payslips and send inquiries"}
-                activeTab={isHR ? "hr" : "employee"}
-            />
+        <>
+            <PayrollBreadcrumb path={isHR ? "/payroll/hr" : "/payroll/employee"} />
             {isHR ? <HRPayrollView /> : <EmployeePayrollView />}
-        </div>
+        </>
     );
 };
 
