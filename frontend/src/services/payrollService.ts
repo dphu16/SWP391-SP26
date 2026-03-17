@@ -364,3 +364,104 @@ export async function downloadPaymentReport(requestId: string): Promise<Blob> {
     });
     return res.data;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPENSATION & BENEFITS (C&B) - HR & EMPLOYEE APIs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type BenefitType = "ALLOWANCE" | "HEALTH_CARE" | "LEARNING" | "GYM" | "TRANSPORTATION" | "MEALS" | "OTHER";
+export type EmployeeBenefitStatus = "ACTIVE" | "INACTIVE";
+
+export interface BenefitResponse {
+    benefitId: string;
+    name: string;
+    description: string;
+    benefitType: BenefitType;
+    standardValue: number;
+    isActive: boolean;
+}
+
+export interface BenefitRequest {
+    name: string;
+    description?: string;
+    benefitType: BenefitType;
+    standardValue?: number;
+}
+
+export interface AssignBenefitRequest {
+    employeeId: string;
+    benefitId: string;
+    startDate: string; // YYYY-MM-DD
+    endDate?: string;  // YYYY-MM-DD
+    appliedValue?: number;
+}
+
+export interface EmployeeBenefitResponse {
+    employeeBenefitId: string;
+    benefitId: string;
+    benefitName: string;
+    benefitType: BenefitType;
+    startDate: string;
+    endDate?: string;
+    appliedValue?: number;
+    status: EmployeeBenefitStatus;
+}
+
+export interface TotalRewardStatementDTO {
+    employeeName: string;
+    employeeCode: string;
+    period: string;
+    totalGrossSalary: number;
+    totalNetSalary: number;
+    totalCashAllowances: number;
+    totalTaxPaid: number;
+    totalInsurancePaid: number;
+    totalNonCashBenefitsValue: number;
+    benefitItems: {
+        benefitName: string;
+        benefitType: string;
+        calculatedValue: number;
+    }[];
+    grandTotalRewardValue: number;
+}
+
+export interface PageResponse<T> {
+    content: T[];
+    pageable: any;
+    totalElements: number;
+    totalPages: number;
+    last: boolean;
+    size: number;
+    number: number;
+    sort: any;
+    numberOfElements: number;
+    first: boolean;
+    empty: boolean;
+}
+
+// HR C&B APIs
+export async function getAllBenefits(page: number = 0, size: number = 20): Promise<PageResponse<BenefitResponse>> {
+    // Note: The backend returns ResponseEntity.ok(benefitService.getAllBenefits(pageable)), which is just the Page object without the ApiResponse wrapper.
+    const res = await apiClient.get<PageResponse<BenefitResponse>>(`/api/v1/hr/benefits?page=${page}&size=${size}`);
+    return res.data;
+}
+
+export async function createBenefit(request: BenefitRequest): Promise<BenefitResponse> {
+    // Note: Backend returns Benefit directly
+    const res = await apiClient.post<BenefitResponse>("/api/v1/hr/benefits", request);
+    return res.data;
+}
+
+export async function assignBenefitToEmployee(request: AssignBenefitRequest): Promise<EmployeeBenefitResponse> {
+    // Note: Backend returns EmployeeBenefitResponse directly
+    const res = await apiClient.post<EmployeeBenefitResponse>("/api/v1/hr/benefits/assign", request);
+    return res.data;
+}
+
+// Employee C&B APIs
+export async function getMyTotalRewardStatement(year?: number): Promise<TotalRewardStatementDTO> {
+    // Note: Backend returns TotalRewardStatementDTO directly
+    const url = year ? `/api/v1/employee/benefits/my-trs?year=${year}` : '/api/v1/employee/benefits/my-trs';
+    const res = await apiClient.get<TotalRewardStatementDTO>(url);
+    return res.data;
+}

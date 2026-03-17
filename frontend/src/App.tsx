@@ -1,6 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Sidebar from "./components/shared/sidebar";
+import Sidebar from "./components/shared/Sidebar";
 import Header from "./components/shared/Header";
 import HRDashboard from "./components/coreHR/HRDashboard";
 import EmployeeDetail from "./components/coreHR/EmployeeDetail";
@@ -106,6 +106,8 @@ const AppShell: React.FC = () => {
               <Route path="/payroll/employee" element={<PayrollModule />} />
               <Route path="/payroll/hr" element={<PayrollModule />} />
               <Route path="/payroll/tax-report" element={<PayrollModule />} />
+              <Route path="/payroll/cnb-manager" element={<PayrollModule />} />
+              <Route path="/payroll/my-trs" element={<PayrollModule />} />
               {/* Payroll — single wildcard route, PayrollModule handles sub-routes internally */}
               <Route path="/payroll/*" element={<PayrollModule />} />
 

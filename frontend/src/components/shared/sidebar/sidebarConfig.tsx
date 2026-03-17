@@ -133,6 +133,12 @@ export const sidebarConfig: SidebarSection[] = [
             // Self-service — any authenticated
           },
           {
+            key: "my-trs",
+            label: "My Benefits",
+            path: "/payroll/my-trs",
+            roles: allow("cnb:view"),
+          },
+          {
             key: "hr-payroll",
             label: "HR Payroll",
             path: "/payroll/hr",
@@ -143,6 +149,12 @@ export const sidebarConfig: SidebarSection[] = [
             label: "Tax & Insurance",
             path: "/payroll/tax-report",
             roles: allow("payroll:admin"),
+          },
+          {
+            key: "cnb-manager",
+            label: "C&B Manager",
+            path: "/payroll/cnb-manager",
+            roles: allow("cnb:manage"),
           },
         ],
       },

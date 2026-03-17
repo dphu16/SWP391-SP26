@@ -9,7 +9,9 @@ export type SidebarCapability =
   | "attendance:manage"
   | "payroll:admin"
   | "performance:view"
-  | "recruitment:view";
+  | "recruitment:view"
+  | "cnb:manage"
+  | "cnb:view";
 
 const capabilityRoles: Record<SidebarCapability, UserRole[]> = {
   "candidate:view": ["HR"],
@@ -21,7 +23,8 @@ const capabilityRoles: Record<SidebarCapability, UserRole[]> = {
   "payroll:admin": ["HR", "MANAGER", "FINANCE"],
   "performance:view": ["HR", "MANAGER", "EMPLOYEE", "MENTOR"],
   "recruitment:view": ["HR", "MANAGER"],
-
+  "cnb:manage": ["HR", "MANAGER"],
+  "cnb:view": ["HR", "MANAGER", "EMPLOYEE", "INTERN", "PROBATION", "FINANCE", "MENTOR"],
 };
 
 const routeCapabilityMap: Array<{
@@ -38,6 +41,8 @@ const routeCapabilityMap: Array<{
   { prefix: "/attendance/summary", capability: "attendance:manage" },
   { prefix: "/payroll/hr", capability: "payroll:admin" },
   { prefix: "/payroll/tax-report", capability: "payroll:admin" },
+  { prefix: "/payroll/cnb-manager", capability: "cnb:manage" },
+  { prefix: "/payroll/my-trs", capability: "cnb:view" },
   { prefix: "/performance", capability: "performance:view" },
   { prefix: "/recruitment", capability: "recruitment:view" },
   { prefix: "/recruitment/jobs", capability: "recruitment:view" },

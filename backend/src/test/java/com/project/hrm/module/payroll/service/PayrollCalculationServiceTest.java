@@ -68,6 +68,7 @@ class PayrollCalculationServiceTest {
     @Mock private AttendanceLogRepository     attendanceLogRepository;
     @Mock private PerformanceCyclesRepository performanceCyclesRepository;
     @Mock private PerformanceReviewsRepository performanceReviewsRepository;
+    @Mock private EmployeeBenefitRepository   employeeBenefitRepository;
 
     @InjectMocks
     private PayrollCalculationService payrollCalculationService;
@@ -139,6 +140,8 @@ class PayrollCalculationServiceTest {
         when(salaryProfileRepository.findActiveByEmployeeIdAndDate(eq(employeeId), any()))
                 .thenReturn(Optional.of(salaryProfile));
         when(attendanceLogRepository.findAbsentDates(eq(employeeId), any(), any()))
+                .thenReturn(List.of());
+        when(employeeBenefitRepository.findActiveBenefitsForPeriod(eq(employeeId), any(), any()))
                 .thenReturn(List.of());
         when(taxConfigRepository.findActiveByCodeAndDate(any(), any()))
                 .thenReturn(Optional.of(taxConfig));
@@ -233,6 +236,8 @@ class PayrollCalculationServiceTest {
                     .thenReturn(Optional.empty());
             when(salaryProfileRepository.findActiveByEmployeeIdAndDate(any(), any()))
                     .thenReturn(Optional.empty());
+            when(employeeBenefitRepository.findActiveBenefitsForPeriod(eq(employeeId), any(), any()))
+                    .thenReturn(List.of());
 
             List<Payslip> result = payrollCalculationService.calculateBatch(batchId, List.of(employeeId));
 
@@ -260,6 +265,8 @@ class PayrollCalculationServiceTest {
                     .thenReturn(Optional.empty());
             when(salaryProfileRepository.findActiveByEmployeeIdAndDate(any(), any()))
                     .thenReturn(Optional.empty());
+            when(employeeBenefitRepository.findActiveBenefitsForPeriod(eq(employeeId), any(), any()))
+                    .thenReturn(List.of());
 
             assertThat(payrollCalculationService.calculateBatch(batchId, List.of(employeeId))).isEmpty();
         }
@@ -390,6 +397,8 @@ class PayrollCalculationServiceTest {
             when(salaryProfileRepository.findActiveByEmployeeIdAndDate(any(), any()))
                     .thenReturn(Optional.of(salaryProfile));
             when(attendanceLogRepository.findAbsentDates(any(), any(), any())).thenReturn(List.of());
+            when(employeeBenefitRepository.findActiveBenefitsForPeriod(eq(employeeId), any(), any()))
+                    .thenReturn(List.of());
             when(taxConfigRepository.findActiveByCodeAndDate(any(), any()))
                     .thenReturn(Optional.of(taxConfig));
             when(insuranceConfigRepository.findActiveByCodeAndDate(any(), any()))
@@ -472,6 +481,8 @@ class PayrollCalculationServiceTest {
                     .thenReturn(Optional.of(salaryProfile));
             when(attendanceLogRepository.findAbsentDates(eq(employeeId), any(), any()))
                     .thenReturn(absentDates);
+            when(employeeBenefitRepository.findActiveBenefitsForPeriod(eq(employeeId), any(), any()))
+                    .thenReturn(List.of());
             when(taxConfigRepository.findActiveByCodeAndDate(any(), any()))
                     .thenReturn(Optional.of(taxConfig));
             when(insuranceConfigRepository.findActiveByCodeAndDate(any(), any()))
@@ -589,6 +600,8 @@ class PayrollCalculationServiceTest {
             when(salaryProfileRepository.findActiveByEmployeeIdAndDate(any(), any()))
                     .thenReturn(Optional.of(salaryProfile));
             when(attendanceLogRepository.findAbsentDates(any(), any(), any())).thenReturn(List.of());
+            when(employeeBenefitRepository.findActiveBenefitsForPeriod(eq(employeeId), any(), any()))
+                    .thenReturn(List.of());
             when(taxConfigRepository.findActiveByCodeAndDate(any(), any()))
                     .thenReturn(Optional.of(taxConfig));
             when(insuranceConfigRepository.findActiveByCodeAndDate(any(), any()))
@@ -617,6 +630,8 @@ class PayrollCalculationServiceTest {
             when(salaryProfileRepository.findActiveByEmployeeIdAndDate(any(), any()))
                     .thenReturn(Optional.of(salaryProfile));
             when(attendanceLogRepository.findAbsentDates(any(), any(), any())).thenReturn(List.of());
+            when(employeeBenefitRepository.findActiveBenefitsForPeriod(eq(employeeId), any(), any()))
+                    .thenReturn(List.of());
             when(taxConfigRepository.findActiveByCodeAndDate(any(), any()))
                     .thenReturn(Optional.of(taxConfig));
             when(insuranceConfigRepository.findActiveByCodeAndDate(any(), any()))

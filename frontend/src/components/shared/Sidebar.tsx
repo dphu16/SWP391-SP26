@@ -499,9 +499,11 @@ const Sidebar: React.FC = () => {
                     <div className="mt-0.5 space-y-0.5 animate-slide-up">
                       {[
                         { label: "My Payslips", path: "/payroll/employee", roles: ["HR", "MANAGER", "FINANCE", "EMPLOYEE"] as const },
+                        { label: "My Benefits", path: "/payroll/my-trs", roles: ["HR", "MANAGER", "EMPLOYEE", "FINANCE", "MENTOR", "INTERN", "PROBATION"] as const },
                         { label: "Payroll Management", path: "/payroll/hr", roles: ["HR", "MANAGER"] as const },
                         { label: "Tax & Insurance Report", path: "/payroll/tax-report", roles: ["HR", "MANAGER"] as const },
                         { label: "Finance Payment", path: "/payroll/finance", roles: ["MANAGER", "FINANCE"] as const },
+                        { label: "C&B Manager", path: "/payroll/cnb-manager", roles: ["HR", "MANAGER"] as const },
                       ]
                           .filter((item) => !item.roles || hasRole(...(item.roles as unknown as UserRole[])))
                           .map((item) => (

@@ -467,11 +467,6 @@ const HRPayrollView: React.FC = () => {
 
     return (
         <div className="flex flex-col pb-10 max-w-7xl mx-auto w-full">
-            {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-[28px] font-bold text-[#1a1c21] tracking-tight">Payroll Management</h1>
-            </div>
-
             {/* Filter & Action Panel */}
             <div className="bg-white rounded-2xl border border-[#e2e8f0] p-5 shadow-sm mb-6 flex flex-col gap-4">
                 <div className="flex flex-wrap items-start justify-between gap-4">
