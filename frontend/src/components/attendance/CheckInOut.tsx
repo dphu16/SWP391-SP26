@@ -325,29 +325,47 @@ const CheckInOut: React.FC = () => {
                             <div className="relative z-10 w-full max-w-md space-y-4">
                                 {status === "pending" && (
                                     <>
-                                        <button
-                                            onClick={handleCheckIn}
-                                            disabled={loading}
-                                            className="w-full relative group overflow-hidden bg-[#0d9488] text-white py-5 rounded-2xl font-bold text-xl shadow-[0_8px_20px_rgb(13,148,136,0.25)] hover:shadow-[0_8px_25px_rgb(13,148,136,0.35)] transition-all transform hover:-translate-y-1 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
-                                        >
-                                            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></span>
-                                            <div className="flex items-center justify-center gap-3">
-                                                {loading ? (
-                                                    <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                                ) : (
-                                                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                                                    </svg>
-                                                )}
-                                                {loading ? "PROCESSING..." : "CHECK-IN NOW"}
+                                        {todaySchedule ? (
+                                            <>
+                                                <button
+                                                    onClick={handleCheckIn}
+                                                    disabled={loading}
+                                                    className="w-full relative group overflow-hidden bg-[#0d9488] text-white py-5 rounded-2xl font-bold text-xl shadow-[0_8px_20px_rgb(13,148,136,0.25)] hover:shadow-[0_8px_25px_rgb(13,148,136,0.35)] transition-all transform hover:-translate-y-1 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+                                                >
+                                                    <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></span>
+                                                    <div className="flex items-center justify-center gap-3">
+                                                        {loading ? (
+                                                            <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                                        ) : (
+                                                            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                                                            </svg>
+                                                        )}
+                                                        {loading ? "PROCESSING..." : "CHECK-IN NOW"}
+                                                    </div>
+                                                </button>
+                                                <p className="text-center text-[#64748b] text-sm">
+                                                    Shift starts at <span className="font-bold text-[#0d9488]">{todaySchedule.shift.startTime.substring(0, 5)}</span>
+                                                    <span className="text-[#94a3b8]"> (5-min grace period)</span>
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <div className="w-full space-y-4">
+                                                <button
+                                                    disabled
+                                                    className="w-full bg-[#e2e8f0] text-[#94a3b8] py-5 rounded-2xl font-bold text-xl cursor-not-allowed"
+                                                >
+                                                    <div className="flex items-center justify-center gap-3">
+                                                        <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                        </svg>
+                                                        CHECK-IN DISABLED
+                                                    </div>
+                                                </button>
+                                                <div className="p-4 rounded-xl bg-[#fff7ed] border border-[#ffedd5] text-[#9a3412] text-center text-sm font-medium">
+                                                    You don't have a work schedule for today. Please contact your manager to be assigned a shift.
+                                                </div>
                                             </div>
-                                        </button>
-                                        {/* Show shift time hint */}
-                                        {todaySchedule && (
-                                            <p className="text-center text-[#64748b] text-sm">
-                                                Shift starts at <span className="font-bold text-[#0d9488]">{todaySchedule.shift.startTime.substring(0, 5)}</span>
-                                                <span className="text-[#94a3b8]"> (5-min grace period)</span>
-                                            </p>
                                         )}
                                     </>
                                 )}

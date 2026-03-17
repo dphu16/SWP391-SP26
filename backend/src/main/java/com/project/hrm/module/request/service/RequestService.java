@@ -2,6 +2,7 @@ package com.project.hrm.module.request.service;
 
 import com.project.hrm.module.attendance.entity.AttendanceLog;
 import com.project.hrm.module.attendance.repository.AttendanceLogRepository;
+import com.project.hrm.module.attendance.repository.WorkScheduleRepository;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.entity.User;
 import com.project.hrm.module.corehr.enums.EmployeeRole;
@@ -24,10 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,6 +43,7 @@ public class RequestService {
     private final EmployeeRepository employeeRepo;
     private final LeaveBalanceRepository leaveBalanceRepo;
     private final AttendanceLogRepository attendanceLogRepo;
+    private final WorkScheduleRepository workScheduleRepo;
     private final UserRepository userRepo;
     private final NotificationService notificationService;
 
@@ -109,6 +111,7 @@ public class RequestService {
         // Deduct leave balance if this is a LEAVE request
         if (req.getRequestType() == RequestType.LEAVE) {
             deductLeaveBalance(req);
+            removeWorkSchedulesOnLeave(req);
         }
 
         // Record OT hours into AttendanceLog if this is an OT request
@@ -148,6 +151,7 @@ public class RequestService {
     }
 
     // --- 6. CẬP NHẬT YÊU CẦU ---
+// --- 6. CẬP NHẬT YÊU CẦU ---
     @Transactional
     public Request updateRequest(UUID requestId, RequestDTO dto) {
         Request req = requestRepo.findById(requestId)
@@ -155,6 +159,11 @@ public class RequestService {
 
         if (req.getStatus() != RequestStatus.PENDING) {
             throw new RuntimeException("Can only update requests with PENDING status.");
+        }
+
+        // BỔ SUNG: Kiểm tra lại quỹ phép nếu đây là đơn LEAVE hoặc đang chuyển thành LEAVE
+        if (dto.getRequestType() == RequestType.LEAVE) {
+            validateLeaveBalance(req.getEmployeeId(), dto.getStartDate(), dto.getEndDate(), dto.getReason());
         }
 
         req.setRequestType(dto.getRequestType());
@@ -198,10 +207,20 @@ public class RequestService {
      * Calculate number of leave days (startDate to endDate inclusive).
      */
     private int calculateLeaveDays(LocalDate startDate, LocalDate endDate) {
-        if (endDate == null || endDate.isBefore(startDate)) {
-            return 1; // single day leave
+        if (startDate == null)
+            return 0;
+
+        LocalDate end = (endDate == null || endDate.isBefore(startDate)) ? startDate : endDate;
+
+        int count = 0;
+        LocalDate current = startDate;
+        while (!current.isAfter(end)) {
+            if (current.getDayOfWeek() != DayOfWeek.SUNDAY) {
+                count++;
+            }
+            current = current.plusDays(1);
         }
-        return (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        return count;
     }
 
     /**
@@ -326,7 +345,35 @@ public class RequestService {
         }
     }
 
-    // ──────────────────────────── Notification Helpers ────────────────────────────
+    /**
+     * Remove work schedules for the employee during the leave period.
+     */
+    private void removeWorkSchedulesOnLeave(Request req) {
+        if (req.getStartDate() == null)
+            return;
+
+        LocalDate endDate = req.getEndDate() != null ? req.getEndDate() : req.getStartDate();
+
+        // Find existing schedules in the date range
+        List<com.project.hrm.module.attendance.entity.WorkSchedule> schedules = workScheduleRepo
+                .findByEmployeeIdAndDateBetweenOrderByDateAsc(
+                        req.getEmployeeId(), req.getStartDate(), endDate);
+
+        if (!schedules.isEmpty()) {
+            log.info("Removing {} work schedule(s) for employee {} due to approved leave from {} to {}",
+                    schedules.size(), req.getEmployeeId(), req.getStartDate(), endDate);
+
+            // For each schedule, remove associated attendance logs first if any
+            for (com.project.hrm.module.attendance.entity.WorkSchedule ws : schedules) {
+                attendanceLogRepo.deleteAll(attendanceLogRepo.findByWorkSchedule_ScheduleId(ws.getScheduleId()));
+            }
+
+            workScheduleRepo.deleteAll(schedules);
+        }
+    }
+
+    // ──────────────────────────── Notification Helpers
+    // ────────────────────────────
 
     /**
      * REQUEST_RECEIVED: When an employee creates a request,
@@ -347,8 +394,7 @@ public class RequestService {
                 notificationService.createForUser(
                         hrUser.getUserId(), title, message,
                         "REQUEST_RECEIVED", "REQUEST",
-                        request.getRequestId() != null ? request.getRequestId().toString() : null
-                );
+                        request.getRequestId() != null ? request.getRequestId().toString() : null);
             }
 
             // Notify all Manager users
@@ -361,8 +407,7 @@ public class RequestService {
                 notificationService.createForUser(
                         managerUser.getUserId(), title, message,
                         "REQUEST_RECEIVED", "REQUEST",
-                        request.getRequestId() != null ? request.getRequestId().toString() : null
-                );
+                        request.getRequestId() != null ? request.getRequestId().toString() : null);
             }
         } catch (Exception e) {
             log.warn("Failed to send REQUEST_RECEIVED notification: {}", e.getMessage());
@@ -389,8 +434,7 @@ public class RequestService {
             notificationService.createForUser(
                     employee.getUser().getUserId(), title, message,
                     "REQUEST_SENT", "REQUEST",
-                    request.getRequestId() != null ? request.getRequestId().toString() : null
-            );
+                    request.getRequestId() != null ? request.getRequestId().toString() : null);
         } catch (Exception e) {
             log.warn("Failed to send REQUEST_SENT notification: {}", e.getMessage());
         }

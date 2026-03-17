@@ -46,13 +46,19 @@ public class AttendanceLogService {
                 throw new RuntimeException("Already checked in today!");
             }
 
+            // Tìm lịch làm việc hôm nay
             WorkSchedule todaySchedule = workScheduleRepo.findByEmployeeIdAndDate(request.getEmployeeId(), today);
+
+            // Nếu không có lịch làm việc, KHÔNG cho phép check-in
+            if (todaySchedule == null || todaySchedule.getShift() == null) {
+                throw new RuntimeException("No work schedule assigned for today. You cannot check in.");
+            }
 
             AttendanceLog newLog = new AttendanceLog();
             newLog.setEmployeeId(request.getEmployeeId());
             newLog.setDate(today);
             newLog.setCheckIn(now);
-            newLog.setStatus(AttendanceStatus.MISSING_PUNCH);
+            newLog.setStatus(AttendanceStatus.MISSING_PUNCH); // Vừa check-in xong, chưa check-out nên là Missing Punch
             newLog.setWorkingHours(BigDecimal.ZERO);
             newLog.setOtHours(BigDecimal.ZERO);
             newLog.setWorkSchedule(todaySchedule);
