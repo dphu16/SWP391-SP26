@@ -4,8 +4,8 @@ import { jobRequestService } from "../../services/jobRequestService";
 import type { JobRequestInput } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
 import { useToast } from "../ui/Toast";
-import { edpService } from "../../services/edpService";
-import type { Position, Department } from "../../services/edpService";
+import { departmentService } from "../../services/departmentService";
+import type { Position, Department } from "../../services/departmentService";
 import { useAuth } from "../../hooks/useAuth";
 
 const inputCls = "w-full px-4 py-2.5 text-sm rounded-xl border border-border-light bg-white text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
@@ -41,14 +41,14 @@ const JobRequestFormPage: React.FC = () => {
         const fetchInitialData = async () => {
             try {
                 // Fetch departments
-                const deptRes = await edpService.getDepartments();
+                const deptRes = await departmentService.getAll();
                 const depts = deptRes.data;
                 setDepartments(depts);
 
                 let autoDeptId: string | null = null;
                 if (user?.role === "MANAGER" && user.employeeId) {
                     try {
-                        const deptData = await edpService.getManagerDepartment(user.employeeId);
+                        const deptData = await departmentService.getManagerDepartment(user.employeeId);
                         autoDeptId = deptData.data.deptId;
                         setManagerDeptId(autoDeptId);
                     } catch (e) {
@@ -76,7 +76,7 @@ const JobRequestFormPage: React.FC = () => {
     // Fetch positions when department changes
     useEffect(() => {
         if (formData.deptId) {
-            edpService.getPositionsByDept(formData.deptId)
+            departmentService.getPositionsByDept(formData.deptId)
                 .then((res: any) => setPositions(res.data))
                 .catch((err: any) => console.error("Failed to load positions", err));
         } else {

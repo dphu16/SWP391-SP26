@@ -41,6 +41,9 @@ public class SecurityConfig {
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                                 .csrf(csrf -> csrf.disable())
                                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .headers(headers -> headers
+                                        .frameOptions(frame -> frame.disable())  //Có thể xóa
+                                )
 
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -53,6 +56,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/jobs/candidate/**").permitAll()
                                                 .requestMatchers("/api/app/candidate/**").permitAll()
                                                 .requestMatchers("/ws/**").permitAll()
+                                                .requestMatchers("/cv/**").permitAll()
 
                                                 .anyRequest().authenticated())
 
