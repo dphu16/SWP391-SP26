@@ -118,27 +118,31 @@ public class BenefitService {
             totalCashAllowances = totalCashAllowances.add(p.getTotalAllowances() != null ? p.getTotalAllowances() : BigDecimal.ZERO);
         }
 
-        // 2. Get active NON-CASH benefits for the year (e.g., Health Care, Gym)
+        // 2. Get active benefits for the year (e.g., Health Care, Gym, and base Allowances)
         List<EmployeeBenefit> activeBenefits = employeeBenefitRepository.findActiveBenefitsForPeriod(employeeId, startOfYear, endOfYear);
         
         BigDecimal totalNonCashValue = BigDecimal.ZERO;
         List<TotalRewardStatementDTO.BenefitItemDTO> benefitItems = new ArrayList<>();
 
         for (EmployeeBenefit eb : activeBenefits) {
-            if (eb.getBenefit().getBenefitType() != BenefitType.ALLOWANCE) {
-                BigDecimal value = eb.getAppliedValue() != null ? eb.getAppliedValue() : eb.getBenefit().getStandardValue();
-                if (value != null) {
+            BigDecimal value = eb.getAppliedValue() != null ? eb.getAppliedValue() : eb.getBenefit().getStandardValue();
+            
+            if (value != null) {
+                // If it's a non-cash benefit, actively add to the totalNonCashValue sum
+                if (eb.getBenefit().getBenefitType() != BenefitType.ALLOWANCE) {
                     // Approximate value for the year based on months active.
                     // For simplicity, we just add the standard value assuming it's an annual value,
                     // but a robust implementation would prorate this based on start/end dates.
                     totalNonCashValue = totalNonCashValue.add(value);
-                    
-                    benefitItems.add(TotalRewardStatementDTO.BenefitItemDTO.builder()
-                            .benefitName(eb.getBenefit().getName())
-                            .benefitType(eb.getBenefit().getBenefitType().name())
-                            .calculatedValue(value)
-                            .build());
                 }
+                
+                // Add BOTH cash and non-cash benefits to the visual breakdown list 
+                // so the employee knows they are actively receiving this benefit.
+                benefitItems.add(TotalRewardStatementDTO.BenefitItemDTO.builder()
+                        .benefitName(eb.getBenefit().getName())
+                        .benefitType(eb.getBenefit().getBenefitType().name())
+                        .calculatedValue(value)
+                        .build());
             }
         }
 
