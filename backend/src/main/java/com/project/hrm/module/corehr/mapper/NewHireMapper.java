@@ -5,7 +5,6 @@ import com.project.hrm.module.corehr.dto.response.NewHireResponseDTO;
 import com.project.hrm.module.corehr.entity.*;
 import com.project.hrm.module.corehr.enums.EmployeeRole;
 
-import java.util.Comparator;
 
 public class NewHireMapper {
 
@@ -51,7 +50,6 @@ public class NewHireMapper {
                                 .contractNumber(dto.getContractNumber() != null ? dto.getContractNumber()
                                                 : "CTR-" + java.util.UUID.randomUUID().toString().substring(0, 8)
                                                                 .toUpperCase())
-                                .contractType(dto.getContractType() != null ? dto.getContractType() : "PROBATION")
                                 .startDate(computedStartDate)
                                 .endDate(computedEndDate)
                                 .baseSalary(dto.getBaseSalary())
@@ -78,14 +76,8 @@ public class NewHireMapper {
         }
 
         public static NewHireResponseDTO toResponseDTO(Employee e) {
-                EmployeeRole resolvedRole = e.getUser() != null && e.getUser().getRoles() != null
-                                ? e.getUser().getRoles().stream()
-                                                .map(Role::getName)
-                                                .filter(java.util.Objects::nonNull)
-                                                .sorted(Comparator.comparing(Enum::name))
-                                                .findFirst()
-                                                .orElse(null)
-                                : null;
+                Role primaryRole = (e.getUser() != null) ? e.getUser().getPrimaryRole() : null;
+                EmployeeRole resolvedRole = (primaryRole != null) ? primaryRole.getName() : null;
 
                 return NewHireResponseDTO.builder()
                                 .employeeId(e.getEmployeeId())

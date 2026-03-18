@@ -1,6 +1,6 @@
 package com.project.hrm.module.evaluation.service;
 
-import com.project.hrm.module.evaluation.dto.*;
+
 import com.project.hrm.module.evaluation.dto.DecisionRequest;
 import com.project.hrm.module.evaluation.dto.PerformanceReviewsRequest;
 import com.project.hrm.module.evaluation.dto.ReviewScoreRequest;
@@ -103,7 +103,8 @@ public class PerformanceReviewsService {
         return repository.findByCycle_CycleId(cycleId).stream()
                 .filter(r -> r.getEmployee() != null 
                         && r.getEmployee().getStatus() == EmployeeStatus.OFFICIAL
-                        && r.getEmployee().getRole() == EmployeeRole.ROLE_EMPLOYEE)
+                        && r.getEmployee().getUser() != null
+                        && r.getEmployee().getUser().hasRole(EmployeeRole.ROLE_EMPLOYEE.name()))
                 .collect(java.util.stream.Collectors.toList());
     }
 

@@ -13,19 +13,11 @@ public class EmployeeMapper {
     }
 
     private static Set<String> resolveRoles(Employee employee) {
-        if (employee.getUser() != null && employee.getUser().getRoles() != null
-                && !employee.getUser().getRoles().isEmpty()) {
+        if (employee.getUser() != null && employee.getUser().getRoles() != null) {
             return employee.getUser().getRoles().stream()
+                    .filter(role -> role != null && role.getName() != null)
                     .map(role -> role.getName().name())
                     .collect(Collectors.toSet());
-        }
-
-        if (employee.getUser() != null && employee.getUser().getRole() != null) {
-            return Set.of(employee.getUser().getRole().name());
-        }
-
-        if (employee.getRole() != null) {
-            return Set.of(employee.getRole().name());
         }
 
         return Collections.emptySet();

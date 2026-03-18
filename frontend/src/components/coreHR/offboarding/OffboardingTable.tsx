@@ -17,71 +17,82 @@ const OffboardingTable: React.FC<OffboardingTableProps> = ({
   onViewDetail,
 }) => {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-border-light bg-surface-light overflow-hidden shadow-card animate-fade-in">
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-100 bg-gray-50/60">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        <table className="w-full text-left border-collapse">
+          <thead className="bg-[#f8fafc] border-b border-border-light">
+            <tr>
+              <th className="px-6 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
                 Employee
               </th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
                 Type
               </th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
                 Request Date
               </th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
                 Status
               </th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
                 Expected Last Day
               </th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light text-center">
                 Action
               </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-50 text-sm">
             {loading ? (
-              Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
+              Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
             ) : filteredRequests.length === 0 ? (
               <tr>
                 <td
                   colSpan={6}
-                  className="px-4 py-16 text-center text-sm text-gray-400"
+                  className="px-6 py-16 text-center text-sm text-text-muted-light italic font-medium"
                 >
-                  No offboarding requests found
+                  <div className="flex flex-col items-center gap-2">
+                    <svg
+                      className="w-10 h-10 text-gray-200"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    <span>No offboarding requests found</span>
+                  </div>
                 </td>
               </tr>
             ) : (
               filteredRequests.map((req) => (
                 <tr
                   key={req.offboardingId}
-                  className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
+                  className="table-row-hover group hover:bg-gray-50/80 transition-colors"
                 >
-                  <td className="px-4 py-3.5">
+                  <td className="px-6 py-3.5">
                     <div className="flex items-center gap-3">
                       <Avatar name={req.employeeName} url={req.avatarUrl} />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">
+                        <div className="font-semibold text-text-primary-light leading-snug">
                           {req.employeeName}
-                        </p>
-                        <p className="text-xs text-gray-500">
+                        </div>
+                        <div className="text-[11px] text-text-secondary-light font-mono mt-0.5">
                           {req.employeeCode}
-                        </p>
+                        </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5">
-                    <span className="text-sm text-gray-700">
-                      {TYPE_LABELS[req.type] ?? req.type}
-                    </span>
+                  <td className="px-4 py-3.5 text-text-primary-light font-medium">
+                    {TYPE_LABELS[req.type] ?? req.type}
                   </td>
-                  <td className="px-4 py-3.5">
-                    <span className="text-sm text-gray-600">
-                      {req.requestDate}
-                    </span>
+                  <td className="px-4 py-3.5 text-text-secondary-light">
+                    {req.requestDate}
                   </td>
                   <td className="px-4 py-3.5">
                     <StatusBadge
@@ -90,16 +101,16 @@ const OffboardingTable: React.FC<OffboardingTableProps> = ({
                       fallbackKey="PENDING"
                     />
                   </td>
-                  <td className="px-4 py-3.5">
-                    <span className="text-sm text-gray-600">
-                      {req.expectedLastDay ?? "—"}
-                    </span>
+                  <td className="px-4 py-3.5 text-text-secondary-light font-medium">
+                    {req.expectedLastDay ?? (
+                      <span className="text-text-muted-light">—</span>
+                    )}
                   </td>
-                  <td className="px-4 py-3.5 text-center">
+                  <td className="px-6 py-3.5 text-center">
                     <button
                       onClick={() => onViewDetail(req)}
-                      className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer inline-flex items-center justify-center border border-primary/20"
-                      title="Details"
+                      className="p-1.5 rounded-lg text-text-secondary-light hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer inline-flex items-center justify-center"
+                      title="View Details"
                     >
                       <svg
                         className="w-4 h-4"

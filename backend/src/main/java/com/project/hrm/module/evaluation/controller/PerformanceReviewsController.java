@@ -33,25 +33,25 @@ public class PerformanceReviewsController {
     // 14
     @GetMapping("/employees/{id}/performance-reviews")
     public ResponseEntity<List<PerformanceReviews>> getByEmployee(
-            @PathVariable UUID id){
+            @PathVariable("id") UUID id){
         return ResponseEntity.ok(service.getByEmployee(id));
     }
 
     // Get or create review for active cycle
     @GetMapping("/employees/{id}/review-active")
-    public ResponseEntity<PerformanceReviews> getActiveReview(@PathVariable UUID id){
+    public ResponseEntity<PerformanceReviews> getActiveReview(@PathVariable("id") UUID id){
         return ResponseEntity.ok(service.getOrCreateForActiveCycle(id));
     }
 
     @GetMapping("/performance-cycles/{id}/reviews")
-    public ResponseEntity<List<PerformanceReviews>> getReviewsByCycle(@PathVariable UUID id){
+    public ResponseEntity<List<PerformanceReviews>> getReviewsByCycle(@PathVariable("id") UUID id){
         return ResponseEntity.ok(service.getByCycle(id));
     }
 
     // 15
     @PutMapping("/performance-reviews/{id}")
     public ResponseEntity<PerformanceReviews> updateScore(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody ReviewScoreRequest request){
         return ResponseEntity.ok(service.updateScore(id, request));
     }
@@ -59,14 +59,14 @@ public class PerformanceReviewsController {
     // 16
     @PatchMapping("/performance-reviews/{id}/finalize")
     public ResponseEntity<PerformanceReviews> finalizeReview(
-            @PathVariable UUID id){
+            @PathVariable("id") UUID id){
         return ResponseEntity.ok(service.finalizeReview(id));
     }
 
     // 17
     @PostMapping("/performance-reviews/{id}/decision")
     public ResponseEntity<String> createDecision(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody DecisionRequest request){
         return ResponseEntity.ok(service.createDecision(id, request));
     }

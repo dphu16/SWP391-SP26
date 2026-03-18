@@ -38,12 +38,9 @@ const OffboardingRequests: React.FC = () => {
     loading,
     showCreateModal,
     setShowCreateModal,
-    createMode,
-    setCreateMode,
     submitting,
     selectedRequest,
     setSelectedRequest,
-    isManager,
     handleCreateRequest,
   } = useOffboardingRequests();
 
@@ -60,31 +57,6 @@ const OffboardingRequests: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {isManager && (
-            <button
-              onClick={() => {
-                setCreateMode("propose");
-                setShowCreateModal(true);
-              }}
-              className="px-4 py-2.5 border-2 border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/5 transition-all cursor-pointer inline-flex items-center gap-2"
-            >
-              <svg
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="8.5" cy="7" r="4" />
-                <line x1="20" y1="8" x2="20" y2="14" />
-                <line x1="23" y1="11" x2="17" y2="11" />
-              </svg>
-              Propose Offboarding
-            </button>
-          )}
         </div>
       </div>
 
@@ -104,7 +76,7 @@ const OffboardingRequests: React.FC = () => {
       {/* Modals */}
       {showCreateModal && (
         <CreateRequestModal
-          mode={createMode}
+          mode="resign"
           loading={submitting}
           onClose={() => setShowCreateModal(false)}
           onSubmit={handleCreateRequest}

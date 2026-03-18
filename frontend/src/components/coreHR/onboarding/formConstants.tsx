@@ -142,7 +142,6 @@ export const makeDefaultFormData = (
   role: "ROLE_EMPLOYEE",
   status: "",
   contractNumber: "",
-  contractType: "",
   startDate: "",
   contractDuration: "",
   endDate: "",

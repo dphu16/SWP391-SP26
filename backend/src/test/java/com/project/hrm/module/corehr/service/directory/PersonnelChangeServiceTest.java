@@ -9,7 +9,6 @@ import com.project.hrm.module.corehr.enums.PersonnelChangeType;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.repository.PersonnelChangeRepository;
 import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
-import com.project.hrm.module.corehr.service.helper.NotificationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -30,8 +29,6 @@ class PersonnelChangeServiceTest {
     private PersonnelChangeRepository changeRepository;
     @Mock
     private EmployeeHelper employeeHelper;
-    @Mock
-    private NotificationService notificationService;
 
     @InjectMocks
     private PersonnelChangeService personnelChangeService;
@@ -55,7 +52,6 @@ class PersonnelChangeServiceTest {
         personnelChangeService.createRequest(dto, UUID.randomUUID());
 
         verify(employeeHelper).resolveManagerForEmployee(employee);
-        verify(notificationService).createForUser(eq(managerUser.getUserId()), any(), any(), eq("PERSONNEL_CHANGE_RECEIVED"), any(), any());
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.project.hrm.module.corehr.service.onboarding;
 
 import com.project.hrm.module.corehr.dto.request.CreateNewHireDTO;
 import com.project.hrm.module.corehr.entity.*;
+import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
@@ -79,11 +80,17 @@ public class OnboardingCommandService {
                     .roles(new java.util.HashSet<>())
                     .build();
 
-            if (request.getRole() != null) {
-                roleRepository.findByName(request.getRole()).ifPresent(role -> {
-                    newUser.getRoles().add(role);
-                });
+            // Determinating role by department name as per business rule
+            EmployeeRole roleEnum = EmployeeRole.ROLE_EMPLOYEE;
+            if (department.getDeptName().equalsIgnoreCase("Human Resources")) {
+                roleEnum = EmployeeRole.ROLE_HR;
+            } else if (department.getDeptName().equalsIgnoreCase("Finance")) {
+                roleEnum = EmployeeRole.ROLE_FINANCE;
             }
+
+            roleRepository.findByName(roleEnum).ifPresent(role -> {
+                newUser.getRoles().add(role);
+            });
 
             newUser.setEmployee(employee);
             userRepository.save(newUser);

@@ -4,10 +4,11 @@ import { decodeJwt, type JwtPayload } from "../utils/jwtDecode";
 
 export interface CurrentUser {
     token: string;
-    username: string;     // JWT sub — dùng để gọi các API cần username
-    employeeId?: string;  // Optional — chỉ có nếu backend đã link user ↔ employee
+    username: string;
+    employeeId?: string;
     fullName: string;
     role: string;
+    roles: string[];
     avatarUrl?: string;
 }
 
@@ -23,12 +24,15 @@ export function useCurrentUser(): CurrentUser | null {
         const payload: JwtPayload | null = decodeJwt(token);
         if (!payload?.sub) return null;
 
+        const rolesList = payload.roles || [];
+
         return {
             token,
-            username: payload.sub,                          // always present in JWT
-            employeeId: payload.employeeId ?? undefined,    // present only if linked
+            username: payload.sub,
+            employeeId: payload.employeeId ?? undefined,
             fullName: payload.fullName ?? payload.sub,
-            role: payload.roles?.[0] ?? "EMPLOYEE",
+            role: rolesList[0] ?? "EMPLOYEE",
+            roles: rolesList,
             avatarUrl: payload.avatarUrl,
         };
     }, []);

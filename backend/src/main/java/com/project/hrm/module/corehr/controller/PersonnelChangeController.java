@@ -26,7 +26,7 @@ public class PersonnelChangeController {
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<PersonnelChangeResponseDTO> createRequest(
             @RequestBody PersonnelChangeRequestDTO dto,
-            @RequestHeader("X-Employee-Id") UUID requestedBy) {
+            @RequestAttribute("employeeId") UUID requestedBy) {
         return ResponseEntity.ok(changeService.createRequest(dto, requestedBy));
     }
 
@@ -39,32 +39,32 @@ public class PersonnelChangeController {
     @PutMapping("/{changeId}/manager-approve")
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<PersonnelChangeResponseDTO> managerApprove(
-            @PathVariable UUID changeId,
-            @RequestHeader("X-Employee-Id") UUID managerId) {
+            @PathVariable("changeId") UUID changeId,
+            @RequestAttribute("employeeId") UUID managerId) {
         return ResponseEntity.ok(changeService.managerApprove(changeId, managerId));
     }
 
     @PutMapping("/{changeId}/hr-confirm")
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<PersonnelChangeResponseDTO> hrConfirm(
-            @PathVariable UUID changeId,
-            @RequestHeader("X-Employee-Id") UUID hrEmployeeId) {
+            @PathVariable("changeId") UUID changeId,
+            @RequestAttribute("employeeId") UUID hrEmployeeId) {
         return ResponseEntity.ok(changeService.hrConfirm(changeId, hrEmployeeId));
     }
 
     @PutMapping("/{changeId}/reject")
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<PersonnelChangeResponseDTO> reject(
-            @PathVariable UUID changeId,
-            @RequestParam String reason,
-            @RequestHeader("X-Employee-Id") UUID rejectedBy) {
+            @PathVariable("changeId") UUID changeId,
+            @RequestParam("reason") String reason,
+            @RequestAttribute("employeeId") UUID rejectedBy) {
         return ResponseEntity.ok(changeService.reject(changeId, reason, rejectedBy));
     }
 
     @GetMapping("/employee/{employeeId}")
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<PersonnelChangeResponseDTO>> getEmployeeHistory(
-            @PathVariable UUID employeeId) {
+            @PathVariable("employeeId") UUID employeeId) {
         return ResponseEntity.ok(changeService.getEmployeeHistory(employeeId));
     }
 }

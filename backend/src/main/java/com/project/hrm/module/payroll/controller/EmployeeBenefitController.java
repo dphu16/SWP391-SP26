@@ -18,15 +18,14 @@ public class EmployeeBenefitController {
     private final BenefitService benefitService;
 
     @GetMapping("/my-trs")
-    @PreAuthorize("hasAnyRole('ROLE_EMPLOYEE', 'ROLE_HR', 'ROLE_FINANCE')")
+    @PreAuthorize("hasAnyRole('EMPLOYEE', 'HR', 'FINANCE')")
     public ResponseEntity<TotalRewardStatementDTO> getMyTotalRewardStatement(
             @RequestAttribute("employeeId") UUID employeeId,
-            @RequestParam(required = false) Integer year) {
-        
+            @RequestParam(name = "year", required = false) Integer year) {
+
         int targetYear = (year != null) ? year : LocalDate.now().getYear();
-        
+
         return ResponseEntity.ok(
-                benefitService.getTotalRewardStatement(employeeId, targetYear)
-        );
+                benefitService.getTotalRewardStatement(employeeId, targetYear));
     }
 }

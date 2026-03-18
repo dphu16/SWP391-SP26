@@ -60,7 +60,8 @@ public class TeamStatsService {
                 .filter(e -> e.getEmployeeId() != null 
                         && !e.getEmployeeId().equals(managerId) 
                         && e.getStatus() == EmployeeStatus.OFFICIAL
-                        && e.getRole() == EmployeeRole.ROLE_EMPLOYEE)
+                        && e.getUser() != null
+                        && e.getUser().hasRole(EmployeeRole.ROLE_EMPLOYEE.name()))
                 .collect(Collectors.toList());
 
         long totalMembers = team.size();

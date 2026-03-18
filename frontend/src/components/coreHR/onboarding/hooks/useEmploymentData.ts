@@ -19,6 +19,7 @@ export interface JobData {
   deptId: string;
   deptName: string;
   posName: string;
+  type?: string;
 }
 
 export const useEmploymentData = () => {
@@ -76,15 +77,21 @@ export const useJobAutoFill = (
         if (cancelled) return;
         const job = res.data;
 
-        const dept =
-          departments.find((d) => d.id === job.deptId) ||
-          departments.find((d) => d.name.toLowerCase() === job.deptName?.toLowerCase());
+        // 1. Get position from Job
         const pos = positions.find((p) => p.id === job.posId);
+        
+        // 2. From position -> get department by id
+        const dept = pos?.deptId ? departments.find((d) => d.id === pos.deptId) : null;
+        
+        // II. Get status from job type
+        const jobStatus = job.type || "";
 
         setFormData((prev) => ({
           ...prev,
           departmentId: dept?.id || prev.departmentId,
           positionId: pos?.id || job.posId || prev.positionId,
+          status: jobStatus || prev.status,
+          // 3. Ensure managerId is not assigned from job data
         }));
         setJobAutoFilled(true);
       })

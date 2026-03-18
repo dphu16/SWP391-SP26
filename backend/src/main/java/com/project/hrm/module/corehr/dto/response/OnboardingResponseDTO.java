@@ -17,6 +17,7 @@ import java.util.UUID;
 public class OnboardingResponseDTO {
 
     private UUID id;
+    private UUID jobId;
     private String candidateName;
     private String candidateEmail;
     private String candidatePhone;

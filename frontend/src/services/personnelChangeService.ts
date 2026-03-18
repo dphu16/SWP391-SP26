@@ -44,7 +44,6 @@ export interface FieldCooldownDTO {
 export interface ContractResponseDTO {
   contractId: string;
   contractNumber: string;
-  contractType: string;
   startDate: string;
   endDate: string;
   baseSalary: number;

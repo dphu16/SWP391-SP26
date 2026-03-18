@@ -1,7 +1,6 @@
 export interface ContractDTO {
   contractId: string;
   contractNumber: string;
-  contractType: string;
   startDate: string;
   endDate: string;
   status: string;

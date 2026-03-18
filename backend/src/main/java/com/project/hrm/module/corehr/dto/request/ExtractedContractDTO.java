@@ -19,7 +19,6 @@ public class ExtractedContractDTO {
     private LocalDate dateOfBirth;
     private BigDecimal baseSalary;
     private String contractNumber;
-    private String contractType;
     private LocalDate startDate;
     private LocalDate endDate;
     private LocalDate dateOfJoining;

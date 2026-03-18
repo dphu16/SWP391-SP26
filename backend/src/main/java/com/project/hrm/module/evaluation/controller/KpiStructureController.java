@@ -30,7 +30,7 @@ public class KpiStructureController {
     }
 
     @GetMapping("/department/{departmentId}")
-    public ResponseEntity<List<AssignKpiRequest.KpiDetailDto>> getKpisByDepartment(@PathVariable UUID departmentId) {
+    public ResponseEntity<List<AssignKpiRequest.KpiDetailDto>> getKpisByDepartment(@PathVariable("departmentId") UUID departmentId) {
         return ResponseEntity.ok(kpiStructureService.getKpisByDepartment(departmentId));
     }
 }

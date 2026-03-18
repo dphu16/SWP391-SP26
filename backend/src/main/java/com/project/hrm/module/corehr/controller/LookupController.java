@@ -32,7 +32,7 @@ public class LookupController {
 
     @GetMapping("/departments/{id}")
     public ResponseEntity<DepartmentOptionDTO> getDepartmentByManager(
-            @PathVariable UUID id) {
+            @PathVariable("id") UUID id) {
 
         DepartmentOptionDTO responses = lookupService.getDepartmentByManagerId(id);
 
@@ -41,7 +41,7 @@ public class LookupController {
 
     @GetMapping("/pos/{id}")
     public ResponseEntity<List<PositionOptionDTO>> getPositionByDeptId(
-            @PathVariable UUID id) {
+            @PathVariable("id") UUID id) {
 
         List<PositionOptionDTO> responses = lookupService.getPositionByDeptId(id);
 

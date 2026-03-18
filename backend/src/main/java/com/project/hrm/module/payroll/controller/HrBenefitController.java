@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/hr/benefits")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ROLE_HR')")
+@PreAuthorize("hasRole('HR')")
 public class HrBenefitController {
 
     private final BenefitService benefitService;

@@ -48,12 +48,6 @@ export const sidebarConfig: SidebarSection[] = [
             roles: ["HR", "MANAGER"] as UserRole[],
             activeMatchPaths: ["/offboarding/history"],
           },
-          {
-            key: "approval",
-            label: "Approval",
-            path: "/offboarding/approval",
-            roles: ["HR", "MANAGER"] as UserRole[],
-          },
         ],
       },
       {
@@ -61,11 +55,6 @@ export const sidebarConfig: SidebarSection[] = [
         label: "Request",
         icon: Icons.checklist,
         children: [
-          {
-            key: "my-requests",
-            label: "My Requests",
-            path: "/requests/my-requests",
-          },
           {
             key: "create-request",
             label: "Create Request",
@@ -177,13 +166,13 @@ export const sidebarConfig: SidebarSection[] = [
   {
     key: "growth",
     sectionLabel: "Growth",
-    roles: ["HR"] as UserRole[],
+    roles: ["HR", "MANAGER"] as UserRole[],
     items: [
       {
         key: "recruitment",
         label: "Recruitment",
         icon: Icons.recruitment,
-        roles: ["HR"] as UserRole[],
+        roles: ["HR", "MANAGER"] as UserRole[],
         children: [
           {
             key: "job-requests",
@@ -194,6 +183,7 @@ export const sidebarConfig: SidebarSection[] = [
             key: "job-openings",
             label: "Job Openings",
             path: "/recruitment/jobs",
+            roles: ["HR"] as UserRole[],
           },
           {
             key: "schedules",

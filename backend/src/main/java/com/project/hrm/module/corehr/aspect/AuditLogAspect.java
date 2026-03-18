@@ -17,8 +17,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
-import java.util.Comparator;
-import java.util.Objects;
 import java.util.UUID;
 
 @Aspect
@@ -143,17 +141,12 @@ public class AuditLogAspect {
     }
 
     private String resolvePrimaryRoleName(Employee employee) {
-        if (employee == null || employee.getUser() == null || employee.getUser().getRoles() == null) {
+        if (employee == null || employee.getUser() == null) {
             return "";
         }
 
-        return employee.getUser().getRoles().stream()
-                .map(com.project.hrm.module.corehr.entity.Role::getName)
-                .filter(Objects::nonNull)
-                .sorted(Comparator.comparing(Enum::name))
-                .map(Enum::name)
-                .findFirst()
-                .orElse("");
+        String roleName = employee.getUser().getPrimaryRoleName();
+        return roleName != null ? roleName : "";
     }
 
     // Capture Request Creation

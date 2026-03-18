@@ -24,7 +24,7 @@ public class ActivationController {
 
     @PostMapping("/send/{employeeId}")
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
-    public ResponseEntity<Map<String, String>> sendActivationEmail(@PathVariable UUID employeeId) {
+    public ResponseEntity<Map<String, String>> sendActivationEmail(@PathVariable("employeeId") UUID employeeId) {
         activationService.sendActivationEmail(employeeId);
         return ResponseEntity.ok(Map.of("message", "Activation email sent successfully"));
     }

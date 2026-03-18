@@ -36,7 +36,7 @@ public class KpiLibraryController {
     }
 
     @GetMapping
-    public ResponseEntity<List<KpiLibraryResponse>> getAll(@RequestParam(required = false) UUID departmentId){
+    public ResponseEntity<List<KpiLibraryResponse>> getAll(@RequestParam(name = "departmentId", required = false) UUID departmentId){
         return ResponseEntity.ok(service.getAll(departmentId));
     }
 

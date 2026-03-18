@@ -54,10 +54,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
 
-                    String employeeId = jwtUtil.extractClaim(token,
+                    String employeeIdStr = jwtUtil.extractClaim(token,
                             claims -> claims.get("employeeId", String.class));
-                    if (employeeId != null) {
-                        req.setAttribute("employeeId", employeeId);
+                    if (employeeIdStr != null) {
+                        try {
+                            req.setAttribute("employeeId", java.util.UUID.fromString(employeeIdStr));
+                        } catch (IllegalArgumentException e) {
+                            logger.warn("Invalid employeeId format in JWT: {}", employeeIdStr);
+                        }
                     }
                 }
             }

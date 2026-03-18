@@ -20,7 +20,7 @@ export const useCandidateOnboarding = () => {
   const candidateName = searchParams.get("name") || "";
   const candidateEmail = searchParams.get("email") || "";
   const candidatePhone = searchParams.get("phone") || "";
-  const jobTitle = searchParams.get("job") || "";
+  const [jobTitle, setJobTitle] = useState(searchParams.get("job") || "");
   const jobId = searchParams.get("jobId") || "";
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -43,6 +43,22 @@ export const useCandidateOnboarding = () => {
       isResubmit ? undefined : applicationId,
     ),
   );
+
+  // Fetch job title from backend if jobId is present
+  useEffect(() => {
+    if (!jobId || isResubmit) return;
+
+    apiClient
+      .get<{ posName: string }>(`/api/jobs/${jobId}`)
+      .then((res) => {
+        if (res.data?.posName) {
+          setJobTitle(res.data.posName);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch job details:", err);
+      });
+  }, [jobId, isResubmit]);
 
   // Load existing employee data for resubmit mode
   useEffect(() => {
@@ -72,7 +88,6 @@ export const useCandidateOnboarding = () => {
           role: data.role || "ROLE_EMPLOYEE",
           status: data.status || "",
           contractNumber: data.contractNumber || "",
-          contractType: data.contractType || "",
           startDate: data.startDate || "",
           endDate: data.endDate || "",
           baseSalary: data.baseSalary || 0,
@@ -122,11 +137,8 @@ export const useCandidateOnboarding = () => {
         if (!formData.positionId)
           errors.positionId = "Please select a position.";
         if (!formData.status) errors.status = "Please select a target status.";
-        if (!formData.role) errors.role = "Please select a role.";
         if (!formData.dateOfJoining)
           errors.dateOfJoining = "Joining Date is required.";
-        if (!formData.contractType)
-          errors.contractType = "Please select a contract type.";
         if (!formData.startDate) errors.startDate = "Start Date is required.";
         if (!formData.baseSalary || formData.baseSalary <= 0)
           errors.baseSalary = "Base Salary must be greater than 0.";

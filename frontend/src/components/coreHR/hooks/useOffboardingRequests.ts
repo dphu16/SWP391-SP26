@@ -11,7 +11,6 @@ export const useOffboardingRequests = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createMode, setCreateMode] = useState<"resign" | "propose">("resign");
   const [submitting, setSubmitting] = useState(false);
   const [selectedRequest, setSelectedRequest] =
     useState<OffboardingResponse | null>(null);
@@ -20,7 +19,6 @@ export const useOffboardingRequests = () => {
 
   const { success, error: toastError } = useToast();
   const auth = useAuth();
-  const isManager = auth?.hasRole("MANAGER");
 
   const fetchRequests = useCallback(async () => {
     setLoading(true);
@@ -42,7 +40,6 @@ export const useOffboardingRequests = () => {
     type: string;
     reason: string;
     expectedLastDay?: string;
-    employeeId?: string;
   }) => {
     setSubmitting(true);
     try {
@@ -52,19 +49,10 @@ export const useOffboardingRequests = () => {
         expectedLastDay: data.expectedLastDay,
       };
 
-      if (createMode === "resign") {
-        const empId = auth?.user?.employeeId;
-        if (!empId) return;
-        await offboardingService.createResignation(empId, payload);
-        success("Success", "Resignation request created");
-      } else {
-        if (!data.employeeId) return;
-        await offboardingService.createManagerProposal(
-          data.employeeId,
-          payload,
-        );
-        success("Success", "Offboarding proposal created");
-      }
+      const empId = auth?.user?.employeeId;
+      if (!empId) return;
+      await offboardingService.createResignation(empId, payload);
+      success("Success", "Resignation request created");
 
       setShowCreateModal(false);
       fetchRequests();
@@ -106,8 +94,6 @@ export const useOffboardingRequests = () => {
     loading,
     showCreateModal,
     setShowCreateModal,
-    createMode,
-    setCreateMode,
     submitting,
     selectedRequest,
     setSelectedRequest,
@@ -116,7 +102,6 @@ export const useOffboardingRequests = () => {
     filterType,
     setFilterType,
     handleFilterChange,
-    isManager,
     handleCreateRequest,
   };
 };

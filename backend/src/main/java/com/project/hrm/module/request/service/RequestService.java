@@ -4,11 +4,8 @@ import com.project.hrm.module.attendance.entity.AttendanceLog;
 import com.project.hrm.module.attendance.repository.AttendanceLogRepository;
 import com.project.hrm.module.attendance.repository.WorkScheduleRepository;
 import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.module.corehr.entity.User;
-import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.corehr.repository.UserRepository;
-import com.project.hrm.module.corehr.service.helper.NotificationService;
 import com.project.hrm.module.request.dto.RequestDTO;
 import com.project.hrm.module.request.dto.RequestResponseDTO;
 import com.project.hrm.module.request.entity.LeaveBalance;
@@ -44,8 +41,6 @@ public class RequestService {
     private final LeaveBalanceRepository leaveBalanceRepo;
     private final AttendanceLogRepository attendanceLogRepo;
     private final WorkScheduleRepository workScheduleRepo;
-    private final UserRepository userRepo;
-    private final NotificationService notificationService;
 
     // --- 1. TẠO YÊU CẦU MỚI (EMPLOYEE) ---
     @Transactional
@@ -63,8 +58,6 @@ public class RequestService {
         req.setEndDate(dto.getEndDate());
         Request saved = requestRepo.save(req);
 
-        // Notify: request received by HR/Manager users
-        notifyRequestReceived(saved);
 
         return saved;
     }
@@ -126,8 +119,6 @@ public class RequestService {
         }
         Request saved = requestRepo.save(req);
 
-        // Notify the employee that their request was approved
-        notifyRequestSent(saved, "Approved");
 
         return saved;
     }
@@ -144,8 +135,6 @@ public class RequestService {
         }
         Request saved = requestRepo.save(req);
 
-        // Notify the employee that their request was rejected
-        notifyRequestSent(saved, "Rejected");
 
         return saved;
     }
@@ -372,71 +361,4 @@ public class RequestService {
         }
     }
 
-    // ──────────────────────────── Notification Helpers
-    // ────────────────────────────
-
-    /**
-     * REQUEST_RECEIVED: When an employee creates a request,
-     * notify all HR and Manager users so they can review it.
-     */
-    private void notifyRequestReceived(Request request) {
-        try {
-            Employee employee = employeeRepo.findById(request.getEmployeeId()).orElse(null);
-            String empName = employee != null ? employee.getFullName() : "An employee";
-            String requestType = request.getRequestType() != null ? request.getRequestType().name() : "REQUEST";
-
-            String title = "New Request Received";
-            String message = empName + " has submitted a " + requestType + " request. Please review.";
-
-            // Notify all HR users
-            List<User> hrUsers = userRepo.findByRoles_Name(EmployeeRole.ROLE_HR);
-            for (User hrUser : hrUsers) {
-                notificationService.createForUser(
-                        hrUser.getUserId(), title, message,
-                        "REQUEST_RECEIVED", "REQUEST",
-                        request.getRequestId() != null ? request.getRequestId().toString() : null);
-            }
-
-            // Notify all Manager users
-            List<User> managerUsers = userRepo.findByRoles_Name(EmployeeRole.ROLE_MANAGER);
-            for (User managerUser : managerUsers) {
-                // Skip if already notified as HR
-                if (hrUsers.stream().anyMatch(u -> u.getUserId().equals(managerUser.getUserId()))) {
-                    continue;
-                }
-                notificationService.createForUser(
-                        managerUser.getUserId(), title, message,
-                        "REQUEST_RECEIVED", "REQUEST",
-                        request.getRequestId() != null ? request.getRequestId().toString() : null);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to send REQUEST_RECEIVED notification: {}", e.getMessage());
-        }
-    }
-
-    /**
-     * REQUEST_SENT: When a manager approves/rejects a request,
-     * notify the employee who submitted the request.
-     */
-    private void notifyRequestSent(Request request, String decision) {
-        try {
-            Employee employee = employeeRepo.findById(request.getEmployeeId()).orElse(null);
-            if (employee == null || employee.getUser() == null) {
-                log.warn("Cannot send REQUEST_SENT notification: employee or user not found for employeeId={}",
-                        request.getEmployeeId());
-                return;
-            }
-
-            String requestType = request.getRequestType() != null ? request.getRequestType().name() : "REQUEST";
-            String title = "Request " + decision;
-            String message = "Your " + requestType + " request has been " + decision.toLowerCase() + ".";
-
-            notificationService.createForUser(
-                    employee.getUser().getUserId(), title, message,
-                    "REQUEST_SENT", "REQUEST",
-                    request.getRequestId() != null ? request.getRequestId().toString() : null);
-        } catch (Exception e) {
-            log.warn("Failed to send REQUEST_SENT notification: {}", e.getMessage());
-        }
-    }
 }

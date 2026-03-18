@@ -55,7 +55,8 @@ public class TeamStatsController {
                 .filter(e -> e.getEmployeeId() != null 
                         && !e.getEmployeeId().equals(manager.getEmployeeId()) 
                         && e.getStatus() == EmployeeStatus.OFFICIAL
-                        && e.getRole() == EmployeeRole.ROLE_EMPLOYEE)
+                        && e.getUser() != null
+                        && e.getUser().hasRole(EmployeeRole.ROLE_EMPLOYEE.name()))
                 .map(EmployeeMapper::toDTO)
                 .collect(Collectors.toList());
 

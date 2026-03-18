@@ -5,7 +5,6 @@ import com.project.hrm.module.corehr.entity.User;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
-import com.project.hrm.module.corehr.service.helper.NotificationService;
 import com.project.hrm.module.corehr.service.onboarding.ActivationService;
 import com.project.hrm.module.request.entity.Request;
 import com.project.hrm.module.request.enums.RequestStatus;
@@ -32,8 +31,6 @@ class ApprovalRequestServiceTest {
     private EmployeeRepository employeeRepository;
     @Mock
     private EmployeeHelper employeeHelper;
-    @Mock
-    private NotificationService notificationService;
     @Mock
     private ActivationService activationService;
 
@@ -63,14 +60,6 @@ class ApprovalRequestServiceTest {
         approvalRequestService.createApprovalRequest(employeeId);
 
         verify(employeeHelper).resolveManagerForEmployee(employee);
-        verify(notificationService).createForUser(
-                eq(managerUser.getUserId()),
-                anyString(),
-                anyString(),
-                eq("REQUEST_RECEIVED"),
-                eq("REQUEST"),
-                any()
-        );
         verify(requestRepository).save(any(Request.class));
     }
 
@@ -103,6 +92,5 @@ class ApprovalRequestServiceTest {
         approvalRequestService.createApprovalRequest(employeeId);
 
         verify(requestRepository).save(any(Request.class));
-        verifyNoInteractions(notificationService);
     }
 }

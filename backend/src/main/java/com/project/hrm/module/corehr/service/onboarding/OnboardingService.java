@@ -20,12 +20,10 @@ import com.project.hrm.module.request.entity.Request;
 import com.project.hrm.module.request.enums.RequestStatus;
 import com.project.hrm.module.request.enums.RequestType;
 import com.project.hrm.module.request.repository.RequestRepository;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -124,7 +122,6 @@ public class OnboardingService implements IOnboardingService {
         dto.setRole(resolvePrimaryRole(employee));
         dto.setStatus(employee.getStatus());
         dto.setContractNumber(contract != null ? contract.getContractNumber() : null);
-        dto.setContractType(contract != null ? contract.getContractType() : null);
         dto.setStartDate(contract != null ? contract.getStartDate() : null);
         dto.setEndDate(contract != null ? contract.getEndDate() : null);
         dto.setBaseSalary(contract != null ? contract.getBaseSalary() : null);
@@ -176,7 +173,6 @@ public class OnboardingService implements IOnboardingService {
         Contract contract = employee.getContract();
         if (contract != null) {
             contract.setContractNumber(updatedData.getContractNumber());
-            contract.setContractType(updatedData.getContractType());
             contract.setStartDate(updatedData.getStartDate());
             contract.setEndDate(updatedData.getEndDate());
             contract.setBaseSalary(updatedData.getBaseSalary());
@@ -210,15 +206,11 @@ public class OnboardingService implements IOnboardingService {
     }
 
     private com.project.hrm.module.corehr.enums.EmployeeRole resolvePrimaryRole(Employee employee) {
-        if (employee == null || employee.getUser() == null || employee.getUser().getRoles() == null) {
+        if (employee == null || employee.getUser() == null) {
             return null;
         }
 
-        return employee.getUser().getRoles().stream()
-                .map(Role::getName)
-                .filter(java.util.Objects::nonNull)
-                .sorted(Comparator.comparing(Enum::name))
-                .findFirst()
-                .orElse(null);
+        Role primaryRole = employee.getUser().getPrimaryRole();
+        return primaryRole != null ? primaryRole.getName() : null;
     }
 }

@@ -43,7 +43,7 @@ public class JobController {
     @GetMapping("/hr/{hrId}")
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<JobResponse>> getJobByHrId(
-            @PathVariable UUID hrId) {
+            @PathVariable("hrId") UUID hrId) {
 
         List<JobResponse> responses = jobService.getJobByEmployeeId(hrId);
 
@@ -60,7 +60,7 @@ public class JobController {
 
     @GetMapping("/candidate/list-job/{id}")
     public ResponseEntity<JobResponse> getJobById(
-            @PathVariable UUID id) {
+            @PathVariable("id") UUID id) {
 
         return ResponseEntity.ok(jobService.getJobById(id));
     }
@@ -68,7 +68,7 @@ public class JobController {
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<JobResponse> getDetailJobById(
-            @PathVariable UUID id) {
+            @PathVariable("id") UUID id) {
 
         return ResponseEntity.ok(jobService.getJobById(id));
     }
@@ -76,7 +76,7 @@ public class JobController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<JobResponse> update(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody CreateJobRequest request) {
 
         return ResponseEntity.ok(
@@ -86,8 +86,8 @@ public class JobController {
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<JobResponse> updateStatus(
-            @PathVariable UUID id,
-            @RequestParam JobStatus status) {
+            @PathVariable("id") UUID id,
+            @RequestParam("status") JobStatus status) {
 
         JobResponse response = jobService.updateStatus(id, status);
         return ResponseEntity.ok(response);
@@ -95,7 +95,7 @@ public class JobController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('HR')")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
 
         jobService.delete(id);
         return ResponseEntity.noContent().build();

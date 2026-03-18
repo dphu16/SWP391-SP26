@@ -45,7 +45,8 @@ public class MentorService {
         return employeeRepository.findByDepartment_DeptId(deptId).stream()
                 .filter(e -> !e.getEmployeeId().equals(mentorId) 
                         && e.getStatus() == EmployeeStatus.OFFICIAL
-                        && e.getRole() == EmployeeRole.ROLE_EMPLOYEE)
+                        && e.getUser() != null
+                        && e.getUser().hasRole(EmployeeRole.ROLE_EMPLOYEE.name()))
                 .map(e -> MenteeDTO.builder()
                         .employeeId(e.getEmployeeId())
                         .fullName(e.getFullName())

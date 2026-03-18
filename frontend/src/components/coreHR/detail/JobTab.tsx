@@ -98,9 +98,6 @@ const JobTab: React.FC<JobTabProps> = ({ detail }) => {
                     Contract #
                   </th>
                   <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
-                    Type
-                  </th>
-                  <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
                     Start Date
                   </th>
                   <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
@@ -119,9 +116,6 @@ const JobTab: React.FC<JobTabProps> = ({ detail }) => {
                   >
                     <td className="py-2.5 px-3 font-medium text-text-primary-light">
                       {c.contractNumber}
-                    </td>
-                    <td className="py-2.5 px-3 text-text-secondary-light">
-                      {c.contractType}
                     </td>
                     <td className="py-2.5 px-3 text-text-secondary-light">
                       {formatDate(c.startDate)}

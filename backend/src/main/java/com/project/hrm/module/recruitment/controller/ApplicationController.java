@@ -41,15 +41,16 @@ public class ApplicationController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApplicationResponse> getById(@PathVariable UUID id) {
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
+    public ResponseEntity<ApplicationResponse> getById(@PathVariable("id") UUID id) {
         return ResponseEntity.ok(applicationService.getApplicationById(id));
     }
 
     @GetMapping("/job/{jobId}")
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<ApplicationResponse>> getByJobId(
-            @PathVariable UUID jobId,
-            @RequestParam ApplicationStatus status) {
+            @PathVariable("jobId") UUID jobId,
+            @RequestParam("status") ApplicationStatus status) {
 
         return ResponseEntity.ok(
                 applicationService.getAppByJobIdAndStatus(jobId, status)
@@ -59,7 +60,7 @@ public class ApplicationController {
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<ApplicationResponse> update(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @ModelAttribute ApplicationRequest request) {
         ApplicationResponse response = applicationService.update(id, request);
         return ResponseEntity.ok(response);
@@ -67,7 +68,7 @@ public class ApplicationController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('HR')")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
 
         applicationService.delete(id);
         return ResponseEntity.noContent().build();
@@ -82,7 +83,7 @@ public class ApplicationController {
 
     @PutMapping("/last-stage/{id}")
     @PreAuthorize("hasRole('HR')")
-    public ResponseEntity<ApplicationResponse> lastStage(@PathVariable UUID id) {
+    public ResponseEntity<ApplicationResponse> lastStage(@PathVariable("id") UUID id) {
         ApplicationResponse response = applicationService.lastStage(id);
         return ResponseEntity.ok(response);
     }

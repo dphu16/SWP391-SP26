@@ -51,22 +51,22 @@ public class TrainingParticipantController {
     }
 
     @GetMapping("/employee/{employeeId}")
-    public ResponseEntity<List<TrainingParticipant>> getByEmployee(@PathVariable UUID employeeId) {
+    public ResponseEntity<List<TrainingParticipant>> getByEmployee(@PathVariable("employeeId") UUID employeeId) {
         return ResponseEntity.ok(service.getByEmployee(employeeId));
     }
 
     @GetMapping("/{participantId}")
-    public ResponseEntity<TrainingParticipant> getById(@PathVariable UUID participantId){
+    public ResponseEntity<TrainingParticipant> getById(@PathVariable("participantId") UUID participantId){
         return ResponseEntity.ok(service.getById(participantId));
     }
 
     @PutMapping("/{participantId}")
-    public ResponseEntity<TrainingParticipant> update(@PathVariable UUID participantId, @RequestBody TrainingParticipantRequest req){
+    public ResponseEntity<TrainingParticipant> update(@PathVariable("participantId") UUID participantId, @RequestBody TrainingParticipantRequest req){
         return ResponseEntity.ok(service.update(participantId, req));
     }
 
     @PutMapping("/{participantId}/submit-certificate")
-    public ResponseEntity<TrainingParticipant> submitCertificate(@PathVariable UUID participantId, @RequestBody java.util.Map<String, String> body){
+    public ResponseEntity<TrainingParticipant> submitCertificate(@PathVariable("participantId") UUID participantId, @RequestBody java.util.Map<String, String> body){
         String certificateUrl = body.get("certificateUrl");
         if (certificateUrl == null || certificateUrl.trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
@@ -75,7 +75,7 @@ public class TrainingParticipantController {
     }
 
     @PutMapping("/{participantId}/confirm-certificate")
-    public ResponseEntity<?> confirmCertificate(@PathVariable UUID participantId) {
+    public ResponseEntity<?> confirmCertificate(@PathVariable("participantId") UUID participantId) {
         try {
             // Get the current authenticated user's email from Spring Security context
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -108,13 +108,13 @@ public class TrainingParticipantController {
     }
 
     @PutMapping("/{participantId}/reject-certificate")
-    public ResponseEntity<TrainingParticipant> rejectCertificate(@PathVariable UUID participantId) {
+    public ResponseEntity<TrainingParticipant> rejectCertificate(@PathVariable("participantId") UUID participantId) {
         System.out.println(">>> Rejecting certificate for participant: " + participantId);
         return ResponseEntity.ok(service.rejectCertificate(participantId));
     }
 
     @DeleteMapping("/{participantId}")
-    public ResponseEntity<Void> delete(@PathVariable UUID participantId){
+    public ResponseEntity<Void> delete(@PathVariable("participantId") UUID participantId){
         service.delete(participantId);
         return ResponseEntity.noContent().build();
     }

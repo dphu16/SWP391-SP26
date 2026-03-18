@@ -5,7 +5,7 @@ import com.project.hrm.module.corehr.dto.request.EmployeeDTO;
 import com.project.hrm.module.corehr.dto.request.EmployeeDetailDTO;
 import com.project.hrm.module.corehr.dto.request.EmployeeSelfUpdateDTO;
 import com.project.hrm.module.corehr.dto.response.ContractResponseDTO;
-import com.project.hrm.module.corehr.dto.response.DependentDTO;
+
 import com.project.hrm.module.corehr.dto.response.FieldCooldownDTO;
 import com.project.hrm.module.corehr.service.directory.ContractService;
 import com.project.hrm.module.corehr.service.directory.DependentService;
@@ -95,15 +95,16 @@ public class EmployeeController {
     // BRD 2.5: Employee views own profile
     @GetMapping("/employee/profile")
     public ResponseEntity<EmployeeDetailDTO> getMyProfile(
-            @RequestHeader("X-Employee-Id") UUID employeeId) {
+            @RequestAttribute("employeeId") UUID employeeId) {
         EmployeeDetailDTO dto = employeeService.getEmployeeDetail(employeeId);
         return ResponseEntity.ok(dto);
     }
 
     // BRD 2.2: Employee self-update (phone, email, address) with 6-month cooldown
     @PutMapping("/employees/self-update")
+    @PreAuthorize("isAuthenticated()") // Cho phép tất cả nhân viên được authenticated tự cập nhật profile của mình
     public ResponseEntity<EmployeeDetailDTO> selfUpdate(
-            @RequestHeader("X-Employee-Id") UUID employeeId,
+            @RequestAttribute("employeeId") UUID employeeId,
             @RequestBody EmployeeSelfUpdateDTO dto) {
         EmployeeDetailDTO updated = selfUpdateService.selfUpdate(employeeId, dto);
         return ResponseEntity.ok(updated);

@@ -6,7 +6,6 @@ import com.project.hrm.module.corehr.entity.User;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
-import com.project.hrm.module.corehr.service.helper.NotificationService;
 import com.project.hrm.module.request.dto.RequestDTO;
 import com.project.hrm.module.request.entity.Request;
 import com.project.hrm.module.request.enums.RequestStatus;
@@ -33,37 +32,11 @@ class RequestServiceTest {
     @Mock
     private EmployeeRepository employeeRepo;
     @Mock
-    private NotificationService notificationService;
-    @Mock
     private EmployeeHelper employeeHelper;
 
     @InjectMocks
     private RequestService requestService;
 
-    @Test
-    void notify_whenLeaveRequestCreated_thenOnlyDeptManagerNotified() {
-        Request request = new Request();
-        request.setRequestType(RequestType.LEAVE);
-        request.setEmployeeId(UUID.randomUUID());
-
-        Employee employee = new Employee();
-        Department department = new Department();
-        Employee manager = new Employee();
-        User managerUser = new User();
-        managerUser.setUserId(UUID.randomUUID());
-        manager.setUser(managerUser);
-        department.setManager(manager);
-        employee.setDepartment(department);
-
-        when(employeeRepo.findById(request.getEmployeeId())).thenReturn(Optional.of(employee));
-
-        requestService.createRequest(new RequestDTO() {{
-            setRequestType(RequestType.LEAVE);
-            setEmployeeId(request.getEmployeeId());
-        }});
-
-        verify(notificationService).createForUser(eq(managerUser.getUserId()), any(), any(), any(), any(), any());
-    }
 
     @Test
     void approve_whenApproverIsCorrectManager_thenSuccess() {

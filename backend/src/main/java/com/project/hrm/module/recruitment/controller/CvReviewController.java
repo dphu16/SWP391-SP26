@@ -31,7 +31,7 @@ public class CvReviewController {
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<CvReviewResponse> getCvReviewById(
-            @PathVariable UUID id) {
+            @PathVariable("id") UUID id) {
 
         return ResponseEntity.ok(cvReviewService.getReviewById(id));
     }

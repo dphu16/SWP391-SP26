@@ -6,15 +6,11 @@ import com.project.hrm.module.corehr.dto.request.HRConfirmOffboardingDTO;
 import com.project.hrm.module.corehr.dto.request.OffboardingRequestDTO;
 import com.project.hrm.module.corehr.dto.response.InactiveEmployeeResponseDTO;
 import com.project.hrm.module.corehr.dto.response.OffboardingResponseDTO;
-import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.corehr.service.offboarding.IOffboardingService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,21 +22,20 @@ import java.util.UUID;
 public class OffboardingController {
 
     private final IOffboardingService offboardingService;
-    private final EmployeeRepository employeeRepository;
-
-    public OffboardingController(IOffboardingService offboardingService,
-            EmployeeRepository employeeRepository) {
+    
+    public OffboardingController(IOffboardingService offboardingService) {
         this.offboardingService = offboardingService;
-        this.employeeRepository = employeeRepository;
     }
 
     // ── BRD 3.1: Nhân viên tự tạo yêu cầu nghỉ việc (voluntary resignation) ──
     @PostMapping("/offboarding/resign/{employeeId}")
+    @PreAuthorize("hasRole('EMPLOYEE')")
     public ResponseEntity<OffboardingResponseDTO> createResignationRequest(
             @PathVariable("employeeId") UUID employeeId,
+            @RequestAttribute("employeeId") UUID tokenEmployeeId,
             @Valid @RequestBody OffboardingRequestDTO dto) {
-        // In local development, trust current employeeId or pass it as requester
-        OffboardingResponseDTO response = offboardingService.createResignationRequest(employeeId, dto, employeeId);
+        // Sử dụng ID từ token để ngăn chặn IDOR, giữ PathVariable để đảm bảo API contract (backward compatibility)
+        OffboardingResponseDTO response = offboardingService.createResignationRequest(tokenEmployeeId, dto, tokenEmployeeId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -49,9 +44,9 @@ public class OffboardingController {
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<OffboardingResponseDTO> createManagerProposedRequest(
             @PathVariable("employeeId") UUID employeeId,
+            @RequestAttribute("employeeId") UUID requesterId,
             @Valid @RequestBody OffboardingRequestDTO dto) {
-        UUID managerId = getCurrentEmployeeId();
-        OffboardingResponseDTO response = offboardingService.createManagerProposedRequest(employeeId, dto, managerId);
+        OffboardingResponseDTO response = offboardingService.createManagerProposedRequest(employeeId, dto, requesterId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -59,8 +54,8 @@ public class OffboardingController {
     @PutMapping("/offboarding/{offboardingId}/manager-approve")
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<OffboardingResponseDTO> managerApprove(
-            @PathVariable("offboardingId") UUID offboardingId) {
-        UUID managerId = getCurrentEmployeeId();
+            @PathVariable("offboardingId") UUID offboardingId,
+            @RequestAttribute("employeeId") UUID managerId) {
         OffboardingResponseDTO response = offboardingService.managerApprove(offboardingId, managerId);
         return ResponseEntity.ok(response);
     }
@@ -70,8 +65,8 @@ public class OffboardingController {
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<OffboardingResponseDTO> hrConfirm(
             @PathVariable("offboardingId") UUID offboardingId,
+            @RequestAttribute("employeeId") UUID hrEmployeeId,
             @Valid @RequestBody HRConfirmOffboardingDTO dto) {
-        UUID hrEmployeeId = getCurrentEmployeeId();
         OffboardingResponseDTO response = offboardingService.hrConfirm(offboardingId, dto, hrEmployeeId);
         return ResponseEntity.ok(response);
     }
@@ -80,12 +75,8 @@ public class OffboardingController {
     @PutMapping("/offboarding/{offboardingId}/cancel")
     public ResponseEntity<OffboardingResponseDTO> cancelOffboarding(
             @PathVariable("offboardingId") UUID offboardingId,
+            @RequestAttribute("employeeId") UUID cancelledBy,
             @Valid @RequestBody CancelOffboardingDTO dto) {
-        UUID cancelledBy = getCurrentEmployeeId(); // Or extract from security
-        if (cancelledBy == null) {
-            // fallback: in some testing modes, allow cancel
-            cancelledBy = offboardingId;
-        }
         OffboardingResponseDTO response = offboardingService.cancelOffboarding(offboardingId, dto, cancelledBy);
         return ResponseEntity.ok(response);
     }
@@ -137,14 +128,5 @@ public class OffboardingController {
         return ResponseEntity.ok(inactiveList);
     }
 
-    // ── Helper: Resolve current user's employee ID from JWT ──
-    private UUID getCurrentEmployeeId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            throw new RuntimeException("Current user not authenticated");
-        }
-        return employeeRepository.findByUser_Email(auth.getName())
-                .map(Employee::getEmployeeId)
-                .orElse(null); // Return null instead of aborting wildly if not found
-    }
+
 }

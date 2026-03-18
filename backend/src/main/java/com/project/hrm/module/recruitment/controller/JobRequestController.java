@@ -22,6 +22,7 @@ public class JobRequestController {
     private final JobRequestService jobRequestService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE')")
     public ResponseEntity<JobRequestResponse> create(
             @Valid @RequestBody JobRequestRequest request) {
 
@@ -31,6 +32,7 @@ public class JobRequestController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<JobRequestResponse>> getAll() {
 
         List<JobRequestResponse> responses =
@@ -42,8 +44,8 @@ public class JobRequestController {
     @GetMapping("/department-name/{name}")
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<List<JobRequestResponse>> getRequestToManager(
-            @PathVariable String name,
-            @RequestParam RequestStatus status) {
+            @PathVariable("name") String name,
+            @RequestParam("status") RequestStatus status) {
 
         List<JobRequestResponse> responses =
                 jobRequestService.getRequestByDepartmentName(name, status);
@@ -54,8 +56,8 @@ public class JobRequestController {
     @GetMapping("/hr/{id}")
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<JobRequestResponse>> getRequestToHr(
-            @PathVariable UUID id,
-            @RequestParam RequestStatus status) {
+            @PathVariable("id") UUID id,
+            @RequestParam("status") RequestStatus status) {
 
         List<JobRequestResponse> responses =
                 jobRequestService.getRequestByReportTo(id, status);
@@ -76,7 +78,7 @@ public class JobRequestController {
     @PatchMapping("/hr/list/{id}")
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<JobRequestResponse>> choiceRequest(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody List<UUID> ids) {
 
         List<JobRequestResponse> response = jobRequestService.choiceHr(id, ids);
@@ -85,15 +87,17 @@ public class JobRequestController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE')")
     public ResponseEntity<JobRequestResponse> getById(
-            @PathVariable UUID id) {
+            @PathVariable("id") UUID id) {
 
         return ResponseEntity.ok(jobRequestService.getRequestById(id));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE')")
     public ResponseEntity<JobRequestResponse> updateBefore(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody JobRequestRequest request) {
 
         return ResponseEntity.ok(
@@ -102,10 +106,11 @@ public class JobRequestController {
     }
 
     @PostMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<JobRequestResponse> updateStatus(
-            @PathVariable UUID id,
-            @RequestParam RequestStatus status,
-            @RequestParam(required = false) String comment) {
+            @PathVariable("id") UUID id,
+            @RequestParam("status") RequestStatus status,
+            @RequestParam(name = "comment", required = false) String comment) {
 
         return ResponseEntity.ok(
                 jobRequestService.updateStatus(id, status, comment)
@@ -113,7 +118,8 @@ public class JobRequestController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE')")
+    public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
 
         jobRequestService.delete(id);
         return ResponseEntity.noContent().build();

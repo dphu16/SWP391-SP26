@@ -72,9 +72,6 @@ const CandidateProfileCompletion: React.FC = () => {
                 <StepNavigator
                   currentStep={currentStep}
                   setCurrentStep={setCurrentStep}
-                  submitting={submitting}
-                  isResubmit={isResubmit}
-                  onSubmit={handleSubmit}
                 />
               </div>
 

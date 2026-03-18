@@ -44,17 +44,19 @@ public class EmployeeSpecification {
 
             if (StringUtils.hasText(role)) {
                 Join<Object, Object> userJoin = root.join("user");
+                Join<Object, Object> rolesJoin = userJoin.join("roles");
 
                 String roleEnumStr = role.trim().toUpperCase();
                 if (roleEnumStr.equals("HR MANAGER") || roleEnumStr.equals("HR")) {
-                    roleEnumStr = "HR";
+                    roleEnumStr = "ROLE_HR";
+                } else if (!roleEnumStr.startsWith("ROLE_")) {
+                    roleEnumStr = "ROLE_" + roleEnumStr;
                 }
 
                 try {
-                    EmployeeRole parsedRole = EmployeeRole
-                            .valueOf(roleEnumStr);
+                    EmployeeRole parsedRole = EmployeeRole.valueOf(roleEnumStr);
                     predicate = criteriaBuilder.and(predicate,
-                            criteriaBuilder.equal(userJoin.get("role"), parsedRole));
+                            criteriaBuilder.equal(rolesJoin.get("name"), parsedRole));
                 } catch (IllegalArgumentException e) {
                     // Ignore Invalid role string
                 }

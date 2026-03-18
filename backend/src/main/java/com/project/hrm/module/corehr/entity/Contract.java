@@ -32,9 +32,6 @@ public class Contract {
     @Column(name = "contract_number", unique = true)
     private String contractNumber;
 
-    @Column(name = "contract_type")
-    private String contractType;
-
     @Column(name = "start_date")
     private LocalDate startDate;
 

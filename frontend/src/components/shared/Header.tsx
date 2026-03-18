@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { getToken, removeToken } from "../../services/authService";
 import { decodeJwt } from "../../utils/jwtDecode";
 import apiClient from "../../services/apiClient";
-import NotificationBell from "../notifications/NotificationBell";
 import Breadcrumb from "../navigation/Breadcrumb";
 
 
@@ -182,17 +181,17 @@ const Header: React.FC = () => {
 
         {/* ── Right: Actions ── */}
         <div className="flex items-center gap-2">
-          {/* AI Chat */}
-          <button
-            className="relative p-2 rounded-lg text-text-secondary-light hover:bg-gray-100 hover:text-text-primary-light transition-colors cursor-pointer"
-            aria-label="AI Chat"
-            onClick={() => navigate("/ai-chat")}
-          >
-            <ChatIcon />
-          </button>
+          {/* AI Chat (Visible to HR and MANAGER only) */}
+          {(currentUser.role === "HR" || currentUser.role === "MANAGER") && (
+            <button
+              className="relative p-2 rounded-lg text-text-secondary-light hover:bg-gray-100 hover:text-text-primary-light transition-colors cursor-pointer"
+              aria-label="AI Chat"
+              onClick={() => navigate("/ai-chat")}
+            >
+              <ChatIcon />
+            </button>
+          )}
 
-          {/* Notifications — using the new NotificationBell component */}
-          <NotificationBell />
 
           {/* Divider */}
           <div className="w-px h-6 bg-border-light mx-1" />
@@ -305,6 +304,11 @@ const Header: React.FC = () => {
                     } catch (error) {
                       console.error("Logout error", error);
                     } finally {
+                      // Clear AI chat history on logout
+                      localStorage.removeItem("hrm_ai_messages");
+                      localStorage.removeItem("hrm_ai_activeExtractedData");
+                      localStorage.removeItem("hrm_ai_activeFileBase64");
+                      
                       removeToken();
                       navigate("/login", { replace: true });
                     }

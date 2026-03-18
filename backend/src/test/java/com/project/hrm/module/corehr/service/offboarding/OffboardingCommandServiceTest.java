@@ -8,7 +8,6 @@ import com.project.hrm.module.corehr.enums.OffboardingStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.repository.OffboardingRepository;
 import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
-import com.project.hrm.module.corehr.service.helper.NotificationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,8 +28,6 @@ class OffboardingCommandServiceTest {
     private OffboardingRepository offboardingRepository;
     @Mock
     private EmployeeHelper employeeHelper;
-    @Mock
-    private NotificationService notificationService;
 
     @InjectMocks
     private OffboardingCommandService offboardingCommandService;
@@ -51,7 +48,6 @@ class OffboardingCommandServiceTest {
         offboardingCommandService.createResignationRequest(employeeId, new OffboardingRequestDTO(), UUID.randomUUID());
 
         verify(employeeHelper).resolveManagerForEmployee(employee);
-        verify(notificationService).createForUser(eq(managerUser.getUserId()), any(), any(), eq("OFFBOARDING_RECEIVED"), any(), any());
     }
 
     @Test

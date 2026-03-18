@@ -1,20 +1,13 @@
-import React from "react";
-import { CheckIcon, VerifiedIcon, STEPS } from "./formConstants";
+import { STEPS } from "./formConstants";
 
 interface StepNavigatorProps {
   currentStep: number;
   setCurrentStep: (step: number) => void;
-  submitting: boolean;
-  isResubmit: boolean;
-  onSubmit: () => void;
 }
 
 const StepNavigator: React.FC<StepNavigatorProps> = ({
   currentStep,
   setCurrentStep,
-  submitting,
-  isResubmit,
-  onSubmit,
 }) => (
   <div className="rounded-2xl border border-border-light bg-surface-light shadow-card overflow-hidden animate-fade-in">
     <div className="px-4 py-3.5 border-b border-border-light">
@@ -56,7 +49,7 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
                     : "border-gray-300 text-gray-300"
               }`}
             >
-              {isCompleted ? <CheckIcon /> : <span>{step.icon}</span>}
+              {isCompleted ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> : <span>{step.icon}</span>}
             </div>
 
             {/* Label */}
@@ -98,29 +91,6 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
           </button>
         );
       })}
-    </div>
-
-    {/* Submit CTA */}
-    <div className="p-4 border-t border-border-light">
-      <button
-        className={`w-full py-2.5 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors text-sm ${
-          currentStep === STEPS.length - 1
-            ? "bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/20 cursor-pointer btn-primary-action"
-            : "bg-gray-100 text-text-muted-light cursor-not-allowed"
-        }`}
-        disabled={currentStep !== STEPS.length - 1 || submitting}
-        onClick={onSubmit}
-      >
-        <VerifiedIcon />
-        {submitting
-          ? "Processing…"
-          : isResubmit
-            ? "Update & Resubmit"
-            : "Finish & Create Employee"}
-      </button>
-      <p className="text-[11px] text-text-secondary-light mt-2 text-center">
-        Complete all 2 steps to activate
-      </p>
     </div>
   </div>
 );

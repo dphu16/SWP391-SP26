@@ -24,7 +24,6 @@ public class CreateNewHireDTO {
     private String taxCode;
     private LocalDate dateOfBirth;
     private String contractNumber;
-    private String contractType;
     private LocalDate startDate;
     private String contractDuration; // 6_MONTHS, 1_YEAR, 2_YEARS, INDEFINITE, CUSTOM
     private LocalDate endDate;

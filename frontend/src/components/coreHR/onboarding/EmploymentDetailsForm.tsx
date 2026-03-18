@@ -11,7 +11,7 @@ import type { FieldErrors } from "../hooks/useCandidateOnboarding";
 import { numberToVietnameseWords } from "../../../utils/numberToVietnameseWords";
 
 import { useEmploymentData, useJobAutoFill, usePositionDepartmentSync, type DepartmentOption, type PositionOption } from "./hooks/useEmploymentData";
-import { useManagerSearch, type ManagerOption } from "./hooks/useManagerSearch";
+
 
 interface EmploymentDetailsFormProps {
   formData: CreateNewHireDTO;
@@ -39,7 +39,7 @@ interface SharedProps {
   update: (field: keyof CreateNewHireDTO, val: string | number) => void;
 }
 
-const DepartmentPositionSection: React.FC<SharedProps & {
+const ProfessionInfoSection: React.FC<SharedProps & {
   departments: DepartmentOption[];
   positions: PositionOption[];
   loading: boolean;
@@ -47,7 +47,7 @@ const DepartmentPositionSection: React.FC<SharedProps & {
   isDeptLocked: boolean;
   isPosLocked: boolean;
 }> = ({ formData, fieldErrors, update, departments, positions, loading, fetchError, isDeptLocked, isPosLocked }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     <div>
       <label className={labelCls}>
         Department <span className="text-rose-500">*</span>
@@ -68,9 +68,6 @@ const DepartmentPositionSection: React.FC<SharedProps & {
             ))}
           </select>
         </SelectWrapper>
-      )}
-      {isDeptLocked && (
-        <p className="mt-1 text-[11px] text-primary font-medium"></p>
       )}
       <FieldError message={fieldErrors.departmentId} />
     </div>
@@ -96,110 +93,12 @@ const DepartmentPositionSection: React.FC<SharedProps & {
           </select>
         </SelectWrapper>
       )}
-      {isPosLocked && (
-        <p className="mt-1 text-[11px] text-primary font-medium"></p>
-      )}
       <FieldError message={fieldErrors.positionId} />
     </div>
-  </div>
-);
-
-const ManagerDateSection: React.FC<SharedProps & {
-  managerQuery: string;
-  handleManagerQueryChange: (v: string) => void;
-  managerResults: ManagerOption[];
-  setShowManagerDropdown: (b: boolean) => void;
-  selectedManagerName: string;
-  managerSearching: boolean;
-  showManagerDropdown: boolean;
-  handleSelectManager: (m: ManagerOption) => void;
-  managerRef: React.RefObject<HTMLDivElement | null>;
-}> = ({
-  formData, fieldErrors, update,
-  managerQuery, handleManagerQueryChange, managerResults, setShowManagerDropdown,
-  selectedManagerName, managerSearching, showManagerDropdown, handleSelectManager, managerRef
-}) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div ref={managerRef as React.RefObject<HTMLDivElement>} className="relative">
-      <label className={labelCls}>Manager</label>
-      <input
-        type="text"
-        value={managerQuery}
-        onChange={(e) => handleManagerQueryChange(e.target.value)}
-        onFocus={() => {
-          if (managerResults.length > 0) setShowManagerDropdown(true);
-        }}
-        placeholder="Search by name or employee code…"
-        className={`${inputCls} ${errorBorder(fieldErrors, "managerId")}`}
-      />
-      {selectedManagerName && (
-        <p className="mt-1 text-xs text-emerald-600 font-medium">✓ {selectedManagerName}</p>
-      )}
-      {managerSearching && (
-        <p className="mt-1 text-xs text-text-muted-light">Searching…</p>
-      )}
-      {showManagerDropdown && managerResults.length > 0 && (
-        <div className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-xl border border-border-light bg-white shadow-lg">
-          {managerResults.map((mgr) => (
-            <button
-              key={mgr.id}
-              type="button"
-              onClick={() => handleSelectManager(mgr)}
-              className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors border-b border-border-light last:border-0 cursor-pointer"
-            >
-              <span className="text-sm font-semibold text-text-primary-light">{mgr.fullName}</span>
-              <span className="ml-2 text-xs text-text-secondary-light font-mono">{mgr.employeeCode}</span>
-              <span className="block text-[11px] text-text-muted-light">
-                {mgr.positionTitle} — {mgr.deptName}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-      {showManagerDropdown && managerResults.length === 0 && !managerSearching && managerQuery.trim().length >= 2 && (
-        <div className="absolute z-20 left-0 right-0 mt-1 rounded-xl border border-border-light bg-white shadow-lg px-4 py-3">
-          <p className="text-xs text-text-muted-light">No results found</p>
-        </div>
-      )}
-    </div>
-    <div>
-      <label className={labelCls}>
-        Joining Date <span className="text-rose-500">*</span>
-      </label>
-      <input
-        type="date"
-        value={formData.dateOfJoining ?? ""}
-        onChange={(e) => update("dateOfJoining", e.target.value)}
-        className={`${inputCls} ${errorBorder(fieldErrors, "dateOfJoining")}`}
-      />
-      <FieldError message={fieldErrors.dateOfJoining} />
-    </div>
-  </div>
-);
-
-const RoleStatusSection: React.FC<SharedProps> = ({ formData, fieldErrors, update }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div>
-      <label className={labelCls}>
-        Role <span className="text-rose-500">*</span>
-      </label>
-      <SelectWrapper>
-        <select
-          value={formData.role}
-          onChange={(e) => update("role", e.target.value)}
-          className={`${inputCls} appearance-none pr-9 cursor-pointer ${errorBorder(fieldErrors, "role")}`}
-        >
-          <option value="ROLE_EMPLOYEE">Employee</option>
-          <option value="ROLE_HR">HR</option>
-          <option value="ROLE_FINANCE">Finance</option>
-        </select>
-      </SelectWrapper>
-      <FieldError message={fieldErrors.role} />
-    </div>
 
     <div>
       <label className={labelCls}>
-        Status <span className="text-rose-500">*</span>
+        Employment Status <span className="text-rose-500">*</span>
       </label>
       <SelectWrapper>
         <select
@@ -215,17 +114,35 @@ const RoleStatusSection: React.FC<SharedProps> = ({ formData, fieldErrors, updat
       </SelectWrapper>
       <FieldError message={fieldErrors.status} />
     </div>
+
+    <div>
+      <label className={labelCls}>
+        Joining Date <span className="text-rose-500">*</span>
+      </label>
+      <input
+        type="date"
+        value={formData.dateOfJoining ?? ""}
+        onChange={(e) => update("dateOfJoining", e.target.value)}
+        className={`${inputCls} ${errorBorder(fieldErrors, "dateOfJoining")}`}
+      />
+      <FieldError message={fieldErrors.dateOfJoining} />
+    </div>
   </div>
 );
 
+// JoiningDateSection integrated into ProfessionInfoSection
+
+// StatusSection is now integrated into ProfessionInfoSection
+
 const ContractSection: React.FC<SharedProps & { onFileChange: (file: File | null) => void; contractFileName: string | null; }> = ({ formData, fieldErrors, update, onFileChange, contractFileName }) => (
-  <>
-    <div className="pt-1 pb-2 border-b border-border-light">
+  <div className="space-y-4">
+    <div className="pt-2 border-b border-border-light">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
-        Contract Information
+        Contract & Legal Documents
       </p>
     </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div>
         <label className={labelCls}>Contract Number</label>
         <input
@@ -236,26 +153,6 @@ const ContractSection: React.FC<SharedProps & { onFileChange: (file: File | null
           className={`${inputCls} font-mono`}
         />
       </div>
-      <div>
-        <label className={labelCls}>
-          Contract Type <span className="text-rose-500">*</span>
-        </label>
-        <SelectWrapper>
-          <select
-            value={formData.contractType ?? ""}
-            onChange={(e) => update("contractType", e.target.value)}
-            className={`${inputCls} appearance-none pr-9 cursor-pointer ${errorBorder(fieldErrors, "contractType")}`}
-          >
-            <option value="" disabled>Select type…</option>
-            <option value="PROBATION">Probation</option>
-            <option value="DEFINITE">Definite</option>
-            <option value="INDEFINITE">Indefinite</option>
-          </select>
-        </SelectWrapper>
-        <FieldError message={fieldErrors.contractType} />
-      </div>
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label className={labelCls}>
           Start Date <span className="text-rose-500">*</span>
@@ -269,16 +166,13 @@ const ContractSection: React.FC<SharedProps & { onFileChange: (file: File | null
         <FieldError message={fieldErrors.startDate} />
       </div>
       <div>
-        <label className={labelCls}>Contract Duration</label>
+        <label className={labelCls}>Duration</label>
         <SelectWrapper>
           <select
             value={formData.contractDuration ?? ""}
             onChange={(e) => {
               update("contractDuration", e.target.value);
-              // Clear endDate when switching away from CUSTOM
-              if (e.target.value !== "CUSTOM") {
-                update("endDate", "");
-              }
+              if (e.target.value !== "CUSTOM") update("endDate", "");
             }}
             className={`${inputCls} appearance-none pr-9 cursor-pointer`}
           >
@@ -290,7 +184,6 @@ const ContractSection: React.FC<SharedProps & { onFileChange: (file: File | null
             <option value="CUSTOM">Custom</option>
           </select>
         </SelectWrapper>
-        {/* Show computed end date preview */}
         {formData.startDate && formData.contractDuration && formData.contractDuration !== "CUSTOM" && formData.contractDuration !== "INDEFINITE" && (() => {
           const start = new Date(formData.startDate);
           let end: Date | null = null;
@@ -298,22 +191,16 @@ const ContractSection: React.FC<SharedProps & { onFileChange: (file: File | null
           else if (formData.contractDuration === "1_YEAR") { end = new Date(start); end.setFullYear(end.getFullYear() + 1); }
           else if (formData.contractDuration === "2_YEARS") { end = new Date(start); end.setFullYear(end.getFullYear() + 2); }
           return end ? (
-            <p className="mt-1 text-[11px] text-primary font-medium">
-              End Date: {end.toLocaleDateString("vi-VN")}
-            </p>
+            <p className="mt-1 text-[11px] text-primary font-medium">Auto-end: {end.toLocaleDateString("vi-VN")}</p>
           ) : null;
         })()}
-        {formData.contractDuration === "INDEFINITE" && (
-          <p className="mt-1 text-[11px] text-text-secondary-light font-medium">No end date</p>
-        )}
       </div>
     </div>
 
-    {/* Show End Date picker only for CUSTOM duration */}
     {formData.contractDuration === "CUSTOM" && (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className={labelCls}>End Date</label>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="lg:col-start-3">
+          <label className={labelCls}>Specific End Date</label>
           <input
             type="date"
             value={formData.endDate ?? ""}
@@ -325,69 +212,62 @@ const ContractSection: React.FC<SharedProps & { onFileChange: (file: File | null
       </div>
     )}
 
-    {/* Contract PDF Upload */}
+    {/* Salary Section Integrated for Flow */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label className={labelCls}>
+          Base Salary <span className="text-rose-500">*</span>
+        </label>
+        <div className="relative">
+          <input
+            type="number"
+            value={formData.baseSalary}
+            onChange={(e) => update("baseSalary", parseFloat(e.target.value) || 0)}
+            placeholder="e.g. 15000000"
+            className={`${inputCls} font-mono pl-12 ${errorBorder(fieldErrors, "baseSalary")}`}
+          />
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted-light font-medium text-xs">VND</span>
+        </div>
+        <FieldError message={fieldErrors.baseSalary} />
+      </div>
+      <div className="flex flex-col justify-center">
+         {formData.baseSalary > 0 && (
+           <p className="text-[11px] text-text-secondary-light italic bg-gray-50 p-2 rounded-lg border border-gray-100">
+             {numberToVietnameseWords(formData.baseSalary)} đồng
+           </p>
+         )}
+      </div>
+    </div>
+
     <div>
-      <label className={labelCls}>Contract File (PDF)</label>
-      <label
-        className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-border-light bg-gray-50 hover:border-primary hover:bg-emerald-50 transition-colors cursor-pointer group"
-      >
-        <input
-          type="file"
-          accept=".pdf"
-          className="hidden"
-          onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
-        />
+      <label className={labelCls}>Contract Attachment (Optional)</label>
+      <label className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-border-light bg-gray-50 hover:border-primary hover:bg-emerald-50 transition-colors cursor-pointer group">
+        <input type="file" accept=".pdf" className="hidden" onChange={(e) => onFileChange(e.target.files?.[0] ?? null)} />
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-text-muted-light group-hover:text-primary flex-shrink-0">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
         </svg>
         <div className="flex-1 min-w-0">
           {contractFileName ? (
             <p className="text-sm font-semibold text-emerald-700 truncate">✓ {contractFileName}</p>
           ) : (
-            <p className="text-sm text-text-muted-light">Click to upload contract PDF <span className="text-text-secondary-light">(optional)</span></p>
+            <p className="text-sm text-text-muted-light">Upload PDF contract...</p>
           )}
         </div>
         {contractFileName && (
-          <button
-            type="button"
-            onClick={(e) => { e.preventDefault(); onFileChange(null); }}
-            className="text-xs text-rose-500 hover:text-rose-700 font-medium flex-shrink-0"
-          >
-            Remove
-          </button>
+          <button type="button" onClick={(e) => { e.preventDefault(); onFileChange(null); }} className="text-xs text-rose-500 hover:text-rose-700 font-medium">Remove</button>
         )}
       </label>
     </div>
-  </>
-);
-
-const SalarySection: React.FC<SharedProps> = ({ formData, fieldErrors, update }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div>
-      <label className={labelCls}>
-        Base Salary <span className="text-rose-500">*</span>
-      </label>
-      <input
-        type="number"
-        value={formData.baseSalary}
-        onChange={(e) => update("baseSalary", parseFloat(e.target.value) || 0)}
-        placeholder="e.g. 15000000"
-        className={`${inputCls} font-mono ${errorBorder(fieldErrors, "baseSalary")}`}
-      />
-      <FieldError message={fieldErrors.baseSalary} />
-    </div>
   </div>
 );
+
+// SalarySection integrated into ContractSection for better flow
 
 const InformationSummarySection: React.FC<{
   formData: CreateNewHireDTO;
   departments: DepartmentOption[];
   positions: PositionOption[];
-  selectedManagerName: string;
-}> = ({ formData, departments, positions, selectedManagerName }) => {
+}> = ({ formData, departments, positions }) => {
   const salaryInWords = numberToVietnameseWords(formData.baseSalary);
   
   const items = [
@@ -396,11 +276,13 @@ const InformationSummarySection: React.FC<{
     { label: "Phone Number", value: formData.phone },
     { label: "Department", value: departments.find((d) => d.id === formData.departmentId)?.name },
     { label: "Position", value: positions.find((p) => p.id === formData.positionId)?.title },
-    { label: "Manager", value: selectedManagerName || undefined },
-    { label: "Role", value: formData.role },
+    { 
+      label: "Role", 
+      value: departments.find(d => d.id === formData.departmentId)?.name === "Human Resources" ? "HR" : 
+             departments.find(d => d.id === formData.departmentId)?.name === "Finance" ? "Finance" : "Employee"
+    },
     { label: "Status", value: formData.status },
     { label: "Contract Number", value: formData.contractNumber },
-    { label: "Contract Type", value: formData.contractType },
     { label: "Start Date", value: formData.startDate },
     { label: "Contract Duration", value: formData.contractDuration === "6_MONTHS" ? "6 Months"
         : formData.contractDuration === "1_YEAR" ? "1 Year"
@@ -475,8 +357,6 @@ const EmploymentDetailsForm: React.FC<EmploymentDetailsFormProps> = ({
   const selectedPos = positions.find((p) => p.id === formData.positionId);
   const isDeptLocked = !!selectedPos?.deptId;
   
-  const managerSearchProps = useManagerSearch(setFormData, clearFieldError);
-
   const update = (field: keyof CreateNewHireDTO, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     clearFieldError(field as string);
@@ -493,7 +373,7 @@ const EmploymentDetailsForm: React.FC<EmploymentDetailsFormProps> = ({
         </div>
       )}
 
-      <DepartmentPositionSection
+      <ProfessionInfoSection
         {...sharedProps}
         departments={departments}
         positions={positions}
@@ -503,22 +383,12 @@ const EmploymentDetailsForm: React.FC<EmploymentDetailsFormProps> = ({
         isPosLocked={isPosLocked}
       />
 
-      <ManagerDateSection
-        {...sharedProps}
-        {...managerSearchProps}
-      />
-
-      <RoleStatusSection {...sharedProps} />
-
       <ContractSection {...sharedProps} onFileChange={onFileChange} contractFileName={contractFileName} />
-
-      <SalarySection {...sharedProps} />
 
       <InformationSummarySection
         formData={formData}
         departments={departments}
         positions={positions}
-        selectedManagerName={managerSearchProps.selectedManagerName}
       />
     </div>
   );

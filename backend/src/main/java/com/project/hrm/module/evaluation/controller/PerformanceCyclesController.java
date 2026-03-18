@@ -36,7 +36,7 @@ public class PerformanceCyclesController {
     // PUT /performance-cycles/{id}
     @PutMapping("/{id}")
     public ResponseEntity<PerformanceCycles> update(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody PerformanceCyclesRequest request){
         return ResponseEntity.ok(service.update(id, request));
     }
@@ -44,7 +44,7 @@ public class PerformanceCyclesController {
     // PATCH /performance-cycles/{id}
     @PatchMapping("/{id}")
     public ResponseEntity<PerformanceCycles> updateStatus(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody CycleStatusRequest request){
         return ResponseEntity.ok(service.updateStatus(id, request));
     }

@@ -30,10 +30,10 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
     fieldErrors[field] ? "border-rose-400 focus:ring-rose-300" : "";
 
   return (
-    <div className="space-y-5">
-      {/* Full Name + Email */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
+    <div className="space-y-6">
+      {/* Section: Basic Identity */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="md:col-span-2 lg:col-span-1">
           <label className={labelCls}>
             Full Name <span className="text-rose-500">*</span>
           </label>
@@ -46,52 +46,6 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           />
           <FieldError message={fieldErrors.fullName} />
         </div>
-        <div>
-          <label className={labelCls}>
-            Email Address <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) => update("email", e.target.value)}
-            placeholder="e.g. john.doe@company.com"
-            className={`${inputCls} ${errorBorder("email")}`}
-          />
-          <FieldError message={fieldErrors.email} />
-        </div>
-      </div>
-
-      {/* Phone + Date of Birth */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className={labelCls}>
-            Phone Number <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="tel"
-            value={formData.phone}
-            onChange={(e) => update("phone", e.target.value)}
-            placeholder="e.g. 0901234567"
-            className={`${inputCls} ${errorBorder("phone")}`}
-          />
-          <FieldError message={fieldErrors.phone} />
-        </div>
-        <div>
-          <label className={labelCls}>
-            Date of Birth <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={formData.dateOfBirth}
-            onChange={(e) => update("dateOfBirth", e.target.value)}
-            className={`${inputCls} ${errorBorder("dateOfBirth")}`}
-          />
-          <FieldError message={fieldErrors.dateOfBirth} />
-        </div>
-      </div>
-
-      {/* Gender */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>Gender</label>
           <SelectWrapper>
@@ -111,10 +65,52 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
             </select>
           </SelectWrapper>
         </div>
+        <div>
+          <label className={labelCls}>
+            Date of Birth <span className="text-rose-500">*</span>
+          </label>
+          <input
+            type="date"
+            value={formData.dateOfBirth}
+            onChange={(e) => update("dateOfBirth", e.target.value)}
+            className={`${inputCls} ${errorBorder("dateOfBirth")}`}
+          />
+          <FieldError message={fieldErrors.dateOfBirth} />
+        </div>
+      </div>
+
+      {/* Section: Contact Details */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className={labelCls}>
+            Email Address <span className="text-rose-500">*</span>
+          </label>
+          <input
+            type="email"
+            value={formData.email}
+            onChange={(e) => update("email", e.target.value)}
+            placeholder="e.g. john.doe@company.com"
+            className={`${inputCls} ${errorBorder("email")}`}
+          />
+          <FieldError message={fieldErrors.email} />
+        </div>
+        <div>
+          <label className={labelCls}>
+            Phone Number <span className="text-rose-500">*</span>
+          </label>
+          <input
+            type="tel"
+            value={formData.phone}
+            onChange={(e) => update("phone", e.target.value)}
+            placeholder="e.g. 0901234567"
+            className={`${inputCls} ${errorBorder("phone")}`}
+          />
+          <FieldError message={fieldErrors.phone} />
+        </div>
       </div>
 
       {/* Divider */}
-      <div className="pt-1 pb-2 border-b border-border-light">
+      <div className="pt-2 border-b border-border-light">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
           Identity & Legal Documents
         </p>

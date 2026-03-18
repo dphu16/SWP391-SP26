@@ -66,7 +66,6 @@ public class ContractService {
         return ContractResponseDTO.builder()
                 .contractId(contract.getContractId())
                 .contractNumber(contract.getContractNumber())
-                .contractType(contract.getContractType())
                 .startDate(contract.getStartDate())
                 .endDate(contract.getEndDate())
                 .baseSalary(contract.getBaseSalary())

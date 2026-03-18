@@ -96,7 +96,6 @@ public class GeminiService {
                 { "fieldName": "dateOfBirth",    "value": "YYYY-MM-DD",        "sure": true  },
                 { "fieldName": "baseSalary",     "value": "15000000",          "sure": true  },
                 { "fieldName": "contractNumber", "value": "Số HĐ",             "sure": true  },
-                { "fieldName": "contractType",   "value": "Loại HĐ",           "sure": true  },
                 { "fieldName": "startDate",      "value": "YYYY-MM-DD",        "sure": true  },
                 { "fieldName": "endDate",        "value": "YYYY-MM-DD",        "sure": true  },
                 { "fieldName": "dateOfJoining",  "value": "YYYY-MM-DD",        "sure": true  },
@@ -172,7 +171,6 @@ public class GeminiService {
                 case "citizenId"       -> dto.setCitizenId(value);
                 case "taxCode"         -> dto.setTaxCode(value);
                 case "contractNumber"  -> dto.setContractNumber(value);
-                case "contractType"    -> dto.setContractType(value);
                 case "departmentName"  -> dto.setDepartmentName(value);
                 case "positionName"    -> dto.setPositionName(value);
                 case "dateOfBirth"     -> dto.setDateOfBirth(LocalDate.parse(value));

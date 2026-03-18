@@ -33,29 +33,29 @@ public class EmployeeGoalController {
     // 10
     @GetMapping("/employees/{id}/goals")
     public ResponseEntity<List<EmployeeGoal>> getByEmployee(
-            @PathVariable UUID id){
+            @PathVariable("id") UUID id){
         return ResponseEntity.ok(service.getByEmployee(id));
     }
 
     // 11
     @PatchMapping("/employee-goals/{id}")
     public ResponseEntity<EmployeeGoal> updateStatus(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody GoalStatusRequest request){
         return ResponseEntity.ok(service.updateStatus(id, request));
     }
 
     @PatchMapping("/employee-goals/{id}/progress")
     public ResponseEntity<EmployeeGoal> updateProgress(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody GoalProgressRequest request){
         return ResponseEntity.ok(service.updateProgress(id, request));
     }
 
     @GetMapping("/employees/{employeeId}/cycles/{cycleId}/goals")
     public ResponseEntity<List<EmployeeGoal>> getByEmployeeAndCycle(
-            @PathVariable UUID employeeId,
-            @PathVariable UUID cycleId){
+            @PathVariable("employeeId") UUID employeeId,
+            @PathVariable("cycleId") UUID cycleId){
         return ResponseEntity.ok(service.getByEmployeeAndCycle(employeeId, cycleId));
     }
 }

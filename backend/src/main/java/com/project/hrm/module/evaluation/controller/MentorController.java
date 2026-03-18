@@ -22,31 +22,31 @@ public class MentorController {
     private final MentorService mentorService;
 
     @GetMapping("/mentees/{mentorId}")
-    public ResponseEntity<List<MenteeDTO>> getMentees(@PathVariable UUID mentorId) {
+    public ResponseEntity<List<MenteeDTO>> getMentees(@PathVariable("mentorId") UUID mentorId) {
         return ResponseEntity.ok(mentorService.getMenteesByMentor(mentorId));
     }
 
     @GetMapping("/goal/{goalId}/evidences")
-    public ResponseEntity<List<GoalEvidence>> getEvidences(@PathVariable UUID goalId) {
+    public ResponseEntity<List<GoalEvidence>> getEvidences(@PathVariable("goalId") UUID goalId) {
         return ResponseEntity.ok(mentorService.getEvidencesByGoal(goalId));
     }
 
     @PatchMapping("/evidence/{evidenceId}/status")
     public ResponseEntity<GoalEvidence> updateEvidenceStatus(
-            @PathVariable UUID evidenceId,
+            @PathVariable("evidenceId") UUID evidenceId,
             @RequestBody EvidenceStatusRequest request) {
         return ResponseEntity.ok(mentorService.updateEvidenceStatus(evidenceId, request));
     }
 
     @PostMapping("/assess/{mentorId}")
     public ResponseEntity<MentorAssessment> submitAssessment(
-            @PathVariable UUID mentorId,
+            @PathVariable("mentorId") UUID mentorId,
             @RequestBody MentorAssessmentRequest request) {
         return ResponseEntity.ok(mentorService.submitAssessment(mentorId, request));
     }
 
     @GetMapping("/review/{reviewId}/assessment")
-    public ResponseEntity<MentorAssessment> getAssessment(@PathVariable UUID reviewId) {
+    public ResponseEntity<MentorAssessment> getAssessment(@PathVariable("reviewId") UUID reviewId) {
         return ResponseEntity.ok(mentorService.getAssessmentByReview(reviewId));
     }
 }

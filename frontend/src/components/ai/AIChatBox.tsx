@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, type KeyboardEvent, type ChangeEvent } from "react";
 import apiClient from "../../services/apiClient";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface ExtractedContract {
   fullName?: string;
   phone?: string;
@@ -12,12 +14,25 @@ interface ExtractedContract {
   dateOfBirth?: string;
   baseSalary?: number;
   contractNumber?: string;
-  contractType?: string;
   startDate?: string;
   endDate?: string;
   dateOfJoining?: string;
   departmentName?: string;
   positionName?: string;
+}
+
+/**
+ * State machine for the offboard flow:
+ *   null               → not in offboard flow
+ *   "awaiting_confirm" → AI asked "Bạn có chắc muốn offboard [tên]?"
+ *   "awaiting_reason"  → user confirmed, AI asked "Vui lòng cho biết lý do?"
+ */
+type OffboardStep = "awaiting_confirm" | "awaiting_reason" | null;
+
+interface OffboardState {
+  step: OffboardStep;
+  employeeName: string;
+  employeeId: string | null;
 }
 
 type ChatMessage = {
@@ -28,19 +43,72 @@ type ChatMessage = {
   fileBase64?: string | null;
 };
 
+// ─── Utilities ────────────────────────────────────────────────────────────────
 
+/** Shared Vietnamese diacritic normalizer used by both search and offboard intent detection. */
+function normalizeVietnamese(input: string): string {
+  if (!input) return "";
+  const nfd = input.normalize("NFD");
+  return nfd
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, (c) => (c === "đ" ? "d" : "D"))
+    .toLowerCase()
+    .trim();
+}
+
+function uid(): string {
+  return Math.random().toString(36).slice(2, 9);
+}
+
+// ─── Offboard intent detector ─────────────────────────────────────────────────
+
+const OFFBOARD_PATTERNS = [
+  /xoa\s+nhan\s+vien\s+(.+)/i,
+  /offboard\s+(.+)/i,
+  /cho\s+nghi\s+viec\s+nhan\s+vien\s+(.+)/i,
+  /cho\s+nghi\s+viec\s+(.+)/i,
+  /nghi\s+viec\s+nhan\s+vien\s+(.+)/i,
+  /remove\s+employee\s+(.+)/i,
+  /terminate\s+employee\s+(.+)/i,
+  /sa\s+thai\s+(.+)/i,
+];
+
+/**
+ * Returns the extracted employee name if the message is an offboard intent,
+ * otherwise returns null.
+ */
+function detectOffboardIntent(message: string): string | null {
+  const normalized = normalizeVietnamese(message);
+  for (const pattern of OFFBOARD_PATTERNS) {
+    const match = normalized.match(pattern);
+    if (match) {
+      // Return the original casing of the name from the original input
+      // by mapping the normalized match back to the original string.
+      const normalizedName = match[1].trim();
+      if (normalizedName.length > 0) {
+        // Try to find the original name in the original message
+        const originalWords = message.split(/\s+/);
+        const nameWordCount = normalizedName.split(/\s+/).length;
+        // Take last N words from the original message matching match length
+        const originalName = originalWords.slice(-nameWordCount).join(" ");
+        return originalName || match[1].trim();
+      }
+    }
+  }
+  return null;
+}
 
 // ─── SVG Icons (Lucide-style) ─────────────────────────────────────────────────
 
 const SendIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="22" y1="2" x2="11" y2="13" />
     <polygon points="22 2 15 22 11 13 2 9 22 2" />
   </svg>
 );
 
 const BotIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="11" width="18" height="10" rx="2" />
     <circle cx="12" cy="5" r="2" />
     <path d="M12 7v4" />
@@ -56,14 +124,11 @@ const UserIcon = () => (
   </svg>
 );
 
-
-
 const PaperclipIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
   </svg>
 );
-
 
 const UserPlusIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -75,60 +140,56 @@ const UserPlusIcon = () => (
 );
 
 const CheckIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
 const SpinnerIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "hrm-spin 1s linear infinite" }}>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
     <path d="M21 12a9 9 0 1 1-6.219-8.56" />
   </svg>
 );
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+const TrashIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    <path d="M10 11v6M14 11v6" />
+    <path d="M9 6V4h6v2" />
+  </svg>
+);
 
-function uid(): string {
-  return Math.random().toString(36).slice(2, 9);
-}
+const UserXIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="8.5" cy="7" r="4" />
+    <line x1="18" y1="8" x2="23" y2="13" />
+    <line x1="23" y1="8" x2="18" y2="13" />
+  </svg>
+);
+
+// ─── Sub-components ────────────────────────────────────────────────────────────
 
 function TypingDots() {
   return (
-    <div style={{ display: "flex", gap: 5, alignItems: "center", padding: "4px 0" }}>
+    <div className="flex gap-1.5 items-center py-1">
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background: "#10B981",
-            opacity: 0.4,
-            animation: `hrm-bounce 1.1s ease infinite`,
-            animationDelay: `${i * 0.15}s`,
-          }}
+          className="w-1.5 h-1.5 rounded-full bg-primary/60"
+          style={{ animation: `ai-bounce 1.1s ease infinite`, animationDelay: `${i * 0.15}s` }}
         />
       ))}
     </div>
   );
 }
 
-
-
-
-
 function PlainPDFViewer({ fileBase64 }: { fileBase64: string }) {
   const dataUri = `data:application/pdf;base64,${fileBase64}`;
-  
   return (
-    <div style={{ flex: 1, width: "100%", height: "100%", overflow: "hidden", borderRadius: 0, display: "flex" }}>
-      <iframe
-        src={dataUri}
-        width="100%"
-        height="100%"
-        title="PDF Preview"
-        style={{ border: "none", display: "block", flex: 1 }}
-      />
+    <div className="flex-1 w-full h-full overflow-hidden flex">
+      <iframe src={dataUri} width="100%" height="100%" title="PDF Preview" className="border-0 block flex-1" />
     </div>
   );
 }
@@ -147,123 +208,66 @@ function ExtractedDataCard({
   const data = extractedData;
 
   const displayFields = [
-    { name: "fullName", label: "Họ tên", value: data.fullName },
-    { name: "email", label: "Email", value: data.email },
-    { name: "phone", label: "SĐT", value: data.phone },
-    { name: "gender", label: "Giới", value: data.gender === "MALE" ? "Nam" : data.gender === "FEMALE" ? "Nữ" : data.gender },
-    { name: "citizenId", label: "CCCD", value: data.citizenId },
-    { name: "departmentName", label: "Phòng ban", value: data.departmentName },
-    { name: "positionName", label: "Vị trí", value: data.positionName },
-    { name: "baseSalary", label: "Lương CB", value: data.baseSalary ? data.baseSalary.toLocaleString("vi-VN") + " VNĐ" : undefined },
-    { name: "contractNumber", label: "Số HĐ", value: data.contractNumber },
-    { name: "contractType", label: "Loại HĐ", value: data.contractType },
-    { name: "startDate", label: "Ngày BĐ", value: data.startDate },
-    { name: "endDate", label: "Ngày KT", value: data.endDate },
+    { name: "fullName",       label: "Họ tên",    value: data.fullName },
+    { name: "email",          label: "Email",      value: data.email },
+    { name: "phone",          label: "SĐT",        value: data.phone },
+    { name: "gender",         label: "Giới tính",  value: data.gender === "MALE" ? "Nam" : data.gender === "FEMALE" ? "Nữ" : data.gender },
+    { name: "citizenId",      label: "CCCD",       value: data.citizenId },
+    { name: "departmentName", label: "Phòng ban",  value: data.departmentName },
+    { name: "positionName",   label: "Vị trí",     value: data.positionName },
+    { name: "baseSalary",     label: "Lương CB",   value: data.baseSalary ? data.baseSalary.toLocaleString("vi-VN") + " VNĐ" : undefined },
+    { name: "contractNumber", label: "Số HĐ",      value: data.contractNumber },
+    { name: "startDate",      label: "Ngày BĐ",    value: data.startDate },
+    { name: "endDate",        label: "Ngày KT",    value: data.endDate },
   ].filter((f) => f.value);
 
   return (
-    <div
-      className="hrm-card-anim"
-      style={{
-        marginTop: 8,
-        border: "1px solid #E2E8F0",
-        borderRadius: 10,
-        overflow: "hidden",
-        background: "white",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "10px 14px",
-          background: "linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)",
-          borderBottom: "1px solid #E2E8F0",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: 6,
-              background: "#10B981",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-            }}
-          >
+    <div className="mt-2 rounded-xl border border-border-light bg-surface-light overflow-hidden animate-fade-in shadow-card">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-light bg-[#ECFEFF]">
+        <div className="w-6 h-6 rounded-lg bg-primary flex items-center justify-center text-white flex-shrink-0">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <span className="text-xs font-bold text-text-primary-light uppercase tracking-wider" style={{ fontFamily: "Archivo, sans-serif" }}>
+          Thông tin trích xuất từ hợp đồng
+        </span>
+      </div>
+
+      {/* Fields */}
+      <div className="p-3 space-y-1.5">
+        {displayFields.map((f) => (
+          <div key={f.name} className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 border border-border-light/60">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
+              {f.label}
+            </span>
+            <span className="text-xs font-semibold text-text-primary-light text-right max-w-[55%] truncate">
+              {f.value || "—"}
+            </span>
           </div>
-          <span
-            style={{
-              fontSize: 12.5,
-              fontWeight: 600,
-              color: "#064E3B",
-              fontFamily: "Archivo, sans-serif",
-            }}
-          >
-            Thông tin hợp đồng
-          </span>
-        </div>
+        ))}
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", padding: "10px 14px 12px" }}>
-        {/* Fields Grid */}
-        <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr", gap: "6px", width: "100%" }}>
-          {displayFields.map((f) => (
-            <div 
-              key={f.name} 
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", borderRadius: 6, background: "#F8FAFC", border: "1px solid #F1F5F9" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 11, color: "#64748B", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                  {f.label}
-                </span>
-              </div>
-              <span style={{ fontSize: 12, color: "#0F172A", fontWeight: 600 }}>{f.value || "—"}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div style={{ padding: "8px 14px 12px", borderTop: "1px solid #F1F5F9" }}>
+      {/* Action */}
+      <div className="px-3 pb-3">
         <button
           onClick={onCreateEmployee}
           disabled={creating || created}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            width: "100%",
-            padding: "8px 0",
-            borderRadius: 8,
-            border: "none",
-            fontSize: 12.5,
-            fontWeight: 600,
-            fontFamily: "Space Grotesk, sans-serif",
-            cursor: creating || created ? "default" : "pointer",
-            transition: "all 200ms ease",
-            background: created ? "#22C55E" : "#10B981",
-            color: "white",
-            opacity: creating ? 0.7 : 1,
-          }}
+          className={`w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
+            created
+              ? "bg-cta text-white"
+              : creating
+              ? "bg-primary/70 text-white cursor-not-allowed"
+              : "bg-primary hover:bg-primary-hover text-white shadow-sm shadow-primary/20"
+          }`}
         >
           {created ? (
-            <>
-              <CheckIcon /> Đã tạo NV thành công
-            </>
+            <><CheckIcon /> Đã tạo nhân viên thành công</>
           ) : creating ? (
-            <>
-              <SpinnerIcon /> Đang tạo...
-            </>
+            <><SpinnerIcon /> Đang tạo...</>
           ) : (
-            <>
-              <UserPlusIcon /> Tạo nhân viên mới
-            </>
+            <><UserPlusIcon /> Tạo nhân viên mới</>
           )}
         </button>
       </div>
@@ -271,25 +275,45 @@ function ExtractedDataCard({
   );
 }
 
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AIChatBox() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: uid(),
-      role: "ai",
-      content: "Xin chào! Tôi là trợ lý AI. Tôi có thể giúp bạn trả lời câu hỏi hoặc quét hợp đồng để tạo nhân viên mới. Hãy bắt đầu nào!",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const saved = localStorage.getItem("hrm_ai_messages");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error("Failed to parse saved chat", e); }
+    }
+    return [
+      {
+        id: uid(),
+        role: "ai",
+        content: "Xin chào! Tôi là trợ lý AI của HRM Pro. Tôi có thể giúp bạn trả lời câu hỏi, quét hợp đồng để tạo nhân viên mới, hoặc xử lý yêu cầu offboard. Hãy bắt đầu nào!",
+      },
+    ];
+  });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [creatingMap, setCreatingMap] = useState<Record<string, boolean>>({});
   const [createdMap, setCreatedMap] = useState<Record<string, boolean>>({});
-  
-  const [activeExtractedData, setActiveExtractedData] = useState<ExtractedContract | null>(null);
-  const [activeFileBase64, setActiveFileBase64] = useState<string | null>(null);
+
+  const [activeExtractedData, setActiveExtractedData] = useState<ExtractedContract | null>(() => {
+    const saved = localStorage.getItem("hrm_ai_activeExtractedData");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { return null; }
+    }
+    return null;
+  });
+  const [activeFileBase64, setActiveFileBase64] = useState<string | null>(() => {
+    return localStorage.getItem("hrm_ai_activeFileBase64");
+  });
+
+  // ── Offboard flow state ──
+  const [offboardState, setOffboardState] = useState<OffboardState>({
+    step: null,
+    employeeName: "",
+    employeeId: null,
+  });
 
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [positions, setPositions] = useState<{ id: string; title: string }[]>([]);
@@ -302,7 +326,28 @@ export default function AIChatBox() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Fetch options on mount
+  // Persist to localStorage
+  useEffect(() => {
+    localStorage.setItem("hrm_ai_messages", JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    if (activeExtractedData) {
+      localStorage.setItem("hrm_ai_activeExtractedData", JSON.stringify(activeExtractedData));
+    } else {
+      localStorage.removeItem("hrm_ai_activeExtractedData");
+    }
+  }, [activeExtractedData]);
+
+  useEffect(() => {
+    if (activeFileBase64) {
+      localStorage.setItem("hrm_ai_activeFileBase64", activeFileBase64);
+    } else {
+      localStorage.removeItem("hrm_ai_activeFileBase64");
+    }
+  }, [activeFileBase64]);
+
+  // Fetch lookup options on mount
   useEffect(() => {
     async function fetchOptions() {
       try {
@@ -319,6 +364,143 @@ export default function AIChatBox() {
     fetchOptions();
   }, []);
 
+  // ── Offboard: look up employee by name and return their ID ──
+  async function findEmployeeIdByName(name: string): Promise<{ id: string; fullName: string } | null> {
+    try {
+      const { data } = await apiClient.get("/api/employees/search", {
+        params: { fullName: name, size: 5 },
+      });
+      const content: Array<{ id: string; fullName: string }> = data.content ?? [];
+      if (content.length === 0) return null;
+
+      // Try exact match first (normalized), then fall back to first result
+      const normalizedTarget = normalizeVietnamese(name);
+      const exact = content.find(
+        (e) => normalizeVietnamese(e.fullName) === normalizedTarget
+      );
+      return exact ?? content[0];
+    } catch {
+      return null;
+    }
+  }
+
+  // ── Offboard: call the propose offboarding endpoint ──
+  async function proposeOffboarding(employeeId: string, reason: string): Promise<void> {
+    // Use "MANAGER_PROPOSED" as the offboarding type for AI-initiated offboards
+    await apiClient.post(`/api/offboarding/propose/${employeeId}`, {
+      type: "MANAGER_PROPOSED",
+      reason,
+    });
+  }
+
+  // ── Handle the multi-step offboard conversation ──
+  async function handleOffboardFlow(userMsg: string): Promise<boolean> {
+    const { step, employeeName, employeeId } = offboardState;
+
+    // Step 1 — we just asked "bạn có chắc không?", now reading the confirmation
+    if (step === "awaiting_confirm") {
+      const norm = normalizeVietnamese(userMsg);
+      const confirmed =
+        norm === "co" ||
+        norm === "chac" ||
+        norm === "dong y" ||
+        norm === "xac nhan" ||
+        norm === "yes" ||
+        norm === "ok" ||
+        norm === "dung" ||
+        norm.includes("co chac") ||
+        norm.includes("xac nhan");
+
+      if (!confirmed) {
+        // User cancelled
+        setOffboardState({ step: null, employeeName: "", employeeId: null });
+        addAiMessage("Đã hủy yêu cầu offboard. Có điều gì khác tôi có thể giúp bạn không?");
+        return true;
+      }
+
+      // Confirmed — ask for reason
+      setOffboardState((prev) => ({ ...prev, step: "awaiting_reason" }));
+      addAiMessage(`Vui lòng cho biết lý do nghỉ việc của nhân viên **${employeeName}**?`);
+      return true;
+    }
+
+    // Step 2 — we have the reason, now call the API
+    if (step === "awaiting_reason") {
+      const reason = userMsg.trim();
+      if (reason.length < 3) {
+        addAiMessage("Lý do quá ngắn. Vui lòng cung cấp lý do cụ thể hơn để tiến hành offboard.");
+        return true;
+      }
+
+      setLoading(true);
+      try {
+        let resolvedEmployeeId = employeeId;
+
+        // If we don't have the ID yet, search for the employee
+        if (!resolvedEmployeeId) {
+          const found = await findEmployeeIdByName(employeeName);
+          if (!found) {
+            setOffboardState({ step: null, employeeName: "", employeeId: null });
+            addAiMessage(`Không tìm thấy nhân viên **${employeeName}** trong hệ thống. Vui lòng kiểm tra lại tên.`);
+            setLoading(false);
+            return true;
+          }
+          resolvedEmployeeId = found.id;
+        }
+
+        await proposeOffboarding(resolvedEmployeeId, reason);
+        setOffboardState({ step: null, employeeName: "", employeeId: null });
+        addAiMessage(
+          `Đã tạo yêu cầu offboard cho nhân viên **${employeeName}** thành công!\n\n` +
+          `Lý do: ${reason}\n\n` +
+          `Yêu cầu đã được gửi và đang chờ Manager xem xét.`
+        );
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : "Unknown error";
+        addAiMessage(`Lỗi khi tạo yêu cầu offboard: ${errMsg}`);
+        setOffboardState({ step: null, employeeName: "", employeeId: null });
+      } finally {
+        setLoading(false);
+      }
+      return true;
+    }
+
+    // Not in any offboard step — check if this message IS a new offboard intent
+    const detectedName = detectOffboardIntent(userMsg);
+    if (detectedName) {
+      setLoading(true);
+      try {
+        // Pre-fetch employee to give better confirmation message
+        const found = await findEmployeeIdByName(detectedName);
+        if (!found) {
+          addAiMessage(`Không tìm thấy nhân viên **"${detectedName}"** trong hệ thống. Vui lòng kiểm tra lại tên.`);
+          setLoading(false);
+          return true;
+        }
+
+        setOffboardState({
+          step: "awaiting_confirm",
+          employeeName: found.fullName,
+          employeeId: found.id,
+        });
+        addAiMessage(
+          `Bạn có chắc muốn offboard nhân viên **${found.fullName}** không?\n\nHành động này sẽ tạo yêu cầu nghỉ việc và không thể hoàn tác dễ dàng.\n\nNhập **"Có"** để xác nhận hoặc **"Không"** để hủy.`
+        );
+      } catch {
+        addAiMessage("Không thể kiểm tra thông tin nhân viên. Vui lòng thử lại.");
+      } finally {
+        setLoading(false);
+      }
+      return true;
+    }
+
+    return false; // Not an offboard message
+  }
+
+  function addAiMessage(content: string) {
+    setMessages((prev) => [...prev, { id: uid(), role: "ai", content }]);
+  }
+
   // ── Chat send ──
   async function sendChat() {
     const msg = input.trim();
@@ -331,23 +513,23 @@ export default function AIChatBox() {
 
     const userMsg: ChatMessage = { id: uid(), role: "user", content: msg };
     setMessages((prev) => [...prev, userMsg]);
-    setLoading(true);
 
+    // If we are inside the offboard flow, handle it first
+    const wasOffboard = await handleOffboardFlow(msg);
+    if (wasOffboard) return;
+
+    // Normal chat flow
+    setLoading(true);
     try {
       if (activeExtractedData) {
         const { data } = await apiClient.post("/api/ai/edit-chat", {
            message: msg,
            currentData: activeExtractedData
         });
-        
         setActiveExtractedData(data.updatedData);
-
         const aiMsg: ChatMessage = {
-          id: uid(),
-          role: "ai",
-          content: data.confirmMessage,
-          extractedData: data.updatedData,
-          fileBase64: activeFileBase64
+          id: uid(), role: "ai", content: data.confirmMessage,
+          extractedData: data.updatedData, fileBase64: activeFileBase64
         };
         setMessages((prev) => [...prev, aiMsg]);
       } else {
@@ -356,8 +538,7 @@ export default function AIChatBox() {
       }
     } catch (err) {
       setMessages((prev) => [...prev, {
-        id: uid(),
-        role: "ai",
+        id: uid(), role: "ai",
         content: `Lỗi kết nối: ${err instanceof Error ? err.message : "Unknown error"}`,
       }]);
     } finally {
@@ -365,19 +546,13 @@ export default function AIChatBox() {
     }
   }
 
-  // ── File upload (scan contract) ──
+  // ── File upload ──
   async function handleFileUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Reset input so user can upload same file again
     e.target.value = "";
 
-    const fileMsg: ChatMessage = {
-      id: uid(),
-      role: "user",
-      content: `📎 ${file.name}`,
-    };
+    const fileMsg: ChatMessage = { id: uid(), role: "user", content: `Đã đính kèm: ${file.name}` };
     setMessages((prev) => [...prev, fileMsg]);
     setUploading(true);
 
@@ -385,31 +560,24 @@ export default function AIChatBox() {
       const formData = new FormData();
       formData.append("file", file);
 
-      // Save file base64 first to be sent locally
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64Data = (reader.result as string).split(',')[1];
         setActiveFileBase64(base64Data);
-
         try {
           const { data } = await apiClient.post("/api/ai/scan-contract", formData, {
             headers: { "Content-Type": "multipart/form-data" },
           });
-
           setActiveExtractedData(data);
-
           const aiMsg: ChatMessage = {
-            id: uid(),
-            role: "ai",
+            id: uid(), role: "ai",
             content: "Tôi đã quét xong hợp đồng. Dưới đây là thông tin trích xuất được:",
-            extractedData: data,
-            fileBase64: base64Data
+            extractedData: data, fileBase64: base64Data
           };
           setMessages((prev) => [...prev, aiMsg]);
         } catch (err) {
           setMessages((prev) => [...prev, {
-            id: uid(),
-            role: "ai",
+            id: uid(), role: "ai",
             content: `Lỗi khi quét file: ${err instanceof Error ? err.message : "Không thể xử lý file"}`,
           }]);
         } finally {
@@ -417,68 +585,66 @@ export default function AIChatBox() {
         }
       };
       reader.readAsDataURL(file);
-    } catch (err) {
+    } catch {
       setUploading(false);
     }
   }
 
-  // ── Create employee from extracted data ──
+  // ── Create employee from contract ──
   async function handleCreateEmployee(msgId: string, data: ExtractedContract) {
     setCreatingMap((prev) => ({ ...prev, [msgId]: true }));
     try {
-      // Find matching IDs for department and position
-      const matchedDept = departments.find(d => 
+      const matchedDept = departments.find(d =>
         data.departmentName && d.name.toLowerCase().includes(data.departmentName.toLowerCase())
-      ) || departments[0]; // Fallback to first if not found
-
-      const matchedPos = positions.find(p => 
+      ) || departments[0];
+      const matchedPos = positions.find(p =>
         data.positionName && p.title.toLowerCase().includes(data.positionName.toLowerCase())
-      ) || positions[0]; // Fallback to first if not found
+      ) || positions[0];
 
       if (!matchedDept || !matchedPos) {
         throw new Error("Không tìm thấy thông tin Phòng ban hoặc Vị trí hợp lệ. Vui lòng kiểm tra lại hệ thống.");
       }
 
       const payload = {
-        fullName: data.fullName || "",
-        phone: data.phone || "",
-        email: data.email || "",
+        fullName: data.fullName || "", phone: data.phone || "", email: data.email || "",
         gender: data.gender === "FEMALE" ? "FEMALE" : data.gender === "OTHER" ? "OTHER" : "MALE",
-        address: data.address || "",
-        citizenId: data.citizenId || "",
-        taxCode: data.taxCode || "",
-        dateOfBirth: data.dateOfBirth || null,
-        baseSalary: data.baseSalary || 0,
+        address: data.address || "", citizenId: data.citizenId || "", taxCode: data.taxCode || "",
+        dateOfBirth: data.dateOfBirth || null, baseSalary: data.baseSalary || 0,
         contractNumber: data.contractNumber || "",
-        contractType: data.contractType || "",
-        startDate: data.startDate || null,
-        endDate: data.endDate || null,
+        startDate: data.startDate || null, endDate: data.endDate || null,
         dateOfJoining: data.dateOfJoining || data.startDate || null,
-        role: "ROLE_EMPLOYEE",
-        status: "PROBATION",
-        departmentId: matchedDept.id,
-        positionId: matchedPos.id,
+        role: "ROLE_EMPLOYEE", status: "PROBATION",
+        departmentId: matchedDept.id, positionId: matchedPos.id,
         fileBase64: activeFileBase64 || ""
       };
 
       await apiClient.post("/api/ai/onboarding/create-and-submit", payload);
       setCreatedMap((prev) => ({ ...prev, [msgId]: true }));
-
       setMessages((prev) => [...prev, {
-        id: uid(),
-        role: "ai",
-        content: `Đã tạo nhân viên "${data.fullName}" thành công cho phòng ${matchedDept.name} và gửi yêu cầu phê duyệt! Bạn có thể hỏi tôi thông tin chi tiết về hợp đồng vừa tạo.`,
+        id: uid(), role: "ai",
+        content: `Đã tạo nhân viên "${data.fullName}" thành công cho phòng ${matchedDept.name} và gửi yêu cầu phê duyệt!`,
       }]);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
       setMessages((prev) => [...prev, {
-        id: uid(),
-        role: "ai",
+        id: uid(), role: "ai",
         content: `Lỗi khi tạo nhân viên: ${errorMsg}`,
       }]);
     } finally {
       setCreatingMap((prev) => ({ ...prev, [msgId]: false }));
     }
+  }
+
+  // ── Clear chat history ──
+  function clearHistory() {
+    const initial: ChatMessage[] = [{
+      id: uid(), role: "ai",
+      content: "Xin chào! Tôi là trợ lý AI của HRM Pro. Tôi có thể giúp bạn trả lời câu hỏi, quét hợp đồng để tạo nhân viên mới, hoặc xử lý yêu cầu offboard. Hãy bắt đầu nào!",
+    }];
+    setMessages(initial);
+    setActiveExtractedData(null);
+    setActiveFileBase64(null);
+    setOffboardState({ step: null, employeeName: "", employeeId: null });
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -494,175 +660,118 @@ export default function AIChatBox() {
     e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
   }
 
-  const isInputActive = input.trim() && !loading;
+  const isInputActive = !!input.trim() && !loading;
+
+  // Determine placeholder hint based on offboard state
+  const inputPlaceholder =
+    offboardState.step === "awaiting_confirm"
+      ? "Nhập \"Có\" để xác nhận hoặc \"Không\" để hủy…"
+      : offboardState.step === "awaiting_reason"
+      ? "Nhập lý do nghỉ việc…"
+      : "Nhập câu hỏi… (Enter để gửi)";
 
   return (
     <>
       <style>{`
-        @import url("https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap");
-
-        @keyframes hrm-bounce {
-          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-          30% { transform: translateY(-5px); opacity: 1; }
+        @keyframes ai-bounce {
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+          30% { transform: translateY(-4px); opacity: 1; }
         }
-        @keyframes hrm-msg-arrival {
-          0% { opacity: 0; transform: translateY(12px) scale(0.96); }
-          100% { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes hrm-card-slide {
-          0% { opacity: 0; transform: translateY(10px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes hrm-spin {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
-        }
-        @keyframes hrm-pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.6; }
-        }
-
-        .hrm-chatbox * {
-          box-sizing: border-box;
-          margin: 0;
-          padding: 0;
-        }
-        .hrm-msg-anim { 
-          animation: hrm-msg-arrival 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          will-change: transform, opacity;
-        }
-        .hrm-card-anim {
-          opacity: 0;
-          animation: hrm-card-slide 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
-          will-change: transform, opacity;
-        }
-
-        .hrm-messages { scroll-behavior: smooth; }
-        .hrm-messages::-webkit-scrollbar { width: 4px; }
-        .hrm-messages::-webkit-scrollbar-track { background: transparent; }
-        .hrm-messages::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }
-        .hrm-messages::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
-
-        .hrm-textarea::-webkit-scrollbar { display: none; }
-
-        .hrm-icon-btn {
-          background: transparent;
-          border: none;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0;
-          transition: color 200ms ease, opacity 200ms ease;
-        }
-        .hrm-icon-btn:focus-visible {
-          outline: 2px solid #10B981;
-          outline-offset: 2px;
-        }
-
         @media (prefers-reduced-motion: reduce) {
-          .hrm-msg-anim { animation: none; }
-          .hrm-bounce { animation: none; }
-          .hrm-spin { animation: none; }
+          .ai-msg-anim { animation: none !important; }
         }
+        .ai-messages-pane::-webkit-scrollbar { width: 4px; }
+        .ai-messages-pane::-webkit-scrollbar-track { background: transparent; }
+        .ai-messages-pane::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }
+        .ai-messages-pane::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+        .ai-textarea::-webkit-scrollbar { display: none; }
       `}</style>
 
-      <div
-        className="hrm-chatbox"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          height: "100%", 
-          width: "100%",
-          maxWidth: "100%",
-          background: "#FFFFFF",
-          borderRadius: 0,
-          fontFamily: "Space Grotesk, sans-serif",
-          overflow: "hidden",
-          boxShadow: "none",
-        }}
-      >
+      <div className="flex flex-col h-full w-full bg-surface-light" style={{ fontFamily: "Space Grotesk, sans-serif" }}>
 
+        {/* ── Header Bar ── */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-light bg-surface-light flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-white shadow-sm shadow-primary/30">
+              <BotIcon />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-text-primary-light leading-none" style={{ fontFamily: "Archivo, sans-serif" }}>
+                HRM AI Assistant
+              </p>
+              <p className="text-[11px] text-text-secondary-light mt-0.5 leading-none">
+                {offboardState.step === "awaiting_confirm"
+                  ? `Đang xác nhận offboard: ${offboardState.employeeName}`
+                  : offboardState.step === "awaiting_reason"
+                  ? "Đang chờ lý do nghỉ việc…"
+                  : activeFileBase64
+                  ? "Đang phân tích hợp đồng..."
+                  : "Sẵn sàng hỗ trợ"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={clearHistory}
+            title="Xóa lịch sử trò chuyện"
+            className="p-2 rounded-lg text-text-secondary-light hover:text-rose-600 hover:bg-rose-50 transition-colors duration-200 cursor-pointer"
+          >
+            <TrashIcon />
+          </button>
+        </div>
 
-        {/* ── Messages ── */}
-        {/* ── Main Content Area ── */}
-        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          {/* Left Side: Chat */}
-          <div style={{ 
-            flex: activeFileBase64 ? "0 0 50%" : "1 1 100%", 
-            display: "flex", 
-            flexDirection: "column", 
-            borderRight: activeFileBase64 ? "1px solid #E2E8F0" : "none",
-            transition: "flex 300ms cubic-bezier(0.16, 1, 0.3, 1)",
-            overflow: "hidden"
-          }}>
-            <div
-              className="hrm-messages hrm-messages-scroll"
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                padding: "16px 18px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
-                background: "#FAFBFC",
+        {/* ── Offboard flow indicator banner ── */}
+        {offboardState.step && (
+          <div className="flex items-center gap-2 px-5 py-2 bg-amber-50 border-b border-amber-200 flex-shrink-0">
+            <UserXIcon />
+            <span className="text-xs font-medium text-amber-700">
+              {offboardState.step === "awaiting_confirm"
+                ? `Đang trong luồng offboard — nhân viên: ${offboardState.employeeName}`
+                : `Đang chờ lý do để hoàn tất offboard — ${offboardState.employeeName}`}
+            </span>
+            <button
+              onClick={() => {
+                setOffboardState({ step: null, employeeName: "", employeeId: null });
+                addAiMessage("Đã hủy yêu cầu offboard.");
               }}
+              className="ml-auto text-[11px] font-semibold text-amber-600 hover:text-amber-800 transition-colors cursor-pointer"
             >
+              Hủy
+            </button>
+          </div>
+        )}
+
+        {/* ── Main Content ── */}
+        <div className="flex flex-1 overflow-hidden">
+
+          {/* Chat Pane */}
+          <div className={`flex flex-col overflow-hidden transition-all duration-300 ${activeFileBase64 ? "w-1/2 border-r border-border-light" : "w-full"}`}>
+
+            {/* Messages */}
+            <div className="ai-messages-pane flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-gray-50/50">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className="hrm-msg-anim"
-                  style={{
-                    display: "flex",
-                    gap: 10,
-                    flexDirection: msg.role === "user" ? "row-reverse" : "row",
-                    alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                    maxWidth: (msg.extractedData) ? "98%" : "85%",
-                  }}
+                  className={`ai-msg-anim flex gap-2.5 animate-fade-in ${msg.role === "user" ? "flex-row-reverse self-end" : "flex-row self-start"} ${msg.extractedData ? "w-full max-w-[96%]" : "max-w-[82%]"}`}
                 >
                   {/* Avatar */}
-                  <div
-                    style={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: 8,
-                      background: msg.role === "ai" ? "#10B981" : "#D1FAE5",
-                      border: msg.role === "user" ? "1px solid #E2E8F0" : "none",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                      marginTop: 2,
-                      color: msg.role === "ai" ? "white" : "#10B981",
-                    }}
-                  >
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    msg.role === "ai"
+                      ? "bg-primary text-white"
+                      : "bg-[#ECFEFF] border border-border-light text-primary"
+                  }`}>
                     {msg.role === "ai" ? <BotIcon /> : <UserIcon />}
                   </div>
 
                   {/* Bubble */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        padding: "10px 14px",
-                        borderRadius:
-                          msg.role === "ai" ? "4px 12px 12px 12px" : "12px 4px 12px 12px",
-                        background: msg.role === "ai" ? "#FFFFFF" : "#10B981",
-                        color: msg.role === "ai" ? "#064E3B" : "white",
-                        fontSize: 13.5,
-                        lineHeight: 1.7,
-                        border: msg.role === "ai" ? "1px solid #E2E8F0" : "none",
-                        boxShadow:
-                          msg.role === "ai"
-                            ? "0 1px 2px rgba(0,0,0,0.04)"
-                            : "0 1px 3px rgba(16, 185, 129, 0.2)",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                      }}
-                    >
+                  <div className="flex-1 min-w-0">
+                    <div className={`px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                      msg.role === "ai"
+                        ? "bg-surface-light border border-border-light text-text-primary-light rounded-tr-2xl rounded-br-2xl rounded-bl-2xl shadow-sm"
+                        : "bg-primary text-white rounded-tl-2xl rounded-br-2xl rounded-bl-2xl shadow-sm shadow-primary/20"
+                    }`}>
                       {msg.content}
                     </div>
 
-                    {/* Extracted contract data card */}
                     {msg.extractedData && (
                       <ExtractedDataCard
                         extractedData={msg.extractedData}
@@ -675,40 +784,15 @@ export default function AIChatBox() {
                 </div>
               ))}
 
-              {/* Typing / uploading indicator */}
+              {/* Loading indicator */}
               {(loading || uploading) && (
-                <div
-                  className="hrm-msg-anim"
-                  style={{ display: "flex", gap: 10, alignSelf: "flex-start" }}
-                >
-                  <div
-                    style={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: 8,
-                      background: "#10B981",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "white",
-                    }}
-                  >
+                <div className="ai-msg-anim flex gap-2.5 self-start animate-fade-in">
+                  <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center flex-shrink-0 mt-0.5">
                     <BotIcon />
                   </div>
-                  <div
-                    style={{
-                      padding: "12px 16px",
-                      background: "#FFFFFF",
-                      border: "1px solid #E2E8F0",
-                      borderRadius: "4px 12px 12px 12px",
-                      boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
+                  <div className="bg-surface-light border border-border-light rounded-tr-2xl rounded-br-2xl rounded-bl-2xl px-4 py-3 shadow-sm">
                     {uploading ? (
-                      <span style={{ fontSize: 12.5, color: "#10B981", fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>
+                      <span className="text-xs text-primary font-medium flex items-center gap-2">
                         <SpinnerIcon /> Đang quét hợp đồng...
                       </span>
                     ) : (
@@ -720,110 +804,70 @@ export default function AIChatBox() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* ── Input Area ── */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-end",
-                gap: 8,
-                padding: "12px 18px",
-                borderTop: "1px solid #E2E8F0",
-                background: "#FFFFFF",
-              }}
-            >
+            {/* Input Area */}
+            <div className="flex items-end gap-2 px-4 py-3 border-t border-border-light bg-surface-light flex-shrink-0">
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
                 onChange={handleFileUpload}
-                style={{ display: "none" }}
+                className="hidden"
               />
 
               <button
-                className="hrm-icon-btn"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={uploading || loading}
-                title="Tải lên hợp đồng"
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 10,
-                  color: uploading || loading ? "#CBD5E1" : "#64748B",
-                  cursor: uploading || loading ? "not-allowed" : "pointer",
-                  flexShrink: 0,
-                  background: "transparent",
-                  border: "1.5px solid #E2E8F0",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 200ms ease",
-                }}
+                disabled={uploading || loading || !!offboardState.step}
+                title="Đính kèm file hợp đồng"
+                className={`w-9 h-9 rounded-xl border border-border-light flex items-center justify-center flex-shrink-0 transition-all duration-200 cursor-pointer ${
+                  uploading || loading || offboardState.step
+                    ? "text-text-muted-light cursor-not-allowed bg-gray-50"
+                    : "text-text-secondary-light hover:text-primary hover:border-primary hover:bg-[#ECFEFF]"
+                }`}
               >
                 <PaperclipIcon />
               </button>
 
               <textarea
                 ref={textareaRef}
-                className="hrm-textarea"
+                className="ai-textarea flex-1 resize-none border border-border-light rounded-xl px-3.5 py-2.5 text-sm text-text-primary-light bg-gray-50 outline-none leading-relaxed max-h-28 transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-surface-light placeholder:text-text-muted-light"
                 rows={1}
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Nhập câu hỏi..."
-                style={{
-                  flex: 1,
-                  resize: "none",
-                  border: "1.5px solid #E2E8F0",
-                  borderRadius: 10,
-                  padding: "9px 14px",
-                  fontSize: 13.5,
-                  fontFamily: "Space Grotesk, sans-serif",
-                  color: "#064E3B",
-                  background: "#F8FAFC",
-                  outline: "none",
-                  lineHeight: 1.55,
-                  maxHeight: 120,
-                  transition: "border-color 200ms ease, box-shadow 200ms ease",
-                }}
+                placeholder={inputPlaceholder}
+                style={{ fontFamily: "Space Grotesk, sans-serif" }}
               />
 
               <button
-                className="hrm-icon-btn"
                 onClick={() => sendChat()}
                 disabled={!isInputActive}
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 10,
-                  border: "none",
-                  background: isInputActive ? "#10B981" : "#E2E8F0",
-                  color: isInputActive ? "white" : "#94A3B8",
-                  cursor: isInputActive ? "pointer" : "not-allowed",
-                  flexShrink: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 200ms ease",
-                }}
+                className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 cursor-pointer ${
+                  isInputActive
+                    ? "bg-primary hover:bg-primary-hover text-white shadow-sm shadow-primary/25"
+                    : "bg-gray-100 text-text-muted-light cursor-not-allowed"
+                }`}
               >
                 <SendIcon />
               </button>
             </div>
           </div>
 
-          {/* Right Side: Artifact View (PDF) */}
+          {/* PDF Artifact Pane */}
           {activeFileBase64 && (
-            <div style={{ 
-              flex: "0 0 50%", 
-              background: "#F1F5F9", 
-              display: "flex", 
-              flexDirection: "column",
-              animation: "hrm-card-slide 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards",
-              overflow: "hidden"
-            }}>
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                <PlainPDFViewer fileBase64={activeFileBase64} />
+            <div className="flex flex-col w-1/2 bg-gray-50 overflow-hidden animate-fade-in">
+              {/* PDF Pane Header */}
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-light bg-surface-light flex-shrink-0">
+                <p className="text-xs font-semibold text-text-secondary-light uppercase tracking-wider">
+                  Xem trước hợp đồng
+                </p>
+                <button
+                  onClick={() => setActiveFileBase64(null)}
+                  className="text-[11px] font-medium text-text-secondary-light hover:text-rose-600 transition-colors cursor-pointer"
+                >
+                  Đóng
+                </button>
               </div>
+              <PlainPDFViewer fileBase64={activeFileBase64} />
             </div>
           )}
         </div>

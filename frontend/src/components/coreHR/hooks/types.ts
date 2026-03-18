@@ -80,7 +80,6 @@ export interface CreateNewHireDTO {
   role: string;
   status: string;
   contractNumber?: string;
-  contractType?: string;
   startDate?: string;
   contractDuration?: string;
   endDate?: string;

@@ -48,7 +48,6 @@ public class OnboardingController {
 
         NewHireResponseDTO response = onboardingService.createNewHire(request);
 
-        // Lưu file PDF hợp đồng nếu FE gửi kèm
         if (request.getFileBase64() != null && !request.getFileBase64().isBlank()
                 && response.getContractId() != null) {
             try {
@@ -69,7 +68,7 @@ public class OnboardingController {
 
     @GetMapping("/employees/{employeeId}/edit")
     @PreAuthorize("hasRole('HR')")
-    public ResponseEntity<CreateNewHireDTO> getEmployeeForEdit(@PathVariable UUID employeeId) {
+    public ResponseEntity<CreateNewHireDTO> getEmployeeForEdit(@PathVariable("employeeId") UUID employeeId) {
         CreateNewHireDTO dto = onboardingService.getEmployeeForEdit(employeeId);
         return ResponseEntity.ok(dto);
     }
@@ -77,7 +76,7 @@ public class OnboardingController {
     @PutMapping("/employees/{employeeId}/resubmit")
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<Void> resubmitRejectedEmployee(
-            @PathVariable UUID employeeId,
+            @PathVariable("employeeId") UUID employeeId,
             @Valid @RequestBody CreateNewHireDTO updatedData) {
         onboardingService.resubmitRejectedEmployee(employeeId, updatedData);
         return ResponseEntity.ok().build();

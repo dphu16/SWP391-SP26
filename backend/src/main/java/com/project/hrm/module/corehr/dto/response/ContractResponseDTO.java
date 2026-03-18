@@ -16,7 +16,6 @@ import java.util.UUID;
 public class ContractResponseDTO {
     private UUID contractId;
     private String contractNumber;
-    private String contractType;
     private LocalDate startDate;
     private LocalDate endDate;
     private BigDecimal baseSalary;
