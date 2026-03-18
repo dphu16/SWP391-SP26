@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
     getAllBenefits, createBenefit, assignBenefitToEmployee,
     type BenefitResponse, type BenefitRequest, type BenefitType, type AssignBenefitRequest
@@ -44,6 +45,7 @@ const CreateBenefitModal: React.FC<{ onCreated: () => void; onClose: () => void 
 
     const handleSubmit = async () => {
         if (!form.name.trim()) { setErr("Tên phúc lợi không được để trống."); return; }
+        if (form.standardValue === undefined || form.standardValue <= 0) { setErr("Vui lòng nhập Giá trị quy đổi hợp lệ (>0)."); return; }
         setBusy(true); setErr("");
         try {
             await createBenefit(form);
@@ -52,8 +54,8 @@ const CreateBenefitModal: React.FC<{ onCreated: () => void; onClose: () => void 
         finally { setBusy(false); }
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    const modalContent = (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
             <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
                 <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-indigo-50">
@@ -80,7 +82,7 @@ const CreateBenefitModal: React.FC<{ onCreated: () => void; onClose: () => void 
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Giá trị quy đổi (VNĐ/tháng)</label>
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Giá trị quy đổi (VNĐ/tháng) *</label>
                         <input type="number" value={form.standardValue ?? ""} onChange={e => setForm(f => ({ ...f, standardValue: e.target.value ? Number(e.target.value) : undefined }))}
                             className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-400 focus:outline-none"
                             placeholder="VD: 1500000" />
@@ -102,7 +104,11 @@ const CreateBenefitModal: React.FC<{ onCreated: () => void; onClose: () => void 
             </div>
         </div>
     );
+    
+    return createPortal(modalContent, document.body);
 };
+
+import { employeeService } from "../../services/employeeService";
 
 // ─── Assign Benefit Modal ──────────────────────────────────────────────────────
 const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: () => void; onClose: () => void }> = ({ benefits, onAssigned, onClose }) => {
@@ -112,6 +118,40 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState("");
     const [success, setSuccess] = useState("");
+    
+    // Add employee name lookup state
+    const [employeeName, setEmployeeName] = useState<string | null>(null);
+    const [empLoading, setEmpLoading] = useState(false);
+
+    // Effect to fetch employee name when employeeId changes length > 30 (UUID format approx)
+    useEffect(() => {
+        if (!form.employeeId || form.employeeId.length < 32) {
+            setEmployeeName(null);
+            return;
+        }
+        const findEmp = async () => {
+            setEmpLoading(true);
+            try {
+                const res = await employeeService.getEmployeeDetail(form.employeeId);
+                // Axios returns data wrapped in res.data, which contains our user obj. 
+                // Depending on generic response parsing, we extract the name:
+                const name = (res.data as any)?.user?.fullName || (res as any)?.user?.fullName || "Tên không xác định";
+                setEmployeeName(name);
+                setErr("");
+            } catch (e: any) {
+                setEmployeeName(null);
+                if (e?.response?.status === 404) {
+                    setErr("Không tìm thấy nhân viên với ID này.");
+                } else if (e?.response?.status === 400 || e?.response?.status === 500) {
+                     // ignore format errors until typing finishes
+                }
+            } finally {
+                setEmpLoading(false);
+            }
+        };
+        const timer = setTimeout(findEmp, 500); // debounce typing
+        return () => clearTimeout(timer);
+    }, [form.employeeId]);
 
     const handleSubmit = async () => {
         if (!form.employeeId.trim()) { setErr("Vui lòng nhập Employee ID."); return; }
@@ -120,13 +160,16 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
         try {
             await assignBenefitToEmployee(form);
             setSuccess("✅ Cấp phát phúc lợi thành công!");
-            setTimeout(() => { onAssigned(); }, 1200);
+            setTimeout(() => { 
+                onAssigned(); 
+                onClose(); // Auto close the modal after success
+            }, 1200);
         } catch (e) { setErr(getErrMsg(e)); }
         finally { setBusy(false); }
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    const modalContent = (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
             <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
                 <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-teal-50">
@@ -139,26 +182,34 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
                     {err && <div className="p-3 bg-rose-50 text-rose-700 text-xs rounded-lg border border-rose-200">{err}</div>}
                     {success && <div className="p-3 bg-emerald-50 text-emerald-700 text-xs rounded-lg border border-emerald-200 font-bold">{success}</div>}
                     <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Employee ID *</label>
+                        <div className="flex justify-between items-center">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Employee ID *</label>
+                            {empLoading && <span className="text-[10px] text-emerald-600 animate-pulse">Đang tìm...</span>}
+                        </div>
                         <input value={form.employeeId} onChange={e => setForm(f => ({ ...f, employeeId: e.target.value }))}
-                            className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none font-mono"
-                            placeholder="UUID của nhân viên" />
+                            className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none placeholder-slate-300"
+                            placeholder="Nhập UUID của nhân viên..." />
+                        
+                        {employeeName && (
+                             <div className="mt-1.5 flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                                 <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                                     {employeeName.charAt(0).toUpperCase()}
+                                 </span>
+                                 <span className="text-xs font-medium text-slate-700">{employeeName}</span>
+                             </div>
+                        )}
                     </div>
                     <div>
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Chọn phúc lợi *</label>
                         <select value={form.benefitId} onChange={e => setForm(f => ({ ...f, benefitId: e.target.value }))}
                             className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none bg-white">
                             <option value="">-- Chọn gói phúc lợi --</option>
-                            {benefits.filter(b => b.isActive).map(b => (
-                                <option key={b.benefitId} value={b.benefitId}>
-                                    {b.name} {b.standardValue ? `(${fmt(b.standardValue)})` : ""}
-                                </option>
-                            ))}
+                            {benefits.map(b => <option key={b.benefitId} value={b.benefitId}>{b.name} ({fmt(b.standardValue)}/tháng)</option>)}
                         </select>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Ngày bắt đầu</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Ngày bắt đầu *</label>
                             <input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
                                 className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none" />
                         </div>
@@ -169,7 +220,7 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
                         </div>
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Giá trị áp dụng riêng (tuỳ chọn)</label>
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Giá trị áp dụng riêng (Tuỳ chọn)</label>
                         <input type="number" value={form.appliedValue ?? ""} onChange={e => setForm(f => ({ ...f, appliedValue: e.target.value ? Number(e.target.value) : undefined }))}
                             className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none"
                             placeholder="Để trống = dùng giá trị mặc định" />
@@ -177,14 +228,16 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
                 </div>
                 <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
                     <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-slate-500 hover:text-slate-700 cursor-pointer">Huỷ</button>
-                    <button onClick={handleSubmit} disabled={busy || !!success}
+                    <button onClick={handleSubmit} disabled={busy}
                         className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md hover:bg-emerald-700 disabled:opacity-50 cursor-pointer transition-colors">
-                        {busy ? "Đang cấp phát..." : "Xác nhận cấp phát"}
+                        {busy ? "Đang xử lý..." : "Xác nhận cấp phát"}
                     </button>
                 </div>
             </div>
         </div>
     );
+    
+    return createPortal(modalContent, document.body);
 };
 
 // ─── Main Component ────────────────────────────────────────────────────────────
