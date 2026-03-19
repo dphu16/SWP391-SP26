@@ -64,7 +64,7 @@ class JobRequestControllerTest {
     }
 
     // ===================== POST /api/job-requests =====================
-    // @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE')")
+    // @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
 
     @Test
     @DisplayName("POST /api/job-requests – HR tạo request → 201 Created")
@@ -97,16 +97,13 @@ class JobRequestControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/job-requests – EMPLOYEE tạo request → 201 Created")
+    @DisplayName("POST /api/job-requests – EMPLOYEE tạo request → 403 Forbidden")
     @WithMockUser(roles = "EMPLOYEE")
-    void create_asEmployee_returns201() throws Exception {
-        when(jobRequestService.create(any())).thenReturn(sampleResponse);
-
+    void create_asEmployee_returns403() throws Exception {
         mockMvc.perform(post("/api/job-requests")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(buildValidRequest())))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(requestId.toString()));
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -172,7 +169,7 @@ class JobRequestControllerTest {
     }
 
     // ===================== GET /api/job-requests/{id} =====================
-    // @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE')")
+    // @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
 
     @Test
     @DisplayName("GET /api/job-requests/{id} – HR xem chi tiết → 200 OK")
@@ -200,14 +197,11 @@ class JobRequestControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/job-requests/{id} – EMPLOYEE xem chi tiết → 200 OK")
+    @DisplayName("GET /api/job-requests/{id} – EMPLOYEE xem chi tiết → 403 Forbidden")
     @WithMockUser(roles = "EMPLOYEE")
-    void getById_asEmployee_returns200() throws Exception {
-        when(jobRequestService.getRequestById(requestId)).thenReturn(sampleResponse);
-
+    void getById_asEmployee_returns403() throws Exception {
         mockMvc.perform(get("/api/job-requests/{id}", requestId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(requestId.toString()));
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -356,7 +350,7 @@ class JobRequestControllerTest {
     }
 
     // ===================== PUT /api/job-requests/{id} =====================
-    // @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE')")
+    // @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
 
     @Test
     @DisplayName("PUT /api/job-requests/{id} – MANAGER cập nhật request → 200 OK")
@@ -386,16 +380,13 @@ class JobRequestControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /api/job-requests/{id} – EMPLOYEE cập nhật request → 200 OK")
+    @DisplayName("PUT /api/job-requests/{id} – EMPLOYEE cập nhật request → 403 Forbidden")
     @WithMockUser(roles = "EMPLOYEE")
-    void update_asEmployee_returns200() throws Exception {
-        when(jobRequestService.update(eq(requestId), any())).thenReturn(sampleResponse);
-
+    void update_asEmployee_returns403() throws Exception {
         mockMvc.perform(put("/api/job-requests/{id}", requestId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(buildValidRequest())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(requestId.toString()));
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -471,7 +462,7 @@ class JobRequestControllerTest {
     }
 
     // ===================== DELETE /api/job-requests/{id} =====================
-    // @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE')")
+    // @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
 
     @Test
     @DisplayName("DELETE /api/job-requests/{id} – MANAGER xóa thành công → 204 No Content")
@@ -494,13 +485,11 @@ class JobRequestControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /api/job-requests/{id} – EMPLOYEE xóa thành công → 204 No Content")
+    @DisplayName("DELETE /api/job-requests/{id} – EMPLOYEE xóa → 403 Forbidden")
     @WithMockUser(roles = "EMPLOYEE")
-    void delete_asEmployee_returns204() throws Exception {
-        doNothing().when(jobRequestService).delete(requestId);
-
+    void delete_asEmployee_returns403() throws Exception {
         mockMvc.perform(delete("/api/job-requests/{id}", requestId))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isForbidden());
     }
 
     @Test
