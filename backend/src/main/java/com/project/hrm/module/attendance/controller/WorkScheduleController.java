@@ -1,11 +1,6 @@
 package com.project.hrm.module.attendance.controller;
 
-import com.project.hrm.module.attendance.dto.AttendanceEmployeeResponse;
-import com.project.hrm.module.attendance.dto.BulkScheduleRequest;
-import com.project.hrm.module.attendance.dto.ShiftRequest;
-import com.project.hrm.module.attendance.dto.WorkScheduleRequest;
-import com.project.hrm.module.attendance.dto.WorkScheduleResponse;
-import com.project.hrm.module.attendance.dto.ShiftResponse;
+import com.project.hrm.module.attendance.dto.*;
 import com.project.hrm.module.attendance.service.WorkScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -23,117 +18,70 @@ public class WorkScheduleController {
     @Autowired
     private WorkScheduleService service;
 
-    // =========================================================
-    // 1. LẤY TẤT CẢ LỊCH (DÀNH CHO MANAGER)
-    // =========================================================
-    @GetMapping
-    public ResponseEntity<List<WorkScheduleResponse>> getAllSchedules() {
-        return ResponseEntity.ok(service.getAllSchedules());
-    }
+    // ============================================================================
+    // KHU VỰC A: DÀNH CHO NHÂN VIÊN (EMPLOYEE PORTAL)
+    // ============================================================================
 
-    // =========================================================
-    // 2. LẤY LỊCH CÁ NHÂN (DÀNH CHO EMPLOYEE)
-    // =========================================================
+    // 1. Lấy lịch cá nhân của 1 nhân viên (Dùng cho màn hình View Schedule của FE)
     @GetMapping("/my-schedule")
     public ResponseEntity<List<WorkScheduleResponse>> getMySchedule(
-            // FIX: Added explicit name= to all @RequestParam so Spring can bind
-            // them without needing the -parameters compiler flag.
             @RequestParam(name = "employeeId") UUID employeeId,
             @RequestParam(name = "month", required = false) Integer month,
             @RequestParam(name = "year", required = false) Integer year) {
         return ResponseEntity.ok(service.getMySchedules(employeeId, month, year));
     }
 
-    // =========================================================
-    // 3. TẠO 1 LỊCH MỚI (THỦ CÔNG)
-    // =========================================================
+    // ============================================================================
+    // KHU VỰC B: DÀNH CHO QUẢN LÝ (MANAGER PORTAL - THAO TÁC VỚI LỊCH)
+    // ============================================================================
+
+    // 2. Lấy TẤT CẢ lịch của toàn công ty
+    @GetMapping
+    public ResponseEntity<List<WorkScheduleResponse>> getAllSchedules() {
+        return ResponseEntity.ok(service.getAllSchedules());
+    }
+
+    // 3. Tạo 1 lịch mới (Thủ công từng ngày)
     @PostMapping
     public ResponseEntity<WorkScheduleResponse> createSchedule(@RequestBody WorkScheduleRequest request) {
         return ResponseEntity.ok(service.createSchedule(request));
     }
 
-    // =========================================================
-    // 4. TẠO LỊCH HÀNG LOẠT (BULK INSERT)
-    // =========================================================
+    // 4. Tạo lịch hàng loạt (Từ ngày A đến ngày B)
     @PostMapping("/bulk")
     public ResponseEntity<List<WorkScheduleResponse>> createBulkSchedules(@RequestBody BulkScheduleRequest request) {
-        List<WorkScheduleResponse> result = service.createBulkSchedules(
-                request.getEmployeeId(),
-                request.getStartDate(),
-                request.getEndDate(),
-                request.getShiftId());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(service.createBulkSchedules(
+                request.getEmployeeId(), request.getStartDate(), request.getEndDate(), request.getShiftId()
+        ));
     }
 
-    // =========================================================
-    // 5. SỬA LỊCH (ĐỔI CA LÀM VIỆC)
-    // =========================================================
-    @PutMapping("/{scheduleId}")
-    public ResponseEntity<WorkScheduleResponse> updateSchedule(
-            // FIX: Added explicit value= to @PathVariable.
-            @PathVariable(value = "scheduleId") UUID scheduleId,
-            // FIX: Added explicit name= to @RequestParam.
-            @RequestParam(name = "newShiftId") UUID newShiftId) {
-        return ResponseEntity.ok(service.updateSchedule(scheduleId, newShiftId));
-    }
-
-    // =========================================================
-    // 6. COPY LỊCH TỪ THÁNG TRƯỚC
-    // =========================================================
+    // 5. Copy lịch từ tháng trước đắp sang tháng này
     @PostMapping("/clone")
     public ResponseEntity<List<WorkScheduleResponse>> cloneSchedule(
-            // FIX: Added explicit name= to all @RequestParam.
             @RequestParam(name = "employeeId") UUID employeeId,
             @RequestParam(name = "targetMonth") int targetMonth,
             @RequestParam(name = "targetYear") int targetYear) {
         return ResponseEntity.ok(service.copyFromPreviousMonth(employeeId, targetMonth, targetYear));
     }
 
-    // =========================================================
-    // 7. LẤY DANH SÁCH NHÂN VIÊN (ĐỂ ĐỔ VÀO DROPDOWN FRONTEND)
-    // =========================================================
-    @GetMapping("/employees")
-    public ResponseEntity<Page<AttendanceEmployeeResponse>> getEmployeesForScheduling(
-            // FIX: Added explicit name= to all @RequestParam.
-            @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "20") int size,
-            @RequestParam(name = "search", required = false) String search) {
-        return ResponseEntity.ok(service.getEmployeesForScheduling(search, page, size));
+    // 6. Đổi ca làm việc của 1 ngày cụ thể
+    @PutMapping("/{scheduleId}")
+    public ResponseEntity<WorkScheduleResponse> updateSchedule(
+            @PathVariable(value = "scheduleId") UUID scheduleId,
+            @RequestParam(name = "newShiftId") UUID newShiftId) {
+        return ResponseEntity.ok(service.updateSchedule(scheduleId, newShiftId));
     }
 
-    // =========================================================
-    // 8. LẤY TẤT CẢ CA LÀM (ĐỂ ĐỔ VÀO UI)
-    // =========================================================
-    @GetMapping("/shifts")
-    public ResponseEntity<List<ShiftResponse>> getAllShifts() {
-        return ResponseEntity.ok(service.getAllShifts());
-    }
-
-    // =========================================================
-    // 9. TẠO CA LÀM MỚI
-    // =========================================================
-    @PostMapping("/shifts")
-    public ResponseEntity<ShiftResponse> createShift(@RequestBody ShiftRequest request) {
-        return ResponseEntity.ok(service.createShift(request));
-    }
-
-    // =========================================================
-    // 10. XÓA CA LÀM
-    // =========================================================
-    @DeleteMapping("/shifts/{shiftId}")
-    public ResponseEntity<Void> deleteShift(
-            // FIX: Added explicit value= to @PathVariable.
-            @PathVariable(value = "shiftId") UUID shiftId) {
-        service.deleteShift(shiftId);
+    // 7. Xóa lịch của 1 ngày
+    @DeleteMapping("/{scheduleId}")
+    public ResponseEntity<Void> deleteSchedule(@PathVariable(value = "scheduleId") UUID scheduleId) {
+        service.deleteSchedule(scheduleId);
         return ResponseEntity.noContent().build();
     }
 
-    // =========================================================
-    // 11. XÓA TẤT CẢ LỊCH TRONG 1 THÁNG CỦA NHÂN VIÊN
-    // =========================================================
+    // 8. Xóa toàn bộ lịch của 1 nhân viên trong 1 tháng
     @DeleteMapping("/bulk-delete")
     public ResponseEntity<Void> deleteSchedulesByMonth(
-            // FIX: Added explicit name= to all @RequestParam.
             @RequestParam(name = "employeeId") UUID employeeId,
             @RequestParam(name = "month") int month,
             @RequestParam(name = "year") int year) {
@@ -141,14 +89,39 @@ public class WorkScheduleController {
         return ResponseEntity.noContent().build();
     }
 
-    // =========================================================
-    // 12. XÓA LỊCH LÀM (1 ngày cụ thể)
-    // =========================================================
-    @DeleteMapping("/{scheduleId}")
-    public ResponseEntity<Void> deleteSchedule(
-            // FIX: Added explicit value= to @PathVariable.
-            @PathVariable(value = "scheduleId") UUID scheduleId) {
-        service.deleteSchedule(scheduleId);
+    // ============================================================================
+    // KHU VỰC C: QUẢN LÝ CA LÀM VIỆC (SHIFT SETTINGS)
+    // ============================================================================
+
+    // 9. Lấy danh sách các loại Ca làm (Sáng, Chiều, Tối...)
+    @GetMapping("/shifts")
+    public ResponseEntity<List<ShiftResponse>> getAllShifts() {
+        return ResponseEntity.ok(service.getAllShifts());
+    }
+
+    // 10. Tạo một loại Ca làm mới
+    @PostMapping("/shifts")
+    public ResponseEntity<ShiftResponse> createShift(@RequestBody ShiftRequest request) {
+        return ResponseEntity.ok(service.createShift(request));
+    }
+
+    // 11. Xóa một loại Ca làm
+    @DeleteMapping("/shifts/{shiftId}")
+    public ResponseEntity<Void> deleteShift(@PathVariable(value = "shiftId") UUID shiftId) {
+        service.deleteShift(shiftId);
         return ResponseEntity.noContent().build();
+    }
+
+    // ============================================================================
+    // KHU VỰC D: API PHỤ TRỢ (HELPER CHO FRONTEND)
+    // ============================================================================
+
+    // 12. Lấy danh sách Nhân viên (Để FE xổ xuống trong ô Dropdown chọn người)
+    @GetMapping("/employees")
+    public ResponseEntity<Page<AttendanceEmployeeResponse>> getEmployeesForScheduling(
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size,
+            @RequestParam(name = "search", required = false) String search) {
+        return ResponseEntity.ok(service.getEmployeesForScheduling(search, page, size));
     }
 }
