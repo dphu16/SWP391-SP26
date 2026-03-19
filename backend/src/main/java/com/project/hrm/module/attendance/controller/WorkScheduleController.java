@@ -55,15 +55,6 @@ public class WorkScheduleController {
         ));
     }
 
-    // 5. Copy lịch từ tháng trước đắp sang tháng này
-    @PostMapping("/clone")
-    public ResponseEntity<List<WorkScheduleResponse>> cloneSchedule(
-            @RequestParam(name = "employeeId") UUID employeeId,
-            @RequestParam(name = "targetMonth") int targetMonth,
-            @RequestParam(name = "targetYear") int targetYear) {
-        return ResponseEntity.ok(service.copyFromPreviousMonth(employeeId, targetMonth, targetYear));
-    }
-
 
     // 7. Xóa lịch của 1 ngày
     @DeleteMapping("/{scheduleId}")
