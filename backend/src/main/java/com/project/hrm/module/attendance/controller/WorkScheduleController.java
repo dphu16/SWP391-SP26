@@ -64,13 +64,6 @@ public class WorkScheduleController {
         return ResponseEntity.ok(service.copyFromPreviousMonth(employeeId, targetMonth, targetYear));
     }
 
-    // 6. Đổi ca làm việc của 1 ngày cụ thể
-    @PutMapping("/{scheduleId}")
-    public ResponseEntity<WorkScheduleResponse> updateSchedule(
-            @PathVariable(value = "scheduleId") UUID scheduleId,
-            @RequestParam(name = "newShiftId") UUID newShiftId) {
-        return ResponseEntity.ok(service.updateSchedule(scheduleId, newShiftId));
-    }
 
     // 7. Xóa lịch của 1 ngày
     @DeleteMapping("/{scheduleId}")
