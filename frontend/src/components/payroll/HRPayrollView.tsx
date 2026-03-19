@@ -895,7 +895,7 @@ const HRPayrollView: React.FC = () => {
                                                     </span>
                                                     {req.createdAt && (
                                                         <span className="text-[10px] text-[#94a3b8]">
-                                                            Sent: {new Date(req.createdAt).toLocaleDateString("vi-VN")}
+                                                            Sent: {new Date(req.createdAt).toLocaleDateString("en-US")}
                                                         </span>
                                                     )}
                                                 </div>
@@ -945,7 +945,7 @@ const HRPayrollView: React.FC = () => {
                                             {req.approvedAt && (
                                                 <div className="text-right flex-shrink-0">
                                                     <p className="text-[10px] text-[#94a3b8] font-bold uppercase tracking-wide">Processed</p>
-                                                    <p className="text-xs font-semibold text-[#334155]">{new Date(req.approvedAt).toLocaleDateString("vi-VN")}</p>
+                                                    <p className="text-xs font-semibold text-[#334155]">{new Date(req.approvedAt).toLocaleDateString("en-US")}</p>
                                                 </div>
                                             )}
                                         </div>

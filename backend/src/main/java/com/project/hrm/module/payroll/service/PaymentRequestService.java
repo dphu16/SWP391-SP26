@@ -5,8 +5,7 @@ import com.project.hrm.module.payroll.dto.RequestDTO.CreatePaymentRequestRequest
 import com.project.hrm.module.payroll.dto.RequestDTO.ReviewPaymentRequestRequest;
 import com.project.hrm.module.payroll.dto.ResponseDTO.PaymentRequestResponse;
 import com.project.hrm.module.payroll.entity.*;
-import com.project.hrm.module.payroll.enums.PaymentRequestStatus;
-import com.project.hrm.module.payroll.enums.PayrollBatchStatus;
+import com.project.hrm.module.payroll.enums.*;
 import com.project.hrm.module.payroll.exception.PayrollException;
 import com.project.hrm.module.payroll.exception.ResourceNotFoundException;
 import com.project.hrm.module.payroll.repository.*;
@@ -139,12 +138,12 @@ public class PaymentRequestService {
             paymentRequest.setApprovedAt(OffsetDateTime.now());
 
             // 3. Nếu là yêu cầu chi LƯƠNG -> Chốt toàn bộ phiếu lương sang PAID
-            if (paymentRequest.getType() == com.project.hrm.module.payroll.enums.PaymentRequestType.SALARY) {
+            if (paymentRequest.getType() == PaymentRequestType.SALARY) {
                 List<Payslip> payslips = payslipRepository
                         .findAllByBatch_BatchId(paymentRequest.getPayrollBatch().getBatchId());
                 for (Payslip p : payslips) {
-                    if (p.getStatus() == com.project.hrm.module.payroll.enums.PayslipStatus.CONFIRMED) {
-                        p.setStatus(com.project.hrm.module.payroll.enums.PayslipStatus.PAID);
+                    if (p.getStatus() == PayslipStatus.CONFIRMED) {
+                        p.setStatus(PayslipStatus.PAID);
                         p.setPaidAt(OffsetDateTime.now());
                     }
                 }
@@ -152,12 +151,12 @@ public class PaymentRequestService {
 
                 // 4. Batch cũng nên được khóa (LOCKED) sau khi đã chi trả lương
                 PayrollBatch batch = paymentRequest.getPayrollBatch();
-                batch.setStatus(com.project.hrm.module.payroll.enums.PayrollBatchStatus.LOCKED);
+                batch.setStatus(PayrollBatchStatus.LOCKED);
                 payrollBatchRepository.save(batch);
 
                 // 5. Đồng bộ trạng thái Kỳ lương (Period) sang PAID
                 com.project.hrm.module.payroll.entity.PayrollPeriod period = batch.getPeriod();
-                period.setStatus(com.project.hrm.module.payroll.enums.PayrollPeriodStatus.PAID);
+                period.setStatus(PayrollPeriodStatus.PAID);
                 payrollPeriodRepository.save(period);
             }
         } else {

@@ -214,14 +214,14 @@ class PayrollCalculationServiceTest {
         }
 
         @Test
-        @DisplayName("Cập nhật batch status → VALIDATED sau khi có ít nhất 1 payslip thành công")
-        void shouldUpdateBatchStatus_ToValidated_AfterSuccess() {
+        @DisplayName("Vẫn giữ nguyên batch status là DRAFT sau khi tính lương thành công")
+        void shouldKeepBatchStatusDraft_AfterSuccess() {
             stubHappyPath(PayrollBatchStatus.DRAFT);
 
             payrollCalculationService.calculateBatch(batchId, List.of(employeeId));
 
-            assertThat(batch.getStatus()).isEqualTo(PayrollBatchStatus.VALIDATED);
-            verify(batchRepository, atLeastOnce()).save(batch);
+            assertThat(batch.getStatus()).isEqualTo(PayrollBatchStatus.DRAFT);
+            verify(batchRepository, never()).save(batch);
         }
 
         @Test

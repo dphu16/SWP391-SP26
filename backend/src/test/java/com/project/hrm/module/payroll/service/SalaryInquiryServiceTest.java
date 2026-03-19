@@ -4,6 +4,7 @@ import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.payroll.dto.RequestDTO.CreateSalaryInquiryRequest;
 import com.project.hrm.module.payroll.dto.ResponseDTO.RespondToInquiryRequest;
 import com.project.hrm.module.payroll.dto.ResponseDTO.SalaryInquiryDto;
+import com.project.hrm.module.payroll.entity.PayrollPeriod;
 import com.project.hrm.module.payroll.entity.Payslip;
 import com.project.hrm.module.payroll.entity.SalaryInquiry;
 import com.project.hrm.module.payroll.entity.SalaryInquiryResponse;
@@ -60,6 +61,7 @@ class SalaryInquiryServiceTest {
 
     private Employee       employee;
     private Employee       responder;
+    private PayrollPeriod  period;
     private Payslip        payslip;
     private SalaryInquiry  inquiry;
 
@@ -81,9 +83,13 @@ class SalaryInquiryServiceTest {
         responder.setEmployeeId(responderId);
         responder.setFullName("HR Manager");
 
+        period = new PayrollPeriod();
+        period.setPeriodId(UUID.randomUUID());
+
         payslip = new Payslip();
         payslip.setPayslipId(payslipId);
         payslip.setEmployee(employee);
+        payslip.setPeriod(period);
 
         inquiry = SalaryInquiry.builder()
                 .id(inquiryId)
@@ -139,6 +145,8 @@ class SalaryInquiryServiceTest {
         @DisplayName("Tạo inquiry thành công khi employee xem phiếu của chính mình")
         void shouldCreateInquiry_WhenOwnerRequests() {
             when(payslipRepository.findById(payslipId)).thenReturn(Optional.of(payslip));
+            when(payslipRepository.findFirstByEmployee_EmployeeIdOrderByPeriod_StartDateDesc(employeeId))
+                    .thenReturn(Optional.of(payslip));
             when(inquiryRepository.save(any())).thenAnswer(inv -> {
                 SalaryInquiry i = inv.getArgument(0);
                 i.setId(inquiryId);
@@ -155,6 +163,8 @@ class SalaryInquiryServiceTest {
         @DisplayName("Inquiry được lưu với status = OPEN")
         void shouldSaveInquiry_WithOpenStatus() {
             when(payslipRepository.findById(payslipId)).thenReturn(Optional.of(payslip));
+            when(payslipRepository.findFirstByEmployee_EmployeeIdOrderByPeriod_StartDateDesc(employeeId))
+                    .thenReturn(Optional.of(payslip));
             when(inquiryRepository.save(any())).thenAnswer(inv -> {
                 SalaryInquiry i = inv.getArgument(0);
                 i.setId(inquiryId);
@@ -172,6 +182,8 @@ class SalaryInquiryServiceTest {
         @DisplayName("Inquiry được lưu với subject và message đúng")
         void shouldSaveInquiry_WithCorrectSubjectAndMessage() {
             when(payslipRepository.findById(payslipId)).thenReturn(Optional.of(payslip));
+            when(payslipRepository.findFirstByEmployee_EmployeeIdOrderByPeriod_StartDateDesc(employeeId))
+                    .thenReturn(Optional.of(payslip));
             when(inquiryRepository.save(any())).thenAnswer(inv -> {
                 SalaryInquiry i = inv.getArgument(0);
                 i.setId(inquiryId);
@@ -190,6 +202,8 @@ class SalaryInquiryServiceTest {
         @DisplayName("Response DTO chứa đúng employeeId và payslipId")
         void shouldReturnCorrectIds_InResponse() {
             when(payslipRepository.findById(payslipId)).thenReturn(Optional.of(payslip));
+            when(payslipRepository.findFirstByEmployee_EmployeeIdOrderByPeriod_StartDateDesc(employeeId))
+                    .thenReturn(Optional.of(payslip));
             when(inquiryRepository.save(any())).thenAnswer(inv -> {
                 SalaryInquiry i = inv.getArgument(0);
                 i.setId(inquiryId);
@@ -206,6 +220,8 @@ class SalaryInquiryServiceTest {
         @DisplayName("Response DTO không chứa hrResponse khi mới tạo (includeInternalNote = false)")
         void shouldReturnNullHrResponse_WhenNewlyCreated() {
             when(payslipRepository.findById(payslipId)).thenReturn(Optional.of(payslip));
+            when(payslipRepository.findFirstByEmployee_EmployeeIdOrderByPeriod_StartDateDesc(employeeId))
+                    .thenReturn(Optional.of(payslip));
             when(inquiryRepository.save(any())).thenAnswer(inv -> {
                 SalaryInquiry i = inv.getArgument(0);
                 i.setId(inquiryId);
@@ -215,6 +231,24 @@ class SalaryInquiryServiceTest {
             SalaryInquiryDto result = salaryInquiryService.createInquiry(employeeId, createReq);
 
             assertThat(result.getHrResponse()).isNull();
+        }
+
+        @Test
+        @DisplayName("Throw PayrollException khi payslip không thuộc kỳ lương mới nhất")
+        void shouldThrow_WhenPayslipIsNotFromLatestPeriod() {
+            when(payslipRepository.findById(payslipId)).thenReturn(Optional.of(payslip));
+
+            Payslip latestPayslip = new Payslip();
+            PayrollPeriod latestPeriod = new PayrollPeriod();
+            latestPeriod.setPeriodId(UUID.randomUUID());
+            latestPayslip.setPeriod(latestPeriod);
+
+            when(payslipRepository.findFirstByEmployee_EmployeeIdOrderByPeriod_StartDateDesc(employeeId))
+                    .thenReturn(Optional.of(latestPayslip));
+
+            assertThatThrownBy(() -> salaryInquiryService.createInquiry(employeeId, createReq))
+                    .isInstanceOf(PayrollException.class)
+                    .hasMessageContaining("Kỳ lương này đã qua");
         }
     }
 

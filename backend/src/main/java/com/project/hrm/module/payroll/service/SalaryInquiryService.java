@@ -18,8 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -41,6 +41,17 @@ public class SalaryInquiryService {
         // [RULE] Employee chỉ được thắc mắc về phiếu lương của chính mình
         if (!payslip.getEmployee().getEmployeeId().equals(employeeId)) {
             throw new AccessDeniedException("Bạn không có quyền thắc mắc về phiếu lương này.");
+        }
+
+        // [RULE] Chỉ cho phép thắc mắc đối với kỳ lương mới nhất mà nhân viên có phiếu lương
+        Optional<Payslip> latestPayslipOpt = payslipRepository
+                .findFirstByEmployee_EmployeeIdOrderByPeriod_StartDateDesc(employeeId);
+
+        if (latestPayslipOpt.isPresent()) {
+            Payslip latestPayslip = latestPayslipOpt.get();
+            if (!latestPayslip.getPeriod().getPeriodId().equals(payslip.getPeriod().getPeriodId())) {
+                throw new PayrollException("Kỳ lương này đã qua. Bạn chỉ có thể gửi thắc mắc cho kỳ lương mới nhất.");
+            }
         }
 
         Employee employee = new Employee();

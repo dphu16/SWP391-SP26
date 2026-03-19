@@ -72,10 +72,6 @@ public class HRPayrollController {
     /** POST /api/v1/hr/payroll/batches/{batchId}/calculate — Yêu cầu chạy toán lương */
     @PostMapping("/batches/{batchId}/calculate")
     public ResponseEntity<ApiResponse<List<PayslipResponse>>> calculatePayslips(@PathVariable("batchId") UUID batchId) {
-        // Trong hệ thống thật, employeeIds nên truyền vào hoặc lấy toàn bộ NV Active
-        // Tạm thời demo: findAll employees -> tính lương.
-        // Cần inject EmployeeRepository nếu làm thật, hoặc lấy từ payslipService.
-        // Ở đây để đơn giản ta gọi một hàm từ payslipService bọc tính năng trên.
         return ResponseEntity.ok(ApiResponse.ok("Đã chạy lương cho Batch.", payslipService.calculateForBatch(batchId)));
     }
 

@@ -39,7 +39,7 @@ const TaxInsuranceReport: React.FC = () => {
             setPeriods(sorted);
             if (sorted.length > 0 && !selPeriodId) setSelPeriodId(sorted[0].periodId);
         } catch {
-            setError("Lỗi khi tải dữ liệu ban đầu.");
+            setError("Error loading initial data.");
         } finally {
             setPeriodLoad(false);
         }
@@ -95,7 +95,7 @@ const TaxInsuranceReport: React.FC = () => {
             const err = e as { response?: { data?: { message?: string } } };
             const msg = err.response?.data?.message || (e as Error).message || "Failed to send report to server.";
             setError(msg);
-            if (msg.includes("đã được gửi") || msg.includes("trùng lặp")) {
+            if (msg.includes("already sent") || msg.includes("duplicate")) {
                 setSentBatches(prev => new Set(prev).add(batchId));
             }
         } finally {

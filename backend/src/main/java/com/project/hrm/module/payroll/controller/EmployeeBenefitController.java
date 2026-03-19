@@ -13,12 +13,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/employee/benefits")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ROLE_EMPLOYEE', 'ROLE_HR', 'ROLE_FINANCE')")
 public class EmployeeBenefitController {
 
     private final BenefitService benefitService;
 
     @GetMapping("/my-trs")
-    @PreAuthorize("hasAnyRole('ROLE_EMPLOYEE', 'ROLE_HR', 'ROLE_FINANCE')")
     public ResponseEntity<TotalRewardStatementDTO> getMyTotalRewardStatement(
             @RequestAttribute("employeeId") UUID employeeId,
             @RequestParam(name = "year", required = false) Integer year) {
