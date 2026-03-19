@@ -107,7 +107,6 @@ public class WorkScheduleService {
         LocalDate current = startDate;
 
         while (!current.isAfter(endDate)) {
-            // Bỏ qua Chủ Nhật và những ngày đã có lịch
             if (current.getDayOfWeek() != DayOfWeek.SUNDAY && !existingDates.contains(current)) {
                 WorkSchedule ws = new WorkSchedule();
                 ws.setEmployeeId(employeeId);
@@ -168,27 +167,11 @@ public class WorkScheduleService {
         return workScheduleRepository.saveAll(newSchedules).stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
-    public WorkScheduleResponse updateSchedule(UUID scheduleId, UUID newShiftId) {
-        WorkSchedule ws = workScheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new RuntimeException("Work schedule not found: " + scheduleId));
-
-        if (ws.getDate().isBefore(LocalDate.now())) {
-            throw new RuntimeException("Cannot modify a schedule for a past date: " + ws.getDate());
-        }
-
-        Shift newShift = shiftRepository.findById(newShiftId)
-                .orElseThrow(() -> new RuntimeException("Shift not found: " + newShiftId));
-
-        ws.setShift(newShift);
-        return mapToResponse(workScheduleRepository.save(ws));
-    }
-
     @Transactional
     public void deleteSchedule(UUID scheduleId) {
         if (!workScheduleRepository.existsById(scheduleId)) {
             throw new RuntimeException("Work schedule not found: " + scheduleId);
         }
-        // Xóa attendance logs liên quan trước (tránh FK constraint)
         attendanceLogRepository.deleteAll(attendanceLogRepository.findByWorkSchedule_ScheduleId(scheduleId));
         workScheduleRepository.deleteById(scheduleId);
     }
@@ -217,14 +200,9 @@ public class WorkScheduleService {
     // ============================================================================
 
     public List<ShiftResponse> getAllShifts() {
-        return shiftRepository.findAll().stream().map(s -> {
-            ShiftResponse dto = new ShiftResponse();
-            dto.setId(s.getShiftId());
-            dto.setName(s.getShiftName());
-            dto.setStartTime(s.getStartTime());
-            dto.setEndTime(s.getEndTime());
-            return dto;
-        }).collect(Collectors.toList());
+        return shiftRepository.findAll().stream()
+                .map(this::mapToShiftResponse) // GỌN GÀNG!
+                .collect(Collectors.toList());
     }
 
     public ShiftResponse createShift(ShiftRequest request) {
@@ -241,13 +219,7 @@ public class WorkScheduleService {
         shift.setStartTime(java.time.LocalTime.parse(request.getStartTime()));
         shift.setEndTime(java.time.LocalTime.parse(request.getEndTime()));
 
-        Shift saved = shiftRepository.save(shift);
-        ShiftResponse dto = new ShiftResponse();
-        dto.setId(saved.getShiftId());
-        dto.setName(saved.getShiftName());
-        dto.setStartTime(saved.getStartTime());
-        dto.setEndTime(saved.getEndTime());
-        return dto;
+        return mapToShiftResponse(shiftRepository.save(shift)); // GỌN GÀNG!
     }
 
     public void deleteShift(UUID shiftId) {
@@ -277,17 +249,12 @@ public class WorkScheduleService {
             employeePage = employeeRepository.findAllWithDetails(pageable);
         }
 
-        return employeePage.map(emp -> {
-            AttendanceEmployeeResponse dto = new AttendanceEmployeeResponse();
-            dto.setId(emp.getEmployeeId());
-            dto.setFullName(emp.getFullName() != null ? emp.getFullName() : "Name not updated");
-            dto.setEmployeeCode(emp.getEmployeeCode() != null
-                    ? emp.getEmployeeCode()
-                    : "EMP-" + emp.getEmployeeId().toString().substring(0, 8).toUpperCase());
-            dto.setDeptName(emp.getDepartment() != null ? emp.getDepartment().getDeptName() : "No department assigned");
-            return dto;
-        });
+        return employeePage.map(this::mapToEmployeeResponse); // GỌN GÀNG!
     }
+
+    // ============================================================================
+    // KHU VỰC E: XƯỞNG ĐÓNG GÓI DTO (MAPPERS)
+    // ============================================================================
 
     private WorkScheduleResponse mapToResponse(WorkSchedule entity) {
         WorkScheduleResponse dto = new WorkScheduleResponse();
@@ -295,13 +262,28 @@ public class WorkScheduleService {
         dto.setDate(entity.getDate());
 
         if (entity.getShift() != null) {
-            ShiftResponse shiftDto = new ShiftResponse();
-            shiftDto.setId(entity.getShift().getShiftId());
-            shiftDto.setName(entity.getShift().getShiftName());
-            shiftDto.setStartTime(entity.getShift().getStartTime());
-            shiftDto.setEndTime(entity.getShift().getEndTime());
-            dto.setShift(shiftDto);
+            dto.setShift(mapToShiftResponse(entity.getShift())); // Tái sử dụng Helper
         }
+        return dto;
+    }
+
+    private ShiftResponse mapToShiftResponse(Shift s) {
+        ShiftResponse dto = new ShiftResponse();
+        dto.setId(s.getShiftId());
+        dto.setName(s.getShiftName());
+        dto.setStartTime(s.getStartTime());
+        dto.setEndTime(s.getEndTime());
+        return dto;
+    }
+
+    private AttendanceEmployeeResponse mapToEmployeeResponse(Employee emp) {
+        AttendanceEmployeeResponse dto = new AttendanceEmployeeResponse();
+        dto.setId(emp.getEmployeeId());
+        dto.setFullName(emp.getFullName() != null ? emp.getFullName() : "Name not updated");
+        dto.setEmployeeCode(emp.getEmployeeCode() != null
+                ? emp.getEmployeeCode()
+                : "EMP-" + emp.getEmployeeId().toString().substring(0, 8).toUpperCase());
+        dto.setDeptName(emp.getDepartment() != null ? emp.getDepartment().getDeptName() : "No department assigned");
         return dto;
     }
 }
