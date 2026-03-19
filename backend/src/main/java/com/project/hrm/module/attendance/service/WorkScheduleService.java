@@ -122,50 +122,6 @@ public class WorkScheduleService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional
-    public List<WorkScheduleResponse> copyFromPreviousMonth(UUID employeeId, int targetMonth, int targetYear) {
-        LocalDate targetDate = LocalDate.of(targetYear, targetMonth, 1);
-
-        if (targetDate.isBefore(LocalDate.now().withDayOfMonth(1))) {
-            throw new RuntimeException("Cannot copy schedules to a past month: " + targetMonth + "/" + targetYear);
-        }
-
-        LocalDate sourceStart = targetDate.minusMonths(1).withDayOfMonth(1);
-        LocalDate sourceEnd = sourceStart.withDayOfMonth(sourceStart.lengthOfMonth());
-
-        List<WorkSchedule> sourceSchedules = workScheduleRepository
-                .findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId, sourceStart, sourceEnd);
-
-        if (sourceSchedules.isEmpty()) {
-            throw new RuntimeException("No schedule data found for " + sourceStart.getMonth() + " " + sourceStart.getYear() + " to copy from.");
-        }
-
-        Set<LocalDate> existingTargetDates = workScheduleRepository
-                .findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId, targetDate, targetDate.withDayOfMonth(targetDate.lengthOfMonth()))
-                .stream().map(WorkSchedule::getDate).collect(Collectors.toSet());
-
-        Map<DayOfWeek, Shift> shiftByDayOfWeek = new HashMap<>();
-        for (WorkSchedule ws : sourceSchedules) {
-            shiftByDayOfWeek.putIfAbsent(ws.getDate().getDayOfWeek(), ws.getShift());
-        }
-        Shift fallbackShift = sourceSchedules.get(0).getShift();
-
-        List<WorkSchedule> newSchedules = new ArrayList<>();
-        for (int day = 1; day <= targetDate.lengthOfMonth(); day++) {
-            LocalDate current = targetDate.withDayOfMonth(day);
-            if (current.getDayOfWeek() == DayOfWeek.SUNDAY || existingTargetDates.contains(current)) continue;
-
-            Shift shift = shiftByDayOfWeek.getOrDefault(current.getDayOfWeek(), fallbackShift);
-
-            WorkSchedule newWs = new WorkSchedule();
-            newWs.setEmployeeId(employeeId);
-            newWs.setDate(current);
-            newWs.setShift(shift);
-            newSchedules.add(newWs);
-        }
-
-        return workScheduleRepository.saveAll(newSchedules).stream().map(this::mapToResponse).collect(Collectors.toList());
-    }
 
     @Transactional
     public void deleteSchedule(UUID scheduleId) {
