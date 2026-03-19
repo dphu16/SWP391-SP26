@@ -182,7 +182,9 @@ public class JobRequestServiceImpl implements JobRequestService {
         response.setPosName(entity.getPos().getTitle());
         response.setDeptId(entity.getDept().getDeptId());
         response.setDeptName(entity.getDept().getDeptName());
-        response.setQuantity(entity.getQuantity());
+        if(entity.getQuantity() == null){
+            response.setQuantity(0);
+        } else response.setQuantity(entity.getQuantity());
         response.setLocation(entity.getLocation());
 
         // Fix 1: employmentType có thể null trong DB
