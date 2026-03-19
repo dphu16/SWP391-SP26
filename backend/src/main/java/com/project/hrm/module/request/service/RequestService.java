@@ -139,7 +139,6 @@ public class RequestService {
         return saved;
     }
 
-    // --- 6. CẬP NHẬT YÊU CẦU ---
 // --- 6. CẬP NHẬT YÊU CẦU ---
     @Transactional
     public Request updateRequest(UUID requestId, RequestDTO dto) {
