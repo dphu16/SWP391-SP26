@@ -87,9 +87,19 @@ const Sidebar: React.FC = () => {
           .filter((section) => !section.roles || hasRole(...section.roles))
           .map((section) => {
             // Filter items by role
-            const visibleItems = section.items.filter(
-              (item) => !item.roles || hasRole(...item.roles),
-            );
+            const visibleItems = section.items
+              .filter((item) => !item.roles || hasRole(...item.roles))
+              .map((item) =>
+                isMenuGroup(item)
+                  ? {
+                      ...item,
+                      children: item.children.filter(
+                        (child) =>
+                          !(child.key === "review-request" && hasRole("EMPLOYEE")),
+                      ),
+                    }
+                  : item,
+              );
             if (visibleItems.length === 0) return null;
 
             return (

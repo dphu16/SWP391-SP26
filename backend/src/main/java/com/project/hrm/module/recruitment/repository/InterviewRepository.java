@@ -3,8 +3,10 @@ package com.project.hrm.module.recruitment.repository;
 import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.recruitment.entity.Interview;
 import com.project.hrm.module.recruitment.enums.InterviewStatus;
-import org.springframework.data.domain.Example;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.UUID;
@@ -17,5 +19,7 @@ public interface InterviewRepository extends JpaRepository<Interview, UUID> {
     boolean existsByApp_IdAndApp_ScoreIsNull(UUID appId);
     List<Interview> findAllByApp_Id(UUID appId);
 
-    void deleteAllByApp_Id(UUID appId);
+    @Modifying
+    @Query("DELETE FROM Interview i WHERE i.app.id = :appId")
+    void deleteAllByApp_Id(@Param("appId") UUID appId);
 }

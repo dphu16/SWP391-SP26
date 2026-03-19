@@ -209,10 +209,8 @@ public class ApplicationServiceImpl implements ApplicationService {
         Application app = applicationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Not found application!"));
         fileService.deletePDF(app.getCvUrl());
-        if(!app.getStatus().equals(ApplicationStatus.APPLIED)){
-            cvReviewService.deleteReview(id);
-            interviewService.deleteInterview(id);
-        }
+        cvReviewService.deleteReview(id);
+        interviewService.deleteInterview(id);
         UUID candidateId = app.getCandidate().getId();
         applicationRepository.delete(app);
         boolean check = applicationRepository.existsByCandidate_Id(candidateId);
