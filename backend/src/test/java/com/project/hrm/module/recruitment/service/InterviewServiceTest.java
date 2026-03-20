@@ -549,8 +549,8 @@ class InterviewServiceTest {
             List<UUID> ids = List.of(appId);
             when(departmentRepository.findById(deptId)).thenReturn(Optional.of(department));
             when(interviewRepository.findAllByApp_IdIn(ids)).thenReturn(List.of(interview));
-            when(interviewRepository.existsByApp_IdAndInterviewer_User_Roles_Name(
-                    appId, EmployeeRole.ROLE_MANAGER)).thenReturn(false);
+            when(interviewRepository.existsByApp_IdAndInterviewer_EmployeeId(
+                    appId, department.getManager().getEmployeeId())).thenReturn(false);
             when(interviewRepository.save(any(Interview.class))).thenAnswer(inv -> {
                 Interview i = inv.getArgument(0);
                 i.setId(UUID.randomUUID());
@@ -583,8 +583,8 @@ class InterviewServiceTest {
             List<UUID> ids = List.of(appId);
             when(departmentRepository.findById(deptId)).thenReturn(Optional.of(department));
             when(interviewRepository.findAllByApp_IdIn(ids)).thenReturn(List.of(interview));
-            when(interviewRepository.existsByApp_IdAndInterviewer_User_Roles_Name(
-                    appId, EmployeeRole.ROLE_MANAGER)).thenReturn(true); // đã có
+            when(interviewRepository.existsByApp_IdAndInterviewer_EmployeeId(
+                    appId, department.getManager().getEmployeeId())).thenReturn(true); // đã có
 
             RuntimeException ex = assertThrows(RuntimeException.class,
                     () -> interviewService.sendInterviewList(ids, deptId));
@@ -602,13 +602,24 @@ class InterviewServiceTest {
         }
 
         @Test
+        @DisplayName("Department không có manager — ném RuntimeException")
+        void sendInterviewList_departmentNoManager_throwsRuntimeException() {
+            department.setManager(null);
+            when(departmentRepository.findById(deptId)).thenReturn(Optional.of(department));
+
+            RuntimeException ex = assertThrows(RuntimeException.class,
+                    () -> interviewService.sendInterviewList(List.of(appId), deptId));
+            assertEquals("This department does not have a manager assigned!", ex.getMessage());
+        }
+
+        @Test
         @DisplayName("Interview mới được set đúng manager, scheduleTime, status SCHEDULED")
         void sendInterviewList_createdInterviewHasCorrectFields() {
             List<UUID> ids = List.of(appId);
             when(departmentRepository.findById(deptId)).thenReturn(Optional.of(department));
             when(interviewRepository.findAllByApp_IdIn(ids)).thenReturn(List.of(interview));
-            when(interviewRepository.existsByApp_IdAndInterviewer_User_Roles_Name(
-                    appId, EmployeeRole.ROLE_MANAGER)).thenReturn(false);
+            when(interviewRepository.existsByApp_IdAndInterviewer_EmployeeId(
+                    appId, department.getManager().getEmployeeId())).thenReturn(false);
             when(interviewRepository.save(any(Interview.class))).thenAnswer(inv -> {
                 Interview i = inv.getArgument(0);
                 i.setId(UUID.randomUUID());

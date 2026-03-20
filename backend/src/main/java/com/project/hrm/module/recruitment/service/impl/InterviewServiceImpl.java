@@ -142,15 +142,19 @@ public class InterviewServiceImpl implements InterviewService {
     public List<InterviewResponse> sendInterviewList(List<UUID> ids, UUID deptId) {
         Department dept = departmentRepository.findById(deptId)
                 .orElseThrow(() -> new RuntimeException("Not found department!"));
+        
+        if (dept.getManager() == null) {
+            throw new RuntimeException("This department does not have a manager assigned!");
+        }
+        
         List<Interview> list = interviewRepository.findAllByApp_IdIn(ids);
         List<Interview> sendList = new ArrayList<>();
         boolean check;
-        EmployeeRole role = EmployeeRole.ROLE_MANAGER;
         for (Interview i : list) {
             if (i.getScheduleTime() == null) {
                 throw new RuntimeException(i.getApp().getCandidate().getFullName() + " hasn't interview day!");
             }
-            check = interviewRepository.existsByApp_IdAndInterviewer_User_Roles_Name(i.getApp().getId(), role);
+            check = interviewRepository.existsByApp_IdAndInterviewer_EmployeeId(i.getApp().getId(), dept.getManager().getEmployeeId());
             if (check) {
                 throw new RuntimeException(
                         "This app has name " + i.getApp().getCandidate().getFullName() + " is existed!");
