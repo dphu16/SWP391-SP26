@@ -56,10 +56,10 @@ public class PaymentRequestService {
 
         // Tính toán số tiền dựa trên loại yêu cầu
         BigDecimal totalAmount;
-        if (request.getType() == com.project.hrm.module.payroll.enums.PaymentRequestType.TAX_INSURANCE) {
+        if (request.getType() == PaymentRequestType.TAX_INSURANCE) {
             // [RULE] Báo cáo bảo hiểm/thuế chỉ được gửi 1 lần duy nhất cho mỗi kỳ (batch)
             if (paymentRequestRepository.existsByPayrollBatch_BatchIdAndType(batch.getBatchId(),
-                    com.project.hrm.module.payroll.enums.PaymentRequestType.TAX_INSURANCE)) {
+                    PaymentRequestType.TAX_INSURANCE)) {
                 throw new PayrollException(
                         "Báo cáo Thuế & Bảo hiểm cho kỳ lương này đã được gửi. Không thể gửi lại để tránh trùng lặp.");
             }

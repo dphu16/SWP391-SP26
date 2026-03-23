@@ -50,7 +50,7 @@ public class SalaryInquiryService {
         if (latestPayslipOpt.isPresent()) {
             Payslip latestPayslip = latestPayslipOpt.get();
             if (!latestPayslip.getPeriod().getPeriodId().equals(payslip.getPeriod().getPeriodId())) {
-                throw new PayrollException("Kỳ lương này đã qua. Bạn chỉ có thể gửi thắc mắc cho kỳ lương mới nhất.");
+                throw new PayrollException("Kỳ lương này đã qua. Hãy gửi thắc mắc cho kỳ lương mới nhất.");
             }
         }
 
