@@ -49,6 +49,11 @@ export interface PayslipResponse {
     employeeId: string;
     employeeName: string;
     departmentName: string;
+    // Thông tin ngân hàng (tự động từ CoreHR)
+    bankName: string | null;
+    accountNumber: string | null;
+    accountHolderName: string | null;
+    branchName: string | null;
     batchId: string;
     periodId: string;
     month: number;

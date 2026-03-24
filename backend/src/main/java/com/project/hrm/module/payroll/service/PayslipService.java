@@ -14,6 +14,8 @@ import com.project.hrm.module.payroll.exception.ResourceNotFoundException;
 import com.project.hrm.module.payroll.repository.PayrollBatchRepository;
 import com.project.hrm.module.payroll.repository.PayslipDetailRepository;
 import com.project.hrm.module.payroll.repository.PayslipRepository;
+import com.project.hrm.module.corehr.entity.BankAccount;
+import com.project.hrm.module.corehr.repository.BankAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +38,7 @@ public class PayslipService {
         private final PayrollCalculationService calculationService;
         private final PayrollBatchRepository batchRepository;
         private final PayslipDetailRepository payslipDetailRepository;
+        private final BankAccountRepository bankAccountRepository;
 
         /** Employee: Xem danh sách phiếu lương của chính mình */
         @Transactional(readOnly = true)
@@ -245,11 +248,20 @@ public class PayslipService {
                                                 .type(d.getType())
                                                 .build()).collect(Collectors.toList());
 
+                // Tự động lấy thông tin ngân hàng của nhân viên từ CoreHR
+                BankAccount bank = bankAccountRepository
+                                .findByEmployee_EmployeeId(p.getEmployee().getEmployeeId())
+                                .orElse(null);
+
                 return PayslipResponse.builder()
                                 .payslipId(p.getPayslipId())
                                 .employeeId(p.getEmployee().getEmployeeId())
                                 .employeeName(p.getEmployee().getFullName())
                                 .departmentName(p.getEmployee().getDepartment() != null ? p.getEmployee().getDepartment().getDeptName() : "N/A")
+                                .bankName(bank != null ? bank.getBankName() : null)
+                                .accountNumber(bank != null ? bank.getAccountNumber() : null)
+                                .accountHolderName(bank != null ? bank.getAccountHolderName() : null)
+                                .branchName(bank != null ? bank.getBranchName() : null)
                                 .batchId(p.getBatch().getBatchId())
                                 .periodId(p.getPeriod().getPeriodId())
                                 .month(p.getPeriod().getMonth())

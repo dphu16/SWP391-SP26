@@ -212,8 +212,26 @@ const ReportDetailModal: React.FC<{
                                                     <div className="font-semibold text-slate-800 text-[13px] whitespace-nowrap">{p.employeeName}</div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3 text-slate-300 text-[11px] text-center font-medium">—</td>
-                                            <td className="px-4 py-3 text-slate-300 text-[11px] text-center font-medium">—</td>
+                                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                                                {p.bankName ? (
+                                                    <div>
+                                                        <div className="font-medium text-slate-700 text-[12px]">{p.bankName}</div>
+                                                        {p.branchName && <div className="text-[10px] text-slate-400">{p.branchName}</div>}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-slate-300 font-medium">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                                                {p.accountNumber ? (
+                                                    <div>
+                                                        <div className="font-mono font-bold text-slate-800 text-[12px]">{p.accountNumber}</div>
+                                                        {p.accountHolderName && <div className="text-[10px] text-slate-500">{p.accountHolderName}</div>}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-slate-300 font-medium">—</span>
+                                                )}
+                                            </td>
                                             <td className="px-4 py-3 text-center whitespace-nowrap">
                                                 <span className="inline-block px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-[13px] tabular-nums">
                                                     {fmt(p.netSalary)}
