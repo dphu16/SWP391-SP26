@@ -172,16 +172,7 @@ export const updateSchedule = async (scheduleId: string, newShiftId: string): Pr
     return response.data;
 };
 
-export const cloneScheduleFromPreviousMonth = async (
-    employeeId: string,
-    targetMonth: number,
-    targetYear: number
-): Promise<WorkScheduleResponse[]> => {
-    const response = await apiClient.post(`/api/v1/attendance/work-schedules/clone`, null, {
-        params: { employeeId, targetMonth, targetYear },
-    });
-    return response.data;
-};
+
 
 // ── Attendance Summary (BE endpoint: GET /api/v1/attendance/summary) ──
 

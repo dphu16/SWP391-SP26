@@ -4,7 +4,6 @@ import {
     getAllShifts,
     createSchedule,
     createBulkSchedules,
-    cloneScheduleFromPreviousMonth,
     createShift,
     deleteShift,
     deleteSchedule,
@@ -27,7 +26,7 @@ interface AttendanceEmployee {
     deptName: string;
 }
 type Employee = AttendanceEmployee;
-type Tab = "single" | "bulk" | "clone" | "shifts" | "manage";
+type Tab = "single" | "bulk" | "shifts" | "manage";
 
 const MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
@@ -327,12 +326,10 @@ const CreateSchedule: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [successCount, setSuccessCount] = useState<number | null>(null);
 
-    // ─── 3.2. TAB: SINGLE & CLONE STATE ──────────────────────────────────────
+    // ─── 3.2. TAB: SINGLE STATE ────────────────────────────────────────────────
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [singleDate, setSingleDate] = useState(today.toISOString().slice(0, 10));
     const [singleShiftId, setSingleShiftId] = useState("");
-    const [cloneTargetMonth, setCloneTargetMonth] = useState(today.getMonth() + 1);
-    const [cloneTargetYear, setCloneTargetYear] = useState(today.getFullYear());
 
     // ─── 3.3. TAB: BULK STATE ────────────────────────────────────────────────
     const [selectedBulkIds, setSelectedBulkIds] = useState<Set<string>>(new Set());
@@ -398,10 +395,6 @@ const CreateSchedule: React.FC = () => {
                     )
                 );
                 setSuccessCount(results.reduce((sum, r) => sum + r.length, 0));
-            } else if (tab === "clone") {
-                if (!selectedEmployee) throw new Error("Please select an employee.");
-                const result = await cloneScheduleFromPreviousMonth(selectedEmployee.id, cloneTargetMonth, cloneTargetYear);
-                setSuccessCount(result.length);
             }
         } catch (err: any) { setError(err?.response?.data?.message ?? err.message ?? "An unknown error occurred."); }
         finally { setSubmitting(false); }
@@ -507,7 +500,6 @@ const CreateSchedule: React.FC = () => {
             <div className="flex items-center gap-2 mb-6 p-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl w-fit">
                 {tabBtn("single", "Single", "📅")}
                 {tabBtn("bulk", "Bulk", "⚡")}
-                {tabBtn("clone", "Clone Previous", "📋")}
                 {tabBtn("shifts", "Shifts", "🕐")}
                 {tabBtn("manage", "Manage", "🔍")}
             </div>
@@ -577,52 +569,7 @@ const CreateSchedule: React.FC = () => {
                     </>
                 )}
 
-                {/* ───────────────────────────────────────────────────────── */}
-                {/* ── NỘI DUNG TAB: CLONE ── */}
-                {/* ───────────────────────────────────────────────────────── */}
-                {tab === "clone" && (
-                    <>
-                        <EmployeeSelector selectedEmployee={selectedEmployee} onSelect={setSelectedEmployee} />
-                        {selectedEmployee && (
-                            <>
-                                <div className="border-t border-[#f1f5f9]" />
-                                <div className="p-4 bg-[#f8fafc] rounded-xl border border-[#e2e8f0]">
-                                    <p className="text-sm text-[#475569] leading-relaxed">
-                                        Clone all schedules from the <strong>previous month</strong> to your target month.
-                                        <strong>Sundays</strong> and dates that <strong>already have schedules</strong> will be skipped.
-                                    </p>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-[#374151] mb-3">Target Month</label>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs text-[#94a3b8] mb-1.5 font-medium">Month</label>
-                                            <select value={cloneTargetMonth} onChange={e => setCloneTargetMonth(Number(e.target.value))}
-                                                className="w-full px-4 py-2.5 rounded-xl border border-[#e2e8f0] text-[#0f172a] text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/40 focus:border-[#0d9488] transition-all bg-white">
-                                                {MONTH_NAMES.map((n, i) => <option key={i + 1} value={i + 1}>{n}</option>)}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs text-[#94a3b8] mb-1.5 font-medium">Year</label>
-                                            <select value={cloneTargetYear} onChange={e => setCloneTargetYear(Number(e.target.value))}
-                                                className="w-full px-4 py-2.5 rounded-xl border border-[#e2e8f0] text-[#0f172a] text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/40 focus:border-[#0d9488] transition-all bg-white">
-                                                {[today.getFullYear() - 1, today.getFullYear(), today.getFullYear() + 1].map(y => <option key={y} value={y}>{y}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="mt-3 flex items-center gap-2 text-sm text-[#64748b]">
-                                        <span className="text-[#0d9488] font-semibold">
-                                            {MONTH_NAMES[cloneTargetMonth === 1 ? 11 : cloneTargetMonth - 2]}{" "}
-                                            {cloneTargetMonth === 1 ? cloneTargetYear - 1 : cloneTargetYear}
-                                        </span>
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-                                        <span className="font-semibold text-[#0f172a]">{MONTH_NAMES[cloneTargetMonth - 1]} {cloneTargetYear}</span>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </>
-                )}
+
 
                 {/* ───────────────────────────────────────────────────────── */}
                 {/* ── NỘI DUNG TAB: SHIFTS ── */}
@@ -789,8 +736,7 @@ const CreateSchedule: React.FC = () => {
                                     Processing {tab === "bulk" ? `${selectedBulkIds.size} employee(s)` : ""}...
                                 </>
                             ) : tab === "single" ? "📅 Create Schedule"
-                                : tab === "bulk" ? `⚡ Create Bulk${selectedBulkIds.size > 0 ? ` (${selectedBulkIds.size})` : ""}`
-                                : "📋 Clone Previous Month"
+                                : `⚡ Create Bulk${selectedBulkIds.size > 0 ? ` (${selectedBulkIds.size})` : ""}`
                             }
                         </button>
                     </div>
