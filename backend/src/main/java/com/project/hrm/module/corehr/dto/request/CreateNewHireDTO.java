@@ -1,6 +1,5 @@
 package com.project.hrm.module.corehr.dto.request;
 
-import com.project.hrm.module.corehr.entity.Contract;
 import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.Gender;
@@ -38,6 +37,4 @@ public class CreateNewHireDTO {
     private BigDecimal baseSalary;
     private String departmentName;
     private String positionName;
-    private String fileBase64;
-    private Contract contract;
 }

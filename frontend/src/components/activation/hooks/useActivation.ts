@@ -5,6 +5,7 @@ import {
   setPassword,
   submitEmergencyContact,
   submitBankAccount,
+  uploadAvatar,
   type ActivationResponse,
 } from "../../../services/activationService";
 
@@ -43,6 +44,8 @@ export const useActivation = () => {
   const [bankName, setBankName] = useState("");
   const [branchName, setBranchName] = useState("");
   const [accountHolderName, setAccountHolderName] = useState("");
+
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -144,11 +147,47 @@ export const useActivation = () => {
         address: contactAddress || undefined,
       });
       setInfo(res);
-      setStep(3);
+      setStep(3); // Go to Avatar Upload
     } catch (err: any) {
       setError(
         err?.response?.data?.message || "Failed to save emergency contact.",
       );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAvatarUpload = async () => {
+    setError(null);
+    setErrors({});
+    let newErrors: Record<string, string> = {};
+
+    if (avatarFile) {
+      const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+      if (!allowedTypes.includes(avatarFile.type)) {
+        newErrors.avatarFile = "Only JPG, JPEG, and PNG formats are allowed.";
+      } else if (avatarFile.size > 2 * 1024 * 1024) {
+        newErrors.avatarFile = "File size must be less than 2MB.";
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    if (!avatarFile) {
+      // It's optional, so we can just move to the next step
+      setStep(4);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await uploadAvatar(token, avatarFile);
+      setStep(4); // Go to Bank Account
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Failed to upload avatar.");
     } finally {
       setLoading(false);
     }
@@ -199,6 +238,7 @@ export const useActivation = () => {
     errors,
     handleSetPassword,
     handleEmergencyContact,
+    handleAvatarUpload,
     handleBankAccount,
 
     newPassword,
@@ -223,5 +263,8 @@ export const useActivation = () => {
     setBranchName,
     accountHolderName,
     setAccountHolderName,
+
+    avatarFile,
+    setAvatarFile,
   };
 };

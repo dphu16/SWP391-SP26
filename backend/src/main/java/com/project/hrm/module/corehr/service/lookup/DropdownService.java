@@ -30,7 +30,20 @@ public class DropdownService {
         return departmentRepository.findAll()
                 .stream()
                 .sorted((a, b) -> a.getDeptName().compareToIgnoreCase(b.getDeptName()))
-                .map(d -> new DepartmentOptionDTO(d.getDeptId(), d.getDeptName()))
+                .map(d -> {
+                    DepartmentOptionDTO dto = new DepartmentOptionDTO();
+                    dto.setId(d.getDeptId());
+                    dto.setName(d.getDeptName());
+                    if (d.getManager() != null) {
+                        dto.setManagerId(d.getManager().getEmployeeId());
+                        dto.setManagerName(d.getManager().getFullName());
+                    }
+                    if (d.getMentor() != null) {
+                        dto.setMentorId(d.getMentor().getEmployeeId());
+                        dto.setMentorName(d.getMentor().getFullName());
+                    }
+                    return dto;
+                })
                 .toList();
     }
 
@@ -68,6 +81,13 @@ public class DropdownService {
     public DepartmentOptionDTO getDepartmentByManagerId(UUID id) {
         Department department = departmentRepository.findByManager_EmployeeId(id);
 
-        return new DepartmentOptionDTO(department.getDeptId(), department.getDeptName());
+        return DepartmentOptionDTO.builder()
+                .id(department.getDeptId())
+                .name(department.getDeptName())
+                .managerId(department.getManager() != null ? department.getManager().getEmployeeId() : null)
+                .managerName(department.getManager() != null ? department.getManager().getFullName() : null)
+                .mentorId(department.getMentor() != null ? department.getMentor().getEmployeeId() : null)
+                .mentorName(department.getMentor() != null ? department.getMentor().getFullName() : null)
+                .build();
     }
 }

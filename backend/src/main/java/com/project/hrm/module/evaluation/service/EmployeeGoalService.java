@@ -120,8 +120,9 @@ public class EmployeeGoalService {
                 && assigner.getDepartment() != null 
                 && employee.getDepartment().getDeptId().equals(assigner.getDepartment().getDeptId());
                 
-        boolean isDirectManager = employee.getManager() != null 
-                && employee.getManager().getEmployeeId().equals(assigner.getEmployeeId());
+        boolean isDirectManager = employee.getDepartment() != null 
+                && employee.getDepartment().getManager() != null 
+                && employee.getDepartment().getManager().getEmployeeId().equals(assigner.getEmployeeId());
 
         if (!inSameDepartment && !isDirectManager) {
             throw new RuntimeException("Only managers in the same department or direct managers have the authority to assign KPIs to this employee");

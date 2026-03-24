@@ -76,8 +76,8 @@ const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({ selectedEmployee, o
         const load = async () => {
             setLoading(true);
             try {
-                const res = await apiClient.get<PageResponse<Employee>>("/api/v1/attendance/work-schedules/employees", {
-                    params: { page: 0, size: 20, search: query || undefined },
+                const res = await apiClient.get("/api/employees/search", {
+                    params: { page: 0, size: 20, q: query || undefined },
                 });
                 setEmployees(res.data.content);
             } catch { setEmployees([]); } finally { setLoading(false); }
@@ -148,8 +148,8 @@ const EmployeeMultiSelector: React.FC<EmployeeMultiSelectorProps> = ({ selectedI
     const load = useCallback(async (q: string) => {
         setLoading(true);
         try {
-            const res = await apiClient.get<PageResponse<Employee>>("/api/v1/attendance/work-schedules/employees", {
-                params: { page: 0, size: 50, search: q || undefined },
+            const res = await apiClient.get("/api/employees/search", {
+                params: { page: 0, size: 50, q: q || undefined },
             });
             setEmployees(res.data.content);
         } catch { setEmployees([]); } finally { setLoading(false); }

@@ -31,6 +31,7 @@ public class AuditLogService {
         try {
             AuditLog auditLog = AuditLog.builder()
                     .entityType(entityType)
+                    .entityName(entityType)
                     .entityId(entityId)
                     .affectedUserId(affectedUserId)
                     .actionType(actionType)

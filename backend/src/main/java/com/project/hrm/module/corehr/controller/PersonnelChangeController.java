@@ -23,7 +23,7 @@ public class PersonnelChangeController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<PersonnelChangeResponseDTO> createRequest(
             @RequestBody PersonnelChangeRequestDTO dto,
             @RequestAttribute("employeeId") UUID requestedBy) {
@@ -34,6 +34,13 @@ public class PersonnelChangeController {
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<PersonnelChangeResponseDTO>> getPendingRequests() {
         return ResponseEntity.ok(changeService.getPendingRequests());
+    }
+
+    @GetMapping("/my-requests")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<List<PersonnelChangeResponseDTO>> getMyRequests(
+            @RequestAttribute("employeeId") UUID employeeId) {
+        return ResponseEntity.ok(changeService.getMyRequests(employeeId));
     }
 
     @PutMapping("/{changeId}/manager-approve")

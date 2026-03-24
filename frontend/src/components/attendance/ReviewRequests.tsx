@@ -408,10 +408,11 @@ const ReviewRequests: React.FC = () => {
         setLoading(true);
         try {
             const isHR = hasRole("HR");
-            const [data, offData, pcData] = await Promise.all([
+            const [data, offData, pcPending, pcMine] = await Promise.all([
                 getAllRequestsForReview(),
                 offboardingService.getActiveRequests().catch(() => ({ data: [] })),
                 personnelChangeService.getPending().catch(() => ({ data: [] })),
+                personnelChangeService.getMyRequests().catch(() => ({ data: [] })),
             ]);
             const parsedReqs = data.map(parseRequest);
             const parsedOffs = offData.data
@@ -419,11 +420,16 @@ const ReviewRequests: React.FC = () => {
                     parseOffboardingRequest(dto, isHR),
                 )
                 : [];
-            const parsedPCs = pcData.data
-                ? pcData.data.map((dto: PersonnelChangeResponseDTO) =>
-                    parsePersonnelChange(dto, isHR),
-                )
-                : [];
+
+            // Combine pending and my-requests for PC, avoiding duplicates
+            const pcMap = new Map<string, PersonnelChangeResponseDTO>();
+            if (pcPending.data) pcPending.data.forEach(dto => pcMap.set(dto.changeId, dto));
+            if (pcMine.data) pcMine.data.forEach(dto => pcMap.set(dto.changeId, dto));
+
+            const parsedPCs = Array.from(pcMap.values()).map((dto) =>
+                parsePersonnelChange(dto, isHR)
+            );
+
             setEntries([...parsedReqs, ...parsedOffs, ...parsedPCs]);
         } catch (err) {
             console.error("Failed to load requests", err);
@@ -468,11 +474,15 @@ const ReviewRequests: React.FC = () => {
                 }
             } else if (entry.rawType === "PERSONNEL_CHANGE") {
                 const pcData = entry.rawPersonnelData;
-                if (pcData?.status === "PENDING" && hasRole("MANAGER")) {
-                    await personnelChangeService.managerApprove(entry.id);
-                } else if (pcData?.status === "MANAGER_APPROVED" && hasRole("HR")) {
-                    await personnelChangeService.hrConfirm(entry.id);
-                } else {
+                if (hasRole("HR")) {
+                    // HR confirms directly unless it's a Dept Transfer that hasn't been manager approved
+                    if (pcData?.changeType !== "DEPARTMENT_TRANSFER" || pcData?.status === "MANAGER_APPROVED") {
+                        await personnelChangeService.hrConfirm(entry.id);
+                    } else {
+                        // For Dept Transfer that's still PENDING, HR can't confirm yet
+                        throw new Error("Department transfers must be approved by a Manager before HR confirmation.");
+                    }
+                } else if (hasRole("MANAGER")) {
                     await personnelChangeService.managerApprove(entry.id);
                 }
             } else {
@@ -681,8 +691,9 @@ const ReviewRequests: React.FC = () => {
                                     <td className="px-5 py-4">
                                         {activeTab === "Pending" ? (
                                             <div className="flex items-center gap-2">
-                                                {entry.rawType === "OFFBOARDING" &&
-                                                entry.rawOffboardingData?.status === "MANAGER_APPROVED" &&
+                                                {/* HR Confirm Flow */}
+                                                {(entry.rawType === "OFFBOARDING" || entry.rawType === "PERSONNEL_CHANGE") &&
+                                                (entry.rawOffboardingData?.status === "MANAGER_APPROVED" || entry.rawPersonnelData?.status === "MANAGER_APPROVED") &&
                                                 hasRole("HR") ? (
                                                     <button
                                                         onClick={() => approve(entry)}
@@ -693,34 +704,11 @@ const ReviewRequests: React.FC = () => {
                                                         </svg>
                                                         Confirm
                                                     </button>
-                                                ) : entry.rawType === "OFFBOARDING" &&
-                                                entry.rawOffboardingData?.status === "PENDING" &&
-                                                !hasRole("HR") ? (
-                                                    <>
-                                                        <button
-                                                            onClick={() => approve(entry)}
-                                                            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0d9488] hover:bg-[#0f766e] text-white text-xs font-bold rounded-lg shadow-sm transition-all"
-                                                        >
-                                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                                            </svg>
-                                                            Approve
-                                                        </button>
-                                                        <button
-                                                            onClick={() => reject(entry)}
-                                                            className="flex items-center gap-1.5 px-3.5 py-1.5 border border-[#fca5a5] bg-white hover:bg-[#fef2f2] text-[#dc2626] text-xs font-bold rounded-lg transition-all"
-                                                        >
-                                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                                                            </svg>
-                                                            Cancel
-                                                        </button>
-                                                    </>
-                                                ) : entry.rawType === "OFFBOARDING" &&
-                                                entry.rawOffboardingData?.status === "MANAGER_APPROVED" ? (
+                                                ) : (entry.rawType === "OFFBOARDING" || entry.rawType === "PERSONNEL_CHANGE") &&
+                                                (entry.rawOffboardingData?.status === "MANAGER_APPROVED" || entry.rawPersonnelData?.status === "MANAGER_APPROVED") ? (
                                                     <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-[#fef3c7] text-[#854d0e]">
-                              Awaiting HR Confirm
-                            </span>
+                                                        Awaiting HR Confirm
+                                                    </span>
                                                 ) : (
                                                     <>
                                                         <button
@@ -739,7 +727,7 @@ const ReviewRequests: React.FC = () => {
                                                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                                                             </svg>
-                                                            Reject
+                                                            {entry.rawType === "OFFBOARDING" ? "Cancel" : "Reject"}
                                                         </button>
                                                     </>
                                                 )}
@@ -752,8 +740,8 @@ const ReviewRequests: React.FC = () => {
                                                         : "bg-[#fee2e2] text-[#dc2626]"
                                                 }`}
                                             >
-                          {activeTab}
-                        </span>
+                                                {activeTab}
+                                            </span>
                                         )}
                                     </td>
                                 </tr>

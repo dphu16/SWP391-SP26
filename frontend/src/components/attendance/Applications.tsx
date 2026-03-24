@@ -35,10 +35,10 @@ type ModalType =
 
 // FIX 4: Defined the AttendanceEmployee type that was used but never declared.
 interface AttendanceEmployee {
-  employeeId: string;
+  id: string;
   employeeCode: string;
   fullName: string;
-  position: string;
+  position?: string;
   deptName: string;
 }
 
@@ -194,6 +194,14 @@ const EmployeeSearch: React.FC<{
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<AttendanceEmployee[]>([]);
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   useEffect(() => {
     if (!query.trim()) {
@@ -206,7 +214,7 @@ const EmployeeSearch: React.FC<{
         const res = await apiClient.get(
           `/api/employees/search?q=${encodeURIComponent(query)}`,
         );
-        setResults(res.data || []);
+        setResults(res.data.content || res.data || []);
       } catch {
         setResults([]);
       } finally {
@@ -217,38 +225,66 @@ const EmployeeSearch: React.FC<{
   }, [query]);
 
   return (
-    <div className="relative">
-      <input
-        type="text"
-        value={value ? value.fullName : query}
-        onChange={(e) => {
-          onChange(null);
-          setQuery(e.target.value);
-        }}
-        placeholder="Search employee name or code..."
-        className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-      />
-      {!value && results.length > 0 && (
+    <div ref={ref} className="relative">
+      {value && !open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="w-full flex items-center justify-between border-2 border-[#0d9488]/50 bg-[#0d9488]/5 rounded-lg px-3 py-2.5 text-sm"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-[#0d9488] text-white flex items-center justify-center font-bold text-xs">
+              {value.fullName.charAt(0)}
+            </div>
+            <div className="text-left">
+              <div className="font-semibold text-[#0f172a]">{value.fullName}</div>
+              <div className="text-[10px] text-[#64748b]">{value.employeeCode} · {value.deptName}</div>
+            </div>
+          </div>
+          <svg className="w-4 h-4 text-[#64748b]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      ) : (
+        <input
+          type="text"
+          value={query}
+          autoFocus={open}
+          onFocus={() => setOpen(true)}
+          onChange={(e) => {
+            onChange(null);
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          placeholder="Search employee name or code..."
+          className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+        />
+      )}
+      {open && results.length > 0 && (
         <ul className="absolute z-20 mt-1 w-full bg-white border border-[#e2e8f0] rounded-lg shadow-lg max-h-48 overflow-y-auto">
           {loading && (
             <li className="px-3 py-2 text-sm text-[#64748b]">Searching…</li>
           )}
           {results.map((emp) => (
             <li
-              key={emp.employeeId}
+              key={emp.id}
               onClick={() => {
                 onChange(emp);
                 setQuery("");
                 setResults([]);
+                setOpen(false);
               }}
-              className="px-3 py-2 text-sm hover:bg-[#f8fafc] cursor-pointer"
+              className="px-3 py-2 flex items-center gap-2 text-sm hover:bg-[#f8fafc] cursor-pointer"
             >
-              <span className="font-semibold text-[#1e293b]">
-                {emp.fullName}
-              </span>
-              <span className="ml-2 text-xs text-[#94a3b8]">
-                {emp.employeeCode} · {emp.deptName}
-              </span>
+              <div className="w-6 h-6 rounded-full bg-[#94a3b8]/20 flex items-center justify-center font-bold text-[10px]">
+                {emp.fullName.charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="font-semibold text-[#1e293b] block truncate">{emp.fullName}</span>
+                <span className="text-[10px] text-[#94a3b8] block truncate">
+                  {emp.employeeCode} · {emp.deptName}
+                </span>
+              </div>
             </li>
           ))}
         </ul>
@@ -470,7 +506,7 @@ const Applications: React.FC = () => {
         if (!pcEmployee) throw new Error("Please select an employee.");
         if (!formData.reason) throw new Error("Please specify a reason.");
         await personnelChangeService.create({
-          employeeId: pcEmployee.employeeId,
+          employeeId: pcEmployee.id,
           changeType: formData.pcType as any,
           reason: formData.reason,
           newDepartmentId: formData.newDepartmentId || undefined,
@@ -631,7 +667,7 @@ const Applications: React.FC = () => {
                 Application for Resignation
               </button>
               {currentUser?.roles?.some((r) =>
-                ["HR", "MANAGER", "ROLE_HR", "ROLE_MANAGER"].includes(r),
+                ["MANAGER", "ROLE_MANAGER"].includes(r),
               ) && (
                 <button
                   onClick={() => handleDropdownItemClick("PersonnelChange")}
@@ -1109,22 +1145,6 @@ const Applications: React.FC = () => {
                       value={pcEmployee}
                       onChange={setPcEmployee}
                     />
-                    {pcEmployee && (
-                      <div className="mt-2 p-3 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                          {pcEmployee.fullName.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-indigo-700 text-sm">
-                            {pcEmployee.fullName}
-                          </p>
-                          <p className="text-xs text-indigo-600 opacity-80">
-                            {pcEmployee.employeeCode} · {pcEmployee.position} ·{" "}
-                            {pcEmployee.deptName}
-                          </p>
-                        </div>
-                      </div>
-                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-[#334155] mb-1.5">

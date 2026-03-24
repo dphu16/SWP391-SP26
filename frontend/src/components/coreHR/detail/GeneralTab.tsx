@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import apiClient from "../../../services/apiClient";
 import { employeeSelfUpdateService } from "../../../services/personnelChangeService";
 import { useAuth } from "../../../hooks/useAuth";
 import type {
   EmployeeDetailDTO,
   DependentDTO,
-  FieldCooldownDTO,
 } from "./types";
 import { formatDate } from "./types";
 import { InfoRow, SectionCard, IconButton } from "./ui";
@@ -43,7 +42,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState(false);
-  const [cooldowns, setCooldowns] = useState<FieldCooldownDTO[]>([]);
+
 
   // HR Edit states
   const [isEditingDep, setIsEditingDep] = useState(false);
@@ -55,27 +54,9 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
   });
   const [savingDep, setSavingDep] = useState(false);
 
-  useEffect(() => {
-    if (isOwner && employeeId) {
-      employeeSelfUpdateService
-        .getCooldowns(employeeId)
-        .then((res) => setCooldowns(res.data))
-        .catch(() => setCooldowns([]));
-    }
-  }, [employeeId, isOwner]);
 
-  const isFieldLocked = (field: EditableField): boolean => {
-    if (isHR) return false;
-    const cd = cooldowns.find((c) => c.fieldName === field);
-    return cd?.locked ?? false;
-  };
 
-  const getCooldownInfo = (field: EditableField): string | null => {
-    const cd = cooldowns.find((c) => c.fieldName === field);
-    if (!cd?.locked || !cd.cooldownUntil) return null;
-    const until = new Date(cd.cooldownUntil);
-    return `Locked until ${until.toLocaleDateString("vi-VN")}`;
-  };
+
 
   const startEditing = () => {
     setEditForm({
@@ -105,10 +86,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
 
       let res;
       if (isOwner && !isHR) {
-        // Employee self-update with cooldown enforcement
         res = await employeeSelfUpdateService.selfUpdate(editForm);
       } else {
-        // HR edit (no cooldown)
         res = await apiClient.put<EmployeeDetailDTO>(
           `/api/employees/${employeeId}/edit`,
           editForm,
@@ -118,14 +97,6 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
       setEditSuccess(true);
       setIsEditing(false);
       setTimeout(() => setEditSuccess(false), 3000);
-
-      // Refresh cooldowns after save
-      if (isOwner) {
-        employeeSelfUpdateService
-          .getCooldowns(employeeId)
-          .then((r) => setCooldowns(r.data))
-          .catch(() => {});
-      }
     } catch (err: unknown) {
       if (err instanceof Error && "response" in err) {
         const axErr = err as {
@@ -251,9 +222,6 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
           />
 
           {editableFieldConfig.map(({ label, field, type, required }) => {
-            const locked = isFieldLocked(field);
-            const cooldownInfo = getCooldownInfo(field);
-
             return (
               <div key={field}>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light mb-1">
@@ -261,13 +229,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                   {required && isEditing && (
                     <span className="text-rose-500 ml-0.5">*</span>
                   )}
-                  {isEditing && locked && (
-                    <span className="ml-2 text-[10px] font-medium text-amber-600 normal-case tracking-normal">
-                      🔒 {cooldownInfo}
-                    </span>
-                  )}
                 </p>
-                {isEditing && !locked ? (
+                {isEditing ? (
                   <input
                     type={type}
                     value={editForm[field]}
@@ -280,10 +243,6 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                     placeholder={label}
                     className="w-full px-3 py-2 text-sm rounded-xl border border-border-light bg-white text-text-primary-light placeholder:text-text-muted-light focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                   />
-                ) : isEditing && locked ? (
-                  <div className="w-full px-3 py-2 text-sm rounded-xl border border-amber-200 bg-amber-50 text-text-secondary-light cursor-not-allowed">
-                    {detail[field] || "—"}
-                  </div>
                 ) : (
                   <p className="text-sm font-medium text-text-primary-light">
                     {detail[field] || "—"}

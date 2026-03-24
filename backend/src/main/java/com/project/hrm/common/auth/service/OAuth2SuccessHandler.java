@@ -1,12 +1,9 @@
 package com.project.hrm.common.auth.service;
 
 import com.project.hrm.common.auth.security.JwtUtil;
-import com.project.hrm.module.corehr.entity.Role;
 import com.project.hrm.module.corehr.entity.User;
 import com.project.hrm.module.corehr.enums.AuthProvider;
-import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.corehr.enums.UserStatus;
-import com.project.hrm.module.corehr.repository.RoleRepository;
 import com.project.hrm.module.corehr.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,14 +16,11 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.Set;
-
 @Component
 @RequiredArgsConstructor
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final UserRepository userRepo;
-    private final RoleRepository roleRepo;
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
 
@@ -39,11 +33,19 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             Authentication auth) throws IOException {
         OAuth2User oAuth2User = (OAuth2User) auth.getPrincipal();
 
-        String email = oAuth2User.getAttribute("email");
+        String rawEmail = oAuth2User.getAttribute("email");
+        String email = (rawEmail != null) ? rawEmail.toLowerCase().trim() : null;
         String picture = oAuth2User.getAttribute("picture");
 
         User user = userRepo.findByEmail(email)
-                .orElseGet(() -> createOAuthUser(email, picture));
+                .map(existingUser -> updateOAuthInfo(existingUser, picture))
+                .orElse(null);
+
+        if (user == null) {
+            String redirectUrl = frontendUrl + "/login?error=account_not_found";
+            getRedirectStrategy().sendRedirect(req, res, redirectUrl);
+            return;
+        }
 
         if (user.getStatus() == UserStatus.INACTIVE) {
             String redirectUrl = frontendUrl + "/login?error=account_inactive";
@@ -58,16 +60,22 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         getRedirectStrategy().sendRedirect(req, res, redirectUrl);
     }
 
-    private User createOAuthUser(String email, String picture) {
-        Role userRole = roleRepo.findByName(EmployeeRole.ROLE_EMPLOYEE).orElseThrow();
+    private User updateOAuthInfo(User user, String picture) {
+        boolean changed = false;
 
-        return userRepo.save(User.builder()
-                .email(email)
-                .avatarUrl(picture)
-                .provider(AuthProvider.GOOGLE)
-                .status(UserStatus.ACTIVE)
-                .roles(Set.of(userRole))
-                .build());
+        // Cập nhật provider nếu chưa phải GOOGLE
+        if (user.getProvider() != AuthProvider.GOOGLE) {
+            user.setProvider(AuthProvider.GOOGLE);
+            changed = true;
+        }
+
+        // Cập nhật avatar nếu chưa có hoặc muốn sync từ Google
+        if (picture != null && !picture.equals(user.getAvatarUrl())) {
+            user.setAvatarUrl(picture);
+            changed = true;
+        }
+
+        return changed ? userRepo.save(user) : user;
     }
 
     private String resolveDisplayName(User user) {

@@ -10,5 +10,10 @@ export const STEPS = [
     title: "Emergency Contact",
     description: "Provide emergency contact info",
   },
-  { id: 3, title: "Bank Account", description: "Add your bank details" },
+  {
+    id: 3,
+    title: "Avatar Upload",
+    description: "Personalize your profile",
+  },
+  { id: 4, title: "Bank Account", description: "Add your bank details" },
 ] as const;

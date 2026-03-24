@@ -117,7 +117,8 @@ public class OnboardingService implements IOnboardingService {
         dto.setAvatarUrl(personal != null ? personal.getAvatar() : null);
         dto.setDepartmentId(employee.getDepartment() != null ? employee.getDepartment().getDeptId() : null);
         dto.setPositionId(employee.getPosition() != null ? employee.getPosition().getPositionId() : null);
-        dto.setMentorId(employee.getManager() != null ? employee.getManager().getEmployeeId() : null);
+        dto.setMentorId(employee.getDepartment() != null && employee.getDepartment().getMentor() != null 
+                ? employee.getDepartment().getMentor().getEmployeeId() : null);
         dto.setDateOfJoining(employee.getDateOfJoining());
         dto.setRole(resolvePrimaryRole(employee));
         dto.setStatus(employee.getStatus());
@@ -151,9 +152,8 @@ public class OnboardingService implements IOnboardingService {
         if (updatedData.getPositionId() != null) {
             employee.setPosition(employeeHelper.findPositionOrThrow(updatedData.getPositionId()));
         }
-        if (updatedData.getMentorId() != null) {
-            employee.setManager(employeeHelper.findEmployeeOrThrow(updatedData.getMentorId()));
-        }
+        // Manager and Mentor are now determined by Department level.
+        // Direct employee.manager field is removed.
         employee.setDateOfJoining(updatedData.getDateOfJoining());
 
         // Update personal info

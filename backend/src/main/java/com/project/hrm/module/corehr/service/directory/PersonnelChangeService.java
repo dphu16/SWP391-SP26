@@ -48,11 +48,13 @@ public class PersonnelChangeService {
         PersonnelChange change = PersonnelChange.builder()
                 .employee(employee)
                 .changeType(dto.getChangeType())
-                .status(PersonnelChangeStatus.PENDING)
+                .status(PersonnelChangeStatus.MANAGER_APPROVED) // Manager created it, so it's already approved
                 .reason(dto.getReason())
                 .oldValues(oldValues)
                 .newValues(newValues)
                 .requestedBy(requestedBy)
+                .managerApprovedBy(requestedBy)
+                .managerApprovedDate(java.time.LocalDateTime.now())
                 .build();
 
         PersonnelChange saved = changeRepository.save(change);
@@ -76,8 +78,13 @@ public class PersonnelChangeService {
     @Transactional
     public PersonnelChangeResponseDTO hrConfirm(UUID changeId, UUID hrEmployeeId) {
         PersonnelChange change = findOrThrow(changeId);
-        if (change.getStatus() != PersonnelChangeStatus.MANAGER_APPROVED) {
-            throw new RuntimeException("Chỉ có thể xác nhận yêu cầu đã được Quản lý duyệt.");
+        if (change.getChangeType() == PersonnelChangeType.DEPARTMENT_TRANSFER
+                && change.getStatus() != PersonnelChangeStatus.MANAGER_APPROVED) {
+            throw new RuntimeException("Chỉ có thể xác nhận yêu cầu Điều chuyển bộ phận đã được Quản lý duyệt.");
+        }
+
+        if (change.getStatus() == PersonnelChangeStatus.REJECTED || change.getStatus() == PersonnelChangeStatus.HR_CONFIRMED) {
+            throw new RuntimeException("Yêu cầu này không thể xác nhận ở trạng thái hiện tại.");
         }
 
         // Apply the change to employee
@@ -109,6 +116,12 @@ public class PersonnelChangeService {
                 PersonnelChangeStatus.PENDING,
                 PersonnelChangeStatus.MANAGER_APPROVED);
         return changeRepository.findByStatusInOrderByCreatedAtDesc(statuses).stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<PersonnelChangeResponseDTO> getMyRequests(UUID requestedBy) {
+        return changeRepository.findByRequestedByOrderByCreatedAtDesc(requestedBy).stream()
                 .map(this::toResponseDTO)
                 .collect(Collectors.toList());
     }
