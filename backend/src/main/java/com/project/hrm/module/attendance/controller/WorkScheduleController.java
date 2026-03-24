@@ -51,19 +51,8 @@ public class WorkScheduleController {
     @PostMapping("/bulk")
     public ResponseEntity<List<WorkScheduleResponse>> createBulkSchedules(@RequestBody BulkScheduleRequest request) {
         return ResponseEntity.ok(service.createBulkSchedules(
-                request.getEmployeeId(), request.getStartDate(), request.getEndDate(), request.getShiftId()
-        ));
+                request.getEmployeeId(), request.getStartDate(), request.getEndDate(), request.getShiftId()));
     }
-
-    // 5. Copy lịch từ tháng trước đắp sang tháng này
-    @PostMapping("/clone")
-    public ResponseEntity<List<WorkScheduleResponse>> cloneSchedule(
-            @RequestParam(name = "employeeId") UUID employeeId,
-            @RequestParam(name = "targetMonth") int targetMonth,
-            @RequestParam(name = "targetYear") int targetYear) {
-        return ResponseEntity.ok(service.copyFromPreviousMonth(employeeId, targetMonth, targetYear));
-    }
-
 
     // 7. Xóa lịch của 1 ngày
     @DeleteMapping("/{scheduleId}")
