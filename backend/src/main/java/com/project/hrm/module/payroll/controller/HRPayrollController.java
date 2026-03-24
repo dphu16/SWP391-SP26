@@ -105,6 +105,22 @@ public class HRPayrollController {
         return ResponseEntity.ok(ApiResponse.ok("Huỷ phiếu lương thành công.", payslipService.cancelPayslip(payslipId)));
     }
 
+    /**
+     * PUT /api/v1/hr/payroll/payslips/{payslipId}/details
+     * UR_HR004: HR chỉnh sửa thủ công chi tiết phiếu lương (allowance/deduction).
+     * Chỉ được phép khi payslip đang ở trạng thái DRAFT.
+     * Body: danh sách đầy đủ các dòng chi tiết — sẽ thay thế hoàn toàn chi tiết cũ.
+     */
+    @PutMapping("/payslips/{payslipId}/details")
+    public ResponseEntity<ApiResponse<PayslipResponse>> updatePayslipDetails(
+            @PathVariable("payslipId") UUID payslipId,
+            @Valid @RequestBody UpdatePayslipDetailRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Cập nhật chi tiết phiếu lương thành công.",
+                payslipService.updatePayslipDetails(payslipId, request)
+        ));
+    }
+
     // ===================== FINANCE ACCOUNTS =====================
 
     /**
