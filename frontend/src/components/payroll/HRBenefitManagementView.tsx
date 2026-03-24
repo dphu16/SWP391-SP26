@@ -28,13 +28,13 @@ const BenefitIcons = {
 };
 
 const BENEFIT_TYPE_META: Record<BenefitType, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
-    ALLOWANCE:      { label: "Allowance",      icon: BenefitIcons.money,   color: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
-    HEALTH_CARE:    { label: "Health Care",    icon: BenefitIcons.medical, color: "text-rose-700",    bg: "bg-rose-50",    border: "border-rose-200" },
-    LEARNING:       { label: "Learning",       icon: BenefitIcons.book,    color: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200" },
-    GYM:            { label: "Fitness",        icon: BenefitIcons.gym,     color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-    TRANSPORTATION: { label: "Transport",      icon: BenefitIcons.car,     color: "text-violet-700",  bg: "bg-violet-50",  border: "border-violet-200" },
-    MEALS:          { label: "Meals",          icon: BenefitIcons.food,    color: "text-orange-700",  bg: "bg-orange-50",  border: "border-orange-200" },
-    OTHER:          { label: "Other",          icon: BenefitIcons.gift,    color: "text-slate-700",   bg: "bg-slate-50",   border: "border-slate-200" },
+    ALLOWANCE:      { label: "Allowance",         icon: BenefitIcons.money, color: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
+    HEALTH_CARE:    { label: "Health Care",       icon: BenefitIcons.medical, color: "text-rose-700",    bg: "bg-rose-50",    border: "border-rose-200" },
+    LEARNING:       { label: "Learning",          icon: BenefitIcons.book, color: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200" },
+    GYM:            { label: "Gym & Fitness",     icon: BenefitIcons.gym, color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
+    TRANSPORTATION: { label: "Transportation",    icon: BenefitIcons.car, color: "text-violet-700",  bg: "bg-violet-50",  border: "border-violet-200" },
+    MEALS:          { label: "Meals",             icon: BenefitIcons.food, color: "text-orange-700",  bg: "bg-orange-50",  border: "border-orange-200" },
+    OTHER:          { label: "Other",             icon: BenefitIcons.gift, color: "text-slate-700",   bg: "bg-slate-50",   border: "border-slate-200" },
 };
 
 // ─── Create Benefit Modal ──────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ const CreateBenefitModal: React.FC<{ onCreated: () => void; onClose: () => void 
 
     const handleSubmit = async () => {
         if (!form.name.trim()) { setErr("Benefit name cannot be empty."); return; }
-        if (form.standardValue === undefined || form.standardValue <= 0) { setErr("Please enter a valid Standard Value (>0)."); return; }
+        if (form.standardValue === undefined || form.standardValue <= 0) { setErr("Please enter a valid monetary value (>0)."); return; }
         setBusy(true); setErr("");
         try {
             await createBenefit(form);
@@ -62,7 +62,7 @@ const CreateBenefitModal: React.FC<{ onCreated: () => void; onClose: () => void 
                     <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                         <span className="text-violet-600">{BenefitIcons.gift}</span> Add New Benefit
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Create benefit package for company</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Create a new benefit package for the company</p>
                 </div>
                 <div className="px-6 py-5 space-y-4">
                     {err && <div className="p-3 bg-rose-50 text-rose-700 text-xs rounded-lg border border-rose-200">{err}</div>}
@@ -70,7 +70,7 @@ const CreateBenefitModal: React.FC<{ onCreated: () => void; onClose: () => void 
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Benefit Name *</label>
                         <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                             className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-400 focus:outline-none"
-                            placeholder="e.g., Premium Health Care Plan A" />
+                            placeholder="e.g. Health Insurance Plan A" />
                     </div>
                     <div>
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Benefit Type</label>
@@ -82,10 +82,10 @@ const CreateBenefitModal: React.FC<{ onCreated: () => void; onClose: () => void 
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Standard Value (VND/month) *</label>
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Monetary Value (VND/month) *</label>
                         <input type="number" value={form.standardValue ?? ""} onChange={e => setForm(f => ({ ...f, standardValue: e.target.value ? Number(e.target.value) : undefined }))}
                             className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-400 focus:outline-none"
-                            placeholder="e.g., 1500000" />
+                            placeholder="e.g. 1500000" />
                     </div>
                     <div>
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Description</label>
@@ -141,7 +141,7 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
             } catch (e: any) {
                 setEmployeeName(null);
                 if (e?.response?.status === 404) {
-                    setErr("No employee found with this ID.");
+                    setErr("Employee not found with this ID.");
                 } else if (e?.response?.status === 400 || e?.response?.status === 500) {
                      // ignore format errors until typing finishes
                 }
@@ -155,7 +155,7 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
 
     const handleSubmit = async () => {
         if (!form.employeeId.trim()) { setErr("Please enter Employee ID."); return; }
-        if (!form.benefitId) { setErr("Please select a benefit."); return; }
+        if (!form.benefitId) { setErr("Please select a benefit package."); return; }
         setBusy(true); setErr(""); setSuccess("");
         try {
             await assignBenefitToEmployee(form);
@@ -176,7 +176,7 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
                     <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                         <span className="text-emerald-600">{Icon.user}</span> Assign Benefit to Employee
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Assign benefit package with application period</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Assign a benefit package with an effective period</p>
                 </div>
                 <div className="px-6 py-5 space-y-4">
                     {err && <div className="p-3 bg-rose-50 text-rose-700 text-xs rounded-lg border border-rose-200">{err}</div>}
@@ -203,7 +203,7 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Select Benefit *</label>
                         <select value={form.benefitId} onChange={e => setForm(f => ({ ...f, benefitId: e.target.value }))}
                             className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none bg-white">
-                            <option value="">-- Select benefit package --</option>
+                            <option value="">-- Select a benefit package --</option>
                             {benefits.map(b => <option key={b.benefitId} value={b.benefitId}>{b.name} ({fmt(b.standardValue)}/month)</option>)}
                         </select>
                     </div>
@@ -220,10 +220,10 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
                         </div>
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Applied Value (Optional)</label>
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Custom Applied Value (Optional)</label>
                         <input type="number" value={form.appliedValue ?? ""} onChange={e => setForm(f => ({ ...f, appliedValue: e.target.value ? Number(e.target.value) : undefined }))}
                             className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none"
-                            placeholder="Leave blank to use default value" />
+                            placeholder="Leave blank to use standard value" />
                     </div>
                 </div>
                 <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
@@ -293,14 +293,14 @@ const HRBenefitManagementView: React.FC = () => {
                         {BenefitIcons.money}
                     </div>
                     <div className="flex items-center gap-2 mb-2">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Standard Value</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Monetary Value</p>
                     </div>
                     <div className="flex items-baseline gap-2">
                         <p className="text-[28px] font-bold text-slate-800 tracking-tight leading-none">{fmt(stats.totalValue).replace(/\s₫/g, "")}</p>
                         <span className="text-xs font-bold text-slate-600">₫</span>
                     </div>
                     <div className="mt-2 text-[11px] font-medium text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full w-fit border border-slate-100/50">
-                        Master catalog value
+                        Catalog Base Value
                     </div>
                 </div>
 
@@ -313,10 +313,10 @@ const HRBenefitManagementView: React.FC = () => {
                     </div>
                     <div className="flex items-baseline gap-2">
                         <p className="text-[28px] font-bold text-slate-800 tracking-tight leading-none">{Object.keys(BENEFIT_TYPE_META).length}</p>
-                        <span className="text-xs font-semibold text-slate-500">Groups</span>
+                        <span className="text-xs font-semibold text-slate-500">Types</span>
                     </div>
                     <div className="mt-2 text-[11px] font-medium text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full w-fit border border-slate-100/50">
-                        Standardized groups
+                        Standard Groups
                     </div>
                 </div>
             </div>
@@ -333,7 +333,7 @@ const HRBenefitManagementView: React.FC = () => {
                         </div>
                         <div>
                             <h3 className="text-base font-bold text-slate-900">Benefit Catalog</h3>
-                            <p className="text-[13px] text-slate-500 mt-0.5">Displaying {filtered.length} standardized benefit packages</p>
+                            <p className="text-[13px] text-slate-500 mt-0.5">Showing {filtered.length} standardized benefit packages</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2.5 flex-wrap">
@@ -374,7 +374,7 @@ const HRBenefitManagementView: React.FC = () => {
                     ) : filtered.length === 0 ? (
                         <div className="py-16 text-center text-slate-400 flex flex-col items-center">
                             <div className="text-slate-300 mb-3">{BenefitIcons.gift}</div>
-                            <p className="text-sm font-semibold text-slate-500">No benefits available. Please add the first benefit package!</p>
+                            <p className="text-sm font-semibold text-slate-500">No benefit packages found. Add your first one!</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -397,10 +397,10 @@ const HRBenefitManagementView: React.FC = () => {
                                         </div>
                                         <div className="flex items-center justify-between mt-auto pt-2 border-t border-slate-100">
                                             <span className="text-sm font-black text-slate-900 tabular-nums">
-                                                {b.standardValue ? fmt(b.standardValue) : <span className="text-slate-400 font-medium text-xs">Variable</span>}
+                                                {b.standardValue ? fmt(b.standardValue) : <span className="text-slate-400 font-medium text-xs">Variable Value</span>}
                                             </span>
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${b.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"}`}>
-                                                {b.isActive ? "● Active" : "○ Suspended"}
+                                                {b.isActive ? "● Active" : "○ Inactive"}
                                             </span>
                                         </div>
                                     </div>

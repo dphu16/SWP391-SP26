@@ -1,5 +1,6 @@
 package com.project.hrm.module.payroll.dto.RequestDTO;
 
+import com.project.hrm.module.payroll.enums.PaymentRequestType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -21,5 +22,5 @@ public class CreatePaymentRequestRequest {
     private String reportUrl;
 
     @NotNull
-    private com.project.hrm.module.payroll.enums.PaymentRequestType type;
+    private PaymentRequestType type;
 }

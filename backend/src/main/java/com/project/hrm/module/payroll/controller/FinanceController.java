@@ -3,11 +3,13 @@ package com.project.hrm.module.payroll.controller;
 import com.project.hrm.module.payroll.dto.RequestDTO.ReviewPaymentRequestRequest;
 import com.project.hrm.module.payroll.dto.ResponseDTO.ApiResponse;
 import com.project.hrm.module.payroll.dto.ResponseDTO.PaymentRequestResponse;
+import com.project.hrm.module.payroll.dto.ResponseDTO.PaymentTransactionResponse;
 import com.project.hrm.module.payroll.dto.ResponseDTO.PayslipResponse;
 import com.project.hrm.module.payroll.dto.ResponseDTO.TaxReportResponse;
 import com.project.hrm.module.payroll.entity.FinanceAccount;
 import com.project.hrm.module.payroll.repository.FinanceAccountRepository;
 import com.project.hrm.module.payroll.service.PaymentRequestService;
+import com.project.hrm.module.payroll.service.PaymentTransactionService;
 import com.project.hrm.module.payroll.service.PayslipService;
 import com.project.hrm.module.payroll.service.PdfGeneratorService;
 import jakarta.validation.Valid;
@@ -43,6 +45,7 @@ public class FinanceController {
     private final PayslipService payslipService;
     private final FinanceAccountRepository financeAccountRepository;
     private final PdfGeneratorService pdfGeneratorService;
+    private final PaymentTransactionService paymentTransactionService;
 
     /**
      * GET /api/v1/finance/payroll/payment-requests/pending
@@ -130,6 +133,25 @@ public class FinanceController {
     @GetMapping("/accounts/active")
     public ResponseEntity<ApiResponse<List<FinanceAccount>>> getActiveAccounts() {
         return ResponseEntity.ok(ApiResponse.ok(financeAccountRepository.findAllByStatus("ACTIVE")));
+    }
+
+    /**
+     * GET /api/v1/finance/payroll/transactions
+     * UR_F004: Finance xem toàn bộ lịch sử giao dịch ngân hàng thực tế (mới nhất trước).
+     */
+    @GetMapping("/transactions")
+    public ResponseEntity<ApiResponse<List<PaymentTransactionResponse>>> getAllTransactions() {
+        return ResponseEntity.ok(ApiResponse.ok(paymentTransactionService.getAllTransactions()));
+    }
+
+    /**
+     * GET /api/v1/finance/payroll/payment-batches/{paymentBatchId}/transactions
+     * UR_F004: Finance xem lịch sử giao dịch theo từng payment batch.
+     */
+    @GetMapping("/payment-batches/{paymentBatchId}/transactions")
+    public ResponseEntity<ApiResponse<List<PaymentTransactionResponse>>> getTransactionsByBatch(
+            @PathVariable("paymentBatchId") UUID paymentBatchId) {
+        return ResponseEntity.ok(ApiResponse.ok(paymentTransactionService.getTransactionsByBatch(paymentBatchId)));
     }
 }
 

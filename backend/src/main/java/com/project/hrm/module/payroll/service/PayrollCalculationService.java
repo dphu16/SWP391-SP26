@@ -105,10 +105,8 @@ public class PayrollCalculationService {
             }
         }
 
-        if (!results.isEmpty()) {
-            batch.setStatus(PayrollBatchStatus.VALIDATED);
-            batchRepository.save(batch);
-        }
+        // Batch status is no longer automatically set to VALIDATED here.
+        // It will remain DRAFT and only changes to VALIDATED when HR approves all pending slips.
 
         return results;
     }

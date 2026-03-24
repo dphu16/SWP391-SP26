@@ -17,6 +17,7 @@ export type PeriodStatus = "OPEN" | "PAID" | "CLOSED";
 export type BatchStatus = "DRAFT" | "VALIDATED" | "PROCESSED" | "LOCKED";
 export type PaymentRequestStatus = "PENDING" | "APPROVED" | "PAID" | "REJECTED";
 export type PaymentRequestType = "SALARY" | "TAX_INSURANCE";
+export type TransactionStatus = "PENDING" | "SUCCESS" | "FAILED";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // RESPONSE DTOs — mirrors backend ResponseDTO exactly
@@ -48,6 +49,11 @@ export interface PayslipResponse {
     employeeId: string;
     employeeName: string;
     departmentName: string;
+    // Thông tin ngân hàng (tự động từ CoreHR)
+    bankName: string | null;
+    accountNumber: string | null;
+    accountHolderName: string | null;
+    branchName: string | null;
     batchId: string;
     periodId: string;
     month: number;
@@ -130,6 +136,33 @@ export interface PaymentRequestResponse {
     type: PaymentRequestType;
     approvedAt: string | null;
     createdAt: string | null;
+}
+
+/** UpdatePayslipDetailRequest — UR_HR004 */
+export interface UpdatePayslipDetailItem {
+    itemName: string;
+    amount: number;
+    type: "ALLOWANCE" | "DEDUCTION";
+}
+export interface UpdatePayslipDetailRequest {
+    details: UpdatePayslipDetailItem[];
+}
+
+/** PaymentTransactionResponse — UR_F004 */
+export interface PaymentTransactionResponse {
+    txnId: string;
+    paymentBatchId: string | null;
+    payslipId: string | null;
+    employeeName: string | null;
+    employeeCode: string | null;
+    departmentName: string | null;
+    amount: number;
+    bankReferenceNo: string | null;
+    bankResponseCode: string | null;
+    bankResponseMsg: string | null;
+    status: TransactionStatus;
+    createdAt: string | null;
+    updatedAt: string | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -245,6 +278,20 @@ export async function confirmPayslip(payslipId: string): Promise<PayslipResponse
 /** PUT /api/v1/hr/payroll/payslips/:id/cancel — Huỷ phiếu lương */
 export async function cancelPayslip(payslipId: string): Promise<PayslipResponse> {
     return unwrap(apiClient.put<ApiResponse<PayslipResponse>>(`/api/v1/hr/payroll/payslips/${payslipId}/cancel`));
+}
+
+/**
+ * PUT /api/v1/hr/payroll/payslips/:id/details
+ * UR_HR004: HR chỉnh sửa thủ công chi tiết phiếu lương.
+ */
+export async function updatePayslipDetails(
+    payslipId: string,
+    request: UpdatePayslipDetailRequest
+): Promise<PayslipResponse> {
+    return unwrap(apiClient.put<ApiResponse<PayslipResponse>>(
+        `/api/v1/hr/payroll/payslips/${payslipId}/details`,
+        request
+    ));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -363,6 +410,26 @@ export async function downloadPaymentReport(requestId: string): Promise<Blob> {
         responseType: "blob",
     });
     return res.data;
+}
+
+/**
+ * GET /api/v1/finance/payroll/transactions
+ * UR_F004: Finance xem toàn bộ lịch sử giao dịch.
+ */
+export async function getTransactionHistory(): Promise<PaymentTransactionResponse[]> {
+    return unwrap(apiClient.get<ApiResponse<PaymentTransactionResponse[]>>("/api/v1/finance/payroll/transactions"));
+}
+
+/**
+ * GET /api/v1/finance/payroll/payment-batches/:paymentBatchId/transactions
+ * UR_F004: Finance xem lịch sử giao dịch theo payment batch.
+ */
+export async function getTransactionsByPaymentBatch(
+    paymentBatchId: string
+): Promise<PaymentTransactionResponse[]> {
+    return unwrap(apiClient.get<ApiResponse<PaymentTransactionResponse[]>>(
+        `/api/v1/finance/payroll/payment-batches/${paymentBatchId}/transactions`
+    ));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
