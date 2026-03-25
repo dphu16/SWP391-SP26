@@ -49,6 +49,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
 
         @Query("SELECT e FROM Employee e LEFT JOIN e.personal p " +
                         "WHERE LOWER(e.fullName) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                        "OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :search, '%')) " +
                         "OR LOWER(p.email) LIKE LOWER(CONCAT('%', :search, '%')) " +
                         "OR LOWER(p.phone) LIKE LOWER(CONCAT('%', :search, '%'))")
         Page<Employee> searchEmployeesByKeyword(@Param("search") String keyword, Pageable pageable);
@@ -62,7 +63,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
         List<Employee> findAllActive();
 
         @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal" })
-        List<Employee> findByManager_EmployeeId(UUID managerId);
+        List<Employee> findByDepartment_Manager_EmployeeId(UUID managerId);
 
     // Sửa lại để trả về List<Employee> và truy vấn thông qua quan hệ với User
     @Query("SELECT e FROM Employee e WHERE e.user.status = 'ACTIVE'")

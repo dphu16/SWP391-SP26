@@ -41,7 +41,7 @@ public class OffboardingController {
 
     // ── BRD 3.1: Quản lý đề xuất sa thải / hết HĐ / không vào làm ──
     @PostMapping("/offboarding/propose/{employeeId}")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<OffboardingResponseDTO> createManagerProposedRequest(
             @PathVariable("employeeId") UUID employeeId,
             @RequestAttribute("employeeId") UUID requesterId,
@@ -106,7 +106,7 @@ public class OffboardingController {
     // ── Legacy endpoints ──
 
     @PutMapping("/employees/{id}/terminate")
-    @PreAuthorize("hasRole('HR')")
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<EmployeeDetailDTO> terminateEmployee(
             @PathVariable("id") UUID id) {
         EmployeeDetailDTO updated = offboardingService.terminateEmployee(id);

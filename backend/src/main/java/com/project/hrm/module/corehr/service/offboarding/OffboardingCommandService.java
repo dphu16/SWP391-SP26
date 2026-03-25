@@ -101,6 +101,11 @@ public class OffboardingCommandService {
                 .status(OffboardingStatus.MANAGER_APPROVED)
                 .build();
 
+        // Khi Quản lý đề xuất nghỉ, nhân viên chuyển sang trạng thái chờ nghỉ (PENDING_OFFBOARD)
+        // nhưng vẫn giữ tài khoản ACTIVE để bàn giao cho đến ngày cưới cùng
+        employee.setStatus(EmployeeStatus.PENDING_OFFBOARD);
+        employeeHelper.save(employee);
+
         offboarding = offboardingRepository.save(offboarding);
         return OffboardingMapper.toDTO(offboarding, employeeRepository);
     }
@@ -119,6 +124,12 @@ public class OffboardingCommandService {
         offboarding.setApprovedByManager(managerId);
         offboarding.setManagerApprovedDate(LocalDate.now());
 
+        // Khi Quản lý duyệt đơn nghỉ việc, chuyển nhân viên sang PENDING_OFFBOARD
+        // Tài khoản User vẫn giữ nguyên ACTIVE để nhân viên làm thủ tục bàn giao
+        Employee employee = offboarding.getEmployee();
+        employee.setStatus(EmployeeStatus.PENDING_OFFBOARD);
+        employeeHelper.save(employee);
+
         offboarding = offboardingRepository.save(offboarding);
         return OffboardingMapper.toDTO(offboarding, employeeRepository);
     }
@@ -133,11 +144,7 @@ public class OffboardingCommandService {
                     "Only MANAGER_APPROVED requests can be confirmed by HR.");
         }
 
-        // BRD 3.4: Hồ sơ chuyển sang PENDING_OFFBOARD — ẩn khỏi danh sách chính
-        Employee employee = offboarding.getEmployee();
-        employee.setStatus(EmployeeStatus.PENDING_OFFBOARD);
-        employeeHelper.save(employee);
-
+        // HR xác nhận — đơn chuyển trạng thái nhưng nhân viên đã được TERMINATED từ bước trước
         offboarding.setStatus(OffboardingStatus.HR_CONFIRMED);
         offboarding.setOfficialLastDay(dto.getOfficialLastDay());
         offboarding.setConfirmedByHr(hrEmployeeId);
@@ -164,6 +171,12 @@ public class OffboardingCommandService {
         } else {
             employee.setStatus(EmployeeStatus.OFFICIAL);
         }
+        
+        // Khôi phục quyền truy cập nếu hủy yêu cầu nghỉ việc
+        if (employee.getUser() != null) {
+            employee.getUser().setStatus(UserStatus.ACTIVE);
+        }
+        
         employeeHelper.save(employee);
 
         offboarding.setStatus(OffboardingStatus.CANCELLED);
@@ -184,14 +197,14 @@ public class OffboardingCommandService {
         for (Offboarding offboarding : confirmedRequests) {
             Employee employee = offboarding.getEmployee();
 
-            // Chuyển EmployeeStatus sang TERMINATED hoặc RESIGNED
+            // Đảm bảo trạng thái cuối cùng là đúng loại nghỉ việc
             if (offboarding.getType() == OffboardingType.RESIGNATION) {
                 employee.setStatus(EmployeeStatus.RESIGNED);
             } else {
                 employee.setStatus(EmployeeStatus.TERMINATED);
             }
-
-            // Thu hồi quyền truy cập
+            
+            // Đảm bảo User INACTIVE
             if (employee.getUser() != null) {
                 employee.getUser().setStatus(UserStatus.INACTIVE);
             }

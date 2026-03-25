@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 import java.util.UUID;
@@ -53,5 +54,18 @@ public class ActivationController {
             @RequestParam(name = "token") String token,
             @Valid @RequestBody BankAccountDTO dto) {
         return ResponseEntity.ok(activationService.submitBankAccountAndActivate(token, dto));
+    }
+    @PostMapping("/avatar")
+    public ResponseEntity<Map<String, String>> uploadAvatar(
+            @RequestParam(name = "token") String token,
+            @RequestParam("file") MultipartFile file) {
+        String avatarUrl = activationService.uploadAvatar(token, file);
+        return ResponseEntity.ok(Map.of("message", "Avatar uploaded successfully", "avatarUrl", avatarUrl));
+    }
+
+    @PostMapping("/debug/create-token")
+    public ResponseEntity<Map<String, String>> createDebugToken(@RequestParam("email") String email) {
+        String token = activationService.createDebugToken(email);
+        return ResponseEntity.ok(Map.of("token", token, "link", "http://localhost:5173/activate?token=" + token));
     }
 }

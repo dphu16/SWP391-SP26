@@ -70,3 +70,20 @@ export async function submitBankAccount(
   );
   return res.data;
 }
+
+export async function uploadAvatar(
+  token: string,
+  file: File,
+): Promise<{ message: string; avatarUrl: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await apiClient.post<{ message: string; avatarUrl: string }>(
+    "/api/activation/avatar",
+    formData,
+    {
+      params: { token },
+      headers: { "Content-Type": "multipart/form-data" },
+    },
+  );
+  return res.data;
+}

@@ -58,4 +58,11 @@ public class SalaryInquiry {
 
     @OneToOne(mappedBy = "inquiry", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private SalaryInquiryResponse response;
+
+    @PrePersist
+    protected void prePersist() {
+        if (createdAt == null) {
+            createdAt = OffsetDateTime.now();
+        }
+    }
 }

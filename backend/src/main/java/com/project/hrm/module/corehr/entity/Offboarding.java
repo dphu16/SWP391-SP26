@@ -37,7 +37,6 @@ public class Offboarding {
     @Column(name = "expected_last_day")
     private LocalDate expectedLastDay;
 
-    /** Ngày nghỉ chính thức do HR điền */
     @Column(name = "official_last_day")
     private LocalDate officialLastDay;
 
@@ -48,30 +47,25 @@ public class Offboarding {
     @Column(name = "status", nullable = false, length = 30)
     private OffboardingStatus status;
 
-    /** Trạng thái nhân viên trước khi offboarding (OFFICIAL, INTERN, PROBATION) */
     @Enumerated(EnumType.STRING)
     @Column(name = "previous_employee_status", length = 30)
     private EmployeeStatus previousEmployeeStatus;
 
-    /** Người tạo request (UUID nhân viên hoặc quản lý) */
     @Column(name = "requested_by")
     private UUID requestedBy;
 
-    /** Quản lý duyệt */
     @Column(name = "approved_by_manager")
     private UUID approvedByManager;
 
     @Column(name = "manager_approved_date")
     private LocalDate managerApprovedDate;
 
-    /** HR xác nhận */
     @Column(name = "confirmed_by_hr")
     private UUID confirmedByHr;
 
     @Column(name = "hr_confirmed_date")
     private LocalDate hrConfirmedDate;
 
-    /** Hủy yêu cầu */
     @Column(name = "cancel_reason", columnDefinition = "TEXT")
     private String cancelReason;
 
@@ -81,12 +75,6 @@ public class Offboarding {
     @Column(name = "cancelled_date")
     private LocalDate cancelledDate;
 
-    @Column(name = "final_settlement_amount", precision = 15, scale = 2)
-    private BigDecimal finalSettlementAmount;
-
-    @Column(name = "is_finance_cleared")
-    private Boolean isFinanceCleared;
-
     @PrePersist
     protected void onCreate() {
         if (this.requestDate == null) {
@@ -94,9 +82,6 @@ public class Offboarding {
         }
         if (this.status == null) {
             this.status = OffboardingStatus.PENDING;
-        }
-        if (this.isFinanceCleared == null) {
-            this.isFinanceCleared = false;
         }
     }
 }

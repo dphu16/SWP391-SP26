@@ -34,12 +34,7 @@ export interface PersonnelChangeResponseDTO {
   createdAt: string;
 }
 
-export interface FieldCooldownDTO {
-  fieldName: string;
-  changedAt: string | null;
-  cooldownUntil: string | null;
-  locked: boolean;
-}
+
 
 export interface ContractResponseDTO {
   contractId: string;
@@ -72,10 +67,19 @@ export const personnelChangeService = {
       headers: { "X-Employee-Id": getEmployeeId() },
     }),
 
-  getPending: () =>
-    apiClient.get<PersonnelChangeResponseDTO[]>(
+  getPending: async (): Promise<{ data: PersonnelChangeResponseDTO[] }> => {
+    const response = await apiClient.get<PersonnelChangeResponseDTO[]>(
       "/api/personnel-changes/pending",
-    ),
+    );
+    return { data: response.data };
+  },
+
+  getMyRequests: async (): Promise<{ data: PersonnelChangeResponseDTO[] }> => {
+    const response = await apiClient.get<PersonnelChangeResponseDTO[]>(
+      "/api/personnel-changes/my-requests",
+    );
+    return { data: response.data };
+  },
 
   managerApprove: (changeId: string) =>
     apiClient.put<PersonnelChangeResponseDTO>(
@@ -113,8 +117,7 @@ export const employeeSelfUpdateService = {
       headers: { "X-Employee-Id": getEmployeeId() },
     }),
 
-  getCooldowns: (employeeId: string) =>
-    apiClient.get<FieldCooldownDTO[]>(`/api/employees/${employeeId}/cooldowns`),
+
 };
 
 export const contractService = {

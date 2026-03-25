@@ -84,7 +84,6 @@ export interface CreateNewHireDTO {
   contractDuration?: string;
   endDate?: string;
   baseSalary: number;
-  fileBase64?: string;
 }
 
 // Offboarding employee DTO (TERMINATED / RESIGNED employees)

@@ -32,8 +32,6 @@ export const useCandidateOnboarding = () => {
     type: "success" | "error";
   } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [contractFile, setContractFile] = useState<File | null>(null);
-  const [contractFileName, setContractFileName] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<CreateNewHireDTO>(
     makeDefaultFormData(
@@ -183,22 +181,7 @@ export const useCandidateOnboarding = () => {
   const handleGoBack = () =>
     navigate(isResubmit ? "/onboarding/progress" : "/onboarding");
 
-  const handleFileChange = (file: File | null) => {
-    setContractFile(file);
-    setContractFileName(file?.name ?? null);
-  };
 
-  // Convert file to base64 before submit
-  const readFileAsBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        resolve(result.split(",")[1]); // strip data:...;base64,
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
 
   const handleSubmit = async () => {
     const err = validateStep(currentStep);
@@ -211,18 +194,6 @@ export const useCandidateOnboarding = () => {
       setSubmitting(true);
       setSubmitError(null);
 
-      // Encode file to base64 if provided
-      let fileBase64: string | undefined;
-      if (contractFile) {
-        try {
-          fileBase64 = await readFileAsBase64(contractFile);
-        } catch {
-          setToast({ message: "Failed to read contract file.", type: "error" });
-          setSubmitting(false);
-          return;
-        }
-      }
-
       if (isResubmit && applicationId) {
         await apiClient.put(
           `/api/employees/${applicationId}/resubmit`,
@@ -234,7 +205,7 @@ export const useCandidateOnboarding = () => {
         });
         setTimeout(() => navigate("/onboarding/progress"), 1500);
       } else {
-        const response = await apiClient.post(API_URL, { ...formData, fileBase64 });
+        const response = await apiClient.post(API_URL, formData);
         const employeeId = response.data?.employeeId;
 
         if (employeeId) {
@@ -325,9 +296,6 @@ export const useCandidateOnboarding = () => {
     setFormData,
     fieldErrors,
     clearFieldError,
-    contractFile,
-    contractFileName,
-    handleFileChange,
     handleNext,
     handleBack,
     handleGoBack,

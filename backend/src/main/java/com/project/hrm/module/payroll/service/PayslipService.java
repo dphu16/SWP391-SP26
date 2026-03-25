@@ -1,22 +1,30 @@
 package com.project.hrm.module.payroll.service;
 
+import com.project.hrm.module.payroll.dto.RequestDTO.UpdatePayslipDetailRequest;
 import com.project.hrm.module.payroll.dto.ResponseDTO.PayslipResponse;
 import com.project.hrm.module.payroll.entity.PayrollBatch;
 import com.project.hrm.module.payroll.entity.Payslip;
+import com.project.hrm.module.payroll.entity.PayslipDetail;
 import com.project.hrm.module.payroll.enums.PayrollBatchStatus;
+import com.project.hrm.module.payroll.enums.PayslipDetailType;
 import com.project.hrm.module.payroll.enums.PayslipStatus;
 import com.project.hrm.module.payroll.exception.AccessDeniedException;
 import com.project.hrm.module.payroll.exception.PayrollException;
 import com.project.hrm.module.payroll.exception.ResourceNotFoundException;
 import com.project.hrm.module.payroll.repository.PayrollBatchRepository;
+import com.project.hrm.module.payroll.repository.PayslipDetailRepository;
 import com.project.hrm.module.payroll.repository.PayslipRepository;
+import com.project.hrm.module.corehr.entity.BankAccount;
+import com.project.hrm.module.corehr.repository.BankAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,6 +37,8 @@ public class PayslipService {
         private final EmployeeRepository employeeRepository;
         private final PayrollCalculationService calculationService;
         private final PayrollBatchRepository batchRepository;
+        private final PayslipDetailRepository payslipDetailRepository;
+        private final BankAccountRepository bankAccountRepository;
 
         /** Employee: Xem danh sách phiếu lương của chính mình */
         @Transactional(readOnly = true)
@@ -128,6 +138,69 @@ public class PayslipService {
                 return toResponse(saved);
         }
 
+        /**
+         * UR_HR004: HR chỉnh sửa thủ công chi tiết phiếu lương (allowance/deduction).
+         * Chỉ được phép khi payslip đang DRAFT.
+         * Toàn bộ details cũ sẽ bị xóa và thay thế bằng danh sách mới.
+         * Sau đó tự động tính lại totalAllowances, totalDeductions, grossSalary, netSalary.
+         */
+        @Transactional
+        public PayslipResponse updatePayslipDetails(UUID payslipId, UpdatePayslipDetailRequest req) {
+                Payslip payslip = findOrThrow(payslipId);
+                if (payslip.getStatus() != PayslipStatus.DRAFT) {
+                        throw new PayrollException("Chỉ có thể chỉnh sửa chi tiết phiếu lương đang ở trạng thái DRAFT.");
+                }
+
+                // Xóa toàn bộ details cũ
+                payslipDetailRepository.deleteAllByPayslip_PayslipId(payslipId);
+                payslipDetailRepository.flush();
+
+                // Tạo details mới
+                List<PayslipDetail> newDetails = new ArrayList<>();
+                for (UpdatePayslipDetailRequest.DetailItem item : req.getDetails()) {
+                        newDetails.add(PayslipDetail.builder()
+                                .payslip(payslip)
+                                .itemName(item.getItemName())
+                                .amount(item.getAmount())
+                                .type(item.getType())
+                                .createdAt(OffsetDateTime.now())
+                                .build());
+                }
+                payslipDetailRepository.saveAll(newDetails);
+                payslip.setDetails(newDetails);
+
+                // Tính lại tổng allowance / deduction
+                BigDecimal totalAllowances = newDetails.stream()
+                        .filter(d -> d.getType() == PayslipDetailType.ALLOWANCE)
+                        .map(PayslipDetail::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                BigDecimal manualDeductions = newDetails.stream()
+                        .filter(d -> d.getType() == PayslipDetailType.DEDUCTION)
+                        .map(PayslipDetail::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                // Giữ nguyên baseSalary, otPay, absentDeduction — chỉ cập nhật allowances & deductions
+                BigDecimal base = payslip.getBaseSalary() != null ? payslip.getBaseSalary() : BigDecimal.ZERO;
+                BigDecimal otPay = payslip.getOtPay() != null ? payslip.getOtPay() : BigDecimal.ZERO;
+                BigDecimal absentDed = payslip.getAbsentDeduction() != null ? payslip.getAbsentDeduction() : BigDecimal.ZERO;
+
+                BigDecimal grossSalary = base.add(otPay).add(totalAllowances).subtract(absentDed);
+                BigDecimal totalDeductions = manualDeductions;
+                BigDecimal netSalary = grossSalary.subtract(totalDeductions);
+
+                payslip.setTotalAllowances(totalAllowances);
+                payslip.setTotalDeductions(totalDeductions);
+                payslip.setGrossSalary(grossSalary);
+                payslip.setNetSalary(netSalary);
+                // tax & insurance are now embedded in manual deductions if HR added them
+                payslip.setTaxAmount(BigDecimal.ZERO);
+                payslip.setInsuranceAmount(BigDecimal.ZERO);
+
+                Payslip saved = payslipRepository.save(payslip);
+                return toResponse(saved);
+        }
+
         /** HR: Huỷ phiếu lương — chỉ được huỷ khi chưa PAID */
         @Transactional
         public PayslipResponse cancelPayslip(UUID payslipId) {
@@ -175,11 +248,20 @@ public class PayslipService {
                                                 .type(d.getType())
                                                 .build()).collect(Collectors.toList());
 
+                // Tự động lấy thông tin ngân hàng của nhân viên từ CoreHR
+                BankAccount bank = bankAccountRepository
+                                .findByEmployee_EmployeeId(p.getEmployee().getEmployeeId())
+                                .orElse(null);
+
                 return PayslipResponse.builder()
                                 .payslipId(p.getPayslipId())
                                 .employeeId(p.getEmployee().getEmployeeId())
                                 .employeeName(p.getEmployee().getFullName())
                                 .departmentName(p.getEmployee().getDepartment() != null ? p.getEmployee().getDepartment().getDeptName() : "N/A")
+                                .bankName(bank != null ? bank.getBankName() : null)
+                                .accountNumber(bank != null ? bank.getAccountNumber() : null)
+                                .accountHolderName(bank != null ? bank.getAccountHolderName() : null)
+                                .branchName(bank != null ? bank.getBranchName() : null)
                                 .batchId(p.getBatch().getBatchId())
                                 .periodId(p.getPeriod().getPeriodId())
                                 .month(p.getPeriod().getMonth())

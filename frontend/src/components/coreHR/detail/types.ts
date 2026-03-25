@@ -6,12 +6,6 @@ export interface ContractDTO {
   status: string;
 }
 
-export interface FieldCooldownDTO {
-  fieldName: string;
-  changedAt: string | null;
-  cooldownUntil: string | null;
-  locked: boolean;
-}
 
 export interface EmployeeDetailDTO {
   employeeId: string;

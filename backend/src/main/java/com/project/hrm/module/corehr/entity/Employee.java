@@ -16,8 +16,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "employees", indexes = {
                 @Index(name = "idx_employees_code", columnList = "employee_code"),
-                @Index(name = "idx_employees_dept", columnList = "dept_id"),
-                @Index(name = "idx_employees_manager", columnList = "manager_id")
+                @Index(name = "idx_employees_dept", columnList = "dept_id")
 })
 @Data
 @NoArgsConstructor
@@ -67,8 +66,5 @@ public class Employee {
         @Builder.Default
         private List<Dependent> dependents = new ArrayList<>();
 
-        @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "manager_id")
-        @OnDelete(action = OnDeleteAction.SET_NULL)
-        private Employee manager;
+
 }

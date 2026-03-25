@@ -22,6 +22,12 @@ import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.UUID;
+import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -263,6 +269,75 @@ public class ActivationService {
         }
 
         // ─────────────────────────────────────────────────────────────
+        // API 6: Upload Avatar
+        // ─────────────────────────────────────────────────────────────
+        @Transactional
+        public String uploadAvatar(String token, MultipartFile file) {
+                EmployeeActivationToken activationToken = activationTokenRepo
+                                .findByTokenAndUsedFalse(token)
+                                .orElseThrow(() -> new BusinessRuleException(
+                                                ErrorCode.ACTIVATION_TOKEN_INVALID,
+                                                "Activation token is invalid or has already been used"));
+
+                Employee employee = activationToken.getEmployee();
+                User user = employee.getUser();
+
+                if (user == null) {
+                        throw new BusinessRuleException(
+                                        ErrorCode.ACTIVATION_NO_USER_ACCOUNT,
+                                        "Employee does not have an associated user account");
+                }
+
+                if (file.isEmpty()) {
+                        throw new BusinessRuleException(ErrorCode.BAD_REQUEST, "File is empty");
+                }
+
+                // File size validation (max 2MB)
+                if (file.getSize() > 2 * 1024 * 1024) {
+                        throw new BusinessRuleException(ErrorCode.BAD_REQUEST, "File size exceeds limit of 2MB");
+                }
+
+                // File type validation
+                String contentType = file.getContentType();
+                List<String> allowedTypes = List.of("image/jpeg", "image/png", "image/jpg");
+                if (contentType == null || !allowedTypes.contains(contentType.toLowerCase())) {
+                        throw new BusinessRuleException(ErrorCode.BAD_REQUEST, "Only JPG, JPEG, and PNG formats are allowed");
+                }
+
+                try {
+                        String uploadDir = "uploads/avatars/";
+                        Path uploadPath = Paths.get(uploadDir);
+
+                        if (!Files.exists(uploadPath)) {
+                                Files.createDirectories(uploadPath);
+                        }
+
+                        // Generate unique file name
+                        String originalFilename = file.getOriginalFilename();
+                        String extension = "";
+                        if (originalFilename != null && originalFilename.lastIndexOf(".") != -1) {
+                                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+                        }
+                        String fileName = UUID.randomUUID().toString() + extension;
+
+                        Path filePath = uploadPath.resolve(fileName);
+                        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+                        // Save the avatarUrl to the path that can be served by the web config
+                        String avatarUrl = "/api/uploads/avatars/" + fileName;
+                        user.setAvatarUrl(avatarUrl);
+                        userRepo.save(user);
+
+                        log.info("Avatar uploaded successfully for employee: {} ({})", employee.getFullName(), employee.getEmployeeId());
+
+                        return avatarUrl;
+                } catch (Exception e) {
+                        log.error("Failed to upload avatar", e);
+                        throw new RuntimeException("Failed to save avatar file to the server");
+                }
+        }
+
+        // ─────────────────────────────────────────────────────────────
         // Private helpers
         // ─────────────────────────────────────────────────────────────
 
@@ -272,5 +347,36 @@ public class ActivationService {
                 return Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
         }
 
+        @Transactional
+        public String createDebugToken(String email) {
+                User user = userRepo.findByEmail(email)
+                                .orElseThrow(() -> new BusinessRuleException(ErrorCode.USER_NOT_FOUND, "User not found"));
+
+                Employee employee = user.getEmployee();
+                if (employee == null) {
+                        throw new BusinessRuleException(ErrorCode.EMPLOYEE_NOT_FOUND, "User has no associated employee profile");
+                }
+
+                // Invalidate existing activation tokens for this employee
+                activationTokenRepo.findByEmployee_EmployeeIdAndUsedFalse(employee.getEmployeeId())
+                                .ifPresent(t -> {
+                                        t.setUsed(true);
+                                        activationTokenRepo.save(t);
+                                });
+
+                String tokenValue = "test-token-" + UUID.randomUUID().toString().substring(0, 8);
+                EmployeeActivationToken token = EmployeeActivationToken.builder()
+                                .token(tokenValue)
+                                .employee(employee)
+                                .used(false)
+                                .build();
+                activationTokenRepo.save(token);
+
+                // Reset status to allow starting from step 1
+                employee.setEmpStatus(ProgressStatus.PENDING_ACTIVATION);
+                employeeRepo.save(employee);
+
+                return tokenValue;
+        }
 
 }

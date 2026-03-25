@@ -5,6 +5,10 @@ import type { CreateNewHireDTO } from "../../hooks/types";
 export interface DepartmentOption {
   id: string;
   name: string;
+  managerId?: string;
+  managerName?: string;
+  mentorId?: string;
+  mentorName?: string;
 }
 
 export interface PositionOption {
@@ -77,26 +81,27 @@ export const useJobAutoFill = (
         if (cancelled) return;
         const job = res.data;
 
-        // 1. Get position from Job
-        const pos = positions.find((p) => p.id === job.posId);
+        // 1. Get position from Job (robust UUID matching)
+        const pos = positions.find((p) => p.id && job.posId && String(p.id).toLowerCase() === String(job.posId).toLowerCase());
         
-        // 2. From position -> get department by id
-        const dept = pos?.deptId ? departments.find((d) => d.id === pos.deptId) : null;
+        // 2. From position -> get department by id, or fallback to job's deptId
+        const targetDeptId = pos?.deptId || job.deptId;
+        const dept = targetDeptId ? departments.find((d) => d.id && String(d.id).toLowerCase() === String(targetDeptId).toLowerCase()) : null;
         
         // II. Get status from job type
         const jobStatus = job.type || "";
 
         setFormData((prev) => ({
           ...prev,
-          departmentId: dept?.id || prev.departmentId,
+          departmentId: dept?.id || job.deptId || prev.departmentId,
           positionId: pos?.id || job.posId || prev.positionId,
           status: jobStatus || prev.status,
           // 3. Ensure managerId is not assigned from job data
         }));
         setJobAutoFilled(true);
       })
-      .catch(() => {
-        // Silently ignore — user can still pick manually
+      .catch((err) => {
+        console.error("Job auto-fill failed:", err);
       });
 
     return () => {
@@ -127,11 +132,11 @@ export const usePositionDepartmentSync = (
 
     if (!formData.positionId || positions.length === 0) return;
 
-    const selectedPosition = positions.find((p) => p.id === formData.positionId);
+    const selectedPosition = positions.find((p) => p.id && String(p.id).toLowerCase() === String(formData.positionId).toLowerCase());
     if (!selectedPosition?.deptId) return;
 
     // Only update if the department doesn't already match
-    const matchingDept = departments.find((d) => d.id === selectedPosition.deptId);
+    const matchingDept = departments.find((d) => d.id && String(d.id).toLowerCase() === String(selectedPosition.deptId).toLowerCase());
     if (matchingDept && formData.departmentId !== matchingDept.id) {
       setFormData((prev) => ({
         ...prev,

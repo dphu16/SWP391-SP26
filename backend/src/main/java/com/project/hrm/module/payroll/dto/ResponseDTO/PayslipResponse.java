@@ -18,6 +18,12 @@ public class PayslipResponse {
     private UUID employeeId;
     private String employeeName;
     private String departmentName;
+
+    // Thông tin ngân hàng (tự động lấy từ CoreHR)
+    private String bankName;
+    private String accountNumber;
+    private String accountHolderName;
+    private String branchName;
     private UUID batchId;
     private UUID periodId;
     private Integer month;

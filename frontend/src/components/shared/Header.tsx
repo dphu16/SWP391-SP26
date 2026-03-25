@@ -9,6 +9,14 @@ import Breadcrumb from "../navigation/Breadcrumb";
 // ─── Current user derived from JWT ──────────────────────────────────────────
 function useCurrentUser() {
   const payload = decodeJwt(getToken());
+
+  const getFullAvatarUrl = (url: string | undefined) => {
+    if (!url) return "";
+    if (url.startsWith("http")) return url;
+    // Assuming backend is at http://localhost:8080 or same as API client host
+    return `http://localhost:8080${url}`;
+  };
+
   if (!payload) {
     return {
       name: "User",
@@ -23,7 +31,7 @@ function useCurrentUser() {
       payload.roles && payload.roles.length > 0
         ? payload.roles[0].replace("ROLE_", "")
         : "—",
-    avatarUrl: payload.avatarUrl ?? "",
+    avatarUrl: getFullAvatarUrl(payload.avatarUrl),
     employeeId: payload.employeeId ?? null,
   };
 }

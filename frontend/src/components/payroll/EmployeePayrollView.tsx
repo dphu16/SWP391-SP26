@@ -10,7 +10,7 @@ const fmt = (n?: number | null) =>
     n == null ? "0 ₫" : new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
 
 const fmtDate = (d?: string | null) =>
-    d ? new Date(d).toLocaleDateString("vi-VN") : "—";
+    d ? new Date(d).toLocaleDateString("en-US") : "—";
 
 const getErrMsg = (e: unknown) => {
     const err = e as { response?: { data?: { message?: string } | string } };
@@ -227,7 +227,7 @@ const EmployeePayrollView: React.FC = () => {
         };
 
         const html = `<!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Payslip - Month ${d.month}/${d.year}</title>
@@ -334,7 +334,7 @@ const EmployeePayrollView: React.FC = () => {
       ${sectionHeader('Deductions', '#dc2626', '#fff1f2')}
       ${d.totalAbsentDays > 0 ? row(`Absent Deduction (${d.totalAbsentDays} days)`, '-' + fmt(d.absentDeduction), '#dc2626') : ''}
       ${row('Tax (PIT)', '-' + fmt(d.taxAmount), '#dc2626')}
-      ${row('Insurance (BHXH+BHYT+BHTN — 10.5%)', '-' + fmt(d.insuranceAmount), '#dc2626')}
+      ${row('Insurance (Social + Health + UI — 10.5%)', '-' + fmt(d.insuranceAmount), '#dc2626')}
       ${deItems.map(i => row('↳ ' + i.itemName, '-' + fmt(i.amount), '#dc2626', true)).join('')}
       <tr style="background:#fff1f2;border-top:1px solid #fecaca" class="section-total">
         <td style="padding:10px 16px;font-size:13px;font-weight:800;color:#991b1b">Total Deductions</td>
@@ -598,7 +598,7 @@ const EmployeePayrollView: React.FC = () => {
                                                 <td className="px-6 py-3.5 text-right font-semibold text-rose-600">-{fmt(detail.taxAmount)}</td>
                                             </tr>
                                             <tr className="hover:bg-slate-50 transition-colors">
-                                                <td className="px-6 py-3.5 font-medium text-slate-700">Insurance (BHXH + BHYT + BHTN — 10.5%)</td>
+                                                <td className="px-6 py-3.5 font-medium text-slate-700">Insurance (Social + Health + UI — 10.5%)</td>
                                                 <td className="px-6 py-3.5 text-right font-semibold text-rose-600">-{fmt(detail.insuranceAmount)}</td>
                                             </tr>
                                             {deductItems.map((item, i) => (
@@ -659,16 +659,23 @@ const EmployeePayrollView: React.FC = () => {
                                             <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{inq.message}</p>
                                             {inq.hrResponse && (
                                                 <div className="mt-3 px-3 py-2.5 rounded-xl bg-emerald-50 border border-emerald-100">
-                                                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide mb-0.5">
-                                                        HR Response ({inq.hrResponse.responderName}):
-                                                    </p>
+                                                    <div className="flex justify-between items-baseline mb-0.5">
+                                                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">
+                                                            HR Response ({inq.hrResponse.responderName}):
+                                                        </p>
+                                                        <span className="text-[10px] text-emerald-600/70 font-medium">
+                                                            {inq.hrResponse.createdAt ? new Date(inq.hrResponse.createdAt).toLocaleString("en-US", { 
+                                                                month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" 
+                                                            }) : ""}
+                                                        </span>
+                                                    </div>
                                                     <p className="text-xs text-slate-700">{inq.hrResponse.officialResponse}</p>
                                                 </div>
                                             )}
                                         </div>
                                         <div className="flex flex-col items-end gap-2 flex-shrink-0">
                                             <StatusBadge status={inq.status} cfg={INQUIRY_STATUS} />
-                                            <span className="text-[10px] text-slate-400">{new Date(inq.createdAt).toLocaleDateString("vi-VN")}</span>
+                                            <span className="text-[10px] text-slate-400">{new Date(inq.createdAt).toLocaleDateString("en-US")}</span>
                                         </div>
                                     </div>
                                 </div>

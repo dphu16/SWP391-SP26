@@ -5,8 +5,6 @@ import com.project.hrm.module.corehr.dto.request.EmployeeDTO;
 import com.project.hrm.module.corehr.dto.request.EmployeeDetailDTO;
 import com.project.hrm.module.corehr.dto.request.EmployeeSelfUpdateDTO;
 import com.project.hrm.module.corehr.dto.response.ContractResponseDTO;
-
-import com.project.hrm.module.corehr.dto.response.FieldCooldownDTO;
 import com.project.hrm.module.corehr.service.directory.ContractService;
 import com.project.hrm.module.corehr.service.directory.DependentService;
 import com.project.hrm.module.corehr.service.directory.EmployeeSelfUpdateService;
@@ -34,10 +32,10 @@ public class EmployeeController {
     private final com.project.hrm.module.corehr.service.AuditLogService auditLogService;
 
     public EmployeeController(IEmployeeService employeeService,
-                              EmployeeSelfUpdateService selfUpdateService,
-                              ContractService contractService,
-                              DependentService dependentService,
-                              com.project.hrm.module.corehr.service.AuditLogService auditLogService) {
+            EmployeeSelfUpdateService selfUpdateService,
+            ContractService contractService,
+            DependentService dependentService,
+            com.project.hrm.module.corehr.service.AuditLogService auditLogService) {
         this.employeeService = employeeService;
         this.selfUpdateService = selfUpdateService;
         this.contractService = contractService;
@@ -49,7 +47,7 @@ public class EmployeeController {
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<Page<EmployeeDTO>> getAllEmployees(
             @PageableDefault(size = 10, sort = "fullName") Pageable pageable) {
-        Page<EmployeeDTO> result = employeeService.searchEmployees(null, null, null, null, null, null, "OFFICIAL",
+        Page<EmployeeDTO> result = employeeService.searchEmployees(null, null, null, null, null, null, null, "OFFICIAL",
                 pageable);
         return ResponseEntity.ok(result);
     }
@@ -74,13 +72,14 @@ public class EmployeeController {
 
     @GetMapping("/employees/search")
     public ResponseEntity<Page<EmployeeDTO>> searchEmployees(
-            @RequestParam(value = "fullName",     required = false) String fullName,
+            @RequestParam(value = "fullName", required = false) String fullName,
             @RequestParam(value = "employeeCode", required = false) String employeeCode,
-            @RequestParam(value = "phoneNumber",  required = false) String phoneNumber,
-            @RequestParam(value = "department",   required = false) String department,
-            @RequestParam(value = "position",     required = false) String position,
-            @RequestParam(value = "role",         required = false) String role,
-            @RequestParam(value = "status",       required = false) String status,
+            @RequestParam(value = "phoneNumber", required = false) String phoneNumber,
+            @RequestParam(value = "department", required = false) String department,
+            @RequestParam(value = "position", required = false) String position,
+            @RequestParam(value = "role", required = false) String role,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "q", required = false) String q,
             @PageableDefault(size = 10, sort = "fullName") Pageable pageable) {
 
         if (phoneNumber != null && !phoneNumber.matches("^[0-9\\-\\s]+$")) {
@@ -88,7 +87,7 @@ public class EmployeeController {
         }
 
         Page<EmployeeDTO> result = employeeService.searchEmployees(
-                fullName, employeeCode, phoneNumber, department, position, role, status, pageable);
+                q, fullName, employeeCode, phoneNumber, department, position, role, status, pageable);
         return ResponseEntity.ok(result);
     }
 
@@ -108,13 +107,6 @@ public class EmployeeController {
             @RequestBody EmployeeSelfUpdateDTO dto) {
         EmployeeDetailDTO updated = selfUpdateService.selfUpdate(employeeId, dto);
         return ResponseEntity.ok(updated);
-    }
-
-    // BRD 2.2: Get cooldown status for employee's editable fields
-    @GetMapping("/employees/{id}/cooldowns")
-    public ResponseEntity<List<FieldCooldownDTO>> getCooldowns(
-            @PathVariable("id") UUID employeeId) {
-        return ResponseEntity.ok(selfUpdateService.getCooldowns(employeeId));
     }
 
     // BRD 2.3: Get contracts for an employee

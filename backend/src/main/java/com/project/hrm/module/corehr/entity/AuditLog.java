@@ -24,6 +24,9 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "entity_name", nullable = false)
+    private String entityName;
+
     @Column(name = "entity_type")
     private String entityType;
 

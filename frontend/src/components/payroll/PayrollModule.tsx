@@ -34,7 +34,7 @@ export const Badge: React.FC<{
     );
 };
 
-// ─── Icon exports (dùng lại trong các file khác) ──────────────────────────────
+// ─── Icon exports (reused in other files) ──────────────────────────────
 export const Icon = {
     layers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>,
     user: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
@@ -59,7 +59,7 @@ export const Icon = {
     eye: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>,
 };
 
-// ─── Breadcrumb navigation thay thế banner cũ ──────────────────────────────────
+// ─── Breadcrumb navigation replacement for old banner ──────────────────────────────────
 const PAYROLL_ROUTE_META: Record<string, { label: string; icon: React.ReactNode }> = {
     "/payroll/employee":    { label: "My Payslips",           icon: Icon.user },
     "/payroll/hr":          { label: "Payroll Management",    icon: Icon.layers },
@@ -113,7 +113,7 @@ const PayrollModule: React.FC = () => {
     const isCnBManager = location.pathname.startsWith("/payroll/cnb-manager");
     const isMyTRS = location.pathname.startsWith("/payroll/my-trs");
 
-    // Redirect dựa trên quyền và pathname
+    // Redirect based on permissions and pathname
     useEffect(() => {
         // Auto redirect base path
         if (location.pathname === "/payroll") {
@@ -125,7 +125,7 @@ const PayrollModule: React.FC = () => {
             return;
         }
 
-        // Chặn quyền truy cập sai trang
+        // Block unauthorized access
         if (isHR && !canViewHR) {
             navigate("/payroll/employee", { replace: true });
         }
@@ -176,7 +176,7 @@ const PayrollModule: React.FC = () => {
         );
     }
 
-    // Nếu không có quyền xem HR nhưng đang ở path HR (sẽ bị redirect ngay sau đó)
+    // If user has no HR permission but is at an HR path (will be redirected immediately)
     if (isHR && !canViewHR) return null;
 
     return (

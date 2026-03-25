@@ -128,16 +128,10 @@ public class BenefitService {
             BigDecimal value = eb.getAppliedValue() != null ? eb.getAppliedValue() : eb.getBenefit().getStandardValue();
             
             if (value != null) {
-                // If it's a non-cash benefit, actively add to the totalNonCashValue sum
                 if (eb.getBenefit().getBenefitType() != BenefitType.ALLOWANCE) {
-                    // Approximate value for the year based on months active.
-                    // For simplicity, we just add the standard value assuming it's an annual value,
-                    // but a robust implementation would prorate this based on start/end dates.
                     totalNonCashValue = totalNonCashValue.add(value);
                 }
-                
-                // Add BOTH cash and non-cash benefits to the visual breakdown list 
-                // so the employee knows they are actively receiving this benefit.
+
                 benefitItems.add(TotalRewardStatementDTO.BenefitItemDTO.builder()
                         .benefitName(eb.getBenefit().getName())
                         .benefitType(eb.getBenefit().getBenefitType().name())

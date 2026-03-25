@@ -14,4 +14,5 @@ public interface PersonnelChangeRepository extends JpaRepository<PersonnelChange
     List<PersonnelChange> findByStatusOrderByCreatedAtDesc(PersonnelChangeStatus status);
 
     List<PersonnelChange> findByStatusInOrderByCreatedAtDesc(List<PersonnelChangeStatus> statuses);
+    List<PersonnelChange> findByRequestedByOrderByCreatedAtDesc(UUID requestedBy);
 }

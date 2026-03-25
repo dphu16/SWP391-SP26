@@ -29,6 +29,12 @@ public class Department {
     @JsonIgnore
     private Employee manager;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mentor_id")
+    @ToString.Exclude
+    @JsonIgnore
+    private Employee mentor;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;

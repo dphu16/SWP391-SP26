@@ -92,7 +92,7 @@ const EmployeeTRSView: React.FC = () => {
                         Total Reward Statement
                     </p>
                     <h2 className="text-xl font-bold text-slate-800 mb-2">
-                        {loading ? "Loading..." : trs ? `Review Period ${trs.period}` : "My Benefits"}
+                        {loading ? "Loading..." : trs ? `Review Period: ${trs.period}` : "My Benefits"}
                     </h2>
                     
                     <div className="flex items-center gap-4 text-sm text-slate-500 font-medium">
@@ -147,8 +147,8 @@ const EmployeeTRSView: React.FC = () => {
                 <>
                     {/* Visual breakdown */}
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-5">
-                        <h3 className="text-base font-bold text-slate-900 mb-1">Total Reward Allocation</h3>
-                        <p className="text-xs text-slate-500 mb-5">Distribution of each component in your total reward</p>
+                        <h3 className="text-base font-bold text-slate-900 mb-1">Total Reward Composition</h3>
+                        <p className="text-xs text-slate-500 mb-5">Breakdown of each component in your total annual rewards</p>
                         <StackedBar data={chartData} />
                     </div>
 
@@ -158,7 +158,7 @@ const EmployeeTRSView: React.FC = () => {
                             { label: "Gross Salary", value: trs.totalGrossSalary, emoji: Icon.layers, bgWrapper: "bg-slate-50/50 border-slate-200/60", iconBg: "bg-slate-100 border-slate-200 text-slate-500", textColor: "text-slate-800" },
                             { label: "Cash Allowances", value: trs.totalCashAllowances, emoji: BenefitIcons.money, bgWrapper: "bg-sky-50/50 border-sky-200/60", iconBg: "bg-sky-100 border-sky-200 text-sky-500", textColor: "text-sky-800" },
                             { label: "Tax & Insurance", value: (trs.totalTaxPaid ?? 0) + (trs.totalInsurancePaid ?? 0), emoji: Icon.shield, bgWrapper: "bg-amber-50/50 border-amber-200/60", iconBg: "bg-amber-100 border-amber-200 text-amber-500", textColor: "text-amber-800" },
-                            { label: "Hidden Benefits", value: trs.totalNonCashBenefitsValue, emoji: BenefitIcons.gift, bgWrapper: "bg-violet-50/50 border-violet-200/60", iconBg: "bg-violet-100 border-violet-200 text-violet-500", textColor: "text-violet-800" },
+                            { label: "Hidden Rewards", value: trs.totalNonCashBenefitsValue, emoji: BenefitIcons.gift, bgWrapper: "bg-violet-50/50 border-violet-200/60", iconBg: "bg-violet-100 border-violet-200 text-violet-500", textColor: "text-violet-800" },
                         ].map((item, i) => (
                             <div key={i} className={`bg-white rounded-[14px] border ${item.bgWrapper} p-5 shadow-sm relative overflow-hidden flex flex-col justify-center`}>
                                 <div className="flex items-center gap-3 mb-3">
@@ -182,9 +182,9 @@ const EmployeeTRSView: React.FC = () => {
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                             <div className="px-6 py-4 border-b border-slate-100 bg-violet-50/50">
                                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                                    <span className="text-violet-500">{BenefitIcons.gift}</span> Non-cash Benefit Details
+                                    <span className="text-violet-500">{BenefitIcons.gift}</span> Non-cash Benefits Detail
                                 </h3>
-                                <p className="text-xs text-slate-500 mt-0.5 ml-6">Additional values provided by the company</p>
+                                <p className="text-xs text-slate-500 mt-0.5 ml-6">Additional value provided by the company as part of your total package</p>
                             </div>
                             <div className="divide-y divide-slate-100">
                                 {trs.benefitItems.map((item, i) => (
@@ -201,7 +201,7 @@ const EmployeeTRSView: React.FC = () => {
                                 ))}
                             </div>
                             <div className="px-6 py-4 bg-violet-50/50 border-t border-violet-100 flex justify-between items-center">
-                                <p className="text-sm font-bold text-violet-800">Total Hidden Benefit Value</p>
+                                <p className="text-sm font-bold text-violet-800">Total Hidden Rewards</p>
                                 <p className="text-lg font-black text-violet-700 tabular-nums">{fmt(trs.totalNonCashBenefitsValue)}</p>
                             </div>
                         </div>
@@ -211,8 +211,8 @@ const EmployeeTRSView: React.FC = () => {
                     {(trs.benefitItems?.length ?? 0) === 0 && (
                         <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-slate-400 flex flex-col items-center justify-center">
                             <div className="text-slate-300 mb-4 scale-150">{BenefitIcons.gift}</div>
-                            <p className="text-sm font-semibold text-slate-500">No non-cash benefits recorded in {year}.</p>
-                            <p className="text-xs text-slate-400 mt-1">Contact HR for more information on benefit packages.</p>
+                            <p className="text-sm font-semibold text-slate-500">No non-cash benefits found for year {year}.</p>
+                            <p className="text-xs text-slate-400 mt-1">Contact HR for information about available benefit packages.</p>
                         </div>
                     )}
                 </>
@@ -222,4 +222,3 @@ const EmployeeTRSView: React.FC = () => {
 };
 
 export default EmployeeTRSView;
-

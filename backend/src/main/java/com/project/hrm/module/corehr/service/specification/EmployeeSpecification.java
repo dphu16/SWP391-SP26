@@ -4,16 +4,29 @@ import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.enums.EmployeeRole;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
 
 public class EmployeeSpecification {
 
-    public static Specification<Employee> filterEmployees(String fullName, String employeeCode, String phoneNumber,
+    public static Specification<Employee> filterEmployees(String q, String fullName, String employeeCode, String phoneNumber,
                                                           String department, String position, String role, String status) {
         return (root, query, criteriaBuilder) -> {
             Predicate predicate = criteriaBuilder.conjunction();
+
+            if (StringUtils.hasText(q)) {
+                String searchTerm = "%" + q.trim().toLowerCase() + "%";
+                Join<Object, Object> personalJoin = root.join("personal", JoinType.LEFT);
+                predicate = criteriaBuilder.and(predicate,
+                        criteriaBuilder.or(
+                                criteriaBuilder.like(criteriaBuilder.lower(root.get("fullName")), searchTerm),
+                                criteriaBuilder.like(criteriaBuilder.lower(root.get("employeeCode")), searchTerm),
+                                criteriaBuilder.like(criteriaBuilder.lower(personalJoin.get("email")), searchTerm),
+                                criteriaBuilder.like(criteriaBuilder.lower(personalJoin.get("phone")), searchTerm)
+                        ));
+            }
 
             if (StringUtils.hasText(fullName)) {
                 predicate = criteriaBuilder.and(predicate,

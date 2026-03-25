@@ -66,10 +66,8 @@ public class OnboardingCommandService {
         employee.setEmpStatus(ProgressStatus.PENDING_REVIEW);
         employee.setStatus(request.getStatus());
 
-        if (request.getMentorId() != null) {
-            Employee mentor = employeeHelper.findEmployeeOrThrow(request.getMentorId());
-            employee.setManager(mentor);
-        }
+        // Manager and Mentor are now determined by the Department level.
+        // Direct employee.manager field is removed.
 
         if (request.getEmail() != null && !request.getEmail().isEmpty()) {
             User newUser = User.builder()

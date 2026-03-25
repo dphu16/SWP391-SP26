@@ -1,7 +1,7 @@
 package com.project.hrm.common.auth.security;
 
-import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.module.corehr.repository.EmployeeRepository;
+import com.project.hrm.module.corehr.entity.User;
+import com.project.hrm.module.corehr.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -26,10 +26,10 @@ public class JwtUtil {
     @Value("${app.jwt.access-token-expiry}")
     private long expirationMs;
 
-    private final EmployeeRepository employeeRepository;
+    private final UserRepository userRepository;
 
-    public JwtUtil(EmployeeRepository employeeRepository) {
-        this.employeeRepository = employeeRepository;
+    public JwtUtil(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
     private SecretKey key() {
@@ -50,9 +50,15 @@ public class JwtUtil {
             claims.put("fullName", fullName);
         }
 
-        // Add employeeId to JWT
-        employeeRepository.findByUser_Email(userDetails.getUsername())
-                .ifPresent(emp -> claims.put("employeeId", emp.getEmployeeId().toString()));
+        // Add employeeId and avatarUrl to JWT
+        userRepository.findByEmail(userDetails.getUsername()).ifPresent(user -> {
+            if (user.getAvatarUrl() != null) {
+                claims.put("avatarUrl", user.getAvatarUrl());
+            }
+            if (user.getEmployee() != null) {
+                claims.put("employeeId", user.getEmployee().getEmployeeId().toString());
+            }
+        });
 
         return Jwts.builder()
                 .setClaims(claims)

@@ -7,6 +7,7 @@ import ActivationDone from "./ActivationDone";
 import PasswordForm from "./forms/PasswordForm";
 import EmergencyContactForm from "./forms/EmergencyContactForm";
 import BankAccountForm from "./forms/BankAccountForm";
+import AvatarUploadForm from "./forms/AvatarUploadForm";
 
 const ActivationPage: React.FC = () => {
   const activationProps = useActivation();
@@ -20,6 +21,7 @@ const ActivationPage: React.FC = () => {
     errors,
     handleSetPassword,
     handleEmergencyContact,
+    handleAvatarUpload,
     handleBankAccount,
     newPassword,
     setNewPassword,
@@ -41,6 +43,8 @@ const ActivationPage: React.FC = () => {
     setBranchName,
     accountHolderName,
     setAccountHolderName,
+    avatarFile,
+    setAvatarFile,
   } = activationProps;
 
   // ── Error / no-token state ──
@@ -134,8 +138,17 @@ const ActivationPage: React.FC = () => {
               />
             )}
 
-            {/* ── Step 3: Bank Account ── */}
+            {/* ── Step 3: Avatar Upload ── */}
             {step === 3 && (
+              <AvatarUploadForm
+                avatarFile={avatarFile}
+                setAvatarFile={setAvatarFile}
+                errors={errors}
+              />
+            )}
+
+            {/* ── Step 4: Bank Account ── */}
+            {step === 4 && (
               <BankAccountForm
                 accountNumber={accountNumber}
                 setAccountNumber={setAccountNumber}
@@ -162,13 +175,15 @@ const ActivationPage: React.FC = () => {
                     ? handleSetPassword
                     : step === 2
                       ? handleEmergencyContact
-                      : handleBankAccount
+                      : step === 3
+                        ? handleAvatarUpload
+                        : handleBankAccount
                 }
                 disabled={loading}
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#22C55E] hover:opacity-90 text-white rounded-lg text-base font-semibold transition-all duration-200 ease-in-out cursor-pointer hover:-translate-y-px shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none focus:outline-none focus:ring-2 focus:ring-[#22C55E]/50 focus:ring-offset-2"
               >
                 {loading && <Spinner />}
-                {step === 3 ? "Finish & Activate" : "Continue"}
+                {step === 4 ? "Finish & Activate" : "Continue"}
               </button>
             </div>
           )}

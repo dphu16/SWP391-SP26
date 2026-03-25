@@ -615,7 +615,6 @@ export default function AIChatBox() {
         dateOfJoining: data.dateOfJoining || data.startDate || null,
         role: "ROLE_EMPLOYEE", status: "PROBATION",
         departmentId: matchedDept.id, positionId: matchedPos.id,
-        fileBase64: activeFileBase64 || ""
       };
 
       await apiClient.post("/api/ai/onboarding/create-and-submit", payload);

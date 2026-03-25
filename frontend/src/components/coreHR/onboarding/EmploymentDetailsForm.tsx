@@ -19,8 +19,6 @@ interface EmploymentDetailsFormProps {
   jobId?: string;
   fieldErrors: FieldErrors;
   clearFieldError: (field: string) => void;
-  onFileChange: (file: File | null) => void;
-  contractFileName: string | null;
 }
 
 // =======================
@@ -127,6 +125,32 @@ const ProfessionInfoSection: React.FC<SharedProps & {
       />
       <FieldError message={fieldErrors.dateOfJoining} />
     </div>
+
+    {/* Manager & Mentor (Derived from Department) */}
+    <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+      <div className="bg-emerald-50/50 p-3 rounded-xl border border-emerald-100 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 flex-shrink-0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wider font-bold text-emerald-800/60 leading-none mb-1">Department Manager</p>
+          <p className="text-sm font-semibold text-emerald-900 truncate">
+            {departments.find(d => d.id === formData.departmentId)?.managerName || "Not Assigned"}
+          </p>
+        </div>
+      </div>
+      <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 flex-shrink-0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wider font-bold text-blue-800/60 leading-none mb-1">Department Mentor</p>
+          <p className="text-sm font-semibold text-blue-900 truncate">
+            {departments.find(d => d.id === formData.departmentId)?.mentorName || "Not Assigned"}
+          </p>
+        </div>
+      </div>
+    </div>
   </div>
 );
 
@@ -134,7 +158,7 @@ const ProfessionInfoSection: React.FC<SharedProps & {
 
 // StatusSection is now integrated into ProfessionInfoSection
 
-const ContractSection: React.FC<SharedProps & { onFileChange: (file: File | null) => void; contractFileName: string | null; }> = ({ formData, fieldErrors, update, onFileChange, contractFileName }) => (
+const ContractSection: React.FC<SharedProps> = ({ formData, fieldErrors, update }) => (
   <div className="space-y-4">
     <div className="pt-2 border-b border-border-light">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light">
@@ -239,25 +263,7 @@ const ContractSection: React.FC<SharedProps & { onFileChange: (file: File | null
       </div>
     </div>
 
-    <div>
-      <label className={labelCls}>Contract Attachment (Optional)</label>
-      <label className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-border-light bg-gray-50 hover:border-primary hover:bg-emerald-50 transition-colors cursor-pointer group">
-        <input type="file" accept=".pdf" className="hidden" onChange={(e) => onFileChange(e.target.files?.[0] ?? null)} />
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-text-muted-light group-hover:text-primary flex-shrink-0">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
-        </svg>
-        <div className="flex-1 min-w-0">
-          {contractFileName ? (
-            <p className="text-sm font-semibold text-emerald-700 truncate">✓ {contractFileName}</p>
-          ) : (
-            <p className="text-sm text-text-muted-light">Upload PDF contract...</p>
-          )}
-        </div>
-        {contractFileName && (
-          <button type="button" onClick={(e) => { e.preventDefault(); onFileChange(null); }} className="text-xs text-rose-500 hover:text-rose-700 font-medium">Remove</button>
-        )}
-      </label>
-    </div>
+
   </div>
 );
 
@@ -343,8 +349,6 @@ const EmploymentDetailsForm: React.FC<EmploymentDetailsFormProps> = ({
   jobId,
   fieldErrors,
   clearFieldError,
-  onFileChange,
-  contractFileName,
 }) => {
   const { departments, positions, loading, fetchError } = useEmploymentData();
   const { jobAutoFilled } = useJobAutoFill(jobId, loading, departments, positions, setFormData);
@@ -383,7 +387,7 @@ const EmploymentDetailsForm: React.FC<EmploymentDetailsFormProps> = ({
         isPosLocked={isPosLocked}
       />
 
-      <ContractSection {...sharedProps} onFileChange={onFileChange} contractFileName={contractFileName} />
+      <ContractSection {...sharedProps} />
 
       <InformationSummarySection
         formData={formData}
