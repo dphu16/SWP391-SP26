@@ -57,10 +57,13 @@ public class BenefitService {
     @Transactional
     public EmployeeBenefitResponse assignBenefitToEmployee(AssignBenefitRequest request) {
         Employee employee = employeeRepository.findById(request.getEmployeeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Employee not found with ID: " + request.getEmployeeId() +
+                        ". Please verify the Employee ID and try again."));
 
         Benefit benefit = benefitRepository.findById(request.getBenefitId())
-                .orElseThrow(() -> new ResourceNotFoundException("Benefit not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Benefit not found with ID: " + request.getBenefitId()));
 
         EmployeeBenefit eb = EmployeeBenefit.builder()
                 .employee(employee)
@@ -83,6 +86,16 @@ public class BenefitService {
                 .appliedValue(eb.getAppliedValue())
                 .status(eb.getStatus().name())
                 .build();
+    }
+
+    @Transactional
+    public void deleteBenefit(UUID benefitId) {
+        Benefit benefit = benefitRepository.findById(benefitId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Benefit not found with ID: " + benefitId));
+        benefit.setIsActive(false);
+        benefitRepository.save(benefit);
+        log.info("Benefit '{}' (ID: {}) has been deactivated.", benefit.getName(), benefitId);
     }
 
     @Transactional(readOnly = true)

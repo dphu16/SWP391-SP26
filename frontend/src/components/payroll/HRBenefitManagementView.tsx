@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
-    getAllBenefits, createBenefit, assignBenefitToEmployee,
+    getAllBenefits, createBenefit, assignBenefitToEmployee, deleteBenefit,
     type BenefitResponse, type BenefitRequest, type BenefitType, type AssignBenefitRequest
 } from "../../services/payrollService";
 
@@ -28,13 +28,13 @@ const BenefitIcons = {
 };
 
 const BENEFIT_TYPE_META: Record<BenefitType, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
-    ALLOWANCE:      { label: "Allowance",         icon: BenefitIcons.money, color: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
-    HEALTH_CARE:    { label: "Health Care",       icon: BenefitIcons.medical, color: "text-rose-700",    bg: "bg-rose-50",    border: "border-rose-200" },
-    LEARNING:       { label: "Learning",          icon: BenefitIcons.book, color: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200" },
-    GYM:            { label: "Gym & Fitness",     icon: BenefitIcons.gym, color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-    TRANSPORTATION: { label: "Transportation",    icon: BenefitIcons.car, color: "text-violet-700",  bg: "bg-violet-50",  border: "border-violet-200" },
-    MEALS:          { label: "Meals",             icon: BenefitIcons.food, color: "text-orange-700",  bg: "bg-orange-50",  border: "border-orange-200" },
-    OTHER:          { label: "Other",             icon: BenefitIcons.gift, color: "text-slate-700",   bg: "bg-slate-50",   border: "border-slate-200" },
+    ALLOWANCE: { label: "Allowance", icon: BenefitIcons.money, color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
+    HEALTH_CARE: { label: "Health Care", icon: BenefitIcons.medical, color: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200" },
+    LEARNING: { label: "Learning", icon: BenefitIcons.book, color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
+    GYM: { label: "Gym & Fitness", icon: BenefitIcons.gym, color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
+    TRANSPORTATION: { label: "Transportation", icon: BenefitIcons.car, color: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200" },
+    MEALS: { label: "Meals", icon: BenefitIcons.food, color: "text-orange-700", bg: "bg-orange-50", border: "border-orange-200" },
+    OTHER: { label: "Other", icon: BenefitIcons.gift, color: "text-slate-700", bg: "bg-slate-50", border: "border-slate-200" },
 };
 
 // ─── Create Benefit Modal ──────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ const CreateBenefitModal: React.FC<{ onCreated: () => void; onClose: () => void 
             </div>
         </div>
     );
-    
+
     return createPortal(modalContent, document.body);
 };
 
@@ -118,12 +118,12 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState("");
     const [success, setSuccess] = useState("");
-    
-    // Add employee name lookup state
+
+    // Employee name lookup state
     const [employeeName, setEmployeeName] = useState<string | null>(null);
     const [empLoading, setEmpLoading] = useState(false);
 
-    // Effect to fetch employee name when employeeId changes length > 30 (UUID format approx)
+    // Fetch employee name when the employeeId field reaches UUID length (debounced)
     useEffect(() => {
         if (!form.employeeId || form.employeeId.length < 32) {
             setEmployeeName(null);
@@ -133,37 +133,43 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
             setEmpLoading(true);
             try {
                 const res = await employeeService.getEmployeeDetail(form.employeeId);
-                // Axios returns data wrapped in res.data, which contains our user obj. 
-                // Depending on generic response parsing, we extract the name:
-                const name = (res.data as any)?.user?.fullName || (res as any)?.user?.fullName || "Unknown Name";
-                setEmployeeName(name);
+                const dto = res.data as any;
+                const name = dto?.fullName ?? "Unknown Name";
+                const extra = [dto?.employeeCode, dto?.deptName].filter(Boolean).join(" · ");
+                setEmployeeName(extra ? `${name} (${extra})` : name);
                 setErr("");
             } catch (e: any) {
                 setEmployeeName(null);
+                // Bug Fix #3: Show a descriptive error with the partial ID when employee not found
                 if (e?.response?.status === 404) {
-                    setErr("Employee not found with this ID.");
-                } else if (e?.response?.status === 400 || e?.response?.status === 500) {
-                     // ignore format errors until typing finishes
+                    const shortId = form.employeeId.substring(0, 8);
+                    setErr(`No employee found with ID starting "${shortId}...". Please verify the Employee ID.`);
+                } else {
+                    setErr("Could not look up employee. Please try again.");
                 }
             } finally {
                 setEmpLoading(false);
             }
         };
-        const timer = setTimeout(findEmp, 500); // debounce typing
+        const timer = setTimeout(findEmp, 500);
         return () => clearTimeout(timer);
     }, [form.employeeId]);
 
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
     const handleSubmit = async () => {
         if (!form.employeeId.trim()) { setErr("Please enter Employee ID."); return; }
+        if (!UUID_REGEX.test(form.employeeId.trim())) {
+            setErr("Employee ID must be a valid UUID format (e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).");
+            return;
+        }
         if (!form.benefitId) { setErr("Please select a benefit package."); return; }
         setBusy(true); setErr(""); setSuccess("");
         try {
-            await assignBenefitToEmployee(form);
-            setSuccess("✅ Benefit assigned successfully!");
-            setTimeout(() => { 
-                onAssigned(); 
-                onClose(); // Auto close the modal after success
-            }, 1200);
+            const result = await assignBenefitToEmployee(form);
+            setSuccess(`Benefit "${result.benefitName}" assigned successfully!`);
+            onAssigned();
+            setTimeout(onClose, 1400);
         } catch (e) { setErr(getErrMsg(e)); }
         finally { setBusy(false); }
     };
@@ -189,14 +195,14 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
                         <input value={form.employeeId} onChange={e => setForm(f => ({ ...f, employeeId: e.target.value }))}
                             className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none placeholder-slate-300"
                             placeholder="Enter employee UUID..." />
-                        
+
                         {employeeName && (
-                             <div className="mt-1.5 flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
-                                 <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
-                                     {employeeName.charAt(0).toUpperCase()}
-                                 </span>
-                                 <span className="text-xs font-medium text-slate-700">{employeeName}</span>
-                             </div>
+                            <div className="mt-1.5 flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+                                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                    {employeeName.charAt(0).toUpperCase()}
+                                </span>
+                                <span className="text-xs font-semibold text-emerald-800">{employeeName}</span>
+                            </div>
                         )}
                     </div>
                     <div>
@@ -236,7 +242,7 @@ const AssignBenefitModal: React.FC<{ benefits: BenefitResponse[]; onAssigned: ()
             </div>
         </div>
     );
-    
+
     return createPortal(modalContent, document.body);
 };
 
@@ -248,6 +254,9 @@ const HRBenefitManagementView: React.FC = () => {
     const [showCreate, setShowCreate] = useState(false);
     const [showAssign, setShowAssign] = useState(false);
     const [filterType, setFilterType] = useState<BenefitType | "">("");
+    // Bug Fix #1: State for delete confirm
+    const [deletingBenefitId, setDeletingBenefitId] = useState<string | null>(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     const loadBenefits = useCallback(async () => {
         setLoading(true); setErr("");
@@ -257,6 +266,17 @@ const HRBenefitManagementView: React.FC = () => {
         } catch (e) { setErr(getErrMsg(e)); }
         finally { setLoading(false); }
     }, []);
+
+    // Bug Fix #1: Handler xóa benefit (soft-delete)
+    const handleDeleteBenefit = async (benefitId: string) => {
+        setDeleteLoading(true);
+        try {
+            await deleteBenefit(benefitId);
+            setDeletingBenefitId(null);
+            await loadBenefits();
+        } catch (e) { setErr(getErrMsg(e)); }
+        finally { setDeleteLoading(false); }
+    };
 
     useEffect(() => { loadBenefits(); }, [loadBenefits]);
 
@@ -399,9 +419,23 @@ const HRBenefitManagementView: React.FC = () => {
                                             <span className="text-sm font-black text-slate-900 tabular-nums">
                                                 {b.standardValue ? fmt(b.standardValue) : <span className="text-slate-400 font-medium text-xs">Variable Value</span>}
                                             </span>
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${b.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"}`}>
-                                                {b.isActive ? "● Active" : "○ Inactive"}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${b.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"}`}>
+                                                    {b.isActive ? "● Active" : "○ Inactive"}
+                                                </span>
+                                                {/* Bug Fix #1: Nút xóa benefit */}
+                                                {b.isActive && (
+                                                    <button
+                                                        onClick={() => setDeletingBenefitId(b.benefitId)}
+                                                        title="Vô hiệu hóa benefit"
+                                                        className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -417,6 +451,34 @@ const HRBenefitManagementView: React.FC = () => {
             )}
             {showAssign && (
                 <AssignBenefitModal benefits={benefits} onAssigned={() => setShowAssign(false)} onClose={() => setShowAssign(false)} />
+            )}
+
+            {/* Bug Fix #1: Confirm Dialog xóa benefit */}
+            {deletingBenefitId && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setDeletingBenefitId(null)} />
+
+                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+                        <h3 className="text-base font-bold text-slate-900 mb-2">Disable Benefit?</h3>
+
+                        <p className="text-sm text-slate-600 mb-5">
+                            This benefit will be marked as <strong>Inactive</strong> and will not appear in the active list.
+
+                            Historical data will be retained.
+
+                        </p>
+
+                        <div className="flex justify-end gap-3">
+                            <button onClick={() => setDeletingBenefitId(null)}
+                                className="px-4 py-2 text-sm font-semibold text-slate-500 hover:text-slate-700 cursor-pointer">Cancel</button>
+                            <button onClick={() => handleDeleteBenefit(deletingBenefitId)} disabled={deleteLoading}
+                                className="px-5 py-2 bg-rose-600 text-white rounded-xl text-sm font-bold hover:bg-rose-700 disabled:opacity-50 cursor-pointer transition-colors">
+                                {deleteLoading ? "Processing..." : "Confirm Disable"}
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
         </div>
     );

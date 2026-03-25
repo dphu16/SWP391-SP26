@@ -224,13 +224,25 @@ const CreatePeriodModal: React.FC<{ onCreated: () => void; onClose: () => void }
     const now = new Date();
     const [month, setMonth] = useState(now.getMonth() + 1);
     const [year, setYear] = useState(now.getFullYear());
+    // Bug Fix #4: thêm startDate và endDate (optional)
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState("");
 
     const create = async () => {
+        // Validate ngay trên UI nếu HR điền cả 2 field
+        if (startDate && endDate && startDate > endDate) {
+            setErr("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.");
+            return;
+        }
         setBusy(true); setErr("");
         try {
-            await createPeriod({ month, year });
+            await createPeriod({
+                month, year,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+            });
             onCreated();
         } catch (e) { setErr(getErrMsg(e)); }
         finally { setBusy(false); }
@@ -259,6 +271,20 @@ const CreatePeriodModal: React.FC<{ onCreated: () => void; onClose: () => void }
                                 className="w-full mt-1 px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
                                 {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                             </select>
+                        </div>
+                    </div>
+                    {/* Bug Fix #4: Start Date & End Date */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 uppercase">Start Date</label>
+                            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                                className="w-full mt-1 px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none" />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 uppercase">End Date</label>
+                            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                                min={startDate || undefined}
+                                className="w-full mt-1 px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none" />
                         </div>
                     </div>
                 </div>
@@ -583,10 +609,10 @@ const HRPayrollView: React.FC = () => {
     };
 
     const PR_STATUS_CFG: Record<string, { label: string; dot: string; text: string; bg: string; border: string }> = {
-        PENDING:  { label: "Pending",  dot: "bg-amber-500",   text: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
-        APPROVED: { label: "Approved", dot: "bg-blue-500",    text: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200" },
-        PAID:     { label: "Paid",     dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-        REJECTED: { label: "Rejected", dot: "bg-rose-500",    text: "text-rose-700",    bg: "bg-rose-50",    border: "border-rose-200" },
+        PENDING: { label: "Pending", dot: "bg-amber-500", text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
+        APPROVED: { label: "Approved", dot: "bg-blue-500", text: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
+        PAID: { label: "Paid", dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
+        REJECTED: { label: "Rejected", dot: "bg-rose-500", text: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200" },
     };
     const PR_TYPE_LABEL: Record<string, string> = {
         SALARY: "Salary Payment",
@@ -868,9 +894,9 @@ const HRPayrollView: React.FC = () => {
                                             {/* 9 — Status */}
                                             <td className="px-5 py-4 text-center">
                                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${p.status === "CONFIRMED" ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                                                        p.status === "PAID" ? "bg-sky-50 text-sky-700 border-sky-100" :
-                                                            p.status === "CANCELLED" ? "bg-rose-50 text-rose-700 border-rose-100" :
-                                                                "bg-slate-50 text-slate-600 border-slate-200"
+                                                    p.status === "PAID" ? "bg-sky-50 text-sky-700 border-sky-100" :
+                                                        p.status === "CANCELLED" ? "bg-rose-50 text-rose-700 border-rose-100" :
+                                                            "bg-slate-50 text-slate-600 border-slate-200"
                                                     }`}>
                                                     {p.status}
                                                 </span>
@@ -1005,11 +1031,10 @@ const HRPayrollView: React.FC = () => {
                                     const isPaid = req.status === "PAID";
                                     return (
                                         <div key={req.requestId}
-                                            className={`rounded-xl border p-4 flex flex-col sm:flex-row sm:items-start gap-4 transition-all ${
-                                                isRejected ? "bg-rose-50/60 border-rose-200" :
+                                            className={`rounded-xl border p-4 flex flex-col sm:flex-row sm:items-start gap-4 transition-all ${isRejected ? "bg-rose-50/60 border-rose-200" :
                                                 isPaid ? "bg-emerald-50/60 border-emerald-200" :
-                                                "bg-slate-50 border-[#e2e8f0]"
-                                            }`}>
+                                                    "bg-slate-50 border-[#e2e8f0]"
+                                                }`}>
                                             {/* Left: status dot */}
                                             <div className={`mt-1 w-2.5 h-2.5 rounded-full flex-shrink-0 ${prStatus.dot}`} />
 
@@ -1044,14 +1069,12 @@ const HRPayrollView: React.FC = () => {
 
                                                 {/* Finance feedback */}
                                                 {req.financeNote ? (
-                                                    <div className={`flex items-start gap-2 mt-2 p-3 rounded-lg border ${
-                                                        isRejected
-                                                            ? "bg-rose-100/70 border-rose-200"
-                                                            : "bg-emerald-100/70 border-emerald-200"
-                                                    }`}>
-                                                        <div className={`flex-shrink-0 mt-0.5 ${
-                                                            isRejected ? "text-rose-600" : "text-emerald-600"
+                                                    <div className={`flex items-start gap-2 mt-2 p-3 rounded-lg border ${isRejected
+                                                        ? "bg-rose-100/70 border-rose-200"
+                                                        : "bg-emerald-100/70 border-emerald-200"
                                                         }`}>
+                                                        <div className={`flex-shrink-0 mt-0.5 ${isRejected ? "text-rose-600" : "text-emerald-600"
+                                                            }`}>
                                                             {isRejected ? (
                                                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1063,9 +1086,8 @@ const HRPayrollView: React.FC = () => {
                                                             )}
                                                         </div>
                                                         <div>
-                                                            <p className={`text-[10px] font-black uppercase tracking-wide mb-0.5 ${
-                                                                isRejected ? "text-rose-700" : "text-emerald-700"
-                                                            }`}>Finance Response:</p>
+                                                            <p className={`text-[10px] font-black uppercase tracking-wide mb-0.5 ${isRejected ? "text-rose-700" : "text-emerald-700"
+                                                                }`}>Finance Response:</p>
                                                             <p className="text-sm text-[#1e293b] font-medium">{req.financeNote}</p>
                                                         </div>
                                                     </div>

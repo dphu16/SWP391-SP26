@@ -175,7 +175,15 @@ const EmployeePayrollView: React.FC = () => {
     useEffect(() => { if (selId) loadDetail(selId); }, [selId, loadDetail]);
 
     const incomeItems = detail?.details?.filter(i => i.type === "ALLOWANCE") ?? [];
-    const deductItems = detail?.details?.filter(i => i.type === "DEDUCTION") ?? [];
+    const allDeductItems = detail?.details?.filter(i => i.type === "DEDUCTION") ?? [];
+
+    const isTax = (name: string) => /tax|thu[eế]/i.test(name);
+    const isIns = (name: string) => /insurance|b[aả]o hi[eể]m|bhxh|bhyt|bhtn/i.test(name);
+
+    const taxItems = allDeductItems.filter(i => isTax(i.itemName));
+    const insItems = allDeductItems.filter(i => isIns(i.itemName));
+    const otherDeducts = allDeductItems.filter(i => !isTax(i.itemName) && !isIns(i.itemName));
+
     const grossSalary = detail?.grossSalary ?? 0;
     const netSalary = detail?.netSalary ?? 0;
     const totalDeduct = detail?.totalDeductions ?? 0;
@@ -203,8 +211,15 @@ const EmployeePayrollView: React.FC = () => {
         if (!detail) return;
         const d = detail;
         const netPctVal = d.grossSalary > 0 ? Math.round((d.netSalary / d.grossSalary) * 100) : 0;
+
+        const isTax = (n: string) => /tax|thu[eế]/i.test(n);
+        const isIns = (n: string) => /insurance|b[aả]o hi[eể]m|bhxh|bhyt|bhtn/i.test(n);
         const incItems = d.details?.filter(i => i.type === "ALLOWANCE") ?? [];
-        const deItems  = d.details?.filter(i => i.type === "DEDUCTION") ?? [];
+        const allDeItems = d.details?.filter(i => i.type === "DEDUCTION") ?? [];
+
+        const taxDetailItems = allDeItems.filter(i => isTax(i.itemName));
+        const insDetailItems = allDeItems.filter(i => isIns(i.itemName));
+        const otherDetailItems = allDeItems.filter(i => !isTax(i.itemName) && !isIns(i.itemName));
 
         const row = (label: string, value: string, color = "#1e293b", indent = false) =>
             `<tr style="border-bottom:1px solid #f1f5f9">
@@ -285,7 +300,7 @@ const EmployeePayrollView: React.FC = () => {
       </div>
       <div style="text-align:right">
         <div class="payslip-label">Pay Slip</div>
-        <div class="period-text">Month ${String(d.month).padStart(2,'0')}/${d.year}</div>
+        <div class="period-text">Month ${String(d.month).padStart(2, '0')}/${d.year}</div>
         <div class="status-badge">${STATUS_EN[d.status] ?? d.status}</div>
       </div>
     </div>
@@ -333,9 +348,15 @@ const EmployeePayrollView: React.FC = () => {
 
       ${sectionHeader('Deductions', '#dc2626', '#fff1f2')}
       ${d.totalAbsentDays > 0 ? row(`Absent Deduction (${d.totalAbsentDays} days)`, '-' + fmt(d.absentDeduction), '#dc2626') : ''}
-      ${row('Tax (PIT)', '-' + fmt(d.taxAmount), '#dc2626')}
-      ${row('Insurance (Social + Health + UI — 10.5%)', '-' + fmt(d.insuranceAmount), '#dc2626')}
-      ${deItems.map(i => row('↳ ' + i.itemName, '-' + fmt(i.amount), '#dc2626', true)).join('')}
+      
+      ${row('Tax (PIT)', taxDetailItems.length === 0 ? '-' + fmt(d.taxAmount) : '', '#dc2626')}
+      ${taxDetailItems.map(i => row('↳ ' + i.itemName, '-' + fmt(i.amount), '#dc2626', true)).join('')}
+      
+      ${row('Insurance (Social + Health + UI)', insDetailItems.length === 0 ? '-' + fmt(d.insuranceAmount) : '', '#dc2626')}
+      ${insDetailItems.map(i => row('↳ ' + i.itemName, '-' + fmt(i.amount), '#dc2626', true)).join('')}
+      
+      ${otherDetailItems.length > 0 ? row('Others', '', '#dc2626') : ''}
+      ${otherDetailItems.map(i => row('↳ ' + i.itemName, '-' + fmt(i.amount), '#dc2626', true)).join('')}
       <tr style="background:#fff1f2;border-top:1px solid #fecaca" class="section-total">
         <td style="padding:10px 16px;font-size:13px;font-weight:800;color:#991b1b">Total Deductions</td>
         <td style="padding:10px 16px;font-size:13px;font-weight:800;color:#991b1b;text-align:right">-${fmt(d.totalDeductions)}</td>
@@ -593,16 +614,41 @@ const EmployeePayrollView: React.FC = () => {
                                                     <td className="px-6 py-3.5 text-right font-semibold text-rose-600">-{fmt(detail.absentDeduction)}</td>
                                                 </tr>
                                             )}
+
                                             <tr className="hover:bg-slate-50 transition-colors">
                                                 <td className="px-6 py-3.5 font-medium text-slate-700">Tax (PIT)</td>
-                                                <td className="px-6 py-3.5 text-right font-semibold text-rose-600">-{fmt(detail.taxAmount)}</td>
+                                                <td className="px-6 py-3.5 text-right font-semibold text-rose-600">
+                                                    {taxItems.length === 0 ? `-${fmt(detail.taxAmount)}` : ""}
+                                                </td>
                                             </tr>
+                                            {taxItems.map((item, i) => (
+                                                <tr key={`tax-${i}`} className="hover:bg-slate-50 transition-colors">
+                                                    <td className="px-6 py-3.5 text-slate-600 pl-10">↳ {item.itemName}</td>
+                                                    <td className="px-6 py-3.5 text-right text-rose-600">-{fmt(item.amount)}</td>
+                                                </tr>
+                                            ))}
+
                                             <tr className="hover:bg-slate-50 transition-colors">
-                                                <td className="px-6 py-3.5 font-medium text-slate-700">Insurance (Social + Health + UI — 10.5%)</td>
-                                                <td className="px-6 py-3.5 text-right font-semibold text-rose-600">-{fmt(detail.insuranceAmount)}</td>
+                                                <td className="px-6 py-3.5 font-medium text-slate-700">Insurance (Social + Health + UI)</td>
+                                                <td className="px-6 py-3.5 text-right font-semibold text-rose-600">
+                                                    {insItems.length === 0 ? `-${fmt(detail.insuranceAmount)}` : ""}
+                                                </td>
                                             </tr>
-                                            {deductItems.map((item, i) => (
-                                                <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                            {insItems.map((item, i) => (
+                                                <tr key={`ins-${i}`} className="hover:bg-slate-50 transition-colors">
+                                                    <td className="px-6 py-3.5 text-slate-600 pl-10">↳ {item.itemName}</td>
+                                                    <td className="px-6 py-3.5 text-right text-rose-600">-{fmt(item.amount)}</td>
+                                                </tr>
+                                            ))}
+
+                                            {otherDeducts.length > 0 && (
+                                                <tr className="hover:bg-slate-50 transition-colors">
+                                                    <td className="px-6 py-3.5 font-medium text-slate-700">Others</td>
+                                                    <td className="px-6 py-3.5 text-right font-semibold text-rose-600"></td>
+                                                </tr>
+                                            )}
+                                            {otherDeducts.map((item, i) => (
+                                                <tr key={`other-${i}`} className="hover:bg-slate-50 transition-colors">
                                                     <td className="px-6 py-3.5 text-slate-600 pl-10">↳ {item.itemName}</td>
                                                     <td className="px-6 py-3.5 text-right text-rose-600">-{fmt(item.amount)}</td>
                                                 </tr>
@@ -664,8 +710,8 @@ const EmployeePayrollView: React.FC = () => {
                                                             HR Response ({inq.hrResponse.responderName}):
                                                         </p>
                                                         <span className="text-[10px] text-emerald-600/70 font-medium">
-                                                            {inq.hrResponse.createdAt ? new Date(inq.hrResponse.createdAt).toLocaleString("en-US", { 
-                                                                month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" 
+                                                            {inq.hrResponse.createdAt ? new Date(inq.hrResponse.createdAt).toLocaleString("en-US", {
+                                                                month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
                                                             }) : ""}
                                                         </span>
                                                     </div>

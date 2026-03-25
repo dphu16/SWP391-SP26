@@ -172,6 +172,9 @@ export interface PaymentTransactionResponse {
 export interface CreatePayrollPeriodRequest {
     month: number;
     year: number;
+    /** Bug Fix #4: optional — bầnd defaults to 1st and last day of the month if not provided */
+    startDate?: string; // YYYY-MM-DD
+    endDate?: string;   // YYYY-MM-DD
 }
 
 export interface CreatePayrollBatchRequest {
@@ -203,6 +206,16 @@ export interface RespondToInquiryRequest {
 export interface ReviewPaymentRequestRequest {
     approved: boolean;
     financeNote?: string;
+}
+
+export interface UpdatePayslipDetailItem {
+    itemName: string;
+    amount: number;
+    type: "ALLOWANCE" | "DEDUCTION";
+}
+
+export interface UpdatePayslipDetailsRequest {
+    details: UpdatePayslipDetailItem[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -286,7 +299,7 @@ export async function cancelPayslip(payslipId: string): Promise<PayslipResponse>
  */
 export async function updatePayslipDetails(
     payslipId: string,
-    request: UpdatePayslipDetailRequest
+    request: UpdatePayslipDetailsRequest
 ): Promise<PayslipResponse> {
     return unwrap(apiClient.put<ApiResponse<PayslipResponse>>(
         `/api/v1/hr/payroll/payslips/${payslipId}/details`,
@@ -523,6 +536,11 @@ export async function assignBenefitToEmployee(request: AssignBenefitRequest): Pr
     // Note: Backend returns EmployeeBenefitResponse directly
     const res = await apiClient.post<EmployeeBenefitResponse>("/api/v1/hr/benefits/assign", request);
     return res.data;
+}
+
+/** Bug Fix #1: DELETE /api/v1/hr/benefits/:id — Soft-delete benefit (sets is_active = false) */
+export async function deleteBenefit(benefitId: string): Promise<void> {
+    await apiClient.delete(`/api/v1/hr/benefits/${benefitId}`);
 }
 
 // Employee C&B APIs

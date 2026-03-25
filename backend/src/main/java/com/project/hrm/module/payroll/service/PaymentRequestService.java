@@ -155,7 +155,7 @@ public class PaymentRequestService {
                 payrollBatchRepository.save(batch);
 
                 // 5. Đồng bộ trạng thái Kỳ lương (Period) sang PAID
-                com.project.hrm.module.payroll.entity.PayrollPeriod period = batch.getPeriod();
+                PayrollPeriod period = batch.getPeriod();
                 period.setStatus(PayrollPeriodStatus.PAID);
                 payrollPeriodRepository.save(period);
             }

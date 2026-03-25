@@ -2,11 +2,14 @@ package com.project.hrm.module.payroll.service;
 
 import com.project.hrm.module.payroll.dto.RequestDTO.CreatePayrollPeriodRequest;
 import com.project.hrm.module.payroll.dto.ResponseDTO.PayrollPeriodResponse;
+import com.project.hrm.module.payroll.entity.PayrollBatch;
 import com.project.hrm.module.payroll.entity.PayrollPeriod;
+import com.project.hrm.module.payroll.enums.PayrollBatchStatus;
 import com.project.hrm.module.payroll.enums.PayrollPeriodStatus;
 import com.project.hrm.module.payroll.enums.PayslipStatus;
 import com.project.hrm.module.payroll.exception.PayrollException;
 import com.project.hrm.module.payroll.exception.ResourceNotFoundException;
+import com.project.hrm.module.payroll.repository.PayrollBatchRepository;
 import com.project.hrm.module.payroll.repository.PayrollPeriodRepository;
 import com.project.hrm.module.payroll.repository.PayslipRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +28,7 @@ public class PayrollPeriodService {
 
     private final PayrollPeriodRepository periodRepository;
     private final PayslipRepository payslipRepository;
-    private final com.project.hrm.module.payroll.repository.PayrollBatchRepository batchRepository;
+    private final PayrollBatchRepository batchRepository;
 
     @Transactional
     public PayrollPeriodResponse createPeriod(CreatePayrollPeriodRequest request) {
@@ -36,15 +39,41 @@ public class PayrollPeriodService {
         }
 
         // [RULE] Không cho tạo kỳ mới nếu vẫn còn kỳ đang OPEN
-        List<com.project.hrm.module.payroll.entity.PayrollPeriod> openPeriods = periodRepository.findAllByStatusOrderByYearDescMonthDesc(PayrollPeriodStatus.OPEN);
+        List<PayrollPeriod> openPeriods = periodRepository
+                .findAllByStatusOrderByYearDescMonthDesc(PayrollPeriodStatus.OPEN);
         if (!openPeriods.isEmpty()) {
-            throw new PayrollException("Vui lòng hoàn tất (PAID/CLOSE) kỳ lương " + 
-                openPeriods.get(0).getMonth() + "/" + openPeriods.get(0).getYear() + " hiện tại trước khi tạo kỳ mới.");
+            throw new PayrollException("Vui lòng hoàn tất (PAID/CLOSE) kỳ lương " +
+                    openPeriods.get(0).getMonth() + "/" + openPeriods.get(0).getYear()
+                    + " hiện tại trước khi tạo kỳ mới.");
         }
 
+        // [RULE] Khi tạo kỳ mới, tự động chuyển tất cả kỳ PAID → CLOSED (lưu trữ lịch sử)
+        List<PayrollPeriod> paidPeriods = periodRepository
+                .findAllByStatusOrderByYearDescMonthDesc(PayrollPeriodStatus.PAID);
+        if (!paidPeriods.isEmpty()) {
+            paidPeriods.forEach(p -> p.setStatus(PayrollPeriodStatus.CLOSED));
+            periodRepository.saveAll(paidPeriods);
+        }
+
+        // Bug Fix #4: Dùng startDate/endDate từ request nếu HR điền vào,
+        // nếu không thì tự tính theo tháng/năm (mặc định = ngày 1 và ngày cuối tháng).
         YearMonth yearMonth = YearMonth.of(request.getYear(), request.getMonth());
-        LocalDate startDate = yearMonth.atDay(1);
-        LocalDate endDate = yearMonth.atEndOfMonth();
+        LocalDate startDate = (request.getStartDate() != null)
+                ? request.getStartDate()
+                : yearMonth.atDay(1);
+        LocalDate endDate = (request.getEndDate() != null)
+                ? request.getEndDate()
+                : yearMonth.atEndOfMonth();
+
+        // [VALIDATION] startDate phải <= endDate
+        if (startDate.isAfter(endDate)) {
+            throw new PayrollException("Ngày bắt đầu (" + startDate + ") phải trước hoặc bằng ngày kết thúc (" + endDate + ").");
+        }
+
+        // [VALIDATION] startDate phải thuộc tháng/năm đã chọn
+        if (startDate.getMonthValue() != request.getMonth() || startDate.getYear() != request.getYear()) {
+            throw new PayrollException("Ngày bắt đầu phải nằm trong tháng " + request.getMonth() + "/" + request.getYear() + ".");
+        }
 
         PayrollPeriod period = PayrollPeriod.builder()
                 .month(request.getMonth())
@@ -55,10 +84,10 @@ public class PayrollPeriodService {
                 .build();
 
         period = periodRepository.save(period);
-        
-        com.project.hrm.module.payroll.entity.PayrollBatch batch = com.project.hrm.module.payroll.entity.PayrollBatch.builder()
+
+        PayrollBatch batch = PayrollBatch.builder()
                 .period(period)
-                .status(com.project.hrm.module.payroll.enums.PayrollBatchStatus.DRAFT)
+                .status(PayrollBatchStatus.DRAFT)
                 .note("Auto generated batch for " + request.getMonth() + "/" + request.getYear())
                 .build();
         batchRepository.save(batch);
@@ -104,8 +133,8 @@ public class PayrollPeriodService {
 
         return PayrollPeriodResponse.builder()
                 .periodId(p.getPeriodId())
-                .batchId(batchOpt.map(com.project.hrm.module.payroll.entity.PayrollBatch::getBatchId).orElse(null))
-                .batchStatus(batchOpt.map(com.project.hrm.module.payroll.entity.PayrollBatch::getStatus).orElse(null))
+                .batchId(batchOpt.map(PayrollBatch::getBatchId).orElse(null))
+                .batchStatus(batchOpt.map(PayrollBatch::getStatus).orElse(null))
                 .month(p.getMonth())
                 .year(p.getYear())
                 .startDate(p.getStartDate())
