@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import apiClient from "../../services/apiClient";
 import {
     getAllShifts,
     createSchedule,
@@ -10,22 +9,17 @@ import {
     deleteSchedulesByMonth,
     getMySchedules,
     updateSchedule,
+    searchEmployeesForSchedule,
     type ShiftResponse,
     type WorkScheduleResponse,
+    type ScheduleEmployee,
 } from "../../services/attendanceService";
-import type { PageResponse } from "../../types";
 
 // ============================================================================
 // KHU VỰC 1: KIỂU DỮ LIỆU & HÀM BỔ TRỢ (TYPES & HELPERS)
 // ============================================================================
 
-interface AttendanceEmployee {
-    id: string;
-    fullName: string;
-    employeeCode: string;
-    deptName: string;
-}
-type Employee = AttendanceEmployee;
+type Employee = ScheduleEmployee & { id: string };
 type Tab = "single" | "bulk" | "shifts" | "manage";
 
 const MONTH_NAMES = [
@@ -75,10 +69,8 @@ const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({ selectedEmployee, o
         const load = async () => {
             setLoading(true);
             try {
-                const res = await apiClient.get<PageResponse<Employee>>("/api/v1/attendance/work-schedules/employees", {
-                    params: { page: 0, size: 20, search: query || undefined },
-                });
-                setEmployees(res.data.content);
+                const data = await searchEmployeesForSchedule(query || undefined, 0, 20);
+                setEmployees(data.content);
             } catch { setEmployees([]); } finally { setLoading(false); }
         };
         const t = setTimeout(load, 250);
@@ -147,10 +139,8 @@ const EmployeeMultiSelector: React.FC<EmployeeMultiSelectorProps> = ({ selectedI
     const load = useCallback(async (q: string) => {
         setLoading(true);
         try {
-            const res = await apiClient.get<PageResponse<Employee>>("/api/v1/attendance/work-schedules/employees", {
-                params: { page: 0, size: 50, search: q || undefined },
-            });
-            setEmployees(res.data.content);
+            const data = await searchEmployeesForSchedule(q || undefined, 0, 50);
+            setEmployees(data.content);
         } catch { setEmployees([]); } finally { setLoading(false); }
     }, []);
 

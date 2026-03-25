@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import apiClient from "../../services/apiClient";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 // FIX 1: Removed the duplicate import block. Merged into a single import that
 // includes all required exports: getLeaveBalance and LeaveBalanceResponse.
@@ -17,7 +16,9 @@ import {
   offboardingService,
   type OffboardingResponse,
 } from "../../services/offboardingService";
-import {personnelChangeService, type PositionLookup} from "../../services/personnelChangeService";
+import { personnelChangeService } from "../../services/personnelChangeService";
+import { searchEmployees } from "../../services/employeeService";
+import { getLookupDepartments, getLookupPositions } from "../../services/lookupService";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type AppStatus = "Pending" | "Approved" | "Rejected";
@@ -203,10 +204,16 @@ const EmployeeSearch: React.FC<{
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await apiClient.get(
-          `/api/employees/search?q=${encodeURIComponent(query)}`,
+        const data = await searchEmployees(query);
+        setResults(
+          data.map((emp) => ({
+            employeeId: emp.employeeId,
+            employeeCode: emp.employeeCode,
+            fullName: emp.fullName,
+            position: emp.position,
+            deptName: emp.deptName,
+          }))
         );
-        setResults(res.data || []);
       } catch {
         setResults([]);
       } finally {
@@ -342,16 +349,16 @@ const Applications: React.FC = () => {
             }),
             datesAffected: o.expectedLastDay
               ? new Date(o.expectedLastDay).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
+                month: "short",
+                day: "numeric",
+              })
               : "N/A",
             status: (o.status === "PENDING"
               ? "Pending"
               : o.status === "CANCELLED"
                 ? "Rejected"
                 : "Approved") as AppStatus,
-              raw: {} as RequestRecordApi,
+            raw: {} as RequestRecordApi,
           }),
         );
 
@@ -375,21 +382,19 @@ const Applications: React.FC = () => {
 
   useEffect(() => {
     if (modal === "PersonnelChange") {
-      apiClient
-        .get("/api/lookup/departments")
-        .then((res) => setDepartments(res.data))
-        .catch(() => {});
-      apiClient
-        .get("/api/lookup/positions")
-        .then((res) => {
+      getLookupDepartments()
+        .then((data) => setDepartments(data))
+        .catch(() => { });
+      getLookupPositions()
+        .then((data) => {
           setPositions(
-              res.data?.map((p: PositionLookup) => ({
-                  id: p.id,
-                  name: p.name || p.title || "",
-              })),
+            data.map((p) => ({
+              id: p.id,
+              name: p.name || p.title || "",
+            }))
           );
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [modal]);
 
@@ -496,8 +501,8 @@ const Applications: React.FC = () => {
     } catch (error: any) {
       setSubmitError(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to submit request.",
+        error.message ||
+        "Failed to submit request.",
       );
     } finally {
       setSubmitting(false);
@@ -633,13 +638,13 @@ const Applications: React.FC = () => {
               {currentUser?.roles?.some((r) =>
                 ["HR", "MANAGER", "ROLE_HR", "ROLE_MANAGER"].includes(r),
               ) && (
-                <button
-                  onClick={() => handleDropdownItemClick("PersonnelChange")}
-                  className="w-full text-left px-4 py-2.5 text-sm font-semibold text-black hover:bg-indigo-50 transition-colors"
-                >
-                  Personnel Change
-                </button>
-              )}
+                  <button
+                    onClick={() => handleDropdownItemClick("PersonnelChange")}
+                    className="w-full text-left px-4 py-2.5 text-sm font-semibold text-black hover:bg-indigo-50 transition-colors"
+                  >
+                    Personnel Change
+                  </button>
+                )}
             </div>
           )}
         </div>
@@ -727,7 +732,7 @@ const Applications: React.FC = () => {
                           disabled={
                             r.status !== "Pending" || r.type === "Resignation"
 
-                          }className={`transition-colors ${r.status !== "Pending" || r.type === "Resignation" ? "text-gray-300 cursor-not-allowed" : "text-[#94a3b8] hover:text-[#0ea5e9]"}`}
+                          } className={`transition-colors ${r.status !== "Pending" || r.type === "Resignation" ? "text-gray-300 cursor-not-allowed" : "text-[#94a3b8] hover:text-[#0ea5e9]"}`}
                           title={
                             r.status === "Pending"
                               ? "Edit request"

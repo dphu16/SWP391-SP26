@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import {
     getAttendanceSummary,
     getDepartments,
+    searchEmployeesForSchedule,
     type AttendanceSummaryDTO,
     type DepartmentOption,
 } from "../../services/attendanceService";
-import apiClient from "../../services/apiClient";
 import EmployeeLogsModal from "./EmployeeLogsModal";
 
 // ── Helpers ──
@@ -99,10 +99,8 @@ const AttendanceSummary: React.FC = () => {
         const timer = setTimeout(async () => {
             setEmpLoading(true);
             try {
-                const res = await apiClient.get(`/api/v1/attendance/work-schedules/employees`, {
-                    params: { search: empSearch || undefined, page: 0, size: 30 },
-                });
-                setEmpOptions(res.data.content ?? []);
+                const data = await searchEmployeesForSchedule(empSearch || undefined, 0, 30);
+                setEmpOptions(data.content ?? []);
             } catch {
                 setEmpOptions([]);
             } finally {
