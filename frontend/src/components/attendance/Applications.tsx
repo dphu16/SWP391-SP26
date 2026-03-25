@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import apiClient from "../../services/apiClient";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 // FIX 1: Removed the duplicate import block. Merged into a single import that
 // includes all required exports: getLeaveBalance and LeaveBalanceResponse.
@@ -17,7 +16,9 @@ import {
   offboardingService,
   type OffboardingResponse,
 } from "../../services/offboardingService";
-import {personnelChangeService, type PositionLookup} from "../../services/personnelChangeService";
+import { personnelChangeService } from "../../services/personnelChangeService";
+import { searchEmployees } from "../../services/employeeService";
+import { getLookupDepartments, getLookupPositions } from "../../services/lookupService";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type AppStatus = "Pending" | "Approved" | "Rejected";
@@ -35,10 +36,10 @@ type ModalType =
 
 // FIX 4: Defined the AttendanceEmployee type that was used but never declared.
 interface AttendanceEmployee {
-  id: string;
+  employeeId: string;
   employeeCode: string;
   fullName: string;
-  position?: string;
+  position: string;
   deptName: string;
 }
 
@@ -194,14 +195,6 @@ const EmployeeSearch: React.FC<{
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<AttendanceEmployee[]>([]);
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
 
   useEffect(() => {
     if (!query.trim()) {
@@ -211,10 +204,16 @@ const EmployeeSearch: React.FC<{
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await apiClient.get(
-          `/api/employees/search?q=${encodeURIComponent(query)}`,
+        const data = await searchEmployees(query);
+        setResults(
+          data.map((emp) => ({
+            employeeId: emp.employeeId,
+            employeeCode: emp.employeeCode,
+            fullName: emp.fullName,
+            position: emp.position,
+            deptName: emp.deptName,
+          }))
         );
-        setResults(res.data.content || res.data || []);
       } catch {
         setResults([]);
       } finally {
@@ -225,66 +224,38 @@ const EmployeeSearch: React.FC<{
   }, [query]);
 
   return (
-    <div ref={ref} className="relative">
-      {value && !open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="w-full flex items-center justify-between border-2 border-[#0d9488]/50 bg-[#0d9488]/5 rounded-lg px-3 py-2.5 text-sm"
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[#0d9488] text-white flex items-center justify-center font-bold text-xs">
-              {value.fullName.charAt(0)}
-            </div>
-            <div className="text-left">
-              <div className="font-semibold text-[#0f172a]">{value.fullName}</div>
-              <div className="text-[10px] text-[#64748b]">{value.employeeCode} · {value.deptName}</div>
-            </div>
-          </div>
-          <svg className="w-4 h-4 text-[#64748b]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-      ) : (
-        <input
-          type="text"
-          value={query}
-          autoFocus={open}
-          onFocus={() => setOpen(true)}
-          onChange={(e) => {
-            onChange(null);
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
-          placeholder="Search employee name or code..."
-          className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-        />
-      )}
-      {open && results.length > 0 && (
+    <div className="relative">
+      <input
+        type="text"
+        value={value ? value.fullName : query}
+        onChange={(e) => {
+          onChange(null);
+          setQuery(e.target.value);
+        }}
+        placeholder="Search employee name or code..."
+        className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
+      />
+      {!value && results.length > 0 && (
         <ul className="absolute z-20 mt-1 w-full bg-white border border-[#e2e8f0] rounded-lg shadow-lg max-h-48 overflow-y-auto">
           {loading && (
             <li className="px-3 py-2 text-sm text-[#64748b]">Searching…</li>
           )}
           {results.map((emp) => (
             <li
-              key={emp.id}
+              key={emp.employeeId}
               onClick={() => {
                 onChange(emp);
                 setQuery("");
                 setResults([]);
-                setOpen(false);
               }}
-              className="px-3 py-2 flex items-center gap-2 text-sm hover:bg-[#f8fafc] cursor-pointer"
+              className="px-3 py-2 text-sm hover:bg-[#f8fafc] cursor-pointer"
             >
-              <div className="w-6 h-6 rounded-full bg-[#94a3b8]/20 flex items-center justify-center font-bold text-[10px]">
-                {emp.fullName.charAt(0)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="font-semibold text-[#1e293b] block truncate">{emp.fullName}</span>
-                <span className="text-[10px] text-[#94a3b8] block truncate">
-                  {emp.employeeCode} · {emp.deptName}
-                </span>
-              </div>
+              <span className="font-semibold text-[#1e293b]">
+                {emp.fullName}
+              </span>
+              <span className="ml-2 text-xs text-[#94a3b8]">
+                {emp.employeeCode} · {emp.deptName}
+              </span>
             </li>
           ))}
         </ul>
@@ -378,16 +349,16 @@ const Applications: React.FC = () => {
             }),
             datesAffected: o.expectedLastDay
               ? new Date(o.expectedLastDay).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
+                month: "short",
+                day: "numeric",
+              })
               : "N/A",
             status: (o.status === "PENDING"
               ? "Pending"
               : o.status === "CANCELLED"
                 ? "Rejected"
                 : "Approved") as AppStatus,
-              raw: {} as RequestRecordApi,
+            raw: {} as RequestRecordApi,
           }),
         );
 
@@ -411,21 +382,19 @@ const Applications: React.FC = () => {
 
   useEffect(() => {
     if (modal === "PersonnelChange") {
-      apiClient
-        .get("/api/lookup/departments")
-        .then((res) => setDepartments(res.data))
-        .catch(() => {});
-      apiClient
-        .get("/api/lookup/positions")
-        .then((res) => {
+      getLookupDepartments()
+        .then((data) => setDepartments(data))
+        .catch(() => { });
+      getLookupPositions()
+        .then((data) => {
           setPositions(
-              res.data?.map((p: PositionLookup) => ({
-                  id: p.id,
-                  name: p.name || p.title || "",
-              })),
+            data.map((p) => ({
+              id: p.id,
+              name: p.name || p.title || "",
+            }))
           );
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [modal]);
 
@@ -506,7 +475,7 @@ const Applications: React.FC = () => {
         if (!pcEmployee) throw new Error("Please select an employee.");
         if (!formData.reason) throw new Error("Please specify a reason.");
         await personnelChangeService.create({
-          employeeId: pcEmployee.id,
+          employeeId: pcEmployee.employeeId,
           changeType: formData.pcType as any,
           reason: formData.reason,
           newDepartmentId: formData.newDepartmentId || undefined,
@@ -532,8 +501,8 @@ const Applications: React.FC = () => {
     } catch (error: any) {
       setSubmitError(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to submit request.",
+        error.message ||
+        "Failed to submit request.",
       );
     } finally {
       setSubmitting(false);
@@ -667,15 +636,15 @@ const Applications: React.FC = () => {
                 Application for Resignation
               </button>
               {currentUser?.roles?.some((r) =>
-                ["MANAGER", "ROLE_MANAGER"].includes(r),
+                ["HR", "MANAGER", "ROLE_HR", "ROLE_MANAGER"].includes(r),
               ) && (
-                <button
-                  onClick={() => handleDropdownItemClick("PersonnelChange")}
-                  className="w-full text-left px-4 py-2.5 text-sm font-semibold text-black hover:bg-indigo-50 transition-colors"
-                >
-                  Personnel Change
-                </button>
-              )}
+                  <button
+                    onClick={() => handleDropdownItemClick("PersonnelChange")}
+                    className="w-full text-left px-4 py-2.5 text-sm font-semibold text-black hover:bg-indigo-50 transition-colors"
+                  >
+                    Personnel Change
+                  </button>
+                )}
             </div>
           )}
         </div>
@@ -763,7 +732,7 @@ const Applications: React.FC = () => {
                           disabled={
                             r.status !== "Pending" || r.type === "Resignation"
 
-                          }className={`transition-colors ${r.status !== "Pending" || r.type === "Resignation" ? "text-gray-300 cursor-not-allowed" : "text-[#94a3b8] hover:text-[#0ea5e9]"}`}
+                          } className={`transition-colors ${r.status !== "Pending" || r.type === "Resignation" ? "text-gray-300 cursor-not-allowed" : "text-[#94a3b8] hover:text-[#0ea5e9]"}`}
                           title={
                             r.status === "Pending"
                               ? "Edit request"
@@ -1145,6 +1114,22 @@ const Applications: React.FC = () => {
                       value={pcEmployee}
                       onChange={setPcEmployee}
                     />
+                    {pcEmployee && (
+                      <div className="mt-2 p-3 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                          {pcEmployee.fullName.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-indigo-700 text-sm">
+                            {pcEmployee.fullName}
+                          </p>
+                          <p className="text-xs text-indigo-600 opacity-80">
+                            {pcEmployee.employeeCode} · {pcEmployee.position} ·{" "}
+                            {pcEmployee.deptName}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-[#334155] mb-1.5">

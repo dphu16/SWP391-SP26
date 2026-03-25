@@ -173,6 +173,32 @@ export const updateSchedule = async (scheduleId: string, newShiftId: string): Pr
 };
 
 
+export interface ScheduleEmployee {
+    id: string;
+    fullName: string;
+    employeeCode: string;
+    deptName: string;
+}
+
+export interface ScheduleEmployeePageResponse {
+    content: ScheduleEmployee[];
+    totalElements: number;
+    totalPages: number;
+    number: number;
+    size: number;
+}
+
+export const searchEmployeesForSchedule = async (
+    search?: string,
+    page = 0,
+    size = 30
+): Promise<ScheduleEmployeePageResponse> => {
+    const response = await apiClient.get<ScheduleEmployeePageResponse>(
+        `/api/v1/attendance/work-schedules/employees`,
+        { params: { search: search || undefined, page, size } }
+    );
+    return response.data;
+};
 
 // ── Attendance Summary (BE endpoint: GET /api/v1/attendance/summary) ──
 
