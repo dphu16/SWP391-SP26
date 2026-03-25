@@ -66,5 +66,4 @@ public class Employee {
         @Builder.Default
         private List<Dependent> dependents = new ArrayList<>();
 
-
 }
