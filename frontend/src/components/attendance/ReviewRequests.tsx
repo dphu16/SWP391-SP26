@@ -728,8 +728,8 @@ const ReviewRequests: React.FC = () => {
                                             ) : (
                                                 <span
                                                     className={`px-2.5 py-1 rounded-md text-xs font-bold ${activeTab === "Approved"
-                                                            ? "bg-[#dcfce7] text-[#15803d]"
-                                                            : "bg-[#fee2e2] text-[#dc2626]"
+                                                        ? "bg-[#dcfce7] text-[#15803d]"
+                                                        : "bg-[#fee2e2] text-[#dc2626]"
                                                         }`}
                                                 >
                                                     {activeTab}
