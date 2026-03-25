@@ -5,6 +5,7 @@ import com.project.hrm.module.attendance.service.WorkScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public class WorkScheduleController {
     // ============================================================================
 
     // 1. Lấy lịch cá nhân của 1 nhân viên (Dùng cho màn hình View Schedule của FE)
+    @PreAuthorize("isAuthenticated()") // Ai đã đăng nhập cũng có thể xem lịch CỦA CHÍNH MÌNH
     @GetMapping("/my-schedule")
     public ResponseEntity<List<WorkScheduleResponse>> getMySchedule(
             @RequestParam(name = "employeeId") UUID employeeId,
@@ -36,18 +38,21 @@ public class WorkScheduleController {
     // ============================================================================
 
     // 2. Lấy TẤT CẢ lịch của toàn công ty
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     @GetMapping
     public ResponseEntity<List<WorkScheduleResponse>> getAllSchedules() {
         return ResponseEntity.ok(service.getAllSchedules());
     }
 
     // 3. Tạo 1 lịch mới (Thủ công từng ngày)
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     @PostMapping
     public ResponseEntity<WorkScheduleResponse> createSchedule(@RequestBody WorkScheduleRequest request) {
         return ResponseEntity.ok(service.createSchedule(request));
     }
 
     // 4. Tạo lịch hàng loạt (Từ ngày A đến ngày B)
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     @PostMapping("/bulk")
     public ResponseEntity<List<WorkScheduleResponse>> createBulkSchedules(@RequestBody BulkScheduleRequest request) {
         return ResponseEntity.ok(service.createBulkSchedules(
@@ -55,6 +60,7 @@ public class WorkScheduleController {
     }
 
     // 7. Xóa lịch của 1 ngày
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     @DeleteMapping("/{scheduleId}")
     public ResponseEntity<Void> deleteSchedule(@PathVariable(value = "scheduleId") UUID scheduleId) {
         service.deleteSchedule(scheduleId);
@@ -62,6 +68,7 @@ public class WorkScheduleController {
     }
 
     // 5. Cập nhật lịch làm việc
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     @PutMapping("/{scheduleId}")
     public ResponseEntity<WorkScheduleResponse> updateSchedule(
             @PathVariable(value = "scheduleId") UUID scheduleId,
@@ -70,6 +77,7 @@ public class WorkScheduleController {
     }
 
     // 8. Xóa toàn bộ lịch của 1 nhân viên trong 1 tháng
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     @DeleteMapping("/bulk-delete")
     public ResponseEntity<Void> deleteSchedulesByMonth(
             @RequestParam(name = "employeeId") UUID employeeId,
@@ -84,18 +92,21 @@ public class WorkScheduleController {
     // ============================================================================
 
     // 9. Lấy danh sách các loại Ca làm (Sáng, Chiều, Tối...)
+    @PreAuthorize("isAuthenticated()") // Nên cho mọi người lấy danh sách ca để có thể View
     @GetMapping("/shifts")
     public ResponseEntity<List<ShiftResponse>> getAllShifts() {
         return ResponseEntity.ok(service.getAllShifts());
     }
 
     // 10. Tạo một loại Ca làm mới
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     @PostMapping("/shifts")
     public ResponseEntity<ShiftResponse> createShift(@RequestBody ShiftRequest request) {
         return ResponseEntity.ok(service.createShift(request));
     }
 
     // 11. Xóa một loại Ca làm
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     @DeleteMapping("/shifts/{shiftId}")
     public ResponseEntity<Void> deleteShift(@PathVariable(value = "shiftId") UUID shiftId) {
         service.deleteShift(shiftId);
@@ -107,6 +118,7 @@ public class WorkScheduleController {
     // ============================================================================
 
     // 12. Lấy danh sách Nhân viên (Để FE xổ xuống trong ô Dropdown chọn người)
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     @GetMapping("/employees")
     public ResponseEntity<Page<AttendanceEmployeeResponse>> getEmployeesForScheduling(
             @RequestParam(name = "page", defaultValue = "0") int page,
