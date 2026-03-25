@@ -61,6 +61,14 @@ public class WorkScheduleController {
         return ResponseEntity.noContent().build();
     }
 
+    // 5. Cập nhật lịch làm việc
+    @PutMapping("/{scheduleId}")
+    public ResponseEntity<WorkScheduleResponse> updateSchedule(
+            @PathVariable(value = "scheduleId") UUID scheduleId,
+            @RequestParam(name = "newShiftId") UUID newShiftId) {
+        return ResponseEntity.ok(service.updateSchedule(scheduleId, newShiftId));
+    }
+
     // 8. Xóa toàn bộ lịch của 1 nhân viên trong 1 tháng
     @DeleteMapping("/bulk-delete")
     public ResponseEntity<Void> deleteSchedulesByMonth(

@@ -141,6 +141,18 @@ public class WorkScheduleService {
     }
 
     @Transactional
+    public WorkScheduleResponse updateSchedule(UUID scheduleId, UUID newShiftId) {
+        WorkSchedule existing = workScheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new RuntimeException("Work schedule not found: " + scheduleId));
+
+        Shift newShift = shiftRepository.findById(newShiftId)
+                .orElseThrow(() -> new RuntimeException("Shift not found: " + newShiftId));
+
+        existing.setShift(newShift);
+        return mapToResponse(workScheduleRepository.save(existing));
+    }
+
+    @Transactional
     public void deleteSchedulesByMonth(UUID employeeId, int month, int year) {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
