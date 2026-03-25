@@ -7,6 +7,7 @@ export type SidebarCapability =
   | "offboarding:manage"
   | "request:review"
   | "attendance:manage"
+  | "attendance:view"
   | "payroll:admin"
   | "performance:view"
   | "recruitment:view"
@@ -20,6 +21,7 @@ const capabilityRoles: Record<SidebarCapability, UserRole[]> = {
   "offboarding:manage": ["HR", "MANAGER"],
   "request:review": ["HR", "MANAGER"],
   "attendance:manage": ["HR", "MANAGER"],
+  "attendance:view": ["HR", "MANAGER", "EMPLOYEE", "INTERN", "PROBATION", "FINANCE", "MENTOR"],
   "payroll:admin": ["HR", "MANAGER", "FINANCE"],
   "performance:view": ["HR", "MANAGER", "EMPLOYEE", "MENTOR"],
   "recruitment:view": ["HR", "MANAGER"],
@@ -31,24 +33,24 @@ const routeCapabilityMap: Array<{
   prefix: string;
   capability: SidebarCapability;
 }> = [
-  { prefix: "/onboarding/hired", capability: "candidate:view" },
-  { prefix: "/onboarding/progress", capability: "onboarding:manage" },
-  { prefix: "/employees", capability: "employees:view" },
-  { prefix: "/offboarding/requests", capability: "offboarding:manage" },
-  { prefix: "/attendance/review", capability: "request:review" },
-  { prefix: "/attendance/view-schedule", capability: "attendance:manage" },
-  { prefix: "/attendance/create-schedule", capability: "attendance:manage" },
-  { prefix: "/attendance/summary", capability: "attendance:manage" },
-  { prefix: "/payroll/hr", capability: "payroll:admin" },
-  { prefix: "/payroll/tax-report", capability: "payroll:admin" },
-  { prefix: "/payroll/cnb-manager", capability: "cnb:manage" },
-  { prefix: "/payroll/my-trs", capability: "cnb:view" },
-  { prefix: "/performance", capability: "performance:view" },
-  { prefix: "/recruitment", capability: "recruitment:view" },
-  { prefix: "/recruitment/jobs", capability: "recruitment:view" },
-  { prefix: "/recruitment/requests", capability: "recruitment:view" },
-  { prefix: "/recruitment/schedules", capability: "recruitment:view" },
-];
+    { prefix: "/onboarding/hired", capability: "candidate:view" },
+    { prefix: "/onboarding/progress", capability: "onboarding:manage" },
+    { prefix: "/employees", capability: "employees:view" },
+    { prefix: "/offboarding/requests", capability: "offboarding:manage" },
+    { prefix: "/attendance/review", capability: "request:review" },
+    { prefix: "/attendance/view-schedule", capability: "attendance:view" },
+    { prefix: "/attendance/create-schedule", capability: "attendance:manage" },
+    { prefix: "/attendance/summary", capability: "attendance:manage" },
+    { prefix: "/payroll/hr", capability: "payroll:admin" },
+    { prefix: "/payroll/tax-report", capability: "payroll:admin" },
+    { prefix: "/payroll/cnb-manager", capability: "cnb:manage" },
+    { prefix: "/payroll/my-trs", capability: "cnb:view" },
+    { prefix: "/performance", capability: "performance:view" },
+    { prefix: "/recruitment", capability: "recruitment:view" },
+    { prefix: "/recruitment/jobs", capability: "recruitment:view" },
+    { prefix: "/recruitment/requests", capability: "recruitment:view" },
+    { prefix: "/recruitment/schedules", capability: "recruitment:view" },
+  ];
 
 export function allow(capability: SidebarCapability): UserRole[] {
   return capabilityRoles[capability];
