@@ -21,6 +21,7 @@ const JobRequestFormPage: React.FC = () => {
     const [loading, setLoading] = useState(isEdit);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [positions, setPositions] = useState<Position[]>([]);
     const [managerDeptId, setManagerDeptId] = useState<string | null>(null);
@@ -105,8 +106,8 @@ const JobRequestFormPage: React.FC = () => {
                 toastSuccess("Created", "Job request created successfully.");
             }
             navigate("/recruitment/job-requests");
-        } catch (err) {
-            toastError("Error", "Failed to save job request.");
+        } catch (err: any) {
+            setFormError(err?.response?.data?.message || "Failed to save job request.");
         } finally {
             setSubmitting(false);
         }
@@ -232,6 +233,12 @@ const JobRequestFormPage: React.FC = () => {
 
 
                     </div>
+                    {formError && (
+                        <div className="p-4 rounded-xl bg-red-50 border border-red-100 flex items-center gap-3 text-red-700 animate-fade-in text-sm font-medium">
+                            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            {formError}
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center justify-end gap-3">

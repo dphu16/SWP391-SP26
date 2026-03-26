@@ -97,9 +97,9 @@ const JobDetailPage: React.FC = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
                 {/* Main Content */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className="lg:col-span-6 space-y-6">
                     {/* Description Section */}
                     <section className="p-6 rounded-2xl border border-border-light bg-white shadow-card">
                         <h2 className="text-lg font-bold mb-4 text-text-primary-light flex items-center gap-2">
@@ -141,7 +141,7 @@ const JobDetailPage: React.FC = () => {
                 </div>
 
                 {/* Sidebar Info */}
-                <div className="space-y-6">
+                <div className="lg:col-span-4 space-y-6">
                     <section className="p-6 rounded-2xl border border-border-light bg-white shadow-card">
                         <h2 className="text-sm font-bold uppercase tracking-wider text-text-muted-light mb-4">
                             JOB DETAILS
@@ -171,7 +171,9 @@ const JobDetailPage: React.FC = () => {
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-text-muted-light uppercase">Salary</label>
-                                <p className="text-xl font-bold text-emerald-600 truncate" title={`$${job.minSalary} - $${job.maxSalary}`}>${job.minSalary} - ${job.maxSalary}</p>
+                                <p className="text-xl font-bold text-emerald-600" title={`${new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(job.minSalary)} - ${new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(job.maxSalary)}`}>
+                                    {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(job.minSalary)} - {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(job.maxSalary)}
+                                </p>
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-text-muted-light uppercase">HR Manager</label>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { jobService } from "../../services/jobService";
 import type { Job, JobStatus } from "../ui/types";
 import { useToast } from "../ui/Toast";
@@ -14,7 +14,8 @@ const JobListPage: React.FC = () => {
     const [jobs, setJobs] = useState<Job[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [selectedTab, setSelectedTab] = useState<"ALL" | "MY_JOB">("ALL");
+    const location = useLocation();
+    const [selectedTab, setSelectedTab] = useState<"ALL" | "MY_JOB">((location.state as any)?.tab || "ALL");
     const { user } = useAuth();
 
     const fetchJobs = useCallback(async () => {
@@ -221,7 +222,9 @@ const JobListPage: React.FC = () => {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    navigate(`/recruitment/cvs?jobId=${job.id}&deptId=${job.deptId}`);
+                                                    navigate(`/recruitment/cvs`, { 
+                                                        state: { jobId: job.id, deptId: job.deptId, status: "APPLIED" } 
+                                                    });
                                                 }}
                                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-text-secondary-light font-medium transition-all group/btn"
                                             >

@@ -90,7 +90,7 @@ const SchedulePage: React.FC = () => {
                 scheduleTime: interview.scheduleTime,
                 status: status,
                 feedback: feedbackText,
-                score: parseFloat(resultText) || 0
+                score: parseFloat(resultText)
             });
             // Reload list
             await fetchSchedule();
@@ -215,6 +215,7 @@ const SchedulePage: React.FC = () => {
                                                                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5 ml-1">Score (0-10)</label>
                                                                                     <input
                                                                                         type="number"
+                                                                                        required
                                                                                         step="0.1"
                                                                                         min="0"
                                                                                         max="10"
