@@ -1,7 +1,7 @@
 import apiClient from "./apiClient";
 import type { Application } from "../types";
 export const applicationService = {
-    getByJobId: (jobId: string, status?: string) => apiClient.get<Application[]>(`/api/app/job/${jobId}`, status ? { params: { status } } : undefined),
+    getByJobId: (jobId: string, status: string) => apiClient.get<Application[]>(`/api/app/job/${jobId}`, { params: { status } }),
 
     // Status can be updated via PUT /api/applications/{id}/status 
     updateStatus: (id: string, status: string) => apiClient.put<Application>(`/api/applications/${id}/status`, null, { params: { status } }),

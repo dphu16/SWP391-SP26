@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useLocation } from "react-router-dom";
 import { applicationService } from "../../services/applicationService";
 import type { Application } from "../../types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
@@ -7,8 +7,9 @@ import { useToast } from "../ui/Toast";
 
 const CVListPage: React.FC = () => {
     const [searchParams] = useSearchParams();
-    const jobId = searchParams.get("jobId");
-    const deptId = searchParams.get("deptId");
+    const location = useLocation();
+    const jobId = (location.state as any)?.jobId || searchParams.get("jobId");
+    const deptId = (location.state as any)?.deptId || searchParams.get("deptId");
 
     const { error: toastError, success: toastSuccess } = useToast();
 
@@ -17,7 +18,14 @@ const CVListPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [editingStatusId, setEditingStatusId] = useState<string | null>(null);
-    const [statusFilter, setStatusFilter] = useState<string>("APPLIED");
+    const [statusFilter, setStatusFilter] = useState<string>((location.state as any)?.status || searchParams.get("status") || "APPLIED");
+
+    useEffect(() => {
+        const s = (location.state as any)?.status || searchParams.get("status");
+        if (s && s !== statusFilter) {
+            setStatusFilter(s);
+        }
+    }, [searchParams, location.state]);
 
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [formMode, setFormMode] = useState<"CREATE" | "UPDATE">("CREATE");
@@ -416,6 +424,7 @@ const CVListPage: React.FC = () => {
                                                         {["APPLIED", "INTERVIEW", "OFFER", "HIRED"].includes(app.status || "APPLIED") && (
                                                             <Link
                                                                 to={`/recruitment/cvs/${app.id}`}
+                                                                state={{ jobId, deptId, status: statusFilter }}
                                                                 className="px-2 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-100 shadow-sm"
                                                                 title="Review Candidate CV"
                                                             >

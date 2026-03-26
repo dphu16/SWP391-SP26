@@ -28,6 +28,7 @@ const PublicJobDetail: React.FC = () => {
     const [job, setJob] = useState<Job | null>(null);
     const [loading, setLoading] = useState(true);
     const [showApplyForm, setShowApplyForm] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
 
     const [applicantName, setApplicantName] = useState("");
     const [applicantEmail, setApplicantEmail] = useState("");
@@ -43,7 +44,7 @@ const PublicJobDetail: React.FC = () => {
                 const res = await jobService.getPublicJobById(id);
                 setJob(res.data);
             } catch (err: any) {
-                toastError("Error", "Could not fetch job details.");
+                window.alert(`Error: ${err?.response?.data?.message || "Could not fetch job details."}`);
             } finally {
                 setLoading(false);
             }
@@ -62,6 +63,7 @@ const PublicJobDetail: React.FC = () => {
 
         try {
             setIsSubmitting(true);
+            setFormError(null);
 
             const formData = new FormData();
             formData.append("jobId", job.id);
@@ -78,8 +80,10 @@ const PublicJobDetail: React.FC = () => {
             setApplicantEmail("");
             setApplicantPhone("");
             setApplicantCv(null);
+            setShowApplyForm(false);
         } catch (err: any) {
-            toastError("Error", "Could not submit application. Please try again later.");
+            const errMsg = err?.response?.data?.message || "Could not submit application. Please try again later.";
+            setFormError(errMsg);
         } finally {
             setIsSubmitting(false);
         }
@@ -156,7 +160,7 @@ const PublicJobDetail: React.FC = () => {
                             <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            {job.minSalary ? `$${job.minSalary} - $${job.maxSalary}` : "Negotiable"}
+                            {job.minSalary ? `${new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(job.minSalary)} - ${new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(job.maxSalary)}` : "Negotiable"}
                         </span>
                         <span className="inline-flex items-center px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-sm font-medium">
                             <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -201,6 +205,14 @@ const PublicJobDetail: React.FC = () => {
                                 Apply for this position
                             </h3>
                             <p className="text-gray-500 mt-1">Please fill out the form below to submit your application.</p>
+                            {formError && (
+                                <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-100 flex items-center gap-3 text-red-700 animate-fade-in">
+                                    <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span className="text-sm font-medium leading-tight">{formError}</span>
+                                </div>
+                            )}
                         </div>
                         <form onSubmit={handleSubmitApplication} className="p-8 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -212,7 +224,7 @@ const PublicJobDetail: React.FC = () => {
                                         value={applicantName}
                                         onChange={(e) => setApplicantName(e.target.value)}
                                         className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                                        placeholder="John Doe"
+                                        placeholder="Nguyễn Văn A"
                                     />
                                 </div>
                                 <div className="space-y-1">
@@ -223,7 +235,7 @@ const PublicJobDetail: React.FC = () => {
                                         value={applicantEmail}
                                         onChange={(e) => setApplicantEmail(e.target.value)}
                                         className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                                        placeholder="john@example.com"
+                                        placeholder="nguyenvana@example.com"
                                     />
                                 </div>
                             </div>
@@ -237,7 +249,7 @@ const PublicJobDetail: React.FC = () => {
                                         value={applicantPhone}
                                         onChange={(e) => setApplicantPhone(e.target.value)}
                                         className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                                        placeholder="+1 234 567 890"
+                                        placeholder="0987654321"
                                     />
                                 </div>
                                 <div className="space-y-1">

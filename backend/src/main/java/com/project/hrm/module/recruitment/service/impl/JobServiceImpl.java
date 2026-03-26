@@ -138,11 +138,12 @@ public class JobServiceImpl implements JobService {
                 .orElseThrow(() ->
                         new RuntimeException("Job not found with id: " + id));
         UUID job = entity.getJobDetail().getJobDetailId();
+        jobRepository.delete(entity);
         JobDetail jobDetail = jobDetailRepository.findById(job)
                 .orElseThrow(() ->
                         new RuntimeException("Job not found with id: " + job));
         jobDetailRepository.delete(jobDetail);
-        jobRepository.delete(entity);
+
     }
 
     private void createJobDetail(JobDetail entity, CreateJobRequest request) {

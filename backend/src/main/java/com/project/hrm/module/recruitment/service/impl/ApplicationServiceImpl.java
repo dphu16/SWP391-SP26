@@ -46,6 +46,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Override
     public ApplicationResponse create(ApplicationRequest request) {
+
         Candidate candidate = candidateRepository.findByEmail(request.getEmail())
                 .orElseGet(() -> {
                     Candidate newCandidate = new Candidate();
@@ -60,6 +61,9 @@ public class ApplicationServiceImpl implements ApplicationService {
         if (applicationRepository.existsByCandidateIdAndJobId(
                 candidate.getId(), job.getId())) {
             app = applicationRepository.findByCandidateIdAndJobId(candidate.getId(), job.getId());
+            if(!app.getStatus().equals(ApplicationStatus.APPLIED)){
+                throw new RuntimeException("Exist this application has status "+app.getStatus());
+            }
             fileService.deletePDF(app.getCvUrl());
         }
         app.setJob(job);
@@ -220,7 +224,15 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     private void updateCandidate(Candidate candidate, ApplicationRequest request) {
-        candidate.setFullName(request.getFullName());
+        String name = request.getFullName();
+        if (!name.matches("[\\p{L} ]*")) {
+            throw new RuntimeException("Name exists digits or special char!");
+        }
+        String phone = request.getPhone();
+        if(!phone.matches("\\d{10}")){
+            throw new RuntimeException("Phone must enough 10 digits!");
+        }
+        candidate.setFullName(name);
         candidate.setPhone(request.getPhone());
         candidate.setCreatedAt(OffsetDateTime.now());
         candidateRepository.save(candidate);

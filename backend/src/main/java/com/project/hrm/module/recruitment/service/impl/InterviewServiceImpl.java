@@ -94,7 +94,7 @@ public class InterviewServiceImpl implements InterviewService {
             if (request.getScore() == null) {
                 throw new RuntimeException("Score is not empty!");
             }
-            if (request.getScore().doubleValue() <= 0
+            if (request.getScore().doubleValue() < 0
                     || request.getScore().doubleValue() > 10) {
                 throw new RuntimeException("Score must be between 0 and 10!");
             }

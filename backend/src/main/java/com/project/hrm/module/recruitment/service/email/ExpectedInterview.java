@@ -7,6 +7,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.format.DateTimeFormatter;
+
 @Service
 @RequiredArgsConstructor
 public class ExpectedInterview {
@@ -14,6 +16,7 @@ public class ExpectedInterview {
 
     @Async
     public void sendEmail(EmailRequest request) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
         String subject = "Interview Invitation - " + request.getTitle();
 
@@ -29,7 +32,7 @@ public class ExpectedInterview {
                 09:00 – 11:30
                 13:30 – 16:30
 
-                You can select interview time from %s ro %s
+                You can select interview time from %s to %s
 
                 If you have any questions, please contact:
 
@@ -40,8 +43,8 @@ public class ExpectedInterview {
                 """.formatted(
                 request.getCandidateName(),
                 request.getTitle(),
-                request.getStart(),
-                request.getEnd(),
+                request.getStart().format(formatter),
+                request.getEnd().format(formatter),
                 request.getHrName()
         );
 

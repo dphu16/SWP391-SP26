@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { applicationService } from "../../services/applicationService";
 import type { Application } from "../../types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
@@ -10,6 +10,8 @@ import { decodeJwt } from "../../utils/jwtDecode";
 const CVReviewPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const location = useLocation();
     const { error: toastError, success: toastSuccess } = useToast();
 
     const [app, setApp] = useState<Application | null>(null);
@@ -17,8 +19,19 @@ const CVReviewPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const handleBack = useCallback(() => {
+        const jId = (location.state as any)?.jobId || searchParams.get("jobId") || app?.jobId;
+        const dId = (location.state as any)?.deptId || searchParams.get("deptId");
+        // Determine the best status to return to (application's current status is most accurate)
+        const s = app?.status || (location.state as any)?.status || "APPLIED";
+
+        // Navigation with no URL parameters at all
+        navigate(`/recruitment/cvs`, { state: { jobId: jId, deptId: dId, status: s } });
+    }, [app, navigate, searchParams, location.state]);
+
     const [comment, setComment] = useState("");
     const [isReviewing, setIsReviewing] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
 
     // Date Limit form states
     const [showDateForm, setShowDateForm] = useState(false);
@@ -124,10 +137,10 @@ const CVReviewPage: React.FC = () => {
             if (result === "PASSED") {
                 setShowDateForm(true);
             } else {
-                navigate(-1);
+                handleBack();
             }
         } catch (err: any) {
-            toastError("Error", err?.response?.data?.message || err?.response?.data || "Failed to submit review");
+            setFormError(err?.response?.data?.message || err?.response?.data || "Failed to submit review");
         } finally {
             setIsReviewing(false);
         }
@@ -160,9 +173,9 @@ const CVReviewPage: React.FC = () => {
                 endTime: end.toISOString()
             });
             toastSuccess("Success", "Date limits saved successfully");
-            navigate(-1);
+            handleBack();
         } catch (err: any) {
-            toastError("Error", err?.response?.data?.message || err?.response?.data || "Failed to save date limits");
+            setFormError(err?.response?.data?.message || err?.response?.data || "Failed to save date limits");
         } finally {
             setIsSavingDates(false);
         }
@@ -191,7 +204,7 @@ const CVReviewPage: React.FC = () => {
             setInterviewTime("");
             fetchApp(); // Reload to fetch the newly created interview
         } catch (err: any) {
-            toastError("Error", err?.response?.data?.message || "Failed to schedule interview");
+            setFormError(err?.response?.data?.message || "Failed to schedule interview");
         } finally {
             setIsScheduling(false);
         }
@@ -207,7 +220,7 @@ const CVReviewPage: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm font-medium text-text-secondary-light mb-2">
-                        <button onClick={() => navigate(-1)} className="hover:text-primary transition-colors flex items-center gap-1">
+                        <button onClick={handleBack} className="hover:text-primary transition-colors flex items-center gap-1">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                             Back
                         </button>
@@ -293,6 +306,12 @@ const CVReviewPage: React.FC = () => {
                         )}
                     </div>
                 </section>
+                {formError && (
+                    <div className="p-4 rounded-2xl bg-red-50 border border-red-100 flex items-center gap-3 text-red-700 animate-fade-in shadow-sm">
+                        <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span className="text-sm font-semibold">{formError}</span>
+                    </div>
+                )}
 
                 {/* Review Form: Only show if status is APPLIED and (no review yet OR review is PASSED and we're in date-limit phase) */}
                 {app.status === "APPLIED" && (!reviewRef || reviewRef.result === "PASSED") ? (
@@ -539,8 +558,8 @@ const CVReviewPage: React.FC = () => {
                         </section>
                     </div>
                 )}
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 
