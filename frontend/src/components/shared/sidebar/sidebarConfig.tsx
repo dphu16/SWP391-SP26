@@ -22,6 +22,7 @@ export const sidebarConfig: SidebarSection[] = [
         label: "Candidate",
         path: "/onboarding/hired",
         icon: Icons.recruitment,
+        roles: ["HR"] as UserRole[],
       },
       {
         key: "employees",
