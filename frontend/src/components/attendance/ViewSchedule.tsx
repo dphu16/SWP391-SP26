@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getMySchedules, type WorkScheduleResponse } from "../../services/attendanceService";
-import { getToken } from "../../services/authService";
-import { decodeJwt } from "../../utils/jwtDecode";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 // ============================================================================
 // 1. CONFIGURATION & CONSTANTS (Cấu hình & Hằng số)
@@ -43,6 +42,7 @@ const ViewSchedule: React.FC = () => {
     const [schedules, setSchedules] = useState<WorkScheduleResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const currentUser = useCurrentUser();
 
     // ------------------------------------------------------------------------
     // B. LIFECYCLE & EFFECTS (Tự động chạy lấy dữ liệu)
@@ -53,9 +53,8 @@ const ViewSchedule: React.FC = () => {
             setError(null);
             try {
                 // Lấy thông tin User từ Token
-                const token = getToken();
-                const payload = token ? decodeJwt(token) : null;
-                const empId = payload?.employeeId;
+
+                const empId = currentUser?.employeeId;
 
                 // Xử lý lệch múi tháng (Java: 1=Jan, JS: 0=Jan)
                 const apiMonth = month + 1;
@@ -81,7 +80,7 @@ const ViewSchedule: React.FC = () => {
         };
 
         fetchSchedules();
-    }, [year, month]); // Chạy lại hàm này mỗi khi year hoặc month thay đổi
+    }, [year, month, currentUser?.employeeId]); // Chạy lại hàm này mỗi khi year hoặc month thay đổi
 
     // ------------------------------------------------------------------------
     // C. COMPUTED VALUES (Tính toán dữ liệu trước khi vẽ giao diện)
