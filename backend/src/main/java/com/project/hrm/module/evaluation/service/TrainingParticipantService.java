@@ -44,6 +44,10 @@ public class TrainingParticipantService {
         Employee employee = employeeRepository.findById(req.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
+        if (repository.existsByEmployee_EmployeeIdAndCourse_CourseUrl(req.getEmployeeId(), course.getCourseUrl())) {
+            throw new RuntimeException("This employee is already assigned to a course with this URL");
+        }
+
         participant.setCourse(course);
         participant.setEmployee(employee);
 
@@ -57,12 +61,9 @@ public class TrainingParticipantService {
             throw new RuntimeException("Deadline cannot be in the past");
         }
 
-        // Validation 2: Course Name/URL must be unique globally
-        if (courseRepository.existsByCourseName(req.getCourseName())) {
-            throw new RuntimeException("A course with this name already exists");
-        }
-        if (courseRepository.existsByCourseUrl(req.getCourseUrl())) {
-            throw new RuntimeException("A course with this URL already exists");
+        // Validation 2: Course URL must be unique per employee
+        if (repository.existsByEmployee_EmployeeIdAndCourse_CourseUrl(req.getEmployeeId(), req.getCourseUrl())) {
+            throw new RuntimeException("This employee is already assigned to a course with this URL");
         }
 
         Employee employee = employeeRepository.findById(req.getEmployeeId())
@@ -71,11 +72,15 @@ public class TrainingParticipantService {
         PerformanceReviews review = reviewRepository.findById(req.getReviewId())
                 .orElseThrow(() -> new RuntimeException("Review not found"));
 
-        TrainingCourse newCourse = new TrainingCourse();
-        newCourse.setCourseName(req.getCourseName());
-        newCourse.setCourseUrl(req.getCourseUrl());
-        newCourse.setPlatform(req.getPlatform());
-        TrainingCourse savedCourse = courseRepository.save(newCourse);
+        // Reuse existing course by URL if it exists, otherwise create new
+        TrainingCourse savedCourse = courseRepository.findFirstByCourseUrl(req.getCourseUrl())
+                .orElseGet(() -> {
+                    TrainingCourse newCourse = new TrainingCourse();
+                    newCourse.setCourseName(req.getCourseName());
+                    newCourse.setCourseUrl(req.getCourseUrl());
+                    newCourse.setPlatform(req.getPlatform());
+                    return courseRepository.save(newCourse);
+                });
 
         TrainingParticipant participant = new TrainingParticipant();
         participant.setEmployee(employee);

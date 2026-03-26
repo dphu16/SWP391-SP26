@@ -189,27 +189,18 @@ const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) =>
                 return;
             }
 
-            // 2. Fetch existing trainings to check for duplicates
+            // 2. Fetch existing trainings to check for duplicates for THIS employee
             const allCurrentTrainings = await kpiService.getAllTrainings();
-
-            const normalizedName = planTrainingForm.courseName.trim().toLowerCase();
             const normalizedUrl = planTrainingForm.courseUrl.trim().toLowerCase();
+            const employeeId = selectedEmployeeReview.employee.employeeId;
 
-            const isDuplicateName = allCurrentTrainings.some((t: any) =>
-                t.course?.courseName?.trim().toLowerCase() === normalizedName
-            );
-            const isDuplicateUrl = allCurrentTrainings.some((t: any) =>
+            const isDuplicateUrlForThisEmployee = allCurrentTrainings.some((t: any) =>
+                t.employeeId === employeeId &&
                 t.course?.courseUrl?.trim().toLowerCase() === normalizedUrl
             );
 
-            if (isDuplicateName) {
-                setPlanTrainingError(`The course name "${planTrainingForm.courseName}" already exists in the system.`);
-                setPlanTrainingLoading(false);
-                return;
-            }
-
-            if (isDuplicateUrl) {
-                setPlanTrainingError(`The course URL is already associated with another training.`);
+            if (isDuplicateUrlForThisEmployee) {
+                setPlanTrainingError(`Khóa học với URL này đã được giao cho nhân viên này rồi.`);
                 setPlanTrainingLoading(false);
                 return;
             }

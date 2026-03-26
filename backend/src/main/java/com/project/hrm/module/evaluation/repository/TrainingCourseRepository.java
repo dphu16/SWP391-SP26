@@ -10,5 +10,7 @@ import java.util.UUID;
 public interface TrainingCourseRepository extends JpaRepository<TrainingCourse, UUID> {
     boolean existsByCourseName(String name);
     boolean existsByCourseUrl(String url);
+    java.util.Optional<TrainingCourse> findFirstByCourseUrl(String url);
+    java.util.Optional<TrainingCourse> findFirstByCourseName(String name);
 }
 
