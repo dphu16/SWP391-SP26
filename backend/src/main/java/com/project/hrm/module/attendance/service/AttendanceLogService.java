@@ -87,6 +87,11 @@ public class AttendanceLogService {
         if (req.getCheckOutTime() != null)
             log.setCheckOut(req.getCheckOutTime());
 
+        // Lưu OT Hours nếu được truyền vào
+        if (req.getOtHours() != null) {
+            log.setOtHours(req.getOtHours());
+        }
+
         // Nếu Manager chủ động set status thì dùng, không thì tự động tính lại
         if (req.getStatus() != null) {
             log.setStatus(req.getStatus());
@@ -123,7 +128,8 @@ public class AttendanceLogService {
         LocalTime checkIn = log.getCheckIn();
         LocalTime checkOut = log.getCheckOut();
 
-        // [ĐÃ SỬA]: Kỷ luật thép, KHÔNG cộng thêm 5 phút grace period nữa. Trễ 1 giây là LATE.
+        // [ĐÃ SỬA]: Kỷ luật thép, KHÔNG cộng thêm 5 phút grace period nữa. Trễ 1 giây
+        // là LATE.
         boolean isLate = checkIn.isAfter(shift.getStartTime());
         boolean isEarly = checkOut.isBefore(shift.getEndTime());
 
@@ -194,9 +200,11 @@ public class AttendanceLogService {
                     totalOt = totalOt.add(log.getOtHours());
 
                 // [ĐÃ SỬA]: Đếm gộp trạng thái kép vào màn hình Summary
-                if (AttendanceStatus.LATE.equals(log.getStatus()) || AttendanceStatus.LATE_EARLY.equals(log.getStatus()))
+                if (AttendanceStatus.LATE.equals(log.getStatus())
+                        || AttendanceStatus.LATE_EARLY.equals(log.getStatus()))
                     lateDays++;
-                if (AttendanceStatus.EARLY_LEAVE.equals(log.getStatus()) || AttendanceStatus.LATE_EARLY.equals(log.getStatus()))
+                if (AttendanceStatus.EARLY_LEAVE.equals(log.getStatus())
+                        || AttendanceStatus.LATE_EARLY.equals(log.getStatus()))
                     earlyLeaveDays++;
                 if (AttendanceStatus.MISSING_PUNCH.equals(log.getStatus()))
                     missingPunchDays++;
