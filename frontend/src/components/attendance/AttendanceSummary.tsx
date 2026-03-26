@@ -74,6 +74,10 @@ const AttendanceSummary: React.FC = () => {
     const [sortField, setSortField] = useState<keyof AttendanceSummaryDTO>("fullName");
     const [sortAsc, setSortAsc] = useState(true);
 
+    // ── Pagination ──
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
+
     // ── Edit logs ──
     const [editingEmployee, setEditingEmployee] = useState<{ id: string; name: string } | null>(null);
 
@@ -132,6 +136,7 @@ const AttendanceSummary: React.FC = () => {
             setAppliedYear(filterYear);
             setAppliedDept(filterDeptId);
             setPhase("result");
+            setCurrentPage(1); // Reset to first page on new search
         } catch (err) {
             console.error("Failed to fetch attendance summary:", err);
             const msg =
@@ -156,6 +161,12 @@ const AttendanceSummary: React.FC = () => {
             return sortAsc ? aNum - bNum : bNum - aNum;
         });
     }, [summaryData, sortField, sortAsc]);
+
+    const totalPages = Math.ceil(sortedData.length / ITEMS_PER_PAGE);
+    const displayedData = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return sortedData.slice(start, start + ITEMS_PER_PAGE);
+    }, [sortedData, currentPage]);
 
     const handleSort = (field: keyof AttendanceSummaryDTO) => {
         if (sortField === field) {
@@ -439,12 +450,12 @@ const AttendanceSummary: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {sortedData.map((row, idx) => (
+                                        {displayedData.map((row, idx) => (
                                             <tr
                                                 key={row.employeeId}
                                                 className="border-t border-[#f1f5f9] hover:bg-[#f8fafc] transition-colors"
                                             >
-                                                <td className="px-5 py-3.5 text-[#94a3b8] text-xs">{idx + 1}</td>
+                                                <td className="px-5 py-3.5 text-[#94a3b8] text-xs">{(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}</td>
                                                 <td className="px-5 py-3.5 font-mono text-xs text-[#64748b]">{row.employeeCode || "—"}</td>
                                                 <td className="px-5 py-3.5 font-medium text-[#0f172a]">{row.fullName}</td>
                                                 <td className="px-5 py-3.5">
@@ -527,6 +538,44 @@ const AttendanceSummary: React.FC = () => {
                                         </tr>
                                     </tfoot>
                                 </table>
+                            </div>
+                        )}
+
+                        {/* ── Pagination ── */}
+                        {summaryData.length > 0 && (
+                            <div className="flex justify-between items-center px-6 py-4 border-t border-[#f1f5f9] bg-[#f8fafc]">
+                                <p className="text-sm text-[#64748b]">
+                                    Showing{" "}
+                                    <span className="font-bold text-[#0f172a]">
+                                        {summaryData.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1}
+                                    </span>{" "}
+                                    to{" "}
+                                    <span className="font-bold text-[#0f172a]">
+                                        {Math.min(currentPage * ITEMS_PER_PAGE, summaryData.length)}
+                                    </span>{" "}
+                                    of{" "}
+                                    <span className="font-bold text-[#0f172a]">{summaryData.length}</span>{" "}
+                                    employees
+                                </p>
+                                <div className="flex gap-2">
+                                    <button
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                        className="px-3 py-1.5 rounded-lg border border-[#e2e8f0] text-sm text-[#334155] hover:bg-white disabled:text-[#94a3b8] disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors shadow-sm"
+                                    >
+                                        Previous
+                                    </button>
+                                    <div className="flex items-center px-2 text-sm font-medium text-[#64748b]">
+                                        Page {currentPage} of {totalPages}
+                                    </div>
+                                    <button
+                                        disabled={currentPage === totalPages || totalPages === 0}
+                                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                        className="px-3 py-1.5 rounded-lg border border-[#e2e8f0] text-sm text-[#334155] hover:bg-white disabled:text-[#94a3b8] disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors shadow-sm"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
