@@ -10,7 +10,7 @@ import {
 } from "../../services/attendanceService";
 
 // Backend status values from AttendanceLogService.evaluateAttendance()
-type AttendanceStatus = "MISSING_PUNCH" | "LATE" | "EARLY_LEAVE" | "VALID" | null;
+type AttendanceStatus = "MISSING_PUNCH" | "LATE" | "EARLY_LEAVE" | "VALID" | "LATE_EARLY" | null;
 
 // Map backend status → display config
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
@@ -18,6 +18,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
     LATE: { label: "LATE", color: "#dc2626", bg: "#fef2f2", icon: "⚠" },
     EARLY_LEAVE: { label: "EARLY LEAVE", color: "#b45309", bg: "#fef3c7", icon: "⚠" },
     MISSING_PUNCH: { label: "AWAITING CHECK-OUT", color: "#0369a1", bg: "#e0f2fe", icon: "⏳" },
+    LATE_EARLY: { label: "LATE & EARLY", color: "#991b1b", bg: "#fee2e2", icon: "⚠" }, // Thêm dòng này (màu đỏ đậm hơn)
 };
 
 const CheckInOut: React.FC = () => {
@@ -88,7 +89,7 @@ const CheckInOut: React.FC = () => {
         const shiftStart = todaySchedule.shift.startTime; // "HH:mm:ss"
         const [sh, sm] = shiftStart.split(":").map(Number);
         const [ch, cm, cs] = checkInTime.split(":").map(Number);
-        const shiftMinutes = sh * 60 + sm + 5; // grace 5 minutes
+        const shiftMinutes = sh * 60 + sm;
         const checkMinutes = ch * 60 + cm + (cs || 0) / 60;
         return checkMinutes > shiftMinutes;
     }, [checkInTime, todaySchedule]);
@@ -346,7 +347,7 @@ const CheckInOut: React.FC = () => {
                                                 </button>
                                                 <p className="text-center text-[#64748b] text-sm">
                                                     Shift starts at <span className="font-bold text-[#0d9488]">{todaySchedule.shift.startTime.substring(0, 5)}</span>
-                                                    <span className="text-[#94a3b8]"> (5-min grace period)</span>
+
                                                 </p>
                                             </>
                                         ) : (

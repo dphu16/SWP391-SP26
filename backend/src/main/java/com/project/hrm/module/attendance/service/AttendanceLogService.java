@@ -123,10 +123,16 @@ public class AttendanceLogService {
         LocalTime checkIn = log.getCheckIn();
         LocalTime checkOut = log.getCheckOut();
 
-        // Evaluate Late / Early Leave (5-minute grace period for check-in)
-        if (checkIn.isAfter(shift.getStartTime().plusMinutes(5))) {
+        // [ĐÃ SỬA]: Kỷ luật thép, KHÔNG cộng thêm 5 phút grace period nữa. Trễ 1 giây là LATE.
+        boolean isLate = checkIn.isAfter(shift.getStartTime());
+        boolean isEarly = checkOut.isBefore(shift.getEndTime());
+
+        // [ĐÃ SỬA]: Kiểm tra trạng thái kép (Vừa đi muộn vừa về sớm)
+        if (isLate && isEarly) {
+            log.setStatus(AttendanceStatus.LATE_EARLY);
+        } else if (isLate) {
             log.setStatus(AttendanceStatus.LATE);
-        } else if (checkOut.isBefore(shift.getEndTime())) {
+        } else if (isEarly) {
             log.setStatus(AttendanceStatus.EARLY_LEAVE);
         } else {
             log.setStatus(AttendanceStatus.VALID);
@@ -186,9 +192,11 @@ public class AttendanceLogService {
                     totalHours = totalHours.add(log.getWorkingHours());
                 if (log.getOtHours() != null)
                     totalOt = totalOt.add(log.getOtHours());
-                if (AttendanceStatus.LATE.equals(log.getStatus()))
+
+                // [ĐÃ SỬA]: Đếm gộp trạng thái kép vào màn hình Summary
+                if (AttendanceStatus.LATE.equals(log.getStatus()) || AttendanceStatus.LATE_EARLY.equals(log.getStatus()))
                     lateDays++;
-                if (AttendanceStatus.EARLY_LEAVE.equals(log.getStatus()))
+                if (AttendanceStatus.EARLY_LEAVE.equals(log.getStatus()) || AttendanceStatus.LATE_EARLY.equals(log.getStatus()))
                     earlyLeaveDays++;
                 if (AttendanceStatus.MISSING_PUNCH.equals(log.getStatus()))
                     missingPunchDays++;

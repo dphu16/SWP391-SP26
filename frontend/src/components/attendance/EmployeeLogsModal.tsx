@@ -19,6 +19,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
     VALID: { label: "ON TIME", color: "#15803d", bg: "#dcfce7" },
     LATE: { label: "LATE", color: "#dc2626", bg: "#fef2f2" },
     EARLY_LEAVE: { label: "EARLY LEAVE", color: "#b45309", bg: "#fef3c7" },
+    LATE_EARLY: { label: "LATE & EARLY", color: "#991b1b", bg: "#fee2e2" }, // [ĐÃ THÊM]: Cấu hình màu cho trạng thái kép
     MISSING_PUNCH: { label: "AWAITING CHECK-OUT", color: "#0369a1", bg: "#e0f2fe" },
 };
 
@@ -174,6 +175,7 @@ const EmployeeLogsModal: React.FC<EmployeeLogsModalProps> = ({
                                                         <option value="VALID">VALID</option>
                                                         <option value="LATE">LATE</option>
                                                         <option value="EARLY_LEAVE">EARLY LEAVE</option>
+                                                        <option value="LATE_EARLY">LATE & EARLY</option> {/* [ĐÃ THÊM]: Option mới trong Dropdown */}
                                                         <option value="MISSING_PUNCH">MISSING PUNCH</option>
                                                     </select>
                                                 ) : (
