@@ -144,8 +144,8 @@ public class JobRequestServiceImpl implements JobRequestService {
     }
 
     private JobRequestResponse uploadData(JobRequest entity, JobRequestRequest request){
-        if (request.getQuantity() <= 0) {
-            throw new IllegalArgumentException("Quantity must be greater than 0");
+        if (request.getQuantity() < 1 || request.getQuantity() > 100) {
+            throw new RuntimeException("Quantity must be between 1 and 100!");
         }
 
         if (request.getDeptId() != null) {
