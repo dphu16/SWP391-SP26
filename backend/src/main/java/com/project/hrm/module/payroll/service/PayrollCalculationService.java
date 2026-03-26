@@ -11,6 +11,8 @@ import com.project.hrm.module.payroll.repository.*;
 import com.project.hrm.module.payroll.util.VietnamPublicHoliday;
 import com.project.hrm.module.attendance.repository.AttendanceLogRepository;
 import com.project.hrm.module.attendance.dto.AttendanceAggregationDTO;
+import com.project.hrm.module.attendance.entity.AttendanceLog;
+import com.project.hrm.module.attendance.enums.AttendanceStatus;
 import com.project.hrm.module.evaluation.repository.PerformanceReviewsRepository;
 import com.project.hrm.module.evaluation.repository.PerformanceCyclesRepository;
 import com.project.hrm.module.evaluation.entity.PerformanceCycles;
@@ -134,19 +136,35 @@ public class PayrollCalculationService {
                 .multiply(attendance.getTotalOtHours())
                 .setScale(2, RoundingMode.HALF_UP);
 
-        // 4. Lọc ngày vắng: chỉ trừ những ngày ABSENT không phải ngày lễ quốc gia
-        List<LocalDate> absentDates = attendanceLogRepository.findAbsentDates(employeeId, startDate, calculationDate);
+        // 4. Lọc và tính khấu trừ theo giờ thực tế cho các trạng thái đi muộn, về sớm, thiếu thẻ
+        List<AttendanceLog> periodLogs = attendanceLogRepository.findByEmployeeIdAndDateBetween(employeeId, startDate, calculationDate);
         Set<LocalDate> publicHolidays = VietnamPublicHoliday.getHolidays(startDate.getYear());
 
-        long holidayAbsences = absentDates.stream().filter(publicHolidays::contains).count();
-        long unpaidAbsentDays = Math.max(0, absentDates.size() - holidayAbsences);
+        BigDecimal totalShortfallHours = BigDecimal.ZERO;
+        for (AttendanceLog attLog : periodLogs) {
+            if (!publicHolidays.contains(attLog.getDate())) {
+                AttendanceStatus status = attLog.getStatus();
+                if (status == AttendanceStatus.LATE ||
+                    status == AttendanceStatus.EARLY_LEAVE ||
+                    status == AttendanceStatus.LATE_EARLY ||
+                    status == AttendanceStatus.MISSING_PUNCH) {
 
-        BigDecimal dailyRate = baseSalary.divide(BigDecimal.valueOf(standardWorkingDays), 2, RoundingMode.HALF_UP);
-        BigDecimal absentDeduction = dailyRate.multiply(BigDecimal.valueOf(unpaidAbsentDays))
+                    BigDecimal working = attLog.getWorkingHours() != null ? attLog.getWorkingHours() : BigDecimal.ZERO;
+                    BigDecimal shortfall = BigDecimal.valueOf(8.0).subtract(working);
+                    if (shortfall.compareTo(BigDecimal.ZERO) > 0) {
+                        totalShortfallHours = totalShortfallHours.add(shortfall);
+                    }
+                }
+            }
+        }
+
+        BigDecimal absentDeduction = hourlyRate.multiply(totalShortfallHours)
                 .setScale(2, RoundingMode.HALF_UP);
 
-        log.info("Nhân viên {}: {} ngày vắng, {} ngày lễ (không trừ), {} ngày trừ lương",
-                employeeId, absentDates.size(), holidayAbsences, unpaidAbsentDays);
+        BigDecimal totalAbsentEquivalent = totalShortfallHours.divide(BigDecimal.valueOf(8), 2, RoundingMode.HALF_UP);
+
+        log.info("Nhân viên {}: Thiếu tổng cộng {} giờ làm việc (không tính ngày lễ), khấu trừ: {}",
+                employeeId, totalShortfallHours, absentDeduction);
 
         // 5. Thưởng KPI
         BigDecimal kpiBonus = BigDecimal.ZERO;
@@ -207,7 +225,7 @@ public class PayrollCalculationService {
                 .period(batch.getPeriod())
                 .employee(employee)
                 .totalOtHours(attendance.getTotalOtHours())
-                .totalAbsentDays(BigDecimal.valueOf(attendance.getTotalAbsentDays()))
+                .totalAbsentDays(totalAbsentEquivalent)
                 .baseSalary(baseSalary)
                 .otPay(otPay)
                 .absentDeduction(absentDeduction)

@@ -781,7 +781,7 @@ const HRPayrollView: React.FC = () => {
                                 {/* 5 */}
                                 <th className="w-[8%] px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">OT Pay</th>
                                 {/* 6 */}
-                                <th className="w-[7%] px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Absent</th>
+                                <th className="w-[7%] px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Penalty (H)</th>
                                 {/* 7 */}
                                 <th className="w-[8%] px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Deduct</th>
                                 {/* 8 */}
@@ -861,11 +861,11 @@ const HRPayrollView: React.FC = () => {
                                                 )}
                                             </td>
 
-                                            {/* 6 — Absent (Day) */}
+                                            {/* 6 — Penalty (H) */}
                                             <td className="px-5 py-4 text-center">
                                                 {p.totalAbsentDays > 0 ? (
                                                     <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[11px] font-black bg-rose-50 text-rose-600 border border-rose-100">
-                                                        {p.totalAbsentDays}D
+                                                        {(p.totalAbsentDays * 8).toFixed(1)}H
                                                     </span>
                                                 ) : (
                                                     <span className="text-[#cbd5e1] font-medium">—</span>

@@ -347,7 +347,7 @@ const EmployeePayrollView: React.FC = () => {
       </tr>
 
       ${sectionHeader('Deductions', '#dc2626', '#fff1f2')}
-      ${d.totalAbsentDays > 0 ? row(`Absent Deduction (${d.totalAbsentDays} days)`, '-' + fmt(d.absentDeduction), '#dc2626') : ''}
+      ${d.totalAbsentDays > 0 ? row(`Attendance Penalty (${(d.totalAbsentDays * 8).toFixed(1)} hours)`, '-' + fmt(d.absentDeduction), '#dc2626') : ''}
       
       ${row('Tax (PIT)', taxDetailItems.length === 0 ? '-' + fmt(d.taxAmount) : '', '#dc2626')}
       ${taxDetailItems.map(i => row('↳ ' + i.itemName, '-' + fmt(i.amount), '#dc2626', true)).join('')}
@@ -610,7 +610,7 @@ const EmployeePayrollView: React.FC = () => {
                                             </tr>
                                             {(detail.absentDeduction ?? 0) > 0 && (
                                                 <tr className="hover:bg-slate-50 transition-colors">
-                                                    <td className="px-6 py-3.5 font-medium text-slate-700">Absent Deduction ({detail.totalAbsentDays} days)</td>
+                                                    <td className="px-6 py-3.5 font-medium text-slate-700">Attendance Penalty ({(detail.totalAbsentDays * 8).toFixed(1)} hrs)</td>
                                                     <td className="px-6 py-3.5 text-right font-semibold text-rose-600">-{fmt(detail.absentDeduction)}</td>
                                                 </tr>
                                             )}
