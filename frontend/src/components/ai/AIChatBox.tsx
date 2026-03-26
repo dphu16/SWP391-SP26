@@ -21,19 +21,6 @@ interface ExtractedContract {
   positionName?: string;
 }
 
-/**
- * State machine for the offboard flow:
- *   null               → not in offboard flow
- *   "awaiting_confirm" → AI asked "Bạn có chắc muốn offboard [tên]?"
- *   "awaiting_reason"  → user confirmed, AI asked "Vui lòng cho biết lý do?"
- */
-type OffboardStep = "awaiting_confirm" | "awaiting_reason" | null;
-
-interface OffboardState {
-  step: OffboardStep;
-  employeeName: string;
-  employeeId: string | null;
-}
 
 type ChatMessage = {
   id: string;
@@ -45,58 +32,11 @@ type ChatMessage = {
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
-/** Shared Vietnamese diacritic normalizer used by both search and offboard intent detection. */
-function normalizeVietnamese(input: string): string {
-  if (!input) return "";
-  const nfd = input.normalize("NFD");
-  return nfd
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[đĐ]/g, (c) => (c === "đ" ? "d" : "D"))
-    .toLowerCase()
-    .trim();
-}
 
 function uid(): string {
   return Math.random().toString(36).slice(2, 9);
 }
 
-// ─── Offboard intent detector ─────────────────────────────────────────────────
-
-const OFFBOARD_PATTERNS = [
-  /xoa\s+nhan\s+vien\s+(.+)/i,
-  /offboard\s+(.+)/i,
-  /cho\s+nghi\s+viec\s+nhan\s+vien\s+(.+)/i,
-  /cho\s+nghi\s+viec\s+(.+)/i,
-  /nghi\s+viec\s+nhan\s+vien\s+(.+)/i,
-  /remove\s+employee\s+(.+)/i,
-  /terminate\s+employee\s+(.+)/i,
-  /sa\s+thai\s+(.+)/i,
-];
-
-/**
- * Returns the extracted employee name if the message is an offboard intent,
- * otherwise returns null.
- */
-function detectOffboardIntent(message: string): string | null {
-  const normalized = normalizeVietnamese(message);
-  for (const pattern of OFFBOARD_PATTERNS) {
-    const match = normalized.match(pattern);
-    if (match) {
-      // Return the original casing of the name from the original input
-      // by mapping the normalized match back to the original string.
-      const normalizedName = match[1].trim();
-      if (normalizedName.length > 0) {
-        // Try to find the original name in the original message
-        const originalWords = message.split(/\s+/);
-        const nameWordCount = normalizedName.split(/\s+/).length;
-        // Take last N words from the original message matching match length
-        const originalName = originalWords.slice(-nameWordCount).join(" ");
-        return originalName || match[1].trim();
-      }
-    }
-  }
-  return null;
-}
 
 // ─── SVG Icons (Lucide-style) ─────────────────────────────────────────────────
 
@@ -160,14 +100,6 @@ const TrashIcon = () => (
   </svg>
 );
 
-const UserXIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-    <circle cx="8.5" cy="7" r="4" />
-    <line x1="18" y1="8" x2="23" y2="13" />
-    <line x1="23" y1="8" x2="18" y2="13" />
-  </svg>
-);
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -287,7 +219,7 @@ export default function AIChatBox() {
       {
         id: uid(),
         role: "ai",
-        content: "Xin chào! Tôi là trợ lý AI của HRM Pro. Tôi có thể giúp bạn trả lời câu hỏi, quét hợp đồng để tạo nhân viên mới, hoặc xử lý yêu cầu offboard. Hãy bắt đầu nào!",
+        content: "Xin chào! Tôi là trợ lý AI của HRM. Tôi có thể giúp bạn trả lời câu hỏi về thông tin của nhân viên, tạo nhân viên mới. Hãy bắt đầu nào!",
       },
     ];
   });
@@ -308,12 +240,6 @@ export default function AIChatBox() {
     return localStorage.getItem("hrm_ai_activeFileBase64");
   });
 
-  // ── Offboard flow state ──
-  const [offboardState, setOffboardState] = useState<OffboardState>({
-    step: null,
-    employeeName: "",
-    employeeId: null,
-  });
 
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [positions, setPositions] = useState<{ id: string; title: string }[]>([]);
@@ -364,142 +290,7 @@ export default function AIChatBox() {
     fetchOptions();
   }, []);
 
-  // ── Offboard: look up employee by name and return their ID ──
-  async function findEmployeeIdByName(name: string): Promise<{ id: string; fullName: string } | null> {
-    try {
-      const { data } = await apiClient.get("/api/employees/search", {
-        params: { fullName: name, size: 5 },
-      });
-      const content: Array<{ id: string; fullName: string }> = data.content ?? [];
-      if (content.length === 0) return null;
 
-      // Try exact match first (normalized), then fall back to first result
-      const normalizedTarget = normalizeVietnamese(name);
-      const exact = content.find(
-        (e) => normalizeVietnamese(e.fullName) === normalizedTarget
-      );
-      return exact ?? content[0];
-    } catch {
-      return null;
-    }
-  }
-
-  // ── Offboard: call the propose offboarding endpoint ──
-  async function proposeOffboarding(employeeId: string, reason: string): Promise<void> {
-    // Use "MANAGER_PROPOSED" as the offboarding type for AI-initiated offboards
-    await apiClient.post(`/api/offboarding/propose/${employeeId}`, {
-      type: "MANAGER_PROPOSED",
-      reason,
-    });
-  }
-
-  // ── Handle the multi-step offboard conversation ──
-  async function handleOffboardFlow(userMsg: string): Promise<boolean> {
-    const { step, employeeName, employeeId } = offboardState;
-
-    // Step 1 — we just asked "bạn có chắc không?", now reading the confirmation
-    if (step === "awaiting_confirm") {
-      const norm = normalizeVietnamese(userMsg);
-      const confirmed =
-        norm === "co" ||
-        norm === "chac" ||
-        norm === "dong y" ||
-        norm === "xac nhan" ||
-        norm === "yes" ||
-        norm === "ok" ||
-        norm === "dung" ||
-        norm.includes("co chac") ||
-        norm.includes("xac nhan");
-
-      if (!confirmed) {
-        // User cancelled
-        setOffboardState({ step: null, employeeName: "", employeeId: null });
-        addAiMessage("Đã hủy yêu cầu offboard. Có điều gì khác tôi có thể giúp bạn không?");
-        return true;
-      }
-
-      // Confirmed — ask for reason
-      setOffboardState((prev) => ({ ...prev, step: "awaiting_reason" }));
-      addAiMessage(`Vui lòng cho biết lý do nghỉ việc của nhân viên **${employeeName}**?`);
-      return true;
-    }
-
-    // Step 2 — we have the reason, now call the API
-    if (step === "awaiting_reason") {
-      const reason = userMsg.trim();
-      if (reason.length < 3) {
-        addAiMessage("Lý do quá ngắn. Vui lòng cung cấp lý do cụ thể hơn để tiến hành offboard.");
-        return true;
-      }
-
-      setLoading(true);
-      try {
-        let resolvedEmployeeId = employeeId;
-
-        // If we don't have the ID yet, search for the employee
-        if (!resolvedEmployeeId) {
-          const found = await findEmployeeIdByName(employeeName);
-          if (!found) {
-            setOffboardState({ step: null, employeeName: "", employeeId: null });
-            addAiMessage(`Không tìm thấy nhân viên **${employeeName}** trong hệ thống. Vui lòng kiểm tra lại tên.`);
-            setLoading(false);
-            return true;
-          }
-          resolvedEmployeeId = found.id;
-        }
-
-        await proposeOffboarding(resolvedEmployeeId, reason);
-        setOffboardState({ step: null, employeeName: "", employeeId: null });
-        addAiMessage(
-          `Đã tạo yêu cầu offboard cho nhân viên **${employeeName}** thành công!\n\n` +
-          `Lý do: ${reason}\n\n` +
-          `Yêu cầu đã được gửi và đang chờ Manager xem xét.`
-        );
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : "Unknown error";
-        addAiMessage(`Lỗi khi tạo yêu cầu offboard: ${errMsg}`);
-        setOffboardState({ step: null, employeeName: "", employeeId: null });
-      } finally {
-        setLoading(false);
-      }
-      return true;
-    }
-
-    // Not in any offboard step — check if this message IS a new offboard intent
-    const detectedName = detectOffboardIntent(userMsg);
-    if (detectedName) {
-      setLoading(true);
-      try {
-        // Pre-fetch employee to give better confirmation message
-        const found = await findEmployeeIdByName(detectedName);
-        if (!found) {
-          addAiMessage(`Không tìm thấy nhân viên **"${detectedName}"** trong hệ thống. Vui lòng kiểm tra lại tên.`);
-          setLoading(false);
-          return true;
-        }
-
-        setOffboardState({
-          step: "awaiting_confirm",
-          employeeName: found.fullName,
-          employeeId: found.id,
-        });
-        addAiMessage(
-          `Bạn có chắc muốn offboard nhân viên **${found.fullName}** không?\n\nHành động này sẽ tạo yêu cầu nghỉ việc và không thể hoàn tác dễ dàng.\n\nNhập **"Có"** để xác nhận hoặc **"Không"** để hủy.`
-        );
-      } catch {
-        addAiMessage("Không thể kiểm tra thông tin nhân viên. Vui lòng thử lại.");
-      } finally {
-        setLoading(false);
-      }
-      return true;
-    }
-
-    return false; // Not an offboard message
-  }
-
-  function addAiMessage(content: string) {
-    setMessages((prev) => [...prev, { id: uid(), role: "ai", content }]);
-  }
 
   // ── Chat send ──
   async function sendChat() {
@@ -514,9 +305,6 @@ export default function AIChatBox() {
     const userMsg: ChatMessage = { id: uid(), role: "user", content: msg };
     setMessages((prev) => [...prev, userMsg]);
 
-    // If we are inside the offboard flow, handle it first
-    const wasOffboard = await handleOffboardFlow(msg);
-    if (wasOffboard) return;
 
     // Normal chat flow
     setLoading(true);
@@ -634,16 +422,14 @@ export default function AIChatBox() {
     }
   }
 
-  // ── Clear chat history ──
   function clearHistory() {
     const initial: ChatMessage[] = [{
       id: uid(), role: "ai",
-      content: "Xin chào! Tôi là trợ lý AI của HRM Pro. Tôi có thể giúp bạn trả lời câu hỏi, quét hợp đồng để tạo nhân viên mới, hoặc xử lý yêu cầu offboard. Hãy bắt đầu nào!",
+      content: "Xin chào! Tôi là trợ lý AI của HRM Pro. Tôi có thể giúp bạn trả lời câu hỏi, hoặc quét hợp đồng để tạo nhân viên mới. Hãy bắt đầu nào!",
     }];
     setMessages(initial);
     setActiveExtractedData(null);
     setActiveFileBase64(null);
-    setOffboardState({ step: null, employeeName: "", employeeId: null });
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -661,13 +447,6 @@ export default function AIChatBox() {
 
   const isInputActive = !!input.trim() && !loading;
 
-  // Determine placeholder hint based on offboard state
-  const inputPlaceholder =
-    offboardState.step === "awaiting_confirm"
-      ? "Nhập \"Có\" để xác nhận hoặc \"Không\" để hủy…"
-      : offboardState.step === "awaiting_reason"
-      ? "Nhập lý do nghỉ việc…"
-      : "Nhập câu hỏi… (Enter để gửi)";
 
   return (
     <>
@@ -699,11 +478,7 @@ export default function AIChatBox() {
                 HRM AI Assistant
               </p>
               <p className="text-[11px] text-text-secondary-light mt-0.5 leading-none">
-                {offboardState.step === "awaiting_confirm"
-                  ? `Đang xác nhận offboard: ${offboardState.employeeName}`
-                  : offboardState.step === "awaiting_reason"
-                  ? "Đang chờ lý do nghỉ việc…"
-                  : activeFileBase64
+                {activeFileBase64
                   ? "Đang phân tích hợp đồng..."
                   : "Sẵn sàng hỗ trợ"}
               </p>
@@ -718,26 +493,6 @@ export default function AIChatBox() {
           </button>
         </div>
 
-        {/* ── Offboard flow indicator banner ── */}
-        {offboardState.step && (
-          <div className="flex items-center gap-2 px-5 py-2 bg-amber-50 border-b border-amber-200 flex-shrink-0">
-            <UserXIcon />
-            <span className="text-xs font-medium text-amber-700">
-              {offboardState.step === "awaiting_confirm"
-                ? `Đang trong luồng offboard — nhân viên: ${offboardState.employeeName}`
-                : `Đang chờ lý do để hoàn tất offboard — ${offboardState.employeeName}`}
-            </span>
-            <button
-              onClick={() => {
-                setOffboardState({ step: null, employeeName: "", employeeId: null });
-                addAiMessage("Đã hủy yêu cầu offboard.");
-              }}
-              className="ml-auto text-[11px] font-semibold text-amber-600 hover:text-amber-800 transition-colors cursor-pointer"
-            >
-              Hủy
-            </button>
-          </div>
-        )}
 
         {/* ── Main Content ── */}
         <div className="flex flex-1 overflow-hidden">
@@ -792,7 +547,7 @@ export default function AIChatBox() {
                   <div className="bg-surface-light border border-border-light rounded-tr-2xl rounded-br-2xl rounded-bl-2xl px-4 py-3 shadow-sm">
                     {uploading ? (
                       <span className="text-xs text-primary font-medium flex items-center gap-2">
-                        <SpinnerIcon /> Đang quét hợp đồng...
+                        <SpinnerIcon /> AI reasoning...
                       </span>
                     ) : (
                       <TypingDots />
@@ -815,10 +570,10 @@ export default function AIChatBox() {
 
               <button
                 onClick={() => fileInputRef.current?.click()}
-                disabled={uploading || loading || !!offboardState.step}
+                disabled={uploading || loading}
                 title="Đính kèm file hợp đồng"
                 className={`w-9 h-9 rounded-xl border border-border-light flex items-center justify-center flex-shrink-0 transition-all duration-200 cursor-pointer ${
-                  uploading || loading || offboardState.step
+                  uploading || loading
                     ? "text-text-muted-light cursor-not-allowed bg-gray-50"
                     : "text-text-secondary-light hover:text-primary hover:border-primary hover:bg-[#ECFEFF]"
                 }`}
@@ -833,7 +588,7 @@ export default function AIChatBox() {
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder={inputPlaceholder}
+                placeholder="Nhập câu hỏi… (Enter để gửi)"
                 style={{ fontFamily: "Space Grotesk, sans-serif" }}
               />
 

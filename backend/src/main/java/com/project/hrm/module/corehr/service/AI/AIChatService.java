@@ -69,9 +69,9 @@ public class AIChatService {
      * 2. Apply changes vào extractedData hiện tại
      * 3. Trả về extractedData đã update + confirm message
      *
-     * @param userMessage    Câu lệnh tự nhiên của HR
-     * @param currentData    ExtractedContractDTO hiện tại (FE gửi kèm)
-     * @return               EditChatResponse gồm updatedData + confirmMessage
+     * @param userMessage Câu lệnh tự nhiên của HR
+     * @param currentData ExtractedContractDTO hiện tại (FE gửi kèm)
+     * @return EditChatResponse gồm updatedData + confirmMessage
      */
     public EditChatResponse editExtractedData(String userMessage, ExtractedContractDTO currentData) {
 
@@ -99,51 +99,51 @@ public class AIChatService {
         }
 
         String prompt = """
-            Người dùng muốn chỉnh sửa thông tin hợp đồng: "%s"
-            
-            Dữ liệu hiện tại:
-            %s
-            
-            Hãy phân tích câu lệnh và trả về JSON chỉ chứa các field CẦN THAY ĐỔI.
-            Chỉ trả về JSON thuần, không markdown, không giải thích.
-            
-            Danh sách field hợp lệ (camelCase):
-            - fullName       (string)
-            - phone          (string)
-            - email          (string)
-            - gender         (string: "MALE" hoặc "FEMALE")
-            - address        (string)
-            - citizenId      (string)
-            - taxCode        (string)
-            - dateOfBirth    (string: YYYY-MM-DD)
-            - baseSalary     (number)
-            - contractNumber (string)
-            - startDate      (string: YYYY-MM-DD)
-            - endDate        (string: YYYY-MM-DD hoặc null)
-            - dateOfJoining  (string: YYYY-MM-DD)
-            - departmentName (string)
-            - positionName   (string)
-            
-            Quy tắc:
-            - Chỉ include field người dùng muốn đổi, bỏ qua các field khác
-            - Ngày tháng: chuyển về YYYY-MM-DD (VD: "01/05/2025" → "2025-05-01")
-            - Lương: chỉ số nguyên (VD: "20 triệu" → 20000000, "15tr" → 15000000)
-            - Nếu không hiểu câu lệnh → trả về: {"error": "Không hiểu yêu cầu"}
-            - Nếu câu lệnh không phải chỉnh sửa → trả về: {"error": "Không phải lệnh chỉnh sửa"}
-            
-            Ví dụ:
-            "sửa lương thành 20 triệu"                        → {"baseSalary": 20000000}
-            "đổi phòng ban thành Kế toán"                     → {"departmentName": "Kế toán"}
-            "sửa lương 20tr và phòng ban là Kế toán"          → {"baseSalary": 20000000, "departmentName": "Kế toán"}
-            "ngày vào làm là 01/05/2025"                      → {"dateOfJoining": "2025-05-01"}
-            "chức vụ là Trưởng phòng Kỹ thuật"               → {"positionName": "Trưởng phòng Kỹ thuật"}
-            "ngày kết thúc là 01/05/2026"                    → {"endDate": "2026-05-01"}
-            """.formatted(userMessage, currentDataJson);
+                Người dùng muốn chỉnh sửa thông tin hợp đồng: "%s"
+
+                Dữ liệu hiện tại:
+                %s
+
+                Hãy phân tích câu lệnh và trả về JSON chỉ chứa các field CẦN THAY ĐỔI.
+                Chỉ trả về JSON thuần, không markdown, không giải thích.
+
+                Danh sách field hợp lệ (camelCase):
+                - fullName       (string)
+                - phone          (string)
+                - email          (string)
+                - gender         (string: "MALE" hoặc "FEMALE")
+                - address        (string)
+                - citizenId      (string)
+                - taxCode        (string)
+                - dateOfBirth    (string: YYYY-MM-DD)
+                - baseSalary     (number)
+                - contractNumber (string)
+                - startDate      (string: YYYY-MM-DD)
+                - endDate        (string: YYYY-MM-DD hoặc null)
+                - dateOfJoining  (string: YYYY-MM-DD)
+                - departmentName (string)
+                - positionName   (string)
+
+                Quy tắc:
+                - Chỉ include field người dùng muốn đổi, bỏ qua các field khác
+                - Ngày tháng: chuyển về YYYY-MM-DD (VD: "01/05/2025" → "2025-05-01")
+                - Lương: chỉ số nguyên (VD: "20 triệu" → 20000000, "15tr" → 15000000)
+                - Nếu không hiểu câu lệnh → trả về: {"error": "Không hiểu yêu cầu"}
+                - Nếu câu lệnh không phải chỉnh sửa → trả về: {"error": "Không phải lệnh chỉnh sửa"}
+
+                Ví dụ:
+                "sửa lương thành 20 triệu"                        → {"baseSalary": 20000000}
+                "đổi phòng ban thành Kế toán"                     → {"departmentName": "Kế toán"}
+                "sửa lương 20tr và phòng ban là Kế toán"          → {"baseSalary": 20000000, "departmentName": "Kế toán"}
+                "ngày vào làm là 01/05/2025"                      → {"dateOfJoining": "2025-05-01"}
+                "chức vụ là Trưởng phòng Kỹ thuật"               → {"positionName": "Trưởng phòng Kỹ thuật"}
+                "ngày kết thúc là 01/05/2026"                    → {"endDate": "2026-05-01"}
+                """
+                .formatted(userMessage, currentDataJson);
 
         return callGroq(
-            "Chỉ trả về JSON thuần túy, không giải thích, không markdown.",
-            prompt
-        );
+                "Chỉ trả về JSON thuần túy, không giải thích, không markdown.",
+                prompt);
     }
 
     /**
@@ -175,8 +175,7 @@ public class AIChatService {
             // Clone DTO để không mutate object gốc
             ExtractedContractDTO updated = objectMapper.readValue(
                     objectMapper.writeValueAsString(currentData),
-                    ExtractedContractDTO.class
-            );
+                    ExtractedContractDTO.class);
 
             StringBuilder summary = new StringBuilder();
 
@@ -221,28 +220,28 @@ public class AIChatService {
         try {
             if (value == null) {
                 switch (field) {
-                    case "endDate"   -> dto.setEndDate(null);
-                    case "taxCode"   -> dto.setTaxCode(null);
+                    case "endDate" -> dto.setEndDate(null);
+                    case "taxCode" -> dto.setTaxCode(null);
                 }
                 return;
             }
             String str = value.toString();
             switch (field) {
-                case "fullName"        -> dto.setFullName(str);
-                case "phone"           -> dto.setPhone(str);
-                case "email"           -> dto.setEmail(str);
-                case "gender"          -> dto.setGender(str);
-                case "address"         -> dto.setAddress(str);
-                case "citizenId"       -> dto.setCitizenId(str);
-                case "taxCode"         -> dto.setTaxCode(str);
-                case "contractNumber"  -> dto.setContractNumber(str);
-                case "departmentName"  -> dto.setDepartmentName(str);
-                case "positionName"    -> dto.setPositionName(str);
-                case "dateOfBirth"     -> dto.setDateOfBirth(LocalDate.parse(str));
-                case "startDate"       -> dto.setStartDate(LocalDate.parse(str));
-                case "endDate"         -> dto.setEndDate(LocalDate.parse(str));
-                case "dateOfJoining"   -> dto.setDateOfJoining(LocalDate.parse(str));
-                case "baseSalary"      -> dto.setBaseSalary(new BigDecimal(str));
+                case "fullName" -> dto.setFullName(str);
+                case "phone" -> dto.setPhone(str);
+                case "email" -> dto.setEmail(str);
+                case "gender" -> dto.setGender(str);
+                case "address" -> dto.setAddress(str);
+                case "citizenId" -> dto.setCitizenId(str);
+                case "taxCode" -> dto.setTaxCode(str);
+                case "contractNumber" -> dto.setContractNumber(str);
+                case "departmentName" -> dto.setDepartmentName(str);
+                case "positionName" -> dto.setPositionName(str);
+                case "dateOfBirth" -> dto.setDateOfBirth(LocalDate.parse(str));
+                case "startDate" -> dto.setStartDate(LocalDate.parse(str));
+                case "endDate" -> dto.setEndDate(LocalDate.parse(str));
+                case "dateOfJoining" -> dto.setDateOfJoining(LocalDate.parse(str));
+                case "baseSalary" -> dto.setBaseSalary(new BigDecimal(str));
                 default -> log.warn("Field không hợp lệ: {}", field);
             }
         } catch (Exception e) {
@@ -255,42 +254,42 @@ public class AIChatService {
      */
     private String getFieldValue(ExtractedContractDTO dto, String field) {
         return switch (field) {
-            case "fullName"        -> dto.getFullName();
-            case "phone"           -> dto.getPhone();
-            case "email"           -> dto.getEmail();
-            case "gender"          -> dto.getGender();
-            case "address"         -> dto.getAddress();
-            case "citizenId"       -> dto.getCitizenId();
-            case "taxCode"         -> dto.getTaxCode();
-            case "contractNumber"  -> dto.getContractNumber();
-            case "departmentName"  -> dto.getDepartmentName();
-            case "positionName"    -> dto.getPositionName();
-            case "dateOfBirth"     -> dto.getDateOfBirth() != null ? dto.getDateOfBirth().toString() : null;
-            case "startDate"       -> dto.getStartDate() != null ? dto.getStartDate().toString() : null;
-            case "endDate"         -> dto.getEndDate() != null ? dto.getEndDate().toString() : null;
-            case "dateOfJoining"   -> dto.getDateOfJoining() != null ? dto.getDateOfJoining().toString() : null;
-            case "baseSalary"      -> dto.getBaseSalary() != null ? dto.getBaseSalary().toPlainString() : null;
+            case "fullName" -> dto.getFullName();
+            case "phone" -> dto.getPhone();
+            case "email" -> dto.getEmail();
+            case "gender" -> dto.getGender();
+            case "address" -> dto.getAddress();
+            case "citizenId" -> dto.getCitizenId();
+            case "taxCode" -> dto.getTaxCode();
+            case "contractNumber" -> dto.getContractNumber();
+            case "departmentName" -> dto.getDepartmentName();
+            case "positionName" -> dto.getPositionName();
+            case "dateOfBirth" -> dto.getDateOfBirth() != null ? dto.getDateOfBirth().toString() : null;
+            case "startDate" -> dto.getStartDate() != null ? dto.getStartDate().toString() : null;
+            case "endDate" -> dto.getEndDate() != null ? dto.getEndDate().toString() : null;
+            case "dateOfJoining" -> dto.getDateOfJoining() != null ? dto.getDateOfJoining().toString() : null;
+            case "baseSalary" -> dto.getBaseSalary() != null ? dto.getBaseSalary().toPlainString() : null;
             default -> null;
         };
     }
 
     private String fieldLabel(String fieldName) {
         return switch (fieldName) {
-            case "fullName"        -> "Họ tên";
-            case "phone"           -> "Số điện thoại";
-            case "email"           -> "Email";
-            case "gender"          -> "Giới tính";
-            case "address"         -> "Địa chỉ";
-            case "citizenId"       -> "CCCD/CMND";
-            case "taxCode"         -> "Mã số thuế";
-            case "dateOfBirth"     -> "Ngày sinh";
-            case "baseSalary"      -> "Lương cơ bản";
-            case "contractNumber"  -> "Số hợp đồng";
-            case "startDate"       -> "Ngày bắt đầu";
-            case "endDate"         -> "Ngày kết thúc";
-            case "dateOfJoining"   -> "Ngày vào làm";
-            case "departmentName"  -> "Phòng ban";
-            case "positionName"    -> "Chức vụ";
+            case "fullName" -> "Họ tên";
+            case "phone" -> "Số điện thoại";
+            case "email" -> "Email";
+            case "gender" -> "Giới tính";
+            case "address" -> "Địa chỉ";
+            case "citizenId" -> "CCCD/CMND";
+            case "taxCode" -> "Mã số thuế";
+            case "dateOfBirth" -> "Ngày sinh";
+            case "baseSalary" -> "Lương cơ bản";
+            case "contractNumber" -> "Số hợp đồng";
+            case "startDate" -> "Ngày bắt đầu";
+            case "endDate" -> "Ngày kết thúc";
+            case "dateOfJoining" -> "Ngày vào làm";
+            case "departmentName" -> "Phòng ban";
+            case "positionName" -> "Chức vụ";
             default -> fieldName;
         };
     }
@@ -301,163 +300,163 @@ public class AIChatService {
 
     private String askWhatApiToCall(String userMessage) {
         String prompt = """
-                Bạn là AI routing của hệ thống HRM.
-                
-                Nhiệm vụ:
-                - Phân tích câu hỏi
-                - Xác định API
-                - Trả về JSON DUY NHẤT
-                
-                ================ INPUT ================
-                User query:
-                "%s"
-                ======================================
-                
-                ================ OUTPUT ================
-                {
-                  "api": "<API_NAME>",
-                  "params": { ... }
-                }
-                ======================================
-                
-                ================ API LIST ================
-                SEARCH_EMPLOYEES(fullName, department, position, status, role)
-                GET_EMPLOYEE_DETAIL(fullName)
-                GET_CONTRACTS(employeeId)
-                GET_EXPIRING_CONTRACTS()
-                NO_API()
-                =========================================
-                
-                ================ NORMALIZE ================
-                - lowercase
-                - remove extra spaces
-                - vietnamese dấu = không dấu (coi như giống nhau)
-                =========================================
-                
-                ================ STEP 1 — INTENT PRIORITY ================
-                IF contains:
-                ["xoa","xoá","delete","remove","terminate","sa thai","offboard","cho nghi"]
-                → NO_API
-                
-                IF contains:
-                ["hop dong sap het han","contract expiring"]
-                → GET_EXPIRING_CONTRACTS
-                
-                IF greeting / irrelevant
-                → NO_API
-                =========================================================
-                
-                ================ STEP 2 — EXTRACT NAME (QUAN TRỌNG) ================
-                
-                1. Regex nhận diện tên người:
-                
-                PATTERN_FULLNAME:
-                \\b([A-ZÀ-Ỹ][a-zà-ỹ]+(?:\\s+[A-ZÀ-Ỹ][a-zà-ỹ]+)+)\\b
-                
-                → match >= 2 từ, viết hoa đầu mỗi từ
-                → ví dụ:
-                - Nguyen Van A
-                - Phung Dinh Phu
-                - Tran Thi Bao
-                
-                ----------------------------------------
-                
-                PATTERN_LOOSE (fallback khi không viết hoa):
-                \\b([a-zà-ỹ]+(?:\\s+[a-zà-ỹ]+){1,2})\\b
-                
-                → dùng khi query toàn chữ thường
-                → nhưng phải lọc stop-words phía dưới
-                
-                ----------------------------------------
-                
-                2. Stop words (LOẠI BỎ khỏi name):
-                ["cua","của","la","là","co","có","nhan","nhân","vien","viên",
-                 "phong","ban","department","so","dien","thoai","email",
-                 "bao","nhieu","tim","kiem","ai","ten"]
-                
-                ----------------------------------------
-                
-                3. Heuristic xác định tên hợp lệ:
-                
-                Sau khi match:
-                - Tách thành tokens
-                - Loại bỏ token thuộc stop words
-                - Đếm số từ còn lại:
-                
-                RULE:
-                - >= 2 từ → FULL NAME
-                - = 1 từ → AMBIGUOUS
-                - = 0 → NO NAME
-                
-                ----------------------------------------
-                
-                4. Ưu tiên:
-                - Ưu tiên PATTERN_FULLNAME
-                - Nếu không có → dùng PATTERN_LOOSE
-                
-                Kết quả:
-                {
-                  "fullName": "...",
-                  "type": "FULL" | "AMBIGUOUS" | "NONE"
-                }
-                
-                ===========================================================
-                
-                ================ STEP 3 — API DECISION ================
-                
-                IF type == FULL:
-                → GET_EMPLOYEE_DETAIL
-                
-                IF type == AMBIGUOUS:
-                → SEARCH_EMPLOYEES (fullName)
-                
-                IF type == NONE:
-                    IF hỏi list / count / tìm:
-                        → SEARCH_EMPLOYEES
-                
-                    IF có filter:
-                        - "phong" → department
-                        - "chuc vu" → position
-                        - "trang thai" → status
-                        - "role" → role
-                
-                    IF hỏi hợp đồng:
-                        → NO_API (không đủ info)
-                
-                IF hỏi hợp đồng + có tên:
-                → GET_CONTRACTS (employeeId = null)
-                
-                ======================================================
-                
-                ================ RULE QUAN TRỌNG ================
-                - KHÔNG đoán employeeId
-                - KHÔNG suy diễn ngoài regex
-                - KHÔNG trả text ngoài JSON
-                - Không chắc → SEARCH_EMPLOYEES
-                =================================================
-                
-                ================ EXAMPLES ================
-                
-                "email cua Nguyen Van An"
-                → {"api":"GET_EMPLOYEE_DETAIL","params":{"fullName":"Nguyen Van An"}}
-                
-                "so dien thoai cua phu"
-                → {"api":"SEARCH_EMPLOYEES","params":{"fullName":"phu"}}
-                
-                "tim nhan vien ten minh"
-                → {"api":"SEARCH_EMPLOYEES","params":{"fullName":"minh"}}
-                
-                "nhan vien phong ke toan"
-                → {"api":"SEARCH_EMPLOYEES","params":{"department":"ke toan"}}
-                
-                "hop dong cua Nguyen Van A"
-                → {"api":"GET_CONTRACTS","params":{"employeeId":null}}
-                
-                "xoa nhan vien Nguyen Van A"
-                → {"api":"NO_API","params":{}}
-                
-                ==========================================
-        """.formatted(userMessage);
+                        Bạn là AI routing của hệ thống HRM.
+
+                        Nhiệm vụ:
+                        - Phân tích câu hỏi
+                        - Xác định API
+                        - Trả về JSON DUY NHẤT
+
+                        ================ INPUT ================
+                        User query:
+                        "%s"
+                        ======================================
+
+                        ================ OUTPUT ================
+                        {
+                          "api": "<API_NAME>",
+                          "params": { ... }
+                        }
+                        ======================================
+
+                        ================ API LIST ================
+                        SEARCH_EMPLOYEES(fullName, department, position, status, role)
+                        GET_EMPLOYEE_DETAIL(fullName)
+                        GET_CONTRACTS(employeeId)
+                        GET_EXPIRING_CONTRACTS()
+                        NO_API()
+                        =========================================
+
+                        ================ NORMALIZE ================
+                        - lowercase
+                        - remove extra spaces
+                        - vietnamese dấu = không dấu (coi như giống nhau)
+                        =========================================
+
+                        ================ STEP 1 — INTENT PRIORITY ================
+                        IF contains:
+                        ["xoa","xoá","delete","remove","terminate","sa thai","offboard","cho nghi"]
+                        → NO_API
+
+                        IF contains:
+                        ["hop dong sap het han","contract expiring"]
+                        → GET_EXPIRING_CONTRACTS
+
+                        IF greeting / irrelevant
+                        → NO_API
+                        =========================================================
+
+                        ================ STEP 2 — EXTRACT NAME (QUAN TRỌNG) ================
+
+                        1. Regex nhận diện tên người:
+
+                        PATTERN_FULLNAME:
+                        \\b([A-ZÀ-Ỹ][a-zà-ỹ]+(?:\\s+[A-ZÀ-Ỹ][a-zà-ỹ]+)+)\\b
+
+                        → match >= 2 từ, viết hoa đầu mỗi từ
+                        → ví dụ:
+                        - Nguyen Van A
+                        - Phung Dinh Phu
+                        - Tran Thi Bao
+
+                        ----------------------------------------
+
+                        PATTERN_LOOSE (fallback khi không viết hoa):
+                        \\b([a-zà-ỹ]+(?:\\s+[a-zà-ỹ]+){1,2})\\b
+
+                        → dùng khi query toàn chữ thường
+                        → nhưng phải lọc stop-words phía dưới
+
+                        ----------------------------------------
+
+                        2. Stop words (LOẠI BỎ khỏi name):
+                        ["cua","của","la","là","co","có","nhan","nhân","vien","viên",
+                         "phong","ban","department","so","dien","thoai","email",
+                         "bao","nhieu","tim","kiem","ai","ten"]
+
+                        ----------------------------------------
+
+                        3. Heuristic xác định tên hợp lệ:
+
+                        Sau khi match:
+                        - Tách thành tokens
+                        - Loại bỏ token thuộc stop words
+                        - Đếm số từ còn lại:
+
+                        RULE:
+                        - >= 2 từ → FULL NAME
+                        - = 1 từ → AMBIGUOUS
+                        - = 0 → NO NAME
+
+                        ----------------------------------------
+
+                        4. Ưu tiên:
+                        - Ưu tiên PATTERN_FULLNAME
+                        - Nếu không có → dùng PATTERN_LOOSE
+
+                        Kết quả:
+                        {
+                          "fullName": "...",
+                          "type": "FULL" | "AMBIGUOUS" | "NONE"
+                        }
+
+                        ===========================================================
+
+                        ================ STEP 3 — API DECISION ================
+
+                        IF type == FULL:
+                        → GET_EMPLOYEE_DETAIL
+
+                        IF type == AMBIGUOUS:
+                        → SEARCH_EMPLOYEES (fullName)
+
+                        IF type == NONE:
+                            IF hỏi list / count / tìm:
+                                → SEARCH_EMPLOYEES
+
+                            IF có filter:
+                                - "phong" → department
+                                - "chuc vu" → position
+                                - "trang thai" → status
+                                - "role" → role
+
+                            IF hỏi hợp đồng:
+                                → NO_API (không đủ info)
+
+                        IF hỏi hợp đồng + có tên:
+                        → GET_CONTRACTS (employeeId = null)
+
+                        ======================================================
+
+                        ================ RULE QUAN TRỌNG ================
+                        - KHÔNG đoán employeeId
+                        - KHÔNG suy diễn ngoài regex
+                        - KHÔNG trả text ngoài JSON
+                        - Không chắc → SEARCH_EMPLOYEES
+                        =================================================
+
+                        ================ EXAMPLES ================
+
+                        "email cua Nguyen Van An"
+                        → {"api":"GET_EMPLOYEE_DETAIL","params":{"fullName":"Nguyen Van An"}}
+
+                        "so dien thoai cua phu"
+                        → {"api":"SEARCH_EMPLOYEES","params":{"fullName":"phu"}}
+
+                        "tim nhan vien ten minh"
+                        → {"api":"SEARCH_EMPLOYEES","params":{"fullName":"minh"}}
+
+                        "nhan vien phong ke toan"
+                        → {"api":"SEARCH_EMPLOYEES","params":{"department":"ke toan"}}
+
+                        "hop dong cua Nguyen Van A"
+                        → {"api":"GET_CONTRACTS","params":{"employeeId":null}}
+
+                        "xoa nhan vien Nguyen Van A"
+                        → {"api":"NO_API","params":{}}
+
+                        ==========================================
+                """.formatted(userMessage);
 
         return callGroq("Chỉ trả về JSON thuần túy, không giải thích, không markdown.", prompt);
     }
@@ -560,7 +559,8 @@ public class AIChatService {
                             }
                         }
 
-                        // ── Nếu KHÔNG có exact-match và nhiều hơn 1 kết quả → trả về danh sách mơ hồ ──
+                        // ── Nếu KHÔNG có exact-match và nhiều hơn 1 kết quả → trả về danh sách mơ hồ
+                        // ──
                         if (resolvedId == null && content.size() > 1) {
                             log.info("=== Ambiguous: {} kết quả cho tên '{}'", content.size(), nameToSearch);
                             // Chỉ giữ lại những field cần thiết để AI liệt kê
@@ -568,19 +568,17 @@ public class AIChatService {
                                     .map(item -> (Map<?, ?>) item)
                                     .map(emp -> {
                                         java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
-                                        m.put("fullName",   emp.get("fullName"));
+                                        m.put("fullName", emp.get("fullName"));
                                         m.put("department", emp.get("departmentName"));
-                                        m.put("position",   emp.get("positionName"));
+                                        m.put("position", emp.get("positionName"));
                                         return m;
                                     })
                                     .toList();
                             yield objectMapper.writeValueAsString(
-                                java.util.Map.of(
-                                    "ambiguous", true,
-                                    "searchedName", nameToSearch,
-                                    "candidates", candidates
-                                )
-                            );
+                                    java.util.Map.of(
+                                            "ambiguous", true,
+                                            "searchedName", nameToSearch,
+                                            "candidates", candidates));
                         }
 
                         // ── 1 kết quả duy nhất hoặc exact-match → lấy luôn ──
@@ -591,7 +589,8 @@ public class AIChatService {
                         employeeId = resolvedId;
                     }
 
-                    if (employeeId == null) yield "{\"error\": \"Không có employeeId\"}";
+                    if (employeeId == null)
+                        yield "{\"error\": \"Không có employeeId\"}";
 
                     log.info("=== Gọi view-detail cho: {}", employeeId);
                     String detail = hrmClient.get()
@@ -607,7 +606,8 @@ public class AIChatService {
 
                 case "GET_CONTRACTS" -> {
                     String employeeId = (String) params.get("employeeId");
-                    if (employeeId == null) yield "{\"error\": \"Cần employeeId\"}";
+                    if (employeeId == null)
+                        yield "{\"error\": \"Cần employeeId\"}";
 
                     yield hrmClient.get()
                             .uri("/api/employees/{id}/contracts", employeeId)
@@ -619,13 +619,13 @@ public class AIChatService {
                 }
 
                 case "GET_EXPIRING_CONTRACTS" ->
-                        hrmClient.get()
-                                .uri("/api/contracts/expiring")
-                                .header("Authorization", bearer)
-                                .retrieve()
-                                .bodyToMono(String.class)
-                                .timeout(Duration.ofSeconds(10))
-                                .block();
+                    hrmClient.get()
+                            .uri("/api/contracts/expiring")
+                            .header("Authorization", bearer)
+                            .retrieve()
+                            .bodyToMono(String.class)
+                            .timeout(Duration.ofSeconds(10))
+                            .block();
 
                 default -> "{\"info\": \"no_api_needed\"}";
             };
@@ -638,26 +638,26 @@ public class AIChatService {
 
     private String askToAnswer(String userMessage, String apiData) {
         String systemPrompt = """
-            Bạn là AI assistant của hệ thống HRM (Human Resource Management).
-            Trả lời bằng tiếng Việt, ngắn gọn, rõ ràng.
+                Bạn là AI assistant của hệ thống HRM (Human Resource Management).
+                Trả lời bằng tiếng Việt, ngắn gọn, rõ ràng.
 
-            Quy tắc trả lời:
-            - Danh sách nhân viên → dùng bullet points, mỗi dòng: Họ tên | Phòng ban | Chức vụ
-            - Thông tin cá nhân → liệt kê các field quan trọng (email, SĐT, lương, phòng ban...)
-            - Khi hỏi về số lượng → dùng field "totalElements" trong data, KHÔNG tự đếm
-            - Không hiển thị UUID thô. Không bịa thêm thông tin.
-            - Format đẹp, có xuống dòng hợp lý.
+                Quy tắc trả lời:
+                - Danh sách nhân viên → dùng bullet points, mỗi dòng: Họ tên | Phòng ban | Chức vụ
+                - Thông tin cá nhân → liệt kê các field quan trọng (email, SĐT, lương, phòng ban...)
+                - Khi hỏi về số lượng → dùng field "totalElements" trong data, KHÔNG tự đếm
+                - Không hiển thị UUID thô. Không bịa thêm thông tin.
+                - Format đẹp, có xuống dòng hợp lý.
 
-            XỬ LÝ KẾT QUẢ MƠ HỒ (ambiguous):
-            Nếu data có trường "ambiguous": true, nghĩa là tìm thấy NHIỀU người có tên tương tự.
-            Khi đó, hãy:
-            1. Thông báo: "Tìm thấy [n] nhân viên có tên '[searchedName]':"
-            2. Liệt kê từng người: Tên | Phòng ban | Chức vụ
-            3. Kết thúc bằng: "Bạn muốn hỏi về nhân viên nào? Vui lòng cung cấp họ tên đầy đủ."
+                XỬ LÝ KẾT QUẢ MƠ HỒ (ambiguous):
+                Nếu data có trường "ambiguous": true, nghĩa là tìm thấy NHIỀU người có tên tương tự.
+                Khi đó, hãy:
+                1. Thông báo: "Tìm thấy [n] nhân viên có tên '[searchedName]':"
+                2. Liệt kê từng người: Tên | Phòng ban | Chức vụ
+                3. Kết thúc bằng: "Bạn muốn hỏi về nhân viên nào? Vui lòng cung cấp họ tên đầy đủ."
 
-            XỬ LÝ KẾT QUẢ LỖI:
-            Nếu data có trường "error" → thông báo lịch sự rằng không tìm thấy, gợi ý nhập họ tên đầy đủ hơn.
-            """;
+                XỬ LÝ KẾT QUẢ LỖI:
+                Nếu data có trường "error" → thông báo lịch sự rằng không tìm thấy, gợi ý nhập họ tên đầy đủ hơn.
+                """;
 
         String userPrompt = """
                 Người dùng hỏi: "%s"
@@ -672,15 +672,13 @@ public class AIChatService {
     private String callGroq(String systemPrompt, String userPrompt) {
         try {
             Map<String, Object> body = Map.of(
-                    "model",       groqProps.getModel(),
-                    "messages",    List.of(
+                    "model", groqProps.getModel(),
+                    "messages", List.of(
                             Map.of("role", "system", "content", systemPrompt),
-                            Map.of("role", "user",   "content", userPrompt)
-                    ),
+                            Map.of("role", "user", "content", userPrompt)),
                     "temperature", 0.2,
-                    "max_tokens",  2048,
-                    "stream",      false
-            );
+                    "max_tokens", 2048,
+                    "stream", false);
 
             String raw = groqWebClient.post()
                     .uri("/v1/chat/completions")
@@ -695,8 +693,7 @@ public class AIChatService {
                                     .filter(ex -> ex instanceof WebClientResponseException
                                             && ((WebClientResponseException) ex).getStatusCode().value() == 429)
                                     .doBeforeRetry(s -> log.warn(
-                                            "Groq 429 — retry #{}", s.totalRetries() + 1))
-                    )
+                                            "Groq 429 — retry #{}", s.totalRetries() + 1)))
                     .block();
 
             return objectMapper.readTree(raw)
@@ -711,7 +708,8 @@ public class AIChatService {
     }
 
     private String removeDiacritics(String input) {
-        if (input == null) return "";
+        if (input == null)
+            return "";
         String normalized = java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD);
         return normalized
                 .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")

@@ -5,8 +5,8 @@ import com.project.hrm.module.corehr.dto.request.EmployeeDTO;
 import com.project.hrm.module.corehr.dto.request.EmployeeDetailDTO;
 import com.project.hrm.module.corehr.dto.request.EmployeeSelfUpdateDTO;
 import com.project.hrm.module.corehr.dto.response.ContractResponseDTO;
+import com.project.hrm.module.corehr.service.AuditLogService;
 import com.project.hrm.module.corehr.service.directory.ContractService;
-import com.project.hrm.module.corehr.service.directory.DependentService;
 import com.project.hrm.module.corehr.service.directory.EmployeeSelfUpdateService;
 import com.project.hrm.module.corehr.service.directory.IEmployeeService;
 import jakarta.validation.Valid;
@@ -28,18 +28,15 @@ public class EmployeeController {
     private final IEmployeeService employeeService;
     private final EmployeeSelfUpdateService selfUpdateService;
     private final ContractService contractService;
-    private final DependentService dependentService;
-    private final com.project.hrm.module.corehr.service.AuditLogService auditLogService;
+    private final AuditLogService auditLogService;
 
     public EmployeeController(IEmployeeService employeeService,
             EmployeeSelfUpdateService selfUpdateService,
             ContractService contractService,
-            DependentService dependentService,
-            com.project.hrm.module.corehr.service.AuditLogService auditLogService) {
+            AuditLogService auditLogService) {
         this.employeeService = employeeService;
         this.selfUpdateService = selfUpdateService;
         this.contractService = contractService;
-        this.dependentService = dependentService;
         this.auditLogService = auditLogService;
     }
 
@@ -91,7 +88,7 @@ public class EmployeeController {
         return ResponseEntity.ok(result);
     }
 
-    // BRD 2.5: Employee views own profile
+    // Employee views profile
     @GetMapping("/employee/profile")
     public ResponseEntity<EmployeeDetailDTO> getMyProfile(
             @RequestAttribute("employeeId") UUID employeeId) {
@@ -99,9 +96,9 @@ public class EmployeeController {
         return ResponseEntity.ok(dto);
     }
 
-    // BRD 2.2: Employee self-update (phone, email, address) with 6-month cooldown
+    // Employee self-update (phone, email, address)
     @PutMapping("/employees/self-update")
-    @PreAuthorize("isAuthenticated()") // Cho phép tất cả nhân viên được authenticated tự cập nhật profile của mình
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<EmployeeDetailDTO> selfUpdate(
             @RequestAttribute("employeeId") UUID employeeId,
             @RequestBody EmployeeSelfUpdateDTO dto) {
@@ -109,7 +106,7 @@ public class EmployeeController {
         return ResponseEntity.ok(updated);
     }
 
-    // BRD 2.3: Get contracts for an employee
+    // Get contracts for an employee
     @GetMapping("/employees/{id}/contracts")
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<ContractResponseDTO>> getEmployeeContracts(
@@ -117,7 +114,7 @@ public class EmployeeController {
         return ResponseEntity.ok(contractService.getContractsByEmployee(employeeId));
     }
 
-    // BRD 2.3: Get contracts expiring within 30 days
+    // Get contracts expiring within 30 days
     @GetMapping("/contracts/expiring")
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<List<ContractResponseDTO>> getExpiringContracts() {
