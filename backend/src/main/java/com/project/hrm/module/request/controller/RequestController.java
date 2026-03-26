@@ -47,18 +47,21 @@ public class RequestController {
     }
 
     // --- 4. TẠO ĐƠN MỚI (EMPLOYEE) ---
+    @PreAuthorize("isAuthenticated()")
     @PostMapping
     public ResponseEntity<Request> createRequest(@RequestBody RequestDTO dto) {
         return ResponseEntity.ok(service.createRequest(dto));
     }
 
     // --- 5. XEM ĐƠN CÁ NHÂN (EMPLOYEE) ---
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/my-requests")
     public ResponseEntity<List<Request>> getMyRequests(@RequestParam("employeeId") UUID employeeId) {
         return ResponseEntity.ok(service.getMyRequests(employeeId));
     }
 
     // --- 6. XÓA ĐƠN (EMPLOYEE) ---
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRequest(@PathVariable("id") UUID id) {
         service.deleteRequest(id);
@@ -66,6 +69,7 @@ public class RequestController {
     }
 
     // --- 7. XEM LEAVE BALANCE CỦA NHÂN VIÊN ---
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/leave-balance")
     public ResponseEntity<LeaveBalance> getLeaveBalance(
             @RequestParam("employeeId") UUID employeeId,

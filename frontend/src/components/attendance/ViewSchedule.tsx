@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getMySchedules, getAllSchedules, type WorkScheduleResponse } from "../../services/attendanceService";
+import { getMySchedules, type WorkScheduleResponse } from "../../services/attendanceService";
 import { getToken } from "../../services/authService";
 import { decodeJwt } from "../../utils/jwtDecode";
 
@@ -61,13 +61,13 @@ const ViewSchedule: React.FC = () => {
                 const apiMonth = month + 1;
                 const apiYear = year;
 
-    // CHẶN CỬA: Nếu không có empId thì quăng lỗi ngay lập tức
-    if (!empId) {
-    throw new Error("Can not find employeeId. Please re-login.!");
-    }
+                // CHẶN CỬA: Nếu không có empId thì quăng lỗi ngay lập tức
+                if (!empId) {
+                    throw new Error("Can not find employeeId. Please re-login.!");
+                }
 
-    // Bắt đầu gọi API (Lúc này chắc chắn 100% đã có empId)
-    const data = await getMySchedules(empId, apiMonth, apiYear);
+                // Bắt đầu gọi API (Lúc này chắc chắn 100% đã có empId)
+                const data = await getMySchedules(empId, apiMonth, apiYear);
 
                 console.log("[ViewSchedule] Schedules:", data);
                 setSchedules(data);

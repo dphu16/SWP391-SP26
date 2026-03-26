@@ -128,7 +128,7 @@ public class PayrollCalculationService {
             standardWorkingDays = startDate.isLeapYear() ? 21 : 20;
         }
 
-        // 3. Tính OT pay (giả sử OT = 1.5x lương giờ)
+        // 3. Tính OT pay (OT = 1.5x lương giờ)
         BigDecimal hourlyRate = baseSalary.divide(BigDecimal.valueOf(standardWorkingDays * 8L), 2, RoundingMode.HALF_UP);
         BigDecimal otPay = hourlyRate.multiply(BigDecimal.valueOf(1.5))
                 .multiply(attendance.getTotalOtHours())
@@ -195,8 +195,10 @@ public class PayrollCalculationService {
             }
         }
 
-        BigDecimal taxAmount = grossSalary.multiply(taxRate).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal insuranceAmount = grossSalary.multiply(insuranceRate).setScale(2, RoundingMode.HALF_UP);
+        // OT Pay is excluded from tax and insurance calculations
+        BigDecimal taxableIncome = grossSalary.subtract(otPay).max(BigDecimal.ZERO);
+        BigDecimal taxAmount = taxableIncome.multiply(taxRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal insuranceAmount = taxableIncome.multiply(insuranceRate).setScale(2, RoundingMode.HALF_UP);
         BigDecimal totalDeductions = taxAmount.add(insuranceAmount);
         BigDecimal netSalary = grossSalary.subtract(totalDeductions);
 

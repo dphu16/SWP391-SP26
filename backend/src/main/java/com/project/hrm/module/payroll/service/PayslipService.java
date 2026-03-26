@@ -151,14 +151,16 @@ public class PayslipService {
                         throw new PayrollException("Chỉ có thể chỉnh sửa chi tiết phiếu lương đang ở trạng thái DRAFT.");
                 }
 
-                // Xóa toàn bộ details cũ
-                payslipDetailRepository.deleteAllByPayslip_PayslipId(payslipId);
-                payslipDetailRepository.flush();
+                // Clear existing details (let Hibernate handle orphan removal)
+                if (payslip.getDetails() != null) {
+                        payslip.getDetails().clear();
+                } else {
+                        payslip.setDetails(new ArrayList<>());
+                }
 
-                // Tạo details mới
-                List<PayslipDetail> newDetails = new ArrayList<>();
+                // Add new details directly to the managed collection
                 for (UpdatePayslipDetailRequest.DetailItem item : req.getDetails()) {
-                        newDetails.add(PayslipDetail.builder()
+                        payslip.getDetails().add(PayslipDetail.builder()
                                 .payslip(payslip)
                                 .itemName(item.getItemName())
                                 .amount(item.getAmount())
@@ -166,16 +168,14 @@ public class PayslipService {
                                 .createdAt(OffsetDateTime.now())
                                 .build());
                 }
-                payslipDetailRepository.saveAll(newDetails);
-                payslip.setDetails(newDetails);
 
-                // Tính lại tổng allowance / deduction
-                BigDecimal totalAllowances = newDetails.stream()
+                // Recalculate totals based on the new collection
+                BigDecimal totalAllowances = payslip.getDetails().stream()
                         .filter(d -> d.getType() == PayslipDetailType.ALLOWANCE)
                         .map(PayslipDetail::getAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                BigDecimal manualDeductions = newDetails.stream()
+                BigDecimal manualDeductions = payslip.getDetails().stream()
                         .filter(d -> d.getType() == PayslipDetailType.DEDUCTION)
                         .map(PayslipDetail::getAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);

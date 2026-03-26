@@ -8,6 +8,7 @@ import com.project.hrm.module.attendance.dto.DepartmentDTO;
 import com.project.hrm.module.corehr.repository.DepartmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,30 +23,35 @@ public class AttendanceLogController {
     private final AttendanceLogService service;
 
     // 1. Check-in / Check-out (Employee)
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/check-in")
     public ResponseEntity<AttendanceLog> checkInOrOut(@RequestBody AttendanceRequest req) {
         return ResponseEntity.ok(service.checkInOrOut(req));
     }
 
     // 2. Xem lịch sử cá nhân (Employee)
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/logs/my-history")
     public ResponseEntity<List<AttendanceLog>> getMyHistory(@RequestParam("employeeId") UUID employeeId) {
         return ResponseEntity.ok(service.getMyHistory(employeeId));
     }
 
     // 3. Xem tất cả chấm công (Manager)
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     @GetMapping("/logs")
     public ResponseEntity<List<AttendanceLog>> getAllLogs() {
         return ResponseEntity.ok(service.getAllLogs());
     }
 
     // 4. Sửa công (Manager)
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     @PutMapping("/logs/{id}")
     public ResponseEntity<AttendanceLog> updateLog(@PathVariable("id") UUID id, @RequestBody AttendanceRequest req) {
         return ResponseEntity.ok(service.updateLog(id, req));
     }
 
     // Đặt trong class Controller của bạn
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     @GetMapping("/summary")
     public ResponseEntity<List<AttendanceSummaryDTO>> getSummaryReport(
             @RequestParam(value = "month", required = false) Integer month,
@@ -59,6 +65,7 @@ public class AttendanceLogController {
 
     private final DepartmentRepository departmentRepository;
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping
     public ResponseEntity<List<DepartmentDTO>> getAllDepartments() {
         List<DepartmentDTO> result = departmentRepository.findAll().stream()

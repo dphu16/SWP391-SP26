@@ -4,7 +4,9 @@ import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.project.hrm.module.payroll.dto.ResponseDTO.PaymentRequestResponse;
 import com.project.hrm.module.payroll.dto.ResponseDTO.PayslipResponse;
+import com.project.hrm.module.payroll.dto.ResponseDTO.TaxReportResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -99,7 +101,7 @@ public class PdfGeneratorService {
         }
     }
 
-    public byte[] generateBankTransferPdf(com.project.hrm.module.payroll.dto.ResponseDTO.PaymentRequestResponse request, List<PayslipResponse> payslips) {
+    public byte[] generateBankTransferPdf(PaymentRequestResponse request, List<PayslipResponse> payslips) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4.rotate(), 30, 30, 30, 30);
             PdfWriter.getInstance(document, out);
@@ -153,7 +155,7 @@ public class PdfGeneratorService {
         }
     }
 
-    public byte[] generateTaxInsurancePdf(com.project.hrm.module.payroll.dto.ResponseDTO.PaymentRequestResponse request, List<com.project.hrm.module.payroll.dto.ResponseDTO.TaxReportResponse> reports) {
+    public byte[] generateTaxInsurancePdf(PaymentRequestResponse request, List<TaxReportResponse> reports) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4.rotate(), 30, 30, 30, 30);
             PdfWriter.getInstance(document, out);

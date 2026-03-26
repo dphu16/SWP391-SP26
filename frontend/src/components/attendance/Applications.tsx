@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import apiClient from "../../services/apiClient";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 // FIX 1: Removed the duplicate import block. Merged into a single import that
 // includes all required exports: getLeaveBalance and LeaveBalanceResponse.
@@ -17,7 +16,17 @@ import {
   offboardingService,
   type OffboardingResponse,
 } from "../../services/offboardingService";
-import {personnelChangeService, type PositionLookup} from "../../services/personnelChangeService";
+import { personnelChangeService } from "../../services/personnelChangeService";
+// searchEmployees is now used in ApplicationModals
+import { getLookupDepartments, getLookupPositions } from "../../services/lookupService";
+import {
+  type AttendanceEmployee,
+  LeaveModalContent,
+  OTModalContent,
+  OtherModalContent,
+  ResignationModalContent,
+  PersonnelChangeModalContent,
+} from "./ApplicationModals";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type AppStatus = "Pending" | "Approved" | "Rejected";
@@ -33,14 +42,7 @@ type ModalType =
   | "PersonnelChange"
   | null;
 
-// FIX 4: Defined the AttendanceEmployee type that was used but never declared.
-interface AttendanceEmployee {
-  id: string;
-  employeeCode: string;
-  fullName: string;
-  position?: string;
-  deptName: string;
-}
+// FIX 4: AttendanceEmployee is imported from ApplicationModals
 
 interface RequestRecord {
   id: string;
@@ -187,111 +189,7 @@ const statusBadge: Record<AppStatus, string> = {
   Rejected: "bg-[#fee2e2] text-[#dc2626]",
 };
 
-const EmployeeSearch: React.FC<{
-  value: AttendanceEmployee | null;
-  onChange: (emp: AttendanceEmployee | null) => void;
-}> = ({ value, onChange }) => {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<AttendanceEmployee[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await apiClient.get(
-          `/api/employees/search?q=${encodeURIComponent(query)}`,
-        );
-        setResults(res.data.content || res.data || []);
-      } catch {
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  return (
-    <div ref={ref} className="relative">
-      {value && !open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="w-full flex items-center justify-between border-2 border-[#0d9488]/50 bg-[#0d9488]/5 rounded-lg px-3 py-2.5 text-sm"
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[#0d9488] text-white flex items-center justify-center font-bold text-xs">
-              {value.fullName.charAt(0)}
-            </div>
-            <div className="text-left">
-              <div className="font-semibold text-[#0f172a]">{value.fullName}</div>
-              <div className="text-[10px] text-[#64748b]">{value.employeeCode} · {value.deptName}</div>
-            </div>
-          </div>
-          <svg className="w-4 h-4 text-[#64748b]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-      ) : (
-        <input
-          type="text"
-          value={query}
-          autoFocus={open}
-          onFocus={() => setOpen(true)}
-          onChange={(e) => {
-            onChange(null);
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
-          placeholder="Search employee name or code..."
-          className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-        />
-      )}
-      {open && results.length > 0 && (
-        <ul className="absolute z-20 mt-1 w-full bg-white border border-[#e2e8f0] rounded-lg shadow-lg max-h-48 overflow-y-auto">
-          {loading && (
-            <li className="px-3 py-2 text-sm text-[#64748b]">Searching…</li>
-          )}
-          {results.map((emp) => (
-            <li
-              key={emp.id}
-              onClick={() => {
-                onChange(emp);
-                setQuery("");
-                setResults([]);
-                setOpen(false);
-              }}
-              className="px-3 py-2 flex items-center gap-2 text-sm hover:bg-[#f8fafc] cursor-pointer"
-            >
-              <div className="w-6 h-6 rounded-full bg-[#94a3b8]/20 flex items-center justify-center font-bold text-[10px]">
-                {emp.fullName.charAt(0)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="font-semibold text-[#1e293b] block truncate">{emp.fullName}</span>
-                <span className="text-[10px] text-[#94a3b8] block truncate">
-                  {emp.employeeCode} · {emp.deptName}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-};
+// EmployeeSearch is now extracted to ApplicationModals
 
 // ── Canonical blank form state ─────────────────────────────────────────────
 // FIX 3: Centralised the reset object so closeModal and handleEdit always use
@@ -378,16 +276,16 @@ const Applications: React.FC = () => {
             }),
             datesAffected: o.expectedLastDay
               ? new Date(o.expectedLastDay).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
+                month: "short",
+                day: "numeric",
+              })
               : "N/A",
             status: (o.status === "PENDING"
               ? "Pending"
               : o.status === "CANCELLED"
                 ? "Rejected"
                 : "Approved") as AppStatus,
-              raw: {} as RequestRecordApi,
+            raw: {} as RequestRecordApi,
           }),
         );
 
@@ -411,21 +309,19 @@ const Applications: React.FC = () => {
 
   useEffect(() => {
     if (modal === "PersonnelChange") {
-      apiClient
-        .get("/api/lookup/departments")
-        .then((res) => setDepartments(res.data))
-        .catch(() => {});
-      apiClient
-        .get("/api/lookup/positions")
-        .then((res) => {
+      getLookupDepartments()
+        .then((data) => setDepartments(data))
+        .catch(() => { });
+      getLookupPositions()
+        .then((data) => {
           setPositions(
-              res.data?.map((p: PositionLookup) => ({
-                  id: p.id,
-                  name: p.name || p.title || "",
-              })),
+            data.map((p) => ({
+              id: p.id,
+              name: p.name || p.title || "",
+            }))
           );
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [modal]);
 
@@ -506,7 +402,7 @@ const Applications: React.FC = () => {
         if (!pcEmployee) throw new Error("Please select an employee.");
         if (!formData.reason) throw new Error("Please specify a reason.");
         await personnelChangeService.create({
-          employeeId: pcEmployee.id,
+          employeeId: pcEmployee.employeeId,
           changeType: formData.pcType as any,
           reason: formData.reason,
           newDepartmentId: formData.newDepartmentId || undefined,
@@ -532,8 +428,8 @@ const Applications: React.FC = () => {
     } catch (error: any) {
       setSubmitError(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to submit request.",
+        error.message ||
+        "Failed to submit request.",
       );
     } finally {
       setSubmitting(false);
@@ -667,15 +563,15 @@ const Applications: React.FC = () => {
                 Application for Resignation
               </button>
               {currentUser?.roles?.some((r) =>
-                ["MANAGER", "ROLE_MANAGER"].includes(r),
+                ["HR", "MANAGER", "ROLE_HR", "ROLE_MANAGER"].includes(r),
               ) && (
-                <button
-                  onClick={() => handleDropdownItemClick("PersonnelChange")}
-                  className="w-full text-left px-4 py-2.5 text-sm font-semibold text-black hover:bg-indigo-50 transition-colors"
-                >
-                  Personnel Change
-                </button>
-              )}
+                  <button
+                    onClick={() => handleDropdownItemClick("PersonnelChange")}
+                    className="w-full text-left px-4 py-2.5 text-sm font-semibold text-black hover:bg-indigo-50 transition-colors"
+                  >
+                    Personnel Change
+                  </button>
+                )}
             </div>
           )}
         </div>
@@ -763,7 +659,7 @@ const Applications: React.FC = () => {
                           disabled={
                             r.status !== "Pending" || r.type === "Resignation"
 
-                          }className={`transition-colors ${r.status !== "Pending" || r.type === "Resignation" ? "text-gray-300 cursor-not-allowed" : "text-[#94a3b8] hover:text-[#0ea5e9]"}`}
+                          } className={`transition-colors ${r.status !== "Pending" || r.type === "Resignation" ? "text-gray-300 cursor-not-allowed" : "text-[#94a3b8] hover:text-[#0ea5e9]"}`}
                           title={
                             r.status === "Pending"
                               ? "Edit request"
@@ -870,384 +766,29 @@ const Applications: React.FC = () => {
               )}
 
               {modal === "Leave" && (
-                <>
-                  {leaveBalanceLoading ? (
-                    <div className="p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm text-[#64748b]">
-                      Loading leave balance...
-                    </div>
-                  ) : leaveBalance ? (
-                    <div className="p-4 bg-gradient-to-r from-[#f0fdf4] to-[#ecfdf5] border border-[#86efac] rounded-xl">
-                      <p className="text-xs font-bold text-[#15803d] uppercase tracking-wider mb-2">
-                        Leave Balance {leaveBalance.year}
-                      </p>
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1 text-center">
-                          <p className="text-2xl font-bold text-[#0f766e]">
-                            {leaveBalance.annualLeaveTotal -
-                              leaveBalance.annualLeaveUsed}
-                          </p>
-                          <p className="text-[10px] text-[#64748b] font-medium">
-                            Annual Leave Left
-                          </p>
-                        </div>
-                        <div className="w-px h-10 bg-[#86efac]" />
-                        <div className="flex-1 text-center">
-                          <p className="text-2xl font-bold text-[#64748b]">
-                            {leaveBalance.annualLeaveUsed}
-                          </p>
-                          <p className="text-[10px] text-[#64748b] font-medium">
-                            Annual Used
-                          </p>
-                        </div>
-                        <div className="w-px h-10 bg-[#86efac]" />
-                        <div className="flex-1 text-center">
-                          <p className="text-2xl font-bold text-[#64748b]">
-                            {leaveBalance.sickLeaveUsed}
-                          </p>
-                          <p className="text-[10px] text-[#64748b] font-medium">
-                            Sick Used
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-3 bg-[#fef3c7] border border-[#fcd34d] rounded-lg text-sm text-[#92400e]">
-                      ⚠️ Could not load leave balance. You can still submit but
-                      approval may be rejected.
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                      Leave Type
-                    </label>
-                    <select
-                      value={formData.leaveType}
-                      onChange={(e) =>
-                        setFormData({ ...formData, leaveType: e.target.value })
-                      }
-                      className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                    >
-                      <option>Annual Leave</option>
-                      <option>Sick Leave</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                        Start Date
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.startDate}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            startDate: e.target.value,
-                          })
-                        }
-                        className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                        End Date
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.endDate}
-                        onChange={(e) =>
-                          setFormData({ ...formData, endDate: e.target.value })
-                        }
-                        className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                      Reason
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={formData.reason}
-                      onChange={(e) =>
-                        setFormData({ ...formData, reason: e.target.value })
-                      }
-                      placeholder="Describe the reason for the leave..."
-                      className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                    />
-                  </div>
-                </>
+                <LeaveModalContent
+                  leaveBalanceLoading={leaveBalanceLoading}
+                  leaveBalance={leaveBalance}
+                  formData={formData}
+                  setFormData={setFormData}
+                />
               )}
 
-              {modal === "OT" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                      OT Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.otDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, otDate: e.target.value })
-                      }
-                      className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                        Start Time
-                      </label>
-                      <input
-                        type="time"
-                        value={formData.otStartTime}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            otStartTime: e.target.value,
-                          })
-                        }
-                        className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                        End Time
-                      </label>
-                      <input
-                        type="time"
-                        value={formData.otEndTime}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            otEndTime: e.target.value,
-                          })
-                        }
-                        className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                      Reason for OT
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={formData.reason}
-                      onChange={(e) =>
-                        setFormData({ ...formData, reason: e.target.value })
-                      }
-                      placeholder="Describe the task requiring overtime..."
-                      className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                    />
-                  </div>
-                </>
-              )}
+              {modal === "OT" && <OTModalContent formData={formData} setFormData={setFormData} />}
 
-              {modal === "Other" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                      Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.otherDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, otherDate: e.target.value })
-                      }
-                      className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                      Reason
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={formData.reason}
-                      onChange={(e) =>
-                        setFormData({ ...formData, reason: e.target.value })
-                      }
-                      placeholder="Please provide details for your request..."
-                      className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                    />
-                  </div>
-                </>
-              )}
+              {modal === "Other" && <OtherModalContent formData={formData} setFormData={setFormData} />}
 
-              {modal === "Resignation" && (
-                <>
-                  <div className="bg-red-50 p-4 rounded-xl border border-red-100 flex items-start gap-3">
-                    <svg
-                      className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                      />
-                    </svg>
-                    <div className="text-sm text-red-800">
-                      <p className="font-semibold">
-                        Notice regarding resignation
-                      </p>
-                      <p className="mt-1 opacity-90">
-                        Please ensure you have communicated with your direct
-                        manager before submitting this official request in the
-                        system.
-                      </p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                      Expected Last Day
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.startDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, startDate: e.target.value })
-                      }
-                      min={new Date().toISOString().split("T")[0]}
-                      className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                      Reason for Resignation
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={formData.reason}
-                      onChange={(e) =>
-                        setFormData({ ...formData, reason: e.target.value })
-                      }
-                      placeholder="Please describe your reason..."
-                      className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                    />
-                  </div>
-                </>
-              )}
+              {modal === "Resignation" && <ResignationModalContent formData={formData} setFormData={setFormData} />}
 
               {modal === "PersonnelChange" && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                      Employee
-                    </label>
-                    <EmployeeSearch
-                      value={pcEmployee}
-                      onChange={setPcEmployee}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                      Change Type
-                    </label>
-                    <select
-                      value={formData.pcType}
-                      onChange={(e) =>
-                        setFormData({ ...formData, pcType: e.target.value })
-                      }
-                      className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                    >
-                      <option value="DEPARTMENT_TRANSFER">
-                        Department Transfer
-                      </option>
-                      <option value="SALARY_CHANGE">Salary Change</option>
-                      <option value="DISCIPLINE">Discipline</option>
-                      <option value="REWARD">Reward</option>
-                    </select>
-                  </div>
-                  {formData.pcType === "DEPARTMENT_TRANSFER" && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                          New Department
-                        </label>
-                        <select
-                          value={formData.newDepartmentId}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              newDepartmentId: e.target.value,
-                            })
-                          }
-                          className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                        >
-                          <option value="">Select Department...</option>
-                          {departments.map((d) => (
-                            <option key={d.id} value={d.id}>
-                              {d.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                          New Position
-                        </label>
-                        <select
-                          value={formData.newPositionId}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              newPositionId: e.target.value,
-                            })
-                          }
-                          className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                        >
-                          <option value="">Select Position...</option>
-                          {positions.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-
-                  {formData.pcType === "SALARY_CHANGE" && (
-                    <div>
-                      <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                        New Base Salary
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.newSalary}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            newSalary: e.target.value,
-                          })
-                        }
-                        placeholder="e.g. 25000000"
-                        className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-semibold text-[#334155] mb-1.5">
-                      Reason / Description
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={formData.reason}
-                      onChange={(e) =>
-                        setFormData({ ...formData, reason: e.target.value })
-                      }
-                      placeholder="Reason for this change..."
-                      className="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488]"
-                    />
-                  </div>
-                </div>
+                <PersonnelChangeModalContent
+                  formData={formData}
+                  setFormData={setFormData}
+                  pcEmployee={pcEmployee}
+                  setPcEmployee={setPcEmployee}
+                  departments={departments}
+                  positions={positions}
+                />
               )}
             </div>
 
