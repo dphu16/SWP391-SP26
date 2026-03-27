@@ -31,14 +31,7 @@ public class EmployeeSelfUpdateService {
             updatedFields.add("phone");
         }
 
-        if (dto.getEmail() != null && !dto.getEmail().equals(employee.getPersonal().getEmail())) {
-            employee.getPersonal().setEmail(dto.getEmail());
-            // Also update login email
-            if (employee.getUser() != null) {
-                employee.getUser().setEmail(dto.getEmail());
-            }
-            updatedFields.add("email");
-        }
+
 
         if (dto.getAddress() != null && !dto.getAddress().equals(employee.getPersonal().getAddress())) {
             employee.getPersonal().setAddress(dto.getAddress());

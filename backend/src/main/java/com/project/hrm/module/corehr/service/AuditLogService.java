@@ -18,6 +18,7 @@ public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
+    private final com.project.hrm.module.corehr.repository.EmployeeRepository employeeRepository;
 
     public void recordAction(
             String entityType,
@@ -31,6 +32,22 @@ public class AuditLogService {
             String description) {
 
         try {
+            // Do not log updates that have no actual change
+            if ("UPDATE".equalsIgnoreCase(actionType)) {
+                String safeOld = oldValue == null ? "" : oldValue.trim();
+                String safeNew = newValue == null ? "" : newValue.trim();
+                if (safeOld.equals(safeNew)) {
+                    return;
+                }
+            }
+            // Validation: Ensure the affectedUserId (Employee ID) exists in the employees table
+            if (affectedUserId != null) {
+                if (!employeeRepository.existsById(affectedUserId)) {
+                    log.warn("Attempted to log action for non-existent employee ID: {}. Setting to null to avoid FK violation.", affectedUserId);
+                    affectedUserId = null;
+                }
+            }
+
             AuditLog auditLog = AuditLog.builder()
                     .entityType(entityType)
                     .entityName(entityType)

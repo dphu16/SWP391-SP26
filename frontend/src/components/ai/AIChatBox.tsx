@@ -150,7 +150,7 @@ function ExtractedDataCard({
 }) {
   const data = extractedData;
 
-  const displayFields = [
+  const allFields = [
     { name: "fullName",       label: "Họ tên",    value: data.fullName },
     { name: "email",          label: "Email",      value: data.email },
     { name: "phone",          label: "SĐT",        value: data.phone },
@@ -162,7 +162,10 @@ function ExtractedDataCard({
     { name: "contractNumber", label: "Số HĐ",      value: data.contractNumber },
     { name: "startDate",      label: "Ngày BĐ",    value: data.startDate },
     { name: "endDate",        label: "Ngày KT",    value: data.endDate },
-  ].filter((f) => f.value);
+  ];
+
+  const displayFields = allFields.filter((f) => f.value);
+  const missingFields = allFields.filter((f) => !f.value && f.name !== "endDate").map(f => f.label);
 
   return (
     <div className="mt-2 rounded-xl border border-border-light bg-surface-light overflow-hidden animate-fade-in shadow-card">
@@ -191,6 +194,24 @@ function ExtractedDataCard({
           </div>
         ))}
       </div>
+
+      {/* Missing Fields Warning */}
+      {missingFields.length > 0 && (
+        <div className="px-3 pb-3">
+          <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-amber-800">
+            <p className="text-xs font-semibold flex items-center gap-1.5 mb-1">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Đang thiếu thông tin:
+            </p>
+            <p className="text-[11px] leading-relaxed">
+              {missingFields.join(", ")}
+            </p>
+            <p className="text-[10px] mt-1.5 opacity-80 italic">
+              * Bạn có thể nhắn tin yêu cầu AI bổ sung thông tin bị thiếu.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Action */}
       <div className="px-3 pb-3">

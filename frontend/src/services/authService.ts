@@ -20,7 +20,7 @@ export async function login(payload: LoginRequest): Promise<LoginResponse> {
   });
 
   if (!res.ok) {
-    let message = "Email hoặc mật khẩu không đúng.";
+    let message = "Email hoặc mật khẩu không chính xác.";
     try {
       const body = await res.json();
       if (body?.message) message = body.message;

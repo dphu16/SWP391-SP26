@@ -11,8 +11,10 @@ import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.repository.RefreshTokenRepository;
 import com.project.hrm.module.corehr.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,6 +25,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UserRepository userRepo;
@@ -44,8 +47,11 @@ public class AuthService {
         try {
             authManager.authenticate(
                     new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));
+        } catch (BadCredentialsException e) {
+            throw new BusinessRuleException(ErrorCode.INVALID_CREDENTIALS,
+                    "Email hoặc mật khẩu không chính xác.");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Authentication error for user: {}", req.getEmail(), e);
             throw e;
         }
 

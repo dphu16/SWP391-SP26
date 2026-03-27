@@ -90,7 +90,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 
-
     @ExceptionHandler(PayrollException.class)
     public ResponseEntity<?> handlePayrollException(PayrollException ex) {
         return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage()));
@@ -102,14 +101,16 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(com.project.hrm.module.payroll.exception.AccessDeniedException.class)
-    public ResponseEntity<?> handlePayrollAccessDenied(com.project.hrm.module.payroll.exception.AccessDeniedException ex) {
+    public ResponseEntity<?> handlePayrollAccessDenied(
+            com.project.hrm.module.payroll.exception.AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(ServletRequestBindingException.class)
     public ResponseEntity<?> handleMissingRequestAttribute(ServletRequestBindingException ex) {
         if (ex.getMessage() != null && ex.getMessage().contains("employeeId")) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Tài khoản của bạn chưa được liên kết với hồ sơ nhân viên. Vui lòng liên hệ HR."));
+            return ResponseEntity.badRequest().body(ApiResponse
+                    .error("Tài khoản của bạn chưa được liên kết với hồ sơ nhân viên. Vui lòng liên hệ HR."));
         }
         return ResponseEntity.badRequest().body(ApiResponse.error("Thiếu thông tin bắt buộc: " + ex.getMessage()));
     }

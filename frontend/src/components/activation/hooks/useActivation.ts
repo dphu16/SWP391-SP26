@@ -11,10 +11,8 @@ import {
 
 function resolveStep(currentStep: string | undefined): number {
   switch (currentStep) {
-    case "PASSWORD_CREATED":
-      return 2;
     case "COMPLETED":
-      return 3;
+      return 4;
     default:
       return 1;
   }

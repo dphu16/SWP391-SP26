@@ -52,19 +52,14 @@ public class AuditLogAspect {
             +
             "execution(* com.project.hrm.module.corehr.service.directory.EmployeeSelfUpdateService.selfUpdate(..))")
     public Object auditEmployeeUpdate(ProceedingJoinPoint pjp) throws Throwable {
-        UUID id = (UUID) pjp.getArgs()[0];
+        UUID employeeId = (UUID) pjp.getArgs()[0];
         
-        UUID employeeId = userRepository.findById(id)
-            .map(u -> u.getEmployee() != null ? u.getEmployee().getEmployeeId() : null)
-            .orElse(null);
-
         Employee oldEmp = employeeRepository.findById(employeeId).orElse(null);
 
         // PRE-CAPTURE old values to prevent Hibernate session auto-update issues
         String oldRole = resolvePrimaryRoleName(oldEmp);
         String oldStatus = (oldEmp != null && oldEmp.getStatus() != null) ? oldEmp.getStatus().name() : "";
         String oldName = (oldEmp != null) ? oldEmp.getFullName() : "";
-        String oldEmail = (oldEmp != null && oldEmp.getPersonal() != null) ? oldEmp.getPersonal().getEmail() : "";
         String oldPhone = (oldEmp != null && oldEmp.getPersonal() != null) ? oldEmp.getPersonal().getPhone() : "";
         String oldAddress = (oldEmp != null && oldEmp.getPersonal() != null) ? oldEmp.getPersonal().getAddress() : "";
 
@@ -74,16 +69,13 @@ public class AuditLogAspect {
         if (newEmp != null && oldEmp != null) {
             String actor = getCurrentUser();
             Object arg1 = pjp.getArgs()[1];
-            boolean specificFieldLogged = false;
-
-            String entityIdStr = employeeId != null ? employeeId.toString() : id.toString();
+            String entityIdStr = employeeId != null ? employeeId.toString() : "unknown";
 
             // Check Role change (only for updateEmployee)
             String newRole = resolvePrimaryRoleName(newEmp);
             if (!oldRole.equals(newRole)) {
                 auditLogService.recordAction("Employee", entityIdStr, employeeId, "UPDATE", "role", oldRole, newRole, actor,
                         actor + " changed role from " + oldRole + " to " + newRole);
-                specificFieldLogged = true;
             }
 
             // Check Status change (only for updateEmployee)
@@ -91,7 +83,6 @@ public class AuditLogAspect {
             if (!oldStatus.equals(newStatus)) {
                 auditLogService.recordAction("Employee", entityIdStr, employeeId, "UPDATE", "status", oldStatus, newStatus,
                         actor, actor + " changed status from " + oldStatus + " to " + newStatus);
-                specificFieldLogged = true;
             }
 
             // Detect specific profile changes
@@ -99,46 +90,25 @@ public class AuditLogAspect {
                 if (req.getFullName() != null && !req.getFullName().equals(oldName)) {
                     auditLogService.recordAction("Employee", entityIdStr, employeeId, "UPDATE", "fullName", oldName,
                             req.getFullName(), actor, actor + " updated name");
-                    specificFieldLogged = true;
-                }
-                if (req.getEmail() != null && !req.getEmail().equals(oldEmail)) {
-                    auditLogService.recordAction("Employee", entityIdStr, employeeId, "UPDATE", "email", oldEmail,
-                            req.getEmail(), actor, actor + " updated email");
-                    specificFieldLogged = true;
                 }
                 if (req.getPhone() != null && !req.getPhone().equals(oldPhone)) {
                     auditLogService.recordAction("Employee", entityIdStr, employeeId, "UPDATE", "phone", oldPhone,
                             req.getPhone(), actor, actor + " updated phone");
-                    specificFieldLogged = true;
                 }
                 if (req.getAddress() != null && !req.getAddress().equals(oldAddress)) {
                     auditLogService.recordAction("Employee", entityIdStr, employeeId, "UPDATE", "address", oldAddress,
                             req.getAddress(), actor, actor + " updated address");
-                    specificFieldLogged = true;
                 }
             } else if (arg1 instanceof EmployeeSelfUpdateDTO req) {
-                if (req.getEmail() != null && !req.getEmail().equals(oldEmail)) {
-                    auditLogService.recordAction("Employee", entityIdStr, employeeId, "UPDATE", "email", oldEmail,
-                            req.getEmail(), actor, actor + " updated own email");
-                    specificFieldLogged = true;
-                }
+
                 if (req.getPhone() != null && !req.getPhone().equals(oldPhone)) {
                     auditLogService.recordAction("Employee", entityIdStr, employeeId, "UPDATE", "phone", oldPhone,
                             req.getPhone(), actor, actor + " updated own phone");
-                    specificFieldLogged = true;
                 }
                 if (req.getAddress() != null && !req.getAddress().equals(oldAddress)) {
                     auditLogService.recordAction("Employee", entityIdStr, employeeId, "UPDATE", "address", oldAddress,
                             req.getAddress(), actor, actor + " updated own address");
-                    specificFieldLogged = true;
                 }
-            }
-
-            // FALLBACK LOG: Always ensure at least one log if something happened but no
-            // specific field was caught
-            if (!specificFieldLogged) {
-                auditLogService.recordAction("Employee", entityIdStr, employeeId, "UPDATE", "profile", "", "", actor,
-                        actor + " updated employee profile");
             }
         }
 
@@ -164,13 +134,14 @@ public class AuditLogAspect {
                 String actor = getCurrentUser();
                 java.lang.reflect.Method getChangeIdMethod = result.getClass().getMethod("getChangeId");
                 UUID changeId = (UUID) getChangeIdMethod.invoke(result);
-                java.lang.reflect.Method getEmployeeIdMethod = result.getClass().getMethod("getEmployeeId");
-                UUID employeeId = (UUID) getEmployeeIdMethod.invoke(result);
                 java.lang.reflect.Method getChangeTypeMethod = result.getClass().getMethod("getChangeType");
                 Object changeType = getChangeTypeMethod.invoke(result);
 
                 auditLogService.recordAction(
-                        "Request", changeId.toString(), employeeId, "CREATE", "requestType",
+                        "Request", changeId.toString(), 
+                        (result != null && result.getClass().getMethod("getEmployeeId") != null) ? 
+                            (UUID) result.getClass().getMethod("getEmployeeId").invoke(result) : null,
+                        "CREATE", "requestType",
                         null, changeType.toString(), actor, actor + " created a " + changeType + " request");
             }
         } catch (Exception e) {
@@ -198,8 +169,10 @@ public class AuditLogAspect {
             String newStatus = newChange.getStatus().name();
             if (!oldStatus.equals(newStatus)) {
                 String actor = getCurrentUser();
+                UUID affectedUserId = newChange.getEmployee() != null ? newChange.getEmployee().getEmployeeId() : null;
+
                 auditLogService.recordAction(
-                        "Request", changeId.toString(), newChange.getEmployee().getEmployeeId(),
+                        "Request", changeId.toString(), affectedUserId,
                         methodName.equals("reject") ? "REJECT" : "APPROVE",
                         "status", oldStatus, newStatus, actor,
                         actor + " changed " + newChange.getChangeType() + " request status from " + oldStatus + " to "
