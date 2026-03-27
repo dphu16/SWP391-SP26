@@ -47,7 +47,8 @@ public class PayrollPeriodService {
                     + " hiện tại trước khi tạo kỳ mới.");
         }
 
-        // [RULE] Khi tạo kỳ mới, tự động chuyển tất cả kỳ PAID → CLOSED (lưu trữ lịch sử)
+        // [RULE] Khi tạo kỳ mới, tự động chuyển tất cả kỳ PAID → CLOSED (lưu trữ lịch
+        // sử)
         List<PayrollPeriod> paidPeriods = periodRepository
                 .findAllByStatusOrderByYearDescMonthDesc(PayrollPeriodStatus.PAID);
         if (!paidPeriods.isEmpty()) {
@@ -67,12 +68,14 @@ public class PayrollPeriodService {
 
         // [VALIDATION] startDate phải <= endDate
         if (startDate.isAfter(endDate)) {
-            throw new PayrollException("Ngày bắt đầu (" + startDate + ") phải trước hoặc bằng ngày kết thúc (" + endDate + ").");
+            throw new PayrollException(
+                    "Ngày bắt đầu (" + startDate + ") phải trước hoặc bằng ngày kết thúc (" + endDate + ").");
         }
 
         // [VALIDATION] startDate phải thuộc tháng/năm đã chọn
         if (startDate.getMonthValue() != request.getMonth() || startDate.getYear() != request.getYear()) {
-            throw new PayrollException("Ngày bắt đầu phải nằm trong tháng " + request.getMonth() + "/" + request.getYear() + ".");
+            throw new PayrollException(
+                    "Ngày bắt đầu phải nằm trong tháng " + request.getMonth() + "/" + request.getYear() + ".");
         }
 
         PayrollPeriod period = PayrollPeriod.builder()
