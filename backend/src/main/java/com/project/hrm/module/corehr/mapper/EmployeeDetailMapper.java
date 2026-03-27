@@ -48,6 +48,9 @@ public class EmployeeDetailMapper {
         Position position = employee.getPosition();
         Contract contract = employee.getContract();
 
+        Employee manager = employee.getManager();
+        Employee mentor = employee.getMentor();
+
         return EmployeeDetailDTO.builder()
                 .employeeId(employee.getEmployeeId())
                 .employeeCode(employee.getEmployeeCode())
@@ -65,6 +68,10 @@ public class EmployeeDetailMapper {
                 .roles(resolveRoles(employee))
                 .positionTitle(position != null ? position.getTitle() : null)
                 .deptName(department != null ? department.getDeptName() : null)
+                .managerName(manager != null ? manager.getFullName() : null)
+                .managerAvatar((manager != null && manager.getPersonal() != null) ? manager.getPersonal().getAvatar() : null)
+                .mentorName(mentor != null ? mentor.getFullName() : null)
+                .mentorAvatar((mentor != null && mentor.getPersonal() != null) ? mentor.getPersonal().getAvatar() : null)
                 .statusEmp(employee.getStatus())
                 .status(resolveUserStatus(employee))
                 .contractNumber(contract != null ? contract.getContractNumber() : null)

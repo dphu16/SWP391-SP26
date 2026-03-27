@@ -35,10 +35,6 @@ public class GeminiService {
         this.objectMapper = objectMapper;
     }
 
-    /**
-     * Kết quả extract từ Gemini gồm:
-     * - extractedData : flat DTO để map vào form + /create-and-submit
-     */
     public record GeminiResult(ExtractedContractDTO extractedData) {}
 
     public GeminiResult extractFromContract(byte[] fileBytes, String mimeType) {
@@ -156,9 +152,6 @@ public class GeminiService {
         }
     }
 
-    /**
-     * Map value string → đúng kiểu trong ExtractedContractDTO.
-     */
     private void mapToDto(ExtractedContractDTO dto, String fieldName, String value) {
         if (value == null || value.isBlank()) return;
         try {

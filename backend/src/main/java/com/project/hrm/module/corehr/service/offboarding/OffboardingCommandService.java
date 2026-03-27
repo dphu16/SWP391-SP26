@@ -12,7 +12,7 @@ import com.project.hrm.module.corehr.enums.OffboardingStatus;
 import com.project.hrm.module.corehr.enums.OffboardingType;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
-import com.project.hrm.module.corehr.exception.ErrorCode;
+import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.mapper.EmployeeDetailMapper;
 import com.project.hrm.module.corehr.mapper.OffboardingMapper;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;

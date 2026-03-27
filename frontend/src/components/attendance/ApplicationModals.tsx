@@ -29,10 +29,10 @@ export const EmployeeSearch: React.FC<{
                 const data = await searchEmployees(query);
                 setResults(
                     data.map((emp) => ({
-                        employeeId: emp.employeeId,
+                        employeeId: emp.id || emp.employeeId,
                         employeeCode: emp.employeeCode,
                         fullName: emp.fullName,
-                        position: emp.position,
+                        position: emp.positionTitle || emp.position,
                         deptName: emp.deptName,
                     }))
                 );
@@ -313,8 +313,6 @@ export const PersonnelChangeModalContent: React.FC<{
             >
                 <option value="DEPARTMENT_TRANSFER">Department Transfer</option>
                 <option value="SALARY_CHANGE">Salary Change</option>
-                <option value="DISCIPLINE">Discipline</option>
-                <option value="REWARD">Reward</option>
             </select>
         </div>
         {formData.pcType === "DEPARTMENT_TRANSFER" && (

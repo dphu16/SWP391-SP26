@@ -5,7 +5,7 @@ import com.project.hrm.module.corehr.dto.response.OffboardingResponseDTO;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.OffboardingStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
-import com.project.hrm.module.corehr.exception.ErrorCode;
+import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.mapper.InactiveEmployeeMapper;
 import com.project.hrm.module.corehr.mapper.OffboardingMapper;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;

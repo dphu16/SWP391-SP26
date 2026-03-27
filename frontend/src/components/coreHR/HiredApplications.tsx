@@ -12,7 +12,7 @@ const COLUMNS = [
   { key: "candidateName", label: "Candidate" },
   { key: "candidateEmail", label: "Email" },
   { key: "candidatePhone", label: "Phone" },
-  { key: "jobTitle", label: "Job Title" },
+  { key: "jobTitle", label: "Position" },
 ];
 
 const HiredApplications: React.FC<HiredApplicationsProps> = ({ onAction }) => {

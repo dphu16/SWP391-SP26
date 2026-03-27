@@ -3,7 +3,7 @@ package com.project.hrm.module.corehr.service.account;
 import com.project.hrm.module.corehr.dto.request.ChangePasswordRequest;
 import com.project.hrm.module.corehr.entity.User;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
-import com.project.hrm.module.corehr.exception.ErrorCode;
+import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;

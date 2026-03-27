@@ -40,7 +40,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
         @Override
         Optional<Employee> findById(UUID uuid);
 
-        @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal", "contract" })
+        @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal", "contract", "manager", "mentor", "manager.personal", "mentor.personal" })
         @Query("SELECT e FROM Employee e WHERE e.employeeId = :id")
         Optional<Employee> findByIdWithDetails(@Param("id") UUID id);
 

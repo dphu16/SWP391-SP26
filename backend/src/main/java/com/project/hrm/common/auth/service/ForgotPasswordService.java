@@ -5,7 +5,7 @@ import com.project.hrm.common.auth.dto.ResetPasswordRequest;
 import com.project.hrm.module.corehr.entity.PasswordResetToken;
 import com.project.hrm.module.corehr.entity.User;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
-import com.project.hrm.module.corehr.exception.ErrorCode;
+import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.repository.PasswordResetTokenRepository;
 import com.project.hrm.module.corehr.repository.UserRepository;
 import com.project.hrm.module.corehr.service.helper.EmailService;

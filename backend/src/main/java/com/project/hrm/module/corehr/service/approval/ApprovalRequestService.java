@@ -7,7 +7,7 @@ import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
-import com.project.hrm.module.corehr.exception.ErrorCode;
+import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.request.entity.Request;
 import com.project.hrm.module.request.enums.RequestStatus;

@@ -4,7 +4,7 @@ import com.project.hrm.module.corehr.dto.response.DependentDTO;
 import com.project.hrm.module.corehr.entity.Dependent;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
-import com.project.hrm.module.corehr.exception.ErrorCode;
+import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.repository.DependentRepository;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import org.springframework.stereotype.Service;

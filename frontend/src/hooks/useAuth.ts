@@ -15,7 +15,7 @@ function subscribeToStorage(callback: () => void) {
 
 export type UserRole =
     | "HR" | "MANAGER" | "EMPLOYEE"
-    | "FINANCE" | "MENTOR" | "INTERN" | "PROBATION";
+    | "FINANCE" | "MENTOR";
 
 export interface AuthUser {
     username: string;
@@ -44,7 +44,7 @@ export function useAuth() {
             employeeId: payload.employeeId,
             avatarUrl: payload.avatarUrl,
         };
-    }, [token]); // ✅ [token] thay vì []
+    }, [token]); 
 
     const hasRole = useCallback(
         (...roles: UserRole[]): boolean => {

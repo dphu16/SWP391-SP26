@@ -32,9 +32,9 @@ public class EmployeeCommandService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     public EmployeeCommandService(EmployeeHelper employeeHelper,
-                                  RoleRepository roleRepository,
-                                  ActivationTokenRepository activationTokenRepo,
-                                  EmailService emailService) {
+            RoleRepository roleRepository,
+            ActivationTokenRepository activationTokenRepo,
+            EmailService emailService) {
         this.employeeHelper = employeeHelper;
         this.roleRepository = roleRepository;
         this.activationTokenRepo = activationTokenRepo;
@@ -46,7 +46,8 @@ public class EmployeeCommandService {
      * Compares against both User.email and Personal.email.
      */
     private boolean isEmailChanged(Employee e, EmployeeChangeDTO req) {
-        if (req.getEmail() == null) return false;
+        if (req.getEmail() == null)
+            return false;
         String newEmail = req.getEmail().trim();
 
         // Compare with current User email (login email)
@@ -100,9 +101,21 @@ public class EmployeeCommandService {
         }
         if (req.getPositionId() != null) {
             e.setPosition(employeeHelper.findPositionOrThrow(req.getPositionId()));
+            // Department is typically derived from position
+            if (e.getPosition().getDepartment() != null) {
+                e.setDepartment(e.getPosition().getDepartment());
+            }
         }
-        if (req.getEmpStatus() != null)
+        
+        // Luôn đồng bộ manager & mentor theo phòng ban cuối cùng
+        if (e.getDepartment() != null) {
+            e.setManager(e.getDepartment().getManager());
+            e.setMentor(e.getDepartment().getMentor());
+        }
+
+        if (req.getEmpStatus() != null) {
             e.setStatus(req.getEmpStatus());
+        }
     }
 
     private void applyUserAccount(Employee e, EmployeeChangeDTO req) {
@@ -131,7 +144,8 @@ public class EmployeeCommandService {
      */
     private void sendEmailVerification(Employee e) {
         String newEmail = e.getUser() != null ? e.getUser().getEmail() : e.getPersonal().getEmail();
-        if (newEmail == null || newEmail.isBlank()) return;
+        if (newEmail == null || newEmail.isBlank())
+            return;
 
         // Invalidate any previous unused tokens for this employee
         activationTokenRepo.findByEmployee_EmployeeIdAndUsedFalse(e.getEmployeeId())

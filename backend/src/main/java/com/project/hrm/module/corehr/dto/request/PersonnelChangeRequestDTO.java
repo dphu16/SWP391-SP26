@@ -19,7 +19,4 @@ public class PersonnelChangeRequestDTO {
 
     // For SALARY_CHANGE
     private BigDecimal newSalary;
-
-    // For DISCIPLINE / REWARD
-    private String description;
 }

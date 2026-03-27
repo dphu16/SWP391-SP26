@@ -15,4 +15,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @EntityGraph(attributePaths = {"roles", "employee"})
     @Query("SELECT u FROM User u WHERE LOWER(u.email) = LOWER(:email)")
     Optional<User> findByEmail(@Param("email") String email);
+
+    Optional<User> findByEmployee_EmployeeId(UUID employeeId);
 }

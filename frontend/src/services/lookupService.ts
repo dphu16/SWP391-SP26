@@ -20,3 +20,8 @@ export const getLookupPositions = async (): Promise<LookupPosition[]> => {
     const response = await apiClient.get<LookupPosition[]>("/api/lookup/positions");
     return response.data;
 };
+
+export const getLookupPositionsByDeptId = async (deptId: string): Promise<LookupPosition[]> => {
+    const response = await apiClient.get<LookupPosition[]>(`/api/lookup/pos/${deptId}`);
+    return response.data;
+};

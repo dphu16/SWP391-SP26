@@ -38,4 +38,9 @@ public class EmployeeDetailDTO {
     private LocalDate startDate;
     private LocalDate endDate;
     private String contractStatus;
+
+    private String managerName;
+    private String managerAvatar;
+    private String mentorName;
+    private String mentorAvatar;
 }

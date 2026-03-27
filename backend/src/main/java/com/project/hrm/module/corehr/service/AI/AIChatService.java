@@ -78,7 +78,7 @@ public class AIChatService {
                 
                 Schema trả về:
                 {
-                  "intent":     "FIND_EMPLOYEE | LIST_EMPLOYEES | GET_CONTRACTS | EXPIRING_CONTRACTS | OTHER",
+                  "intent":     "FIND_EMPLOYEE | LIST_EMPLOYEES | EMPLOYEE_STATISTICS | GET_CONTRACTS | EXPIRING_CONTRACTS | OTHER",
                   "name":       "tên nhân viên hoặc null",
                   "department": "phòng ban hoặc null",
                   "position":   "chức vụ hoặc null",
@@ -88,6 +88,7 @@ public class AIChatService {
                 Quy tắc:
                 - FIND_EMPLOYEE: hỏi thông tin 1 người cụ thể
                 - LIST_EMPLOYEES: hỏi danh sách / tìm kiếm nhiều người
+                - EMPLOYEE_STATISTICS: hỏi về thống kê nhanh, số lượng nhân viên, phòng ban, giới tính
                 - GET_CONTRACTS: hỏi về hợp đồng của nhân viên
                 - EXPIRING_CONTRACTS: hỏi hợp đồng sắp hết hạn
                 - OTHER: câu hỏi không liên quan hoặc yêu cầu xóa/sửa dữ liệu
@@ -105,6 +106,9 @@ public class AIChatService {
                 
                 "hợp đồng sắp hết hạn"
                 → {"intent":"EXPIRING_CONTRACTS","name":null,"department":null,"position":null,"field":null}
+                
+                "tổng cộng có bao nhiêu nhân viên, thống kê giới tính, phòng ban"
+                → {"intent":"EMPLOYEE_STATISTICS","name":null,"department":null,"position":null,"field":null}
                 
                 Câu hỏi: "%s"
                 """.formatted(userMessage);
@@ -133,8 +137,9 @@ public class AIChatService {
     private Intent parseIntent(String raw) {
         if (raw == null) return Intent.OTHER;
         return switch (raw.toUpperCase().trim()) {
-            case "FIND_EMPLOYEE"      -> Intent.FIND_EMPLOYEE;
-            case "LIST_EMPLOYEES"     -> Intent.LIST_EMPLOYEES;
+            case "FIND_EMPLOYEE"        -> Intent.FIND_EMPLOYEE;
+            case "LIST_EMPLOYEES"       -> Intent.LIST_EMPLOYEES;
+            case "EMPLOYEE_STATISTICS"  -> Intent.EMPLOYEE_STATISTICS;
             case "GET_CONTRACTS"      -> Intent.GET_CONTRACTS;
             case "EXPIRING_CONTRACTS" -> Intent.EXPIRING_CONTRACTS;
             default                   -> Intent.OTHER;
@@ -175,11 +180,17 @@ public class AIChatService {
                 if (employeeId == null)
                     yield errorJson("Không tìm thấy nhân viên tên '" + intent.name() + "'.");
 
+                if (employeeId.startsWith("AMBIGUOUS:"))
+                    yield employeeId;
+
                 yield hrmGet("/api/employees/" + employeeId + "/contracts", bearer);
             }
 
             case EXPIRING_CONTRACTS ->
                     hrmGet("/api/contracts/expiring", bearer);
+
+            case EMPLOYEE_STATISTICS ->
+                    hrmGet("/api/hr/employees?size=100", bearer);
 
             case OTHER ->
                     infoJson("no_api_needed");
@@ -189,8 +200,12 @@ public class AIChatService {
     // ── Tìm employee: search → exact match → detail ──────────────────────────
     private String resolveAndFetchEmployee(IntentResult intent, String bearer) {
         String employeeId = resolveEmployeeId(intent.name(), intent.department(), bearer);
+
         if (employeeId == null)
             return errorJson("Không tìm thấy nhân viên tên '" + intent.name() + "'.");
+        if (employeeId.startsWith("AMBIGUOUS:")) {
+            return employeeId;
+        }
 
         return hrmGet("/api/employee/" + employeeId + "/view-detail", bearer);
     }

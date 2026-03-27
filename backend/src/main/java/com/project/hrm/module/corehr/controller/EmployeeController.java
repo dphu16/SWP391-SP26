@@ -50,7 +50,7 @@ public class EmployeeController {
     }
 
     @GetMapping("employee/{id}/view-detail")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE', 'INTERN', 'PROBATION')")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE', 'FINANCE')")
     public ResponseEntity<EmployeeDetailDTO> getEmployeeDetail(
             @PathVariable("id") UUID id) {
 
@@ -123,7 +123,7 @@ public class EmployeeController {
 
     // Get Employee Activity Logs
     @GetMapping("/employees/{id}/activity-logs")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE','FINANCE')")
     public ResponseEntity<List<com.project.hrm.module.corehr.dto.response.AuditLogResponseDTO>> getEmployeeActivityLogs(
             @PathVariable("id") UUID employeeId) {
         return ResponseEntity.ok(auditLogService.getEmployeeActivityLogs(employeeId));

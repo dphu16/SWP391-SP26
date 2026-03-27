@@ -9,7 +9,7 @@ import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
-import com.project.hrm.module.corehr.exception.ErrorCode;
+import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.repository.*;
 import com.project.hrm.module.corehr.service.helper.EmailService;
 import lombok.RequiredArgsConstructor;
@@ -324,9 +324,15 @@ public class ActivationService {
                         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
                         // Save the avatarUrl to the path that can be served by the web config
-                        String avatarUrl = "/api/uploads/avatars/" + fileName;
+                        String avatarUrl = "/avatars/" + fileName;
                         user.setAvatarUrl(avatarUrl);
                         userRepo.save(user);
+
+                        // Also update personal info if it exists
+                        if (employee.getPersonal() != null) {
+                                employee.getPersonal().setAvatar(avatarUrl);
+                        }
+                        employeeRepo.save(employee);
 
                         log.info("Avatar uploaded successfully for employee: {} ({})", employee.getFullName(), employee.getEmployeeId());
 

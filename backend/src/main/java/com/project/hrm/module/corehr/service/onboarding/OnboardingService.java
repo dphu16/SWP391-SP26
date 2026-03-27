@@ -13,7 +13,7 @@ import com.project.hrm.module.corehr.entity.*;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
-import com.project.hrm.module.corehr.exception.ErrorCode;
+import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.repository.RoleRepository;
 import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
 import com.project.hrm.module.request.entity.Request;

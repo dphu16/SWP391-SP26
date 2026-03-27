@@ -7,7 +7,7 @@ import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
-import com.project.hrm.module.corehr.exception.ErrorCode;
+import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.mapper.NewHireMapper;
 import com.project.hrm.module.corehr.repository.OnboardingRepository;
 import com.project.hrm.module.corehr.repository.RoleRepository;
@@ -66,8 +66,10 @@ public class OnboardingCommandService {
         employee.setEmpStatus(ProgressStatus.PENDING_REVIEW);
         employee.setStatus(request.getStatus());
 
-        // Manager and Mentor are now determined by the Department level.
-        // Direct employee.manager field is removed.
+        if (department != null) {
+            employee.setManager(department.getManager());
+            employee.setMentor(department.getMentor());
+        }
 
         if (request.getEmail() != null && !request.getEmail().isEmpty()) {
             User newUser = User.builder()
@@ -80,10 +82,12 @@ public class OnboardingCommandService {
 
             // Determinating role by department name as per business rule
             EmployeeRole roleEnum = EmployeeRole.ROLE_EMPLOYEE;
-            if (department.getDeptName().equalsIgnoreCase("Human Resources")) {
-                roleEnum = EmployeeRole.ROLE_HR;
-            } else if (department.getDeptName().equalsIgnoreCase("Finance")) {
-                roleEnum = EmployeeRole.ROLE_FINANCE;
+            if (department != null && department.getDeptName() != null) {
+                if (department.getDeptName().equalsIgnoreCase("Human Resources")) {
+                    roleEnum = EmployeeRole.ROLE_HR;
+                } else if (department.getDeptName().equalsIgnoreCase("Finance")) {
+                    roleEnum = EmployeeRole.ROLE_FINANCE;
+                }
             }
 
             roleRepository.findByName(roleEnum).ifPresent(role -> {

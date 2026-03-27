@@ -7,9 +7,8 @@ import com.project.hrm.module.corehr.entity.RefreshToken;
 import com.project.hrm.module.corehr.entity.User;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
-import com.project.hrm.module.corehr.exception.ErrorCode;
+import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.repository.RefreshTokenRepository;
-import com.project.hrm.module.corehr.repository.RoleRepository;
 import com.project.hrm.module.corehr.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,8 +16,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -85,8 +82,6 @@ public class AuthService {
 
     private String generateRefreshToken(String email) {
         User user = userRepo.findByEmail(email).orElseThrow();
-        refreshTokenRepo.deleteByUser(user);
-
         return refreshTokenRepo.save(RefreshToken.builder()
                 .token(UUID.randomUUID().toString())
                 .user(user)

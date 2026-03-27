@@ -56,7 +56,7 @@ const ALL_ACTIONS: ActionDef[] = [
     desc: "Manage job postings & candidates",
     icon: <span className="text-violet-500">{I.list}</span>,
     accent: "bg-violet-50",
-    route: "/recruitment",
+    route: "/recruitment/jobs",
     roles: ["HR"],
   },
   {
@@ -95,7 +95,7 @@ const ALL_ACTIONS: ActionDef[] = [
     icon: <span className="text-emerald-600">{I.document}</span>,
     accent: "bg-emerald-50",
     route: "/payroll/my-trs",
-    roles: ["EMPLOYEE", "INTERN", "PROBATION", "FINANCE", "MENTOR", "HR", "MANAGER"],
+    roles: ["EMPLOYEE", "FINANCE", "MENTOR", "HR", "MANAGER"],
   },
   {
     id: "qa-attendance-personal",
@@ -104,7 +104,7 @@ const ALL_ACTIONS: ActionDef[] = [
     icon: <span className="text-blue-500">{I.clock}</span>,
     accent: "bg-blue-50",
     route: "/attendance/view-schedule",
-    roles: ["EMPLOYEE", "INTERN", "PROBATION", "MENTOR"],
+    roles: ["EMPLOYEE", "MENTOR"],
   },
 ];
 
@@ -117,8 +117,6 @@ const ROLE_BADGE: Record<UserRole, { label: string; cls: string }> = {
   EMPLOYEE: { label: "Employee", cls: "bg-emerald-100 text-emerald-700" },
   FINANCE: { label: "Finance", cls: "bg-amber-100 text-amber-700" },
   MENTOR: { label: "Mentor", cls: "bg-blue-100 text-blue-700" },
-  INTERN: { label: "Intern", cls: "bg-rose-100 text-rose-700" },
-  PROBATION: { label: "Probation", cls: "bg-orange-100 text-orange-700" },
 };
 
 /* ─────────────────────────────────────────

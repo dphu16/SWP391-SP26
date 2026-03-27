@@ -14,8 +14,8 @@ import {
   offboardingService,
   type OffboardingResponse,
 } from "../../services/offboardingService";
-import { personnelChangeService } from "../../services/personnelChangeService";
-import { getLookupDepartments, getLookupPositions } from "../../services/lookupService";
+import { personnelChangeService, type PersonnelChangeResponseDTO } from "../../services/personnelChangeService";
+import { getLookupDepartments, getLookupPositionsByDeptId } from "../../services/lookupService";
 import {
   type AttendanceEmployee,
   LeaveModalContent,
@@ -40,6 +40,7 @@ interface RequestRecord {
   datesAffected: string;
   status: AppStatus;
   raw: RequestRecordApi;
+  pcRaw?: PersonnelChangeResponseDTO;
 }
 
 // Mẫu Form Trống chuẩn (Dùng để reset Form về mặc định, tránh lỗi rác dữ liệu)
@@ -154,12 +155,14 @@ const Applications: React.FC = () => {
     }
     setLoadingRequests(true);
     try {
-      const [regularReqs, offboardingReqs] = await Promise.all([
+      const [regularReqs, offboardingReqs, pcReqs] = await Promise.all([
         getMyRequests(currentUser.employeeId),
         offboardingService.getActiveRequests().catch(() => ({ data: [] })),
+        personnelChangeService.getMyRequests().catch(() => ({ data: [] })),
       ]);
 
       const mappedRegular = regularReqs.map(mapApiRequest);
+
       const myOffboarding = (offboardingReqs.data || [])
         .filter((o: OffboardingResponse) => o.employeeId === currentUser.employeeId && o.type === "RESIGNATION")
         .map((o: OffboardingResponse): RequestRecord => ({
@@ -172,7 +175,23 @@ const Applications: React.FC = () => {
           raw: {} as RequestRecordApi,
         }));
 
-      setRequests([...mappedRegular, ...myOffboarding].sort((a, b) => new Date(b.dateRequested).getTime() - new Date(a.dateRequested).getTime()));
+      const myPcRequests = (pcReqs.data || []).map((pc): RequestRecord => ({
+        id: pc.changeId,
+        type: "PersonnelChange",
+        typeLabel: pc.changeType === "DEPARTMENT_TRANSFER" ? "Department Transfer"
+          : "Salary Change",
+        dateRequested: new Date(pc.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        datesAffected: "—",
+        status: (pc.status === "PENDING" || pc.status === "MANAGER_APPROVED" ? "Pending"
+          : pc.status === "HR_CONFIRMED" ? "Approved"
+          : "Rejected") as AppStatus,
+        raw: {} as RequestRecordApi,
+        pcRaw: pc,
+      }));
+
+      setRequests([...mappedRegular, ...myOffboarding, ...myPcRequests].sort(
+        (a, b) => new Date(b.dateRequested).getTime() - new Date(a.dateRequested).getTime()
+      ));
     } catch (error) {
       console.error("Error fetching requests", error);
     } finally {
@@ -189,11 +208,29 @@ const Applications: React.FC = () => {
   useEffect(() => {
     if (modal === "PersonnelChange") {
       getLookupDepartments().then(setDepartments).catch(() => { });
-      getLookupPositions().then((data) => {
-        setPositions(data.map((p) => ({ id: p.id, name: p.name || p.title || "" })));
-      }).catch(() => { });
     }
   }, [modal]);
+
+  // Tải danh sách Position theo Department khi chọn Department mới trong Personnel Change
+  useEffect(() => {
+    if (modal === "PersonnelChange" && formData.pcType === "DEPARTMENT_TRANSFER") {
+      if (formData.newDepartmentId) {
+        getLookupPositionsByDeptId(formData.newDepartmentId)
+          .then((data) => {
+            setPositions(data.map((p) => ({ id: p.id, name: p.name || p.title || "" })));
+            // Nếu position hiện tại không còn trong list mới, reset nó
+            if (!data.some(p => p.id === formData.newPositionId)) {
+              setFormData(prev => ({ ...prev, newPositionId: "" }));
+            }
+          })
+          .catch(() => { });
+      } else {
+        // Nếu xóa department, có thể load lại toàn bộ positions hoặc xóa list positions
+        setPositions([]);
+        setFormData(prev => ({ ...prev, newPositionId: "" }));
+      }
+    }
+  }, [formData.newDepartmentId, formData.pcType, modal]);
 
   // 4.4. Tự động đóng Menu thả xuống (Dropdown) khi click ra ngoài
   useEffect(() => {
@@ -209,7 +246,6 @@ const Applications: React.FC = () => {
   // KHU VỰC 5: XỬ LÝ SỰ KIỆN NÚT BẤM (ACTION HANDLERS)
   // ============================================================================
 
-  // 🔴 [NÚT BẤM]: Chọn loại đơn từ Dropdown "New Request"
   const handleDropdownItemClick = (type: ModalType) => {
     setModal(type);
     setMenuOpen(false);
@@ -225,7 +261,6 @@ const Applications: React.FC = () => {
     }
   };
 
-  // 🔴 [NÚT BẤM]: Tắt Modal / Hủy bỏ
   const closeModal = () => {
     setModal(null);
     setPcEmployee(null);
@@ -234,9 +269,32 @@ const Applications: React.FC = () => {
     setEditRequestId(null);
   };
 
-  // 🔴 [NÚT BẤM]: Bấm icon "Sửa" ở danh sách Đơn
   const handleEdit = (r: RequestRecord) => {
     if (r.status !== "Pending") return;
+
+    // Personnel Change: mở lại modal tạo mới với dữ liệu cũ
+    if (r.type === "PersonnelChange" && r.pcRaw) {
+      const pc = r.pcRaw;
+      setEditRequestId(r.id);
+      setModal("PersonnelChange");
+      setPcEmployee({
+        employeeId: pc.employeeId,
+        employeeCode: pc.employeeCode,
+        fullName: pc.employeeName,
+        position: "",
+        deptName: pc.departmentName || "",
+      });
+      setFormData({
+        ...BLANK_FORM,
+        pcType: pc.changeType,
+        reason: pc.reason || "",
+        newDepartmentId: pc.newValues?.departmentId?.toString() || "",
+        newPositionId: pc.newValues?.positionId?.toString() || "",
+        newSalary: pc.newValues?.baseSalary?.toString() || "",
+      });
+      return;
+    }
+
     const { raw } = r;
     setEditRequestId(r.id);
     setModal(r.type);
@@ -270,7 +328,7 @@ const Applications: React.FC = () => {
     });
   };
 
-  // 🔴 [NÚT BẤM]: Bấm icon "Xóa" ở danh sách Đơn
+  // 🔴 [NÚT BẤM]: Bấm icon "Xóa / Hủy" ở danh sách Đơn
   const handleDelete = async (id: string, status: AppStatus, type: AppType) => {
     if (status !== "Pending") return;
     try {
@@ -278,6 +336,10 @@ const Applications: React.FC = () => {
         const reason = window.prompt("Reason for cancellation:");
         if (!reason) return;
         await offboardingService.cancel(id, { cancelReason: reason });
+      } else if (type === "PersonnelChange") {
+        const reason = window.prompt("Reason for cancellation:");
+        if (!reason) return;
+        await personnelChangeService.reject(id, reason);
       } else {
         await deleteRequest(id);
       }
@@ -313,6 +375,10 @@ const Applications: React.FC = () => {
       } else if (modal === "PersonnelChange") {
         if (!pcEmployee) throw new Error("Please select an employee.");
         if (!formData.reason) throw new Error("Please specify a reason.");
+        // If editing, cancel (reject) the old request first, then create a new one
+        if (editRequestId) {
+          await personnelChangeService.reject(editRequestId, "Cancelled and re-submitted with updated info.");
+        }
         await personnelChangeService.create({ employeeId: pcEmployee.employeeId, changeType: formData.pcType as any, reason: formData.reason, newDepartmentId: formData.newDepartmentId || undefined, newPositionId: formData.newPositionId || undefined, newTitle: formData.newTitle || undefined, newSalary: formData.newSalary ? Number(formData.newSalary) : undefined });
         closeModal(); loadRequests(); setSubmitting(false); return;
       } else return;
@@ -420,12 +486,12 @@ const Applications: React.FC = () => {
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                         </button>
 
-                        {/* Action: Nút Xóa */}
+                        {/* Action: Nút Xóa / Hủy */}
                         <button
                           onClick={() => handleDelete(r.id, r.status, r.type)}
                           disabled={r.status !== "Pending"}
                           className={`transition-colors ${r.status !== "Pending" ? "text-gray-300 cursor-not-allowed" : "text-[#94a3b8] hover:text-[#ef4444]"}`}
-                          title={r.status === "Pending" ? "Delete request" : "Cannot delete approved/rejected request"}
+                          title={r.status === "Pending" ? (r.type === "PersonnelChange" ? "Cancel request" : "Delete request") : "Cannot delete approved/rejected request"}
                         >
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>

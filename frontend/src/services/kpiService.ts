@@ -331,11 +331,7 @@ export const kpiService = {
     uploadFile: async (file: File): Promise<string> => {
         const formData = new FormData();
         formData.append("file", file);
-        const response = await apiClient.post("/api/files/upload", formData, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-        });
+        const response = await apiClient.post("/api/files/upload", formData);
         return response.data; // This is the public URL string
     },
 

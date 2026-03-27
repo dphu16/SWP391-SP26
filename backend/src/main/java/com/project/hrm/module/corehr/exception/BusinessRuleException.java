@@ -1,5 +1,6 @@
 package com.project.hrm.module.corehr.exception;
 
+import com.project.hrm.module.corehr.enums.ErrorCode;
 import lombok.Getter;
 
 @Getter
