@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useSearchParams, useLocation } from "react-router-dom";
+import { useSearchParams, useLocation, Link } from "react-router-dom";
 import { applicationService } from "../../services/applicationService";
 import type { Application } from "../../types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
@@ -226,13 +226,6 @@ const CVListPage: React.FC = () => {
                         <h1 className="text-2xl font-bold font-heading text-text-primary-light tracking-tight">
                             List of {applications.length > 0 && applications[0].jobTitle ? applications[0].jobTitle : "for Job"}
                         </h1>
-                        <p className="mt-0.5 text-sm font-medium text-text-secondary-light mb-2">
-                            <Link to="/dashboard" className="hover:text-primary transition-colors">Home</Link>
-                            <span className="mx-2">&gt;</span>
-                            <Link to="/recruitment/jobs" className="hover:text-primary transition-colors">Job Postings</Link>
-                            <span className="mx-2">&gt;</span>
-                            <span className="text-text-primary-light">Applications</span>
-                        </p>
                     </div>
                 </div>
 

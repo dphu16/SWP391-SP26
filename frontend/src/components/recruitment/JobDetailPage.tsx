@@ -41,13 +41,15 @@ const JobDetailPage: React.FC = () => {
             {/* Header section with back button and basic info */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm font-medium text-text-secondary-light mb-2">
-                        <Link to="/dashboard" className="hover:text-primary transition-colors">Home</Link>
-                        <span className="mx-1">&gt;</span>
-                        <Link to="/recruitment/jobs" className="hover:text-primary transition-colors">Job Postings</Link>
-                        <span className="mx-1">&gt;</span>
-                        <span className="text-text-primary-light">{job.posName}</span>
-                    </div>
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="hover:text-primary transition-colors flex items-center gap-1 text-sm font-medium text-text-secondary-light mb-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back
+                    </button>
                     <h1 className="text-3xl font-bold font-heading text-text-primary-light tracking-tight">
                         {job.posName}
                     </h1>

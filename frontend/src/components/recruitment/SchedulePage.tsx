@@ -284,11 +284,18 @@ const SchedulePage: React.FC = () => {
                                                                         </div>
 
                                                                         <div className="w-full bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm relative group aspect-[1/1.414]">
-                                                                            <iframe
-                                                                                src={`http://localhost:8080${appDetail.cvUrl}#toolbar=0&navpanes=0&view=FitH`}
+                                                                            <object
+                                                                                data={`http://localhost:8080${appDetail.cvUrl}#navpanes=0&view=FitH`}
+                                                                                type="application/pdf"
                                                                                 className="absolute top-0 left-0 w-full h-full border-none"
-                                                                                title="Candidate CV Viewer"
-                                                                            />
+                                                                                aria-label="Candidate CV Viewer"
+                                                                            >
+                                                                                <embed
+                                                                                    src={`http://localhost:8080${appDetail.cvUrl}#navpanes=0&view=FitH`}
+                                                                                    type="application/pdf"
+                                                                                    className="absolute top-0 left-0 w-full h-full border-none"
+                                                                                />
+                                                                            </object>
                                                                         </div>
                                                                     </div>
                                                                 </div>

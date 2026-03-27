@@ -23,12 +23,14 @@ const formatTimeLeft = (closedTime: string | null) => {
 const PublicJobDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { error: toastError, success: toastSuccess } = useToast();
+    const { error: toastError } = useToast();
 
     const [job, setJob] = useState<Job | null>(null);
     const [loading, setLoading] = useState(true);
     const [showApplyForm, setShowApplyForm] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [hasSubmitted, setHasSubmitted] = useState(false);
 
     const [applicantName, setApplicantName] = useState("");
     const [applicantEmail, setApplicantEmail] = useState("");
@@ -74,13 +76,14 @@ const PublicJobDetail: React.FC = () => {
 
             await applicationService.applyJobCandidate(formData);
 
-            toastSuccess("Success", "Your application has been submitted successfully!");
+            setHasSubmitted(true);
+            setShowSuccessModal(true);
             // Reset form
             setApplicantName("");
             setApplicantEmail("");
             setApplicantPhone("");
             setApplicantCv(null);
-            setShowApplyForm(false);
+            // We keep showApplyForm as true so they see the instructions and can resubmit if they want.
         } catch (err: any) {
             const errMsg = err?.response?.data?.message || "Could not submit application. Please try again later.";
             setFormError(errMsg);
@@ -204,7 +207,22 @@ const PublicJobDetail: React.FC = () => {
                             <h3 className="text-2xl font-bold text-gray-900">
                                 Apply for this position
                             </h3>
-                            <p className="text-gray-500 mt-1">Please fill out the form below to submit your application.</p>
+                            {hasSubmitted ? (
+                                <div className="mt-4 p-5 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-900 space-y-3 animate-fade-in">
+                                    <div className="flex items-center gap-2 text-indigo-700 font-bold">
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        Application Instructions
+                                    </div>
+                                    <p className="text-sm leading-relaxed">
+                                        Your CV has been successfully submitted! Please check your <strong>Gmail</strong> for an automated confirmation and further updates.
+                                    </p>
+                                    <p className="text-sm italic opacity-80 pt-1 border-t border-indigo-100">
+                                        Note: If you made a mistake or wish to change your CV, you can resubmit the information using the form below.
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-gray-500 mt-1">Please fill out the form below to submit your application.</p>
+                            )}
                             {formError && (
                                 <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-100 flex items-center gap-3 text-red-700 animate-fade-in">
                                     <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -291,6 +309,29 @@ const PublicJobDetail: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-[2rem] p-10 max-w-sm w-full shadow-2xl text-center space-y-6 animate-scale-up border border-gray-100">
+                        <div className="mx-auto w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shadow-inner">
+                            <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-2xl font-black text-gray-900 tracking-tight">Application Success!</h3>
+                            <p className="text-gray-500 font-medium">Your CV has been received. Our recruitment team will contact you soon via email.</p>
+                        </div>
+                        <button
+                            onClick={() => setShowSuccessModal(false)}
+                            className="w-full py-4 bg-primary text-white font-bold rounded-2xl hover:bg-primary-hover transition-all shadow-lg shadow-primary/30 active:scale-[0.98]"
+                        >
+                            Got it, thanks!
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

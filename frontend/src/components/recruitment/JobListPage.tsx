@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { jobService } from "../../services/jobService";
 import type { Job, JobStatus } from "../ui/types";
 import { useToast } from "../ui/Toast";
@@ -103,11 +103,6 @@ const JobListPage: React.FC = () => {
                     <h1 className="text-2xl font-bold font-heading text-text-primary-light tracking-tight">
                         Job Openings
                     </h1>
-                    <p className="mt-0.5 text-sm font-medium text-text-secondary-light">
-                        <Link to="/dashboard" className="hover:text-primary transition-colors">Home</Link>
-                        <span className="mx-2">&gt;</span>
-                        <span className="text-text-primary-light">Job Postings</span>
-                    </p>
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-100 mr-2">
