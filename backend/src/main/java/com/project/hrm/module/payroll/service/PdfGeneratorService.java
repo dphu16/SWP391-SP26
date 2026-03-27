@@ -33,7 +33,7 @@ public class PdfGeneratorService {
             Font headFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
             Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 12);
 
-            // TODO: Ideally use a Unicode font for Vietnamese. We stick to basic for demo.
+            // TODO: Lý tưởng nhất là dùng font Unicode cho tiếng Việt. Tạm dùng font cơ bản cho demo.
 
             // Tiêu đề
             Paragraph title = new Paragraph("PAYSLIP", titleFont);
@@ -141,7 +141,7 @@ public class PdfGeneratorService {
             for (PayslipResponse p : payslips) {
                 table.addCell(createCell(p.getEmployeeId() != null ? p.getEmployeeId().toString().substring(0, 8) : "N/A", normalFont));
                 table.addCell(createCell(p.getEmployeeName(), normalFont));
-                // TODO: Update when Employee entity has bank details
+                // TODO: Cập nhật khi thực thể Employee có thông tin ngân hàng
                 table.addCell(createCell("N/A", normalFont));
                 table.addCell(createCell("N/A", normalFont));
                 table.addCell(createCell(formatCurrency(p.getNetSalary()), normalFont));

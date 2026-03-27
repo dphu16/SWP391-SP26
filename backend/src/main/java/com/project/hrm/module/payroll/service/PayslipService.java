@@ -151,14 +151,14 @@ public class PayslipService {
                         throw new PayrollException("Chỉ có thể chỉnh sửa chi tiết phiếu lương đang ở trạng thái DRAFT.");
                 }
 
-                // Clear existing details (let Hibernate handle orphan removal)
+                // Xóa chi tiết hiện tại (để Hibernate xử lý orphan removal)
                 if (payslip.getDetails() != null) {
                         payslip.getDetails().clear();
                 } else {
                         payslip.setDetails(new ArrayList<>());
                 }
 
-                // Add new details directly to the managed collection
+                // Thêm chi tiết mới trực tiếp vào collection
                 for (UpdatePayslipDetailRequest.DetailItem item : req.getDetails()) {
                         payslip.getDetails().add(PayslipDetail.builder()
                                 .payslip(payslip)
@@ -169,7 +169,7 @@ public class PayslipService {
                                 .build());
                 }
 
-                // Recalculate totals based on the new collection
+                // Tính toán lại tổng dựa trên collection mới
                 BigDecimal totalAllowances = payslip.getDetails().stream()
                         .filter(d -> d.getType() == PayslipDetailType.ALLOWANCE)
                         .map(PayslipDetail::getAmount)
@@ -180,7 +180,7 @@ public class PayslipService {
                         .map(PayslipDetail::getAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                // Giữ nguyên baseSalary, otPay, absentDeduction — chỉ cập nhật allowances & deductions
+                // Giữ nguyên baseSalary, otPay, absentDeduction — chỉ cập nhật phụ cấp & khấu trừ
                 BigDecimal base = payslip.getBaseSalary() != null ? payslip.getBaseSalary() : BigDecimal.ZERO;
                 BigDecimal otPay = payslip.getOtPay() != null ? payslip.getOtPay() : BigDecimal.ZERO;
                 BigDecimal absentDed = payslip.getAbsentDeduction() != null ? payslip.getAbsentDeduction() : BigDecimal.ZERO;
@@ -193,7 +193,7 @@ public class PayslipService {
                 payslip.setTotalDeductions(totalDeductions);
                 payslip.setGrossSalary(grossSalary);
                 payslip.setNetSalary(netSalary);
-                // tax & insurance are now embedded in manual deductions if HR added them
+                // thuế và bảo hiểm bây giờ được gói gọn trong khoản khấu trừ thủ công nếu HR thêm vào
                 payslip.setTaxAmount(BigDecimal.ZERO);
                 payslip.setInsuranceAmount(BigDecimal.ZERO);
 
