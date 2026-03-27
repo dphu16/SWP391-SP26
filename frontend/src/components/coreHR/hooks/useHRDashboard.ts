@@ -28,7 +28,7 @@ export const useHRDashboard = () => {
       );
       setEmployees(firstPage.data.content);
 
-      const totalPages = Math.min(firstPage.data.totalPages, 20);
+      const totalPages = Math.min(firstPage.data.page?.totalPages ?? 1, 20);
       let allEmps: Employee[] = [...firstPage.data.content];
 
       if (totalPages > 1) {

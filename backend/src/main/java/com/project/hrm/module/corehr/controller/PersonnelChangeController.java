@@ -22,7 +22,7 @@ public class PersonnelChangeController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<PersonnelChangeResponseDTO> createRequest(
             @RequestBody PersonnelChangeRequestDTO dto,
             @RequestAttribute("employeeId") UUID requestedBy,

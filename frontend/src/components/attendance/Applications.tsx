@@ -433,7 +433,7 @@ const Applications: React.FC = () => {
               <button onClick={() => handleDropdownItemClick("OT")} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#0f172a] hover:bg-[#f8fafc] transition-colors border-b border-[#f1f5f9]">OT Application</button>
               <button onClick={() => handleDropdownItemClick("Other")} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#0f172a] hover:bg-[#f8fafc] transition-colors border-b border-[#f1f5f9]">Other Request</button>
               <button onClick={() => handleDropdownItemClick("Resignation")} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-black hover:bg-red-50 transition-colors border-b border-[#f1f5f9]">Application for Resignation</button>
-              {currentUser?.roles?.some((r) => ["HR", "MANAGER", "ROLE_HR", "ROLE_MANAGER"].includes(r)) && (
+              {currentUser?.roles?.some((r) => ["HR", "ROLE_HR"].includes(r)) && (
                 <button onClick={() => handleDropdownItemClick("PersonnelChange")} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-black hover:bg-indigo-50 transition-colors">Personnel Change</button>
               )}
             </div>

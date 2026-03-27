@@ -62,16 +62,6 @@ public class PersonnelChangeService {
     public PersonnelChangeResponseDTO createRequest(PersonnelChangeRequestDTO dto, UUID requestedBy, boolean isHr) {
         Employee employee = employeeHelper.findEmployeeOrThrow(dto.getEmployeeId());
 
-        if (dto.getChangeType() == PersonnelChangeType.DEPARTMENT_TRANSFER) {
-            if (!isHr) {
-                throw new RuntimeException("Chỉ HR mới được quyền tạo yêu cầu điều chuyển phòng ban.");
-            }
-        } else {
-            if (!isHr) {
-                validateManagerCanActOnEmployee(requestedBy, employee);
-            }
-        }
-
         // BRD 2.4: Intern can't have salary change
         if (dto.getChangeType() == PersonnelChangeType.SALARY_CHANGE
                 && employee.getStatus() == EmployeeStatus.INTERN) {

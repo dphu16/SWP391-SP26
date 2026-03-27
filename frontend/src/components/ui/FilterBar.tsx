@@ -22,7 +22,7 @@ interface FilterBarProps {
   hideFilters?: boolean;
 }
 
-const STATIC_ROLES = ["Manager", "HR", "Employee", "Finance", "Mentor", "Intern", "Probation"];
+const STATIC_ROLES = ["Manager", "HR", "Employee", "Finance", "Mentor"];
 
 const FilterBar: React.FC<FilterBarProps> = ({ 
   onSearch, 
@@ -79,13 +79,9 @@ const FilterBar: React.FC<FilterBarProps> = ({
       options: [
         { label: "All Status", value: "All Status" },
         { label: "Official", value: "OFFICIAL" },
-        { label: "Completed", value: "COMPLETED" },
-        { label: "Pending Review", value: "PENDING_REVIEW" },
-        { label: "Pending Verify", value: "PENDING_VERIFY" },
-        { label: "Pending Activation", value: "PENDING_ACTIVATION" },
-        { label: "Rejected", value: "REJECTED" },
-        { label: "New", value: "NEW" },
-      ],
+        { label: "Probation", value: "PROBATION" },
+        { label: "Intern", value: "INTERN" },
+        { label: "Resigned", value: "RESIGNED" }      ],
     },
   ];
 

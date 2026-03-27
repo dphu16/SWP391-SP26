@@ -37,7 +37,7 @@ public class DependentController {
      * Cập nhật người phụ thuộc
      */
     @PutMapping("/dependents/{dependentId}")
-    @PreAuthorize("hasRole('HR')")
+    @PreAuthorize("hasRole('HR') and !hasRole('MANAGER')")
     public ResponseEntity<DependentDTO> updateDependent(
             @PathVariable("dependentId") UUID dependentId,
             @RequestBody DependentDTO dto) {
@@ -49,7 +49,7 @@ public class DependentController {
      * HR tạo mới người phụ thuộc cho nhân viên chưa có
      */
     @PostMapping("/{employeeId}/dependents")
-    @PreAuthorize("hasRole('HR')")
+    @PreAuthorize("hasRole('HR') and !hasRole('MANAGER')")
     public ResponseEntity<DependentDTO> createDependent(
             @PathVariable("employeeId") UUID employeeId,
             @RequestBody DependentDTO dto) {

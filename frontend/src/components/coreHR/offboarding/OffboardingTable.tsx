@@ -9,12 +9,14 @@ interface OffboardingTableProps {
   loading: boolean;
   filteredRequests: OffboardingResponse[];
   onViewDetail: (request: OffboardingResponse) => void;
+  onCancelRequest?: (request: OffboardingResponse) => void;
 }
 
 const OffboardingTable: React.FC<OffboardingTableProps> = ({
   loading,
   filteredRequests,
   onViewDetail,
+  onCancelRequest,
 }) => {
   return (
     <div className="rounded-2xl border border-border-light bg-surface-light overflow-hidden shadow-card animate-fade-in">
@@ -107,24 +109,37 @@ const OffboardingTable: React.FC<OffboardingTableProps> = ({
                     )}
                   </td>
                   <td className="px-6 py-3.5 text-center">
-                    <button
-                      onClick={() => onViewDetail(req)}
-                      className="p-1.5 rounded-lg text-text-secondary-light hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer inline-flex items-center justify-center"
-                      title="View Details"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => onViewDetail(req)}
+                        className="p-1.5 rounded-lg text-text-secondary-light hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer inline-flex items-center justify-center"
+                        title="View Details"
                       >
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    </button>
+                        <svg
+                          className="w-4 h-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      </button>
+                      {(req.status === "PENDING" || req.status === "MANAGER_APPROVED") && onCancelRequest && (
+                        <button
+                          onClick={() => onCancelRequest(req)}
+                          className="p-1.5 rounded-lg text-text-secondary-light hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer inline-flex items-center justify-center"
+                          title="Cancel Request"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))

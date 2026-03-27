@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../../services/apiClient";
 import type { Application, OnboardingListResponse } from "./types";
+import { useToast } from "../../../components/ui/Toast";
 
 const API_URL = "/api/applications/hired";
 
@@ -11,6 +12,7 @@ export const useEmployeeOnboarding = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [statusModalApp, setStatusModalApp] = useState<Application | null>(null);
+  const { success: toastSuccess, error: toastError } = useToast();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -81,6 +83,26 @@ export const useEmployeeOnboarding = () => {
     navigate(`/onboarding/${app.id}/profile?action=resubmit`);
   };
 
+  const handleCancel = async (app: Application) => {
+    if (!window.confirm(`Are you sure you want to cancel the onboarding for ${app.candidateName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await apiClient.delete(`/api/employees/${app.id}/cancel`);
+      toastSuccess("Success", "Onboarding cancelled and profile deleted.");
+      fetchData();
+      if (statusModalApp?.id === app.id) {
+        setStatusModalApp(null);
+      }
+    } catch (err: unknown) {
+      const message = (err as any)?.response?.data?.message ?? "Failed to cancel onboarding";
+      toastError("Error", message);
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     error,
@@ -91,5 +113,6 @@ export const useEmployeeOnboarding = () => {
     statusModalApp,
     setStatusModalApp,
     handleResubmit,
+    handleCancel,
   };
 };

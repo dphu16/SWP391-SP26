@@ -10,6 +10,7 @@ import com.project.hrm.module.corehr.mapper.InactiveEmployeeMapper;
 import com.project.hrm.module.corehr.mapper.OffboardingMapper;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.corehr.repository.OffboardingRepository;
+import com.project.hrm.module.corehr.entity.Offboarding;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -40,22 +41,35 @@ public class OffboardingQueryService {
         }
 
         /** Lấy tất cả request đang active (PENDING, MANAGER_APPROVED, HR_CONFIRMED) */
-        public List<OffboardingResponseDTO> getActiveRequests() {
+        public List<OffboardingResponseDTO> getActiveRequests(UUID deptId) {
                 List<OffboardingStatus> activeStatuses = List.of(
                                 OffboardingStatus.PENDING,
                                 OffboardingStatus.MANAGER_APPROVED,
                                 OffboardingStatus.HR_CONFIRMED);
 
-                return offboardingRepository.findByStatusIn(activeStatuses)
-                                .stream()
+                List<Offboarding> entities;
+                if (deptId != null) {
+                        entities = offboardingRepository.findByStatusInAndEmployee_Department_DeptId(activeStatuses, deptId);
+                } else {
+                        entities = offboardingRepository.findByStatusIn(activeStatuses);
+                }
+
+                return entities.stream()
                                 .map(o -> OffboardingMapper.toDTO(o, employeeRepository))
                                 .toList();
         }
 
         /** Lấy chỉ request PENDING (chờ Manager duyệt) */
-        public List<OffboardingResponseDTO> getPendingRequests() {
-                return offboardingRepository.findByStatusIn(List.of(OffboardingStatus.PENDING))
-                                .stream()
+        public List<OffboardingResponseDTO> getPendingRequests(UUID deptId) {
+                List<OffboardingStatus> statuses = List.of(OffboardingStatus.PENDING);
+                List<Offboarding> entities;
+                if (deptId != null) {
+                        entities = offboardingRepository.findByStatusInAndEmployee_Department_DeptId(statuses, deptId);
+                } else {
+                        entities = offboardingRepository.findByStatusIn(statuses);
+                }
+
+                return entities.stream()
                                 .map(o -> OffboardingMapper.toDTO(o, employeeRepository))
                                 .toList();
         }

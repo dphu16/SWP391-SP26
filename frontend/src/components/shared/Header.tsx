@@ -196,7 +196,7 @@ const Header: React.FC = () => {
         <div className="flex items-center gap-2">
           <div id="ai-chat-header-right" className="empty:hidden" />
           {/* AI Chat (Visible to HR and MANAGER only) */}
-          {!isAiChat && (currentUser.role === "HR" || currentUser.role === "MANAGER") && (
+          {!isAiChat && (currentUser.role === "HR") && (
             <button
               className="relative p-2 rounded-lg text-text-secondary-light hover:bg-gray-100 hover:text-text-primary-light transition-colors cursor-pointer"
               aria-label="AI Chat"

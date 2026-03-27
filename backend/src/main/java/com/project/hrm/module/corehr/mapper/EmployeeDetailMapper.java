@@ -67,6 +67,7 @@ public class EmployeeDetailMapper {
                 .dateOfJoining(employee.getDateOfJoining())
                 .roles(resolveRoles(employee))
                 .positionTitle(position != null ? position.getTitle() : null)
+                .deptId(department != null ? department.getDeptId() : null)
                 .deptName(department != null ? department.getDeptName() : null)
                 .managerName(manager != null ? manager.getFullName() : null)
                 .managerAvatar((manager != null && manager.getPersonal() != null) ? manager.getPersonal().getAvatar() : null)

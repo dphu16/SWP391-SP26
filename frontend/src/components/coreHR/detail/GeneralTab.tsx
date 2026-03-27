@@ -31,7 +31,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
   const { user, hasRole } = useAuth();
   const isOwner = user?.employeeId === employeeId;
   const isHR = hasRole("HR");
-  const canEdit = isOwner || isHR;
+  const isManager = hasRole("MANAGER");
+  const canEdit = (isOwner || isHR) && !isManager;
 
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -250,7 +251,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
       <SectionCard
         title="Emergency Contact"
         action={
-          isHR ? (
+          (isHR && !isManager) ? (
             !isEditingDep ? (
               <IconButton
                 title="Edit emergency contact"

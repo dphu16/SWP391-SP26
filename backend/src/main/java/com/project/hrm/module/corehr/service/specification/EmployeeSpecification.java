@@ -10,11 +10,16 @@ import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
 
+import java.util.UUID;
+
 public class EmployeeSpecification {
 
     public static Specification<Employee> filterEmployees(String q, String fullName, String employeeCode, String phoneNumber,
-                                                          String department, String position, String role, String status) {
+                                                          String department, String position, String role, String status, UUID deptId) {
         return (root, query, criteriaBuilder) -> {
+            if (query != null) {
+                query.distinct(true); // Prevent duplicate rows from @EntityGraph JOIN on user.roles (@ManyToMany)
+            }
             Predicate predicate = criteriaBuilder.conjunction();
 
             if (StringUtils.hasText(q)) {
@@ -63,6 +68,11 @@ public class EmployeeSpecification {
                                 criteriaBuilder.function("unaccent", String.class,
                                         criteriaBuilder.literal(searchDept))
                         ));
+            }
+            
+            if (deptId != null) {
+                predicate = criteriaBuilder.and(predicate,
+                        criteriaBuilder.equal(root.get("department").get("deptId"), deptId));
             }
 
             if (StringUtils.hasText(position)) {
@@ -115,6 +125,10 @@ public class EmployeeSpecification {
                                 criteriaBuilder.equal(root.get("empStatus"), progStatusEnum));
                     } catch (IllegalArgumentException ignored) {}
                 }
+            } else {
+                // No status filter specified → exclude PENDING_OFFBOARD and TERMINATED by default
+                predicate = criteriaBuilder.and(predicate,
+                        criteriaBuilder.not(root.get("status").in(EmployeeStatus.PENDING_OFFBOARD, EmployeeStatus.TERMINATED)));
             }
 
             return predicate;

@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,9 +23,26 @@ import java.util.UUID;
 public class OffboardingController {
 
     private final IOffboardingService offboardingService;
+    private final com.project.hrm.module.corehr.service.directory.IEmployeeService employeeService;
     
-    public OffboardingController(IOffboardingService offboardingService) {
+    public OffboardingController(IOffboardingService offboardingService, com.project.hrm.module.corehr.service.directory.IEmployeeService employeeService) {
         this.offboardingService = offboardingService;
+        this.employeeService = employeeService;
+    }
+
+    private UUID getMemberFilterDeptId(UUID currentEmployeeId, Authentication authentication) {
+        if (currentEmployeeId != null && authentication != null) {
+            boolean isManager = authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER"));
+            boolean isHr = authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_HR"));
+
+            if (isManager && !isHr) {
+                EmployeeDetailDTO mgrInfo = employeeService.getEmployeeDetail(currentEmployeeId);
+                return mgrInfo.getDeptId();
+            }
+        }
+        return null;
     }
 
     // ── BRD 3.1: Nhân viên tự tạo yêu cầu nghỉ việc (voluntary resignation) ──
@@ -34,14 +52,13 @@ public class OffboardingController {
             @PathVariable("employeeId") UUID employeeId,
             @RequestAttribute("employeeId") UUID tokenEmployeeId,
             @Valid @RequestBody OffboardingRequestDTO dto) {
-        // Sử dụng ID từ token để ngăn chặn IDOR, giữ PathVariable để đảm bảo API contract (backward compatibility)
         OffboardingResponseDTO response = offboardingService.createResignationRequest(tokenEmployeeId, dto, tokenEmployeeId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     // ── BRD 3.1: Quản lý đề xuất sa thải / hết HĐ / không vào làm ──
     @PostMapping("/offboarding/propose/{employeeId}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('HR','MANAGER')")
     public ResponseEntity<OffboardingResponseDTO> createManagerProposedRequest(
             @PathVariable("employeeId") UUID employeeId,
             @RequestAttribute("employeeId") UUID requesterId,
@@ -83,16 +100,20 @@ public class OffboardingController {
 
     // ── Query: Lấy tất cả request đang active ──
     @GetMapping("/offboarding/active")
-    @PreAuthorize("hasAnyRole('HR','MANAGER','EMPLOYEE','INTERN','PROBATION')")
-    public ResponseEntity<List<OffboardingResponseDTO>> getActiveRequests() {
-        return ResponseEntity.ok(offboardingService.getActiveRequests());
+    @PreAuthorize("hasAnyRole('HR','MANAGER','EMPLOYEE')")
+    public ResponseEntity<List<OffboardingResponseDTO>> getActiveRequests(
+            @RequestAttribute(value = "employeeId", required = false) UUID currentEmployeeId,
+            Authentication auth) {
+        return ResponseEntity.ok(offboardingService.getActiveRequests(getMemberFilterDeptId(currentEmployeeId, auth)));
     }
 
     // ── Query: Lấy request PENDING (chờ Manager duyệt) ──
     @GetMapping("/offboarding/pending")
     @PreAuthorize("hasAnyRole('HR','MANAGER')")
-    public ResponseEntity<List<OffboardingResponseDTO>> getPendingRequests() {
-        return ResponseEntity.ok(offboardingService.getPendingRequests());
+    public ResponseEntity<List<OffboardingResponseDTO>> getPendingRequests(
+            @RequestAttribute(value = "employeeId", required = false) UUID currentEmployeeId,
+            Authentication auth) {
+        return ResponseEntity.ok(offboardingService.getPendingRequests(getMemberFilterDeptId(currentEmployeeId, auth)));
     }
 
     // ── Query: Chi tiết 1 offboarding request ──
@@ -106,7 +127,7 @@ public class OffboardingController {
     // ── Legacy endpoints ──
 
     @PutMapping("/employees/{id}/terminate")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<EmployeeDetailDTO> terminateEmployee(
             @PathVariable("id") UUID id) {
         EmployeeDetailDTO updated = offboardingService.terminateEmployee(id);

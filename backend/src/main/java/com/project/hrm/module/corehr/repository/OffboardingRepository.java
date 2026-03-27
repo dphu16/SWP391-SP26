@@ -23,6 +23,9 @@ public interface OffboardingRepository extends JpaRepository<Offboarding, UUID> 
     @EntityGraph(attributePaths = {"employee", "employee.department", "employee.position", "employee.personal"})
     List<Offboarding> findByStatusIn(List<OffboardingStatus> statuses);
 
+    @EntityGraph(attributePaths = {"employee", "employee.department", "employee.position", "employee.personal"})
+    List<Offboarding> findByStatusInAndEmployee_Department_DeptId(List<OffboardingStatus> statuses, UUID deptId);
+
     @EntityGraph(attributePaths = { "employee", "employee.department", "employee.position", "employee.personal" })
     List<Offboarding> findByEmployee_EmployeeId(UUID employeeId);
 

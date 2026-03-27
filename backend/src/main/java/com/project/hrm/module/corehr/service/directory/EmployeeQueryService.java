@@ -31,10 +31,11 @@ public class EmployeeQueryService {
                         .orElseThrow(() -> new RuntimeException("Employee not found with id: " + id)));
     }
 
-    public Page<EmployeeDTO> searchEmployees(String q, String fullName, String employeeCode, String phoneNumber, String department,
-            String position, String role, String status, Pageable pageable) {
+    public Page<EmployeeDTO> searchEmployees(String q, String fullName, String employeeCode, String phoneNumber,
+            String department,
+            String position, String role, String status, UUID deptId, Pageable pageable) {
         org.springframework.data.jpa.domain.Specification<com.project.hrm.module.corehr.entity.Employee> spec = EmployeeSpecification
-                .filterEmployees(q, fullName, employeeCode, phoneNumber, department, position, role, status);
+                .filterEmployees(q, fullName, employeeCode, phoneNumber, department, position, role, status, deptId);
 
         return employeeRepository.findAll(spec, pageable).map(EmployeeMapper::toDTO);
     }
