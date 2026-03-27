@@ -120,7 +120,7 @@ public class WorkScheduleController {
     // 12. Lấy danh sách Nhân viên (Để FE xổ xuống trong ô Dropdown chọn người)
     @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     @GetMapping("/employees")
-    public ResponseEntity<Page<AttendanceEmployeeResponse>> getEmployeesForScheduling(
+    public ResponseEntity<Page<AttendanceEmployeeResponse>> getEmplocdyeesForScheduling(
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size,
             @RequestParam(name = "search", required = false) String search) {

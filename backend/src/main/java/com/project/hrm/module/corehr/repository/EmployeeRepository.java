@@ -47,29 +47,30 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
         @EntityGraph(attributePaths = { "user", "position", "department", "personal" })
         List<Employee> findByStatusIn(List<EmployeeStatus> statuses);
 
-        @Query("SELECT e FROM Employee e LEFT JOIN e.personal p " +
-                        "WHERE LOWER(e.fullName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-                        "OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :search, '%')) " +
-                        "OR LOWER(p.email) LIKE LOWER(CONCAT('%', :search, '%')) " +
-                        "OR LOWER(p.phone) LIKE LOWER(CONCAT('%', :search, '%'))")
-        Page<Employee> searchEmployeesByKeyword(@Param("search") String keyword, Pageable pageable);
+
+        @Query(value = """
+        SELECT e.* FROM employees e
+        LEFT JOIN personal_info p ON p.employee_id = e.employee_id
+        WHERE unaccent(lower(e.full_name)) LIKE unaccent(lower(concat('%', :search, '%')))
+        OR lower(e.employee_code) LIKE lower(concat('%', :search, '%'))
+        OR lower(p.email) LIKE lower(concat('%', :search, '%'))
+        OR lower(p.phone) LIKE lower(concat('%', :search, '%'))
+        """,
+            countQuery = """
+        SELECT count(e.*) FROM employees e
+        LEFT JOIN personal_info p ON p.employee_id = e.employee_id
+        WHERE unaccent(lower(e.full_name)) LIKE unaccent(lower(concat('%', :search, '%')))
+        OR lower(e.employee_code) LIKE lower(concat('%', :search, '%'))
+        OR lower(p.email) LIKE lower(concat('%', :search, '%'))
+        OR lower(p.phone) LIKE lower(concat('%', :search, '%'))
+        """,
+            nativeQuery = true)
+    Page<Employee> searchEmployeesByKeyword(@Param("search") String keyword, Pageable pageable);
 
         @EntityGraph(attributePaths = { "user", "position", "department", "personal" })
         List<Employee> findByEmpStatusNot(ProgressStatus status);
 
-        Optional<Employee> findByUser(User user);
-
-        @Query("SELECT e FROM Employee e WHERE e.user.status = com.project.hrm.module.corehr.enums.UserStatus.ACTIVE")
-        List<Employee> findAllActive();
-
-        @EntityGraph(attributePaths = { "user", "user.roles", "position", "department", "personal" })
-        List<Employee> findByDepartment_Manager_EmployeeId(UUID managerId);
-
-    // Sửa lại để trả về List<Employee> và truy vấn thông qua quan hệ với User
-    @Query("SELECT e FROM Employee e WHERE e.user.status = 'ACTIVE'")
-    List<Employee> findActiveEmployeesForPayroll();
-
-    @EntityGraph(attributePaths = { "user", "position", "department" })
-    List<Employee> findByDepartment_DeptId(UUID deptId);
+        @EntityGraph(attributePaths = { "user", "position", "department" })
+        List<Employee> findByDepartment_DeptId(UUID deptId);
 
 }

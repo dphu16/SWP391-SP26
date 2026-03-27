@@ -2,6 +2,7 @@ package com.project.hrm.module.corehr.service.specification;
 
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.enums.EmployeeRole;
+import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -29,9 +30,15 @@ public class EmployeeSpecification {
             }
 
             if (StringUtils.hasText(fullName)) {
+                // unaccent để tìm "bich" ra "Bích", "nguyen van a" ra "Nguyễn Văn A"
+                String searchName = "%" + fullName.trim().toLowerCase() + "%";
                 predicate = criteriaBuilder.and(predicate,
-                        criteriaBuilder.like(criteriaBuilder.lower(root.get("fullName")),
-                                "%" + fullName.trim().toLowerCase() + "%"));
+                        criteriaBuilder.like(
+                                criteriaBuilder.function("unaccent", String.class,
+                                        criteriaBuilder.lower(root.get("fullName"))),
+                                criteriaBuilder.function("unaccent", String.class,
+                                        criteriaBuilder.literal(searchName))
+                        ));
             }
 
             if (StringUtils.hasText(employeeCode)) {
@@ -46,15 +53,28 @@ public class EmployeeSpecification {
             }
 
             if (StringUtils.hasText(department)) {
-                Join<Object, Object> deptJoin = root.join("department");
+                Join<Object, Object> deptJoin = root.join("department", JoinType.LEFT);
+                String searchDept = "%" + department.trim().toLowerCase() + "%";
+                // LIKE thay vì equal → "ke toan" tìm ra "Kế Toán", "IT" tìm ra "Công nghệ thông tin"
                 predicate = criteriaBuilder.and(predicate,
-                        criteriaBuilder.equal(deptJoin.get("deptName"), department.trim()));
+                        criteriaBuilder.like(
+                                criteriaBuilder.function("unaccent", String.class,
+                                        criteriaBuilder.lower(deptJoin.get("deptName"))),
+                                criteriaBuilder.function("unaccent", String.class,
+                                        criteriaBuilder.literal(searchDept))
+                        ));
             }
 
             if (StringUtils.hasText(position)) {
-                Join<Object, Object> posJoin = root.join("position");
+                Join<Object, Object> posJoin = root.join("position", JoinType.LEFT);
+                String searchPos = "%" + position.trim().toLowerCase() + "%";
                 predicate = criteriaBuilder.and(predicate,
-                        criteriaBuilder.equal(posJoin.get("title"), position.trim()));
+                        criteriaBuilder.like(
+                                criteriaBuilder.function("unaccent", String.class,
+                                        criteriaBuilder.lower(posJoin.get("title"))),
+                                criteriaBuilder.function("unaccent", String.class,
+                                        criteriaBuilder.literal(searchPos))
+                        ));
             }
 
             if (StringUtils.hasText(role)) {
@@ -76,13 +96,24 @@ public class EmployeeSpecification {
             }
 
             if (StringUtils.hasText(status)) {
+                String statusStr = status.trim().toUpperCase();
+                boolean matched = false;
+
+                // Try EmployeeStatus (OFFICIAL, TERMINATED, etc.)
                 try {
-                    ProgressStatus parsedStatus = ProgressStatus
-                            .valueOf(status.trim().toUpperCase());
+                    EmployeeStatus empStatusEnum = EmployeeStatus.valueOf(statusStr);
                     predicate = criteriaBuilder.and(predicate,
-                            criteriaBuilder.equal(root.get("empStatus"), parsedStatus));
-                } catch (IllegalArgumentException e) {
-                    // Ignore Invalid status string
+                            criteriaBuilder.equal(root.get("status"), empStatusEnum));
+                    matched = true;
+                } catch (IllegalArgumentException ignored) {}
+
+                // Try ProgressStatus (NEW, COMPLETED, etc.) if not matched yet
+                if (!matched) {
+                    try {
+                        ProgressStatus progStatusEnum = ProgressStatus.valueOf(statusStr);
+                        predicate = criteriaBuilder.and(predicate,
+                                criteriaBuilder.equal(root.get("empStatus"), progStatusEnum));
+                    } catch (IllegalArgumentException ignored) {}
                 }
             }
 

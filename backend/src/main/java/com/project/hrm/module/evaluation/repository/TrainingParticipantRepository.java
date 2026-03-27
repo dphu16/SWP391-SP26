@@ -10,5 +10,6 @@ import java.util.UUID;
 @Repository
 public interface TrainingParticipantRepository extends JpaRepository<TrainingParticipant, UUID> {
     List<TrainingParticipant> findByEmployee_EmployeeId(UUID employeeId);
+    boolean existsByEmployee_EmployeeIdAndCourse_CourseUrl(UUID employeeId, String courseUrl);
 }
 
