@@ -41,8 +41,11 @@ const ROUTE_TREE: RouteNode[] = [
   // Payroll
   { path: "/payroll", label: "Payroll", parent: "/dashboard", isClickable: false },
   { path: "/payroll/employee", label: "My Payslips", parent: "/payroll", isClickable: true },
-  { path: "/payroll/hr", label: "HR Payroll", parent: "/payroll", isClickable: true },
+  { path: "/payroll/hr", label: "Payroll Management", parent: "/payroll", isClickable: true },
   { path: "/payroll/tax-report", label: "Tax & Insurance", parent: "/payroll", isClickable: true },
+  { path: "/payroll/finance", label: "Finance Payment", parent: "/payroll", isClickable: true },
+  { path: "/payroll/cnb-manager", label: "C&B Manager", parent: "/payroll", isClickable: true },
+  { path: "/payroll/my-trs", label: "My Benefits", parent: "/payroll", isClickable: true },
 
   // Performance
   { path: "/performance", label: "Performance", parent: "/dashboard", isClickable: true },

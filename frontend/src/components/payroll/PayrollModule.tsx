@@ -73,19 +73,7 @@ export const PayrollBreadcrumb: React.FC<{ path: string }> = ({ path }) => {
     const meta = PAYROLL_ROUTE_META[path] ?? { label: "Payroll", icon: Icon.money };
     return (
         <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-                {/* Breadcrumb text */}
-                <div className="flex items-center gap-1.5 text-sm">
-                    <span className="text-slate-400 font-medium">Payroll</span>
-                    <svg className="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                    <span className="flex items-center gap-1.5 font-bold text-slate-800">
-                        {meta.icon}
-                        {meta.label}
-                    </span>
-                </div>
-            </div>
+            {/* Removed inner breadcrumb to avoid redundancy with global layout breadcrumbs */}
             
             {/* Big Page Title */}
             <h1 className="text-[28px] font-bold text-slate-900 tracking-tight">
