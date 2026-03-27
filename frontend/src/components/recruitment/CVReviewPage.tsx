@@ -219,12 +219,15 @@ const CVReviewPage: React.FC = () => {
         <div className="space-y-6 animate-fade-in pb-10 max-w-[1600px] mx-auto px-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm font-medium text-text-secondary-light mb-2">
-                        <button onClick={handleBack} className="hover:text-primary transition-colors flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                            Back
-                        </button>
-                    </div>
+                    <button
+                        onClick={handleBack}
+                        className="hover:text-primary transition-colors flex items-center gap-1 text-sm font-medium text-text-secondary-light mb-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back
+                    </button>
                     <h1 className="text-3xl font-bold font-heading text-text-primary-light tracking-tight">
                         Review CV
                     </h1>
@@ -320,19 +323,35 @@ const CVReviewPage: React.FC = () => {
                             <div className="grid grid-cols-1 lg:grid-cols-10 gap-10">
                                 {/* Left Side: CV Viewer (60%) */}
                                 <div className="lg:col-span-6 space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h2 className="text-lg font-bold text-text-primary-light flex items-center gap-2">
-                                            <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                    <div className="flex items-center justify-between mb-0">
+                                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                             Candidate CV
-                                        </h2>
-
+                                        </h3>
+                                        <a
+                                            href={`http://localhost:8080${app.cvUrl}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 group transition-colors"
+                                        >
+                                            Open Full Screen
+                                            <svg className="w-3 h-3 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                        </a>
                                     </div>
+
                                     <div className="w-full bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm relative group aspect-[1/1.414]">
-                                        <iframe
-                                            src={`http://localhost:8080${app.cvUrl}#toolbar=0&navpanes=0&view=FitH`}
+                                        <object
+                                            data={`http://localhost:8080${app.cvUrl}#navpanes=0&view=FitH`}
+                                            type="application/pdf"
                                             className="absolute top-0 left-0 w-full h-full border-none"
-                                            title="Candidate CV Viewer"
-                                        />
+                                            aria-label="Candidate CV Viewer"
+                                        >
+                                            <embed
+                                                src={`http://localhost:8080${app.cvUrl}#navpanes=0&view=FitH`}
+                                                type="application/pdf"
+                                                className="absolute top-0 left-0 w-full h-full border-none"
+                                            />
+                                        </object>
                                     </div>
                                 </div>
 

@@ -1,6 +1,7 @@
 package com.project.hrm.module.recruitment.service.email;
 
 import com.project.hrm.module.recruitment.dto.request.EmailRequest;
+import com.project.hrm.module.recruitment.service.EmailService;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -10,8 +11,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 
-@Service
-public class UploadCV {
+@Service("UploadCV")
+public class UploadCV implements EmailService {
 
     private final JavaMailSender mailSender;
 
@@ -20,6 +21,7 @@ public class UploadCV {
     }
 
     @Async
+    @Override
     public void sendEmail(EmailRequest request) {
 
         try {

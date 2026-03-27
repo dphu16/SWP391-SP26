@@ -2,12 +2,7 @@ package com.project.hrm.module.recruitment.service.impl;
 
 import com.project.hrm.module.recruitment.dto.request.EmailRequest;
 import com.project.hrm.module.recruitment.enums.JobStatus;
-import com.project.hrm.module.recruitment.service.CvReviewService;
-import com.project.hrm.module.recruitment.service.InterviewService;
-import com.project.hrm.module.recruitment.service.email.ExpectedInterview;
-import com.project.hrm.module.recruitment.service.email.OfferEmail;
-import com.project.hrm.module.recruitment.service.email.RejectEmail;
-import com.project.hrm.module.recruitment.service.email.UploadCV;
+import com.project.hrm.module.recruitment.service.*;
 import com.project.hrm.module.recruitment.dto.request.ApplicationRequest;
 import com.project.hrm.module.recruitment.dto.request.DateLimitRequest;
 import com.project.hrm.module.recruitment.dto.response.ApplicationResponse;
@@ -18,8 +13,6 @@ import com.project.hrm.module.recruitment.enums.ApplicationStatus;
 import com.project.hrm.module.recruitment.repository.ApplicationRepository;
 import com.project.hrm.module.recruitment.repository.CandidateRepository;
 import com.project.hrm.module.recruitment.repository.JobRepository;
-import com.project.hrm.module.recruitment.service.ApplicationService;
-import com.project.hrm.module.recruitment.service.FileService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -27,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -35,14 +29,11 @@ import java.util.UUID;
 public class ApplicationServiceImpl implements ApplicationService {
     private final CandidateRepository candidateRepository;
     private final JobRepository jobRepository;
-    private final UploadCV uploadCV;
-    private final ExpectedInterview expectedInterview;
     private final ApplicationRepository applicationRepository;
     private final CvReviewService cvReviewService;
     private final InterviewService interviewService;
     private final FileService fileService;
-    private final OfferEmail offerEmail;
-    private final RejectEmail rejectEmail;
+    private final Map<String, EmailService> emailService;
 
     @Override
     public ApplicationResponse create(ApplicationRequest request) {
@@ -73,8 +64,9 @@ public class ApplicationServiceImpl implements ApplicationService {
         app.setStatus(ApplicationStatus.APPLIED);
         app.setCreatedAt(OffsetDateTime.now());
         applicationRepository.save(app);
+
         EmailRequest emailRequest = sendCV(app,job);
-        uploadCV.sendEmail(emailRequest);
+        emailService.get("UploadCV").sendEmail(emailRequest);
         return mapToResponse(app);
     }
 
@@ -115,7 +107,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         Job job = jobRepository.findById(request.getJobId())
                 .orElseThrow(() -> new RuntimeException("Not found job."));
         EmailRequest emailRequest = sendCV(app,job);
-        uploadCV.sendEmail(emailRequest);
+        emailService.get("UploadCV").sendEmail(emailRequest);
         return mapToResponse(app);
     }
 
@@ -138,7 +130,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         Job job = jobRepository.findById(app.getJob().getId())
                 .orElseThrow(() -> new RuntimeException("Not found job."));
         EmailRequest emailRequest = expectedDay(app,job);
-        expectedInterview.sendEmail(emailRequest);
+        emailService.get("ExpectedInterview").sendEmail(emailRequest);
 
         return mapToResponse(app);
     }
@@ -168,7 +160,7 @@ public class ApplicationServiceImpl implements ApplicationService {
                 .orElseThrow(() -> new RuntimeException("Not found job."));
         for (Application app : applications) {
             EmailRequest emailRequest = offerGmail(app,job);
-            offerEmail.sendEmail(emailRequest);
+            emailService.get("OfferEmail").sendEmail(emailRequest);
         }
 
         return applications.stream()
@@ -198,7 +190,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
                 i.setStatus(ApplicationStatus.REJECTED);
                 EmailRequest emailRequest = rejectGmail(i,job);
-                rejectEmail.sendEmail(emailRequest);
+                emailService.get("RejectEmail").sendEmail(emailRequest);
 
             }
             job.setStatus(JobStatus.CLOSED);
