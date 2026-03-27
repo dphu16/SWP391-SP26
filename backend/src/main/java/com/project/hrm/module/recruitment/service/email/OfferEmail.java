@@ -1,18 +1,20 @@
 package com.project.hrm.module.recruitment.service.email;
 
 import com.project.hrm.module.recruitment.dto.request.EmailRequest;
+import com.project.hrm.module.recruitment.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-@Service
+@Service("OfferEmail")
 @RequiredArgsConstructor
-public class OfferEmail {
+public class OfferEmail implements EmailService {
     private final JavaMailSender mailSender;
 
     @Async
+    @Override
     public void sendEmail(EmailRequest request) {
 
         String subject = "Job Offer - " + request.getTitle();
