@@ -179,6 +179,7 @@ const JobFormPage: React.FC = () => {
                                 value={selectedDeptId}
                                 onChange={(e) => setSelectedDeptId(e.target.value)}
                                 className={inputCls}
+                                disabled={Boolean(formData.requestId)}
                             >
                                 <option value="" disabled>Select a department</option>
                                 {departments.map(dept => (
@@ -197,7 +198,7 @@ const JobFormPage: React.FC = () => {
                                 value={formData.posId}
                                 onChange={handleChange}
                                 className={inputCls}
-                                disabled={!selectedDeptId}
+                                disabled={!selectedDeptId || Boolean(formData.requestId)}
                             >
                                 <option value="" disabled>Select a position</option>
                                 {positions.map(pos => (

@@ -201,6 +201,15 @@ const CVListPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <div>
+                        <Link
+                            to="/recruitment/jobs"
+                            className="hover:text-primary transition-colors flex items-center gap-1 text-sm font-medium text-text-secondary-light mb-2"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            Back
+                        </Link>
                         <h1 className="text-2xl font-bold font-heading text-text-primary-light tracking-tight">
                             List of {applications.length > 0 && applications[0].jobTitle ? applications[0].jobTitle : "for Job"}
                         </h1>

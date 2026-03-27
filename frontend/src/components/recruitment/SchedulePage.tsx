@@ -166,7 +166,7 @@ const SchedulePage: React.FC = () => {
                                                             onClick={() => handleToggleReview(interview)}
                                                             className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all shadow-sm ${isActive ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}
                                                         >
-                                                            {isActive ? "Close Panel" : "Review Application"}
+                                                            {isActive ? "Close Panel" : "Review"}
                                                         </button>
                                                     </td>
                                                 </tr>
