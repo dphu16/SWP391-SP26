@@ -29,12 +29,6 @@ public class PaymentRequestService {
     private final PayslipRepository payslipRepository;
     private final PayrollPeriodRepository payrollPeriodRepository;
 
-    /**
-     * HR: Tạo yêu cầu thanh toán lương gửi sang Finance.
-     * [RULE] Batch phải ở trạng thái PROCESSED (đã tính toán xong và validate).
-     * [RULE] Số tiền request = tổng net salary của các payslip CONFIRMED trong
-     * batch.
-     */
     @Transactional
     public PaymentRequestResponse createRequest(UUID requesterId, CreatePaymentRequestRequest request) {
         PayrollBatch batch = payrollBatchRepository.findById(request.getPayrollBatchId())
@@ -57,12 +51,18 @@ public class PaymentRequestService {
         // Tính toán số tiền dựa trên loại yêu cầu
         BigDecimal totalAmount;
         if (request.getType() == PaymentRequestType.TAX_INSURANCE) {
-            // [RULE] Báo cáo bảo hiểm/thuế chỉ được gửi 1 lần duy nhất cho mỗi kỳ (batch)
-            if (paymentRequestRepository.existsByPayrollBatch_BatchIdAndType(batch.getBatchId(),
-                    PaymentRequestType.TAX_INSURANCE)) {
+            // [RULE] Chỉ block nếu đang có request TAX_INSURANCE đang PENDING (chờ Finance duyệt).
+            // Không block nếu request cũ đã REJECTED hoặc PAID (cho phép gửi lại sau khi cố khū).
+            boolean hasPendingRequest = paymentRequestRepository
+                    .existsByPayrollBatch_BatchIdAndTypeAndStatus(
+                            batch.getBatchId(),
+                            PaymentRequestType.TAX_INSURANCE,
+                            PaymentRequestStatus.PENDING);
+            if (hasPendingRequest) {
                 throw new PayrollException(
-                        "Báo cáo Thuế & Bảo hiểm cho kỳ lương này đã được gửi. Không thể gửi lại để tránh trùng lặp.");
+                        "Báo cáo Thuế & Bảo hiểm cho kỳ lương này đang chờ Finance duyệt (PENDING). Không thể gửi lại.");
             }
+
             BigDecimal pit = payslipRepository.sumTaxAmountByBatchId(batch.getBatchId());
             BigDecimal ins = payslipRepository.sumInsuranceAmountByBatchId(batch.getBatchId());
             totalAmount = pit.add(ins);
@@ -98,9 +98,25 @@ public class PaymentRequestService {
         paymentRequest = paymentRequestRepository.save(paymentRequest);
 
         // [RULE] Nếu là yêu cầu chi LƯƠNG -> Chuyển trạng thái Batch sang PROCESSED
-        if (request.getType() == com.project.hrm.module.payroll.enums.PaymentRequestType.SALARY) {
+        // Đồng thời, tự động reject bất kỳ TAX_INSURANCE đang PENDING cho cùng batch này.
+        // Ý nghĩa: HR phải gửi lại báo cáo Thuế & Bảo hiểm mới cho kỳ này — dữ liệu bảng lương có thể đã thay đổi.
+        if (request.getType() == PaymentRequestType.SALARY) {
             batch.setStatus(PayrollBatchStatus.PROCESSED);
             payrollBatchRepository.save(batch);
+
+            List<PaymentRequest> pendingTaxRequests = paymentRequestRepository
+                    .findAllByPayrollBatch_BatchIdAndTypeAndStatus(
+                            batch.getBatchId(),
+                            PaymentRequestType.TAX_INSURANCE,
+                            PaymentRequestStatus.PENDING);
+            if (!pendingTaxRequests.isEmpty()) {
+                pendingTaxRequests.forEach(req -> {
+                    req.setStatus(PaymentRequestStatus.REJECTED);
+                    req.setFinanceNote(
+                            "Tự động hủy: bảng lương được gửi lại. HR cần nộp lại báo cáo Thuế & Bảo hiểm mới.");
+                });
+                paymentRequestRepository.saveAll(pendingTaxRequests);
+            }
         }
 
         return toResponse(paymentRequest);
@@ -160,7 +176,42 @@ public class PaymentRequestService {
                 payrollPeriodRepository.save(period);
             }
         } else {
+            // Finance từ chối yêu cầu thanh toán
             paymentRequest.setStatus(PaymentRequestStatus.REJECTED);
+
+            // Nếu là yêu cầu chi LƯƠNG bị từ chối → rollback để HR kiểm tra và chỉnh sửa lại
+            if (paymentRequest.getType() == PaymentRequestType.SALARY) {
+                PayrollBatch batch = paymentRequest.getPayrollBatch();
+
+                // 1. Đưa tất cả payslip CONFIRMED về lại DRAFT để HR có thể chỉnh sửa
+                List<Payslip> payslips = payslipRepository.findAllByBatch_BatchId(batch.getBatchId());
+                for (Payslip p : payslips) {
+                    if (p.getStatus() == PayslipStatus.CONFIRMED) {
+                        p.setStatus(PayslipStatus.DRAFT);
+                        p.setConfirmedAt(null);
+                    }
+                }
+                payslipRepository.saveAll(payslips);
+
+                // 2. Đưa Batch về lại DRAFT (HR cần confirm lại sau khi chỉnh sửa)
+                batch.setStatus(PayrollBatchStatus.DRAFT);
+                payrollBatchRepository.save(batch);
+
+                // 3. Tự động từ chối tất cả TAX_INSURANCE request PENDING của cùng batch
+                //    vì dữ liệu bảng lương đã thay đổi, HR phải nộp lại sau khi chỉnh sửa xong
+                List<PaymentRequest> pendingTaxRequests = paymentRequestRepository
+                        .findAllByPayrollBatch_BatchIdAndTypeAndStatus(
+                                batch.getBatchId(),
+                                PaymentRequestType.TAX_INSURANCE,
+                                PaymentRequestStatus.PENDING);
+                for (PaymentRequest taxReq : pendingTaxRequests) {
+                    taxReq.setStatus(PaymentRequestStatus.REJECTED);
+                    taxReq.setFinanceNote(
+                            "Tự động hủy: yêu cầu chi lương bị Finance từ chối. " +
+                            "HR cần chỉnh sửa bảng lương và nộp lại yêu cầu Thuế & Bảo hiểm.");
+                }
+                paymentRequestRepository.saveAll(pendingTaxRequests);
+            }
         }
 
         return toResponse(paymentRequestRepository.save(paymentRequest));

@@ -24,17 +24,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * API dành cho Finance.
- * Quyền: ROLE_FINANCE
- * Base path: /api/v1/finance/payroll
- *
- * Luồng Finance:
- *   1. Nhận yêu cầu thanh toán từ HR
- *   2. Xem báo cáo đính kèm (report_url)
- *   3. Duyệt hoặc từ chối
- *   4. (Tích hợp tiếp) Thực thi payment batch sau khi duyệt
- */
 @RestController
 @RequestMapping("/api/v1/finance/payroll")
 @RequiredArgsConstructor
@@ -69,7 +58,6 @@ public class FinanceController {
     /**
      * PUT /api/v1/finance/payroll/payment-requests/{requestId}/review
      * Finance duyệt hoặc từ chối yêu cầu thanh toán.
-     * Body: { "approved": true/false, "financeNote": "..." }
      */
     @PutMapping("/payment-requests/{requestId}/review")
     public ResponseEntity<ApiResponse<PaymentRequestResponse>> reviewRequest(
@@ -78,8 +66,7 @@ public class FinanceController {
             @Valid @RequestBody ReviewPaymentRequestRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(
                 request.getApproved() ? "Đã duyệt yêu cầu thanh toán." : "Đã từ chối yêu cầu thanh toán.",
-                paymentRequestService.reviewRequest(approverId, requestId, request)
-        ));
+                paymentRequestService.reviewRequest(approverId, requestId, request)));
     }
 
     /**
@@ -87,7 +74,8 @@ public class FinanceController {
      * Finance xem báo cáo thuế & bảo hiểm trong một batch.
      */
     @GetMapping("/batches/{batchId}/tax-report")
-    public ResponseEntity<ApiResponse<List<TaxReportResponse>>> getTaxReportByBatch(@PathVariable("batchId") UUID batchId) {
+    public ResponseEntity<ApiResponse<List<TaxReportResponse>>> getTaxReportByBatch(
+            @PathVariable("batchId") UUID batchId) {
         return ResponseEntity.ok(ApiResponse.ok(payslipService.getTaxReportByBatch(batchId)));
     }
 
@@ -122,7 +110,8 @@ public class FinanceController {
      * Finance xem danh sách phiếu lương trong một batch để duyệt.
      */
     @GetMapping("/batches/{batchId}/payslips")
-    public ResponseEntity<ApiResponse<List<PayslipResponse>>> getPayslipsByBatch(@PathVariable("batchId") UUID batchId) {
+    public ResponseEntity<ApiResponse<List<PayslipResponse>>> getPayslipsByBatch(
+            @PathVariable("batchId") UUID batchId) {
         return ResponseEntity.ok(ApiResponse.ok(payslipService.getPayslipsByBatch(batchId)));
     }
 
@@ -137,7 +126,8 @@ public class FinanceController {
 
     /**
      * GET /api/v1/finance/payroll/transactions
-     * UR_F004: Finance xem toàn bộ lịch sử giao dịch ngân hàng thực tế (mới nhất trước).
+     * UR_F004: Finance xem toàn bộ lịch sử giao dịch ngân hàng thực tế (mới nhất
+     * trước).
      */
     @GetMapping("/transactions")
     public ResponseEntity<ApiResponse<List<PaymentTransactionResponse>>> getAllTransactions() {
@@ -154,8 +144,3 @@ public class FinanceController {
         return ResponseEntity.ok(ApiResponse.ok(paymentTransactionService.getTransactionsByBatch(paymentBatchId)));
     }
 }
-
-
-
-
-

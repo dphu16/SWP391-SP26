@@ -54,10 +54,6 @@ public class PayrollCalculationService {
     private final EmployeeBenefitRepository employeeBenefitRepository;
 
     /**
-     * Chạy lương cho toàn bộ nhân viên trong một batch.
-     * Mỗi nhân viên sẽ được tạo 1 payslip DRAFT.
-     * Gọi từ HR sau khi tạo batch.
-     *
      * @param batchId     ID của batch cần chạy
      * @param employeeIds Danh sách nhân viên cần tính lương
      */
@@ -115,7 +111,8 @@ public class PayrollCalculationService {
         }
 
         // Trạng thái Batch không còn tự động chuyển sang VALIDATED ở đây.
-        // Nó sẽ giữ nguyên là DRAFT và chỉ chuyển sang VALIDATED khi HR duyệt tất cả các phiếu lương.
+        // Nó sẽ giữ nguyên là DRAFT và chỉ chuyển sang VALIDATED khi HR duyệt tất cả
+        // các phiếu lương.
 
         return results;
     }
@@ -182,7 +179,7 @@ public class PayrollCalculationService {
             kpiBonus = BigDecimal.valueOf(2000000);
         }
 
-        // 5.5 FETCH DYNAMIC BENEFITS
+        // FETCH DYNAMIC BENEFITS
         List<EmployeeBenefit> activeBenefits = employeeBenefitRepository.findActiveBenefitsForPeriod(employeeId,
                 startDate, calculationDate);
         BigDecimal dynamicAllowances = BigDecimal.ZERO;
@@ -206,12 +203,16 @@ public class PayrollCalculationService {
         BigDecimal taxRate = BigDecimal.ZERO;
         BigDecimal insuranceRate = BigDecimal.ZERO;
 
-        // Nếu Employee đã Resigned hoặc ngày end_date trong kỳ lương nhỏ hơn ngày nghỉ
-        // -> nghỉ giữa chừng -> Không đóng Thuế/BH.
+        // Xác định trạng thái nhân viên để áp dụng quy tắc thuế & bảo hiểm:
+        // - RESIGNED / TERMINATED : Đã nghỉ việc hoàn toàn → miễn thuế TNCN & BH kỳ cuối
+        // - PENDING_OFFBOARD      : Đang trong quá trình offboard nhưng vẫn còn đi làm
+        //                           → tính thuế & BH bình thường như nhân viên OFFICIAL
+        // - Các trạng thái còn lại: tính đầy đủ
         Employee employee = profile.getEmployee();
-        boolean isResignedMidMonth = employee.getStatus() == EmployeeStatus.RESIGNED;
+        boolean isExemptFromTaxAndInsurance = employee.getStatus() == EmployeeStatus.RESIGNED
+                || employee.getStatus() == EmployeeStatus.TERMINATED;
 
-        if (!isResignedMidMonth) {
+        if (!isExemptFromTaxAndInsurance) {
             if (profile.getTaxCode() != null) {
                 taxRate = taxConfigRepository
                         .findActiveByCodeAndDate(profile.getTaxCode(), calculationDate)

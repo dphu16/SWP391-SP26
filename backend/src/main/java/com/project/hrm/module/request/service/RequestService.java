@@ -5,7 +5,6 @@ import com.project.hrm.module.attendance.repository.AttendanceLogRepository;
 import com.project.hrm.module.attendance.repository.WorkScheduleRepository;
 import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
-import com.project.hrm.module.corehr.repository.UserRepository;
 import com.project.hrm.module.request.dto.RequestDTO;
 import com.project.hrm.module.request.dto.RequestResponseDTO;
 import com.project.hrm.module.request.entity.LeaveBalance;
@@ -28,6 +27,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -45,6 +45,11 @@ public class RequestService {
     // --- 1. TẠO YÊU CẦU MỚI (EMPLOYEE) ---
     @Transactional
     public Request createRequest(RequestDTO dto) {
+        // [MỚI]: Validate ngày quá khứ và kiểm tra lịch làm việc (áp dụng cho LEAVE và OT)
+        if (dto.getRequestType() == RequestType.LEAVE || dto.getRequestType() == RequestType.OT) {
+            validateDatesAndSchedules(dto.getEmployeeId(), dto.getStartDate(), dto.getEndDate(), dto.getRequestType());
+        }
+
         // Validate leave balance when creating a LEAVE request
         if (dto.getRequestType() == RequestType.LEAVE) {
             validateLeaveBalance(dto.getEmployeeId(), dto.getStartDate(), dto.getEndDate(), dto.getReason());
@@ -57,7 +62,6 @@ public class RequestService {
         req.setStartDate(dto.getStartDate());
         req.setEndDate(dto.getEndDate());
         Request saved = requestRepo.save(req);
-
 
         return saved;
     }
@@ -119,7 +123,6 @@ public class RequestService {
         }
         Request saved = requestRepo.save(req);
 
-
         return saved;
     }
 
@@ -135,11 +138,10 @@ public class RequestService {
         }
         Request saved = requestRepo.save(req);
 
-
         return saved;
     }
 
-// --- 6. CẬP NHẬT YÊU CẦU ---
+    // --- 6. CẬP NHẬT YÊU CẦU ---
     @Transactional
     public Request updateRequest(UUID requestId, RequestDTO dto) {
         Request req = requestRepo.findById(requestId)
@@ -147,6 +149,11 @@ public class RequestService {
 
         if (req.getStatus() != RequestStatus.PENDING) {
             throw new RuntimeException("Can only update requests with PENDING status.");
+        }
+
+        // [MỚI]: Kiểm tra lại tính hợp lệ của ngày và lịch làm việc khi Update đơn
+        if (dto.getRequestType() == RequestType.LEAVE || dto.getRequestType() == RequestType.OT) {
+            validateDatesAndSchedules(req.getEmployeeId(), dto.getStartDate(), dto.getEndDate(), dto.getRequestType());
         }
 
         // BỔ SUNG: Kiểm tra lại quỹ phép nếu đây là đơn LEAVE hoặc đang chuyển thành LEAVE
@@ -192,8 +199,51 @@ public class RequestService {
     // =========================================================
 
     /**
-     * Calculate number of leave days (startDate to endDate inclusive).
+     * [MỚI BỔ SUNG]
+     * Hàm Validate 1: Không được xin lùi về quá khứ
+     * Hàm Validate 2: Bắt buộc phải có Lịch làm việc (Work Schedule) vào ngày xin nghỉ/OT
      */
+    private void validateDatesAndSchedules(UUID employeeId, LocalDate startDate, LocalDate endDate, RequestType type) {
+        if (startDate == null) return;
+
+        LocalDate today = LocalDate.now();
+        LocalDate end = (endDate == null || endDate.isBefore(startDate)) ? startDate : endDate;
+
+        // 1. Chặn ngày trong quá khứ
+        if (startDate.isBefore(today)) {
+            throw new RuntimeException("Cannot create a " + type.name() + " request for past dates. Please select a date from today onwards.");
+        }
+
+        // 2. Chặn những ngày không có lịch làm việc (Work Schedule)
+        // Lấy danh sách lịch làm việc của nhân viên trong khoảng thời gian request
+        List<com.project.hrm.module.attendance.entity.WorkSchedule> schedules = workScheduleRepo
+                .findByEmployeeIdAndDateBetweenOrderByDateAsc(employeeId, startDate, end);
+
+        // Chuyển List lịch thành Set chứa các ngày có lịch để truy vấn cho nhanh
+        Set<LocalDate> scheduledDates = schedules.stream()
+                .map(com.project.hrm.module.attendance.entity.WorkSchedule::getDate)
+                .collect(Collectors.toSet());
+
+        LocalDate current = startDate;
+        while (!current.isAfter(end)) {
+            boolean isSunday = current.getDayOfWeek() == DayOfWeek.SUNDAY;
+
+            // Bỏ qua Chủ Nhật đối với đơn xin nghỉ (vì vốn dĩ không làm việc nên không cần xét lịch)
+            if (type == RequestType.LEAVE && isSunday) {
+                current = current.plusDays(1);
+                continue;
+            }
+
+            // Nếu ngày đang xét KHÔNG nằm trong danh sách các ngày có lịch làm việc -> Ném lỗi
+            if (!scheduledDates.contains(current)) {
+                throw new RuntimeException("Invalid request: No work schedule found for " + current + ". You can only request " + type.name() + " on scheduled working days.");
+            }
+            current = current.plusDays(1);
+        }
+    }
+
+    // Tính số ngày nghỉ khi tạo đơn
+    // Không tính chủ nhật
     private int calculateLeaveDays(LocalDate startDate, LocalDate endDate) {
         if (startDate == null)
             return 0;
@@ -218,10 +268,7 @@ public class RequestService {
         return reason != null && reason.startsWith("[Sick Leave]");
     }
 
-    /**
-     * Validate that the employee has enough leave balance before creating a
-     * request.
-     */
+    // Kiểm tra số ngày nghỉ còn lại
     private void validateLeaveBalance(UUID employeeId, LocalDate startDate, LocalDate endDate, String reason) {
         if (startDate == null)
             return;
@@ -243,7 +290,7 @@ public class RequestService {
         }
 
         // Annual leave: check remaining
-        int remaining = balance.getRemainingAnnualLeave();
+        int remaining = balance.getRemainingAnnualLeave(); // hàm get từ entity
         if (leaveDays > remaining) {
             throw new RuntimeException("Insufficient annual leave balance. "
                     + "Requesting " + leaveDays + " day(s) but only " + remaining
@@ -251,10 +298,7 @@ public class RequestService {
         }
     }
 
-    /**
-     * Deduct leave days from the employee's balance when a LEAVE request is
-     * approved.
-     */
+    // Trừ số ngày nghỉ khi tạo đơn
     private void deductLeaveBalance(Request req) {
         if (req.getStartDate() == null)
             return;

@@ -3,6 +3,7 @@ import type { KpiLibrary, Department, KpiDetailDto, PerformanceCycle, CreateCycl
 import { getToken } from "../services/authService";
 
 
+
 const Icons = {
     checkCircle: (
         <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-primary">
@@ -126,48 +127,6 @@ const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) =>
     const [certFetchLoading, setCertFetchLoading] = useState(false);
     const [certFetchError, setCertFetchError] = useState<string | null>(null);
     const [trainingActionError, setTrainingActionError] = useState('');
-
-    useEffect(() => {
-        if (!previewCertUrl) {
-            setCertBlobUrl(null);
-            setCertFetchError(null);
-            return;
-        }
-
-        const fetchBlob = async () => {
-            setCertFetchLoading(true);
-            setCertFetchError(null);
-            try {
-                const token = getToken();
-                const response = await fetch(previewCertUrl!, {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Failed to load file: ${response.status} ${response.statusText}`);
-                }
-
-                const blob = await response.blob();
-                const blobUrl = window.URL.createObjectURL(blob);
-                setCertBlobUrl(blobUrl);
-            } catch (err: any) {
-                console.error("Fetch certificate error:", err);
-                setCertFetchError(err.message || 'Error loading file');
-            } finally {
-                setCertFetchLoading(false);
-            }
-        };
-
-        fetchBlob();
-
-        return () => {
-            if (certBlobUrl) {
-                URL.revokeObjectURL(certBlobUrl);
-            }
-        };
-    }, [previewCertUrl]);
 
     const handlePlanTrainingCreate = async () => {
         if (!planTrainingForm.courseName || !planTrainingForm.courseUrl || !planTrainingForm.deadline || !planTrainingForm.reason) {
@@ -346,6 +305,49 @@ const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) =>
             fetchAllTrainings();
         }
     }, [viewMode]);
+
+    // Handle fetching certificate blob with authentication
+    useEffect(() => {
+        if (!previewCertUrl) {
+            setCertBlobUrl(null);
+            setCertFetchError(null);
+            return;
+        }
+
+        const fetchBlob = async () => {
+            setCertFetchLoading(true);
+            setCertFetchError(null);
+            try {
+                const token = getToken();
+                const response = await fetch(previewCertUrl!, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to load file: ${response.status} ${response.statusText}`);
+                }
+
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                setCertBlobUrl(blobUrl);
+            } catch (err: any) {
+                console.error("Fetch certificate error:", err);
+                setCertFetchError(err.message || 'Error loading file');
+            } finally {
+                setCertFetchLoading(false);
+            }
+        };
+
+        fetchBlob();
+
+        return () => {
+            if (certBlobUrl) {
+                URL.revokeObjectURL(certBlobUrl);
+            }
+        };
+    }, [previewCertUrl]);
 
     useEffect(() => {
         if (isAddKpiModalOpen && modalTab === 'library') {
@@ -535,6 +537,13 @@ const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) =>
 
     const handleAddKpi = (kpi: KpiLibrary) => {
         if (structureDetails.some(d => d.kpiLibraryId === kpi.libId)) return; // already added
+
+        // Add full definition to allKpis so the display mapping works correctly
+        setAllKpis(prev => {
+            if (prev.some(k => k.libId === kpi.libId)) return prev;
+            return [...prev, kpi];
+        });
+
         setStructureDetails(prev => [...prev, { kpiLibraryId: kpi.libId, weight: kpi.defaultWeight }]);
     };
 
@@ -695,7 +704,7 @@ const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) =>
                             </h3>
                             <div className="flex items-end gap-2">
                                 <span className="text-4xl font-bold font-heading text-primary">{globalStats.orgAverageScore.toFixed(1)}</span>
-                                <span className="text-sm font-bold text-green-500 mb-1">+2.4%</span>
+                                <span className="text-sm font-bold text-green-500 mb-1"></span>
                             </div>
                         </div>
                         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm bento-card">
@@ -850,7 +859,7 @@ const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) =>
                                                             onClick={() => setPreviewCertUrl(
                                                                 t.certificateUrl.startsWith('http')
                                                                     ? t.certificateUrl
-                                                                    : t.certificateUrl
+                                                                    : `http://localhost:8080${t.certificateUrl}`
                                                             )}
                                                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black uppercase rounded-lg border border-primary/20 transition-colors cursor-pointer"
                                                         >
@@ -1890,10 +1899,10 @@ const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) =>
                     <div className="flex items-center gap-3">
                         <a
                             href={certBlobUrl || previewCertUrl!}
-                            download="certificate"
+                            download
                             target="_blank"
                             rel="noreferrer"
-                            className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-lg transition-colors"
+                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-lg transition-colors ${!certBlobUrl ? 'opacity-50 pointer-events-none' : ''}`}
                         >
                             ↓ Download
                         </a>
@@ -1909,49 +1918,35 @@ const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) =>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-auto p-4 bg-gray-50 flex items-center justify-center min-h-[500px]">
+                <div className="flex-1 overflow-auto p-4 bg-gray-50 flex items-center justify-center min-h-[400px]">
                     {certFetchLoading ? (
-                        <div className="flex flex-col items-center gap-4">
-                            <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                            <span className="text-xs font-black text-text-muted-light uppercase tracking-widest">Fetching file securely...</span>
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                            <p className="text-xs font-bold text-text-muted-light animate-pulse">Loading secure file...</p>
                         </div>
                     ) : certFetchError ? (
-                        <div className="flex flex-col items-center gap-3 text-red-500 max-w-xs text-center">
-                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-12 h-12 opacity-20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                            </svg>
-                            <span className="text-xs font-black uppercase tracking-widest">Failed to load certificate</span>
-                            <p className="text-[10px] font-medium opacity-60 leading-relaxed">{certFetchError}</p>
+                        <div className="text-center p-10">
+                            <div className="text-rose-500 font-bold mb-2">Failed to load certificate</div>
+                            <div className="text-xs text-text-muted-light">{certFetchError}</div>
                         </div>
                     ) : certBlobUrl ? (
-                        <>
-                            {previewCertUrl!.toLowerCase().includes('.pdf') ? (
-                                <iframe
-                                    src={certBlobUrl}
-                                    className="w-full h-[600px] rounded-xl border border-border-light bg-white"
-                                    title="Certificate PDF"
-                                />
-                            ) : (
-                                <div className="relative flex flex-col items-center">
-                                    <img
-                                        src={certBlobUrl}
-                                        alt="Training Certificate"
-                                        className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl border border-white"
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).style.display = 'none';
-                                            const errEl = (e.target as HTMLImageElement).nextElementSibling;
-                                            if (errEl) errEl.classList.remove('hidden');
-                                        }}
-                                    />
-                                    <div className="hidden flex flex-col items-center gap-2 text-text-muted-light">
-                                        <svg viewBox="0 0 20 20" fill="currentColor" className="w-12 h-12 opacity-20">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                        </svg>
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Unsupported or corrupted file</span>
-                                    </div>
-                                </div>
-                            )}
-                        </>
+                        previewCertUrl!.toLowerCase().includes('.pdf') ? (
+                            <iframe
+                                src={certBlobUrl}
+                                className="w-full h-[600px] rounded-xl border border-border-light"
+                                title="Certificate PDF"
+                            />
+                        ) : (
+                            <img
+                                src={certBlobUrl}
+                                alt="Training Certificate"
+                                className="max-w-full max-h-[65vh] object-contain rounded-xl shadow-lg"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                    (e.target as HTMLImageElement).nextElementSibling?.removeAttribute('hidden');
+                                }}
+                            />
+                        )
                     ) : null}
                 </div>
             </div>

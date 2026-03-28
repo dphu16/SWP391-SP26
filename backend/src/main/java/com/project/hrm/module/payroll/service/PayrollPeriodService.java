@@ -32,13 +32,13 @@ public class PayrollPeriodService {
 
     @Transactional
     public PayrollPeriodResponse createPeriod(CreatePayrollPeriodRequest request) {
-        // [RULE] Không cho tạo 2 kỳ trùng tháng/năm
+        // Không cho tạo 2 kỳ trùng tháng/năm
         if (periodRepository.existsByMonthAndYear(request.getMonth(), request.getYear())) {
             throw new PayrollException(
                     "Kỳ lương tháng " + request.getMonth() + "/" + request.getYear() + " đã tồn tại.");
         }
 
-        // [RULE] Không cho tạo kỳ mới nếu vẫn còn kỳ đang OPEN
+        // Không cho tạo kỳ mới nếu vẫn còn kỳ đang OPEN
         List<PayrollPeriod> openPeriods = periodRepository
                 .findAllByStatusOrderByYearDescMonthDesc(PayrollPeriodStatus.OPEN);
         if (!openPeriods.isEmpty()) {
@@ -47,8 +47,23 @@ public class PayrollPeriodService {
                     + " hiện tại trước khi tạo kỳ mới.");
         }
 
-        // [RULE] Khi tạo kỳ mới, tự động chuyển tất cả kỳ PAID → CLOSED (lưu trữ lịch
-        // sử)
+        // [RULE] Kỳ lương phải được tạo tuần tự theo từng tháng, không được bỏ qua tháng.
+        // Ví dụ: nếu kỳ gần nhất là tháng 2/2025, chỉ được tạo tháng 3/2025.
+        periodRepository.findTopByOrderByYearDescMonthDesc().ifPresent(latestPeriod -> {
+            YearMonth latestYM = YearMonth.of(latestPeriod.getYear(), latestPeriod.getMonth());
+            YearMonth requestedYM = YearMonth.of(request.getYear(), request.getMonth());
+            YearMonth expectedNextYM = latestYM.plusMonths(1);
+
+            if (!requestedYM.equals(expectedNextYM)) {
+                throw new PayrollException(
+                        "Kỳ lương phải được tạo tuần tự. Kỳ tiếp theo phải là tháng "
+                        + expectedNextYM.getMonthValue() + "/" + expectedNextYM.getYear()
+                        + " (hiện tại kỳ gần nhất là tháng "
+                        + latestPeriod.getMonth() + "/" + latestPeriod.getYear() + ").");
+            }
+        });
+
+        // Khi tạo kỳ mới, tự động chuyển tất cả kỳ PAID → CLOSED (lưu trữ lịch sử)
         List<PayrollPeriod> paidPeriods = periodRepository
                 .findAllByStatusOrderByYearDescMonthDesc(PayrollPeriodStatus.PAID);
         if (!paidPeriods.isEmpty()) {
@@ -56,7 +71,6 @@ public class PayrollPeriodService {
             periodRepository.saveAll(paidPeriods);
         }
 
-        // Bug Fix #4: Dùng startDate/endDate từ request nếu HR điền vào,
         // nếu không thì tự tính theo tháng/năm (mặc định = ngày 1 và ngày cuối tháng).
         YearMonth yearMonth = YearMonth.of(request.getYear(), request.getMonth());
         LocalDate startDate = (request.getStartDate() != null)
@@ -66,13 +80,13 @@ public class PayrollPeriodService {
                 ? request.getEndDate()
                 : yearMonth.atEndOfMonth();
 
-        // [VALIDATION] startDate phải <= endDate
+        // startDate phải <= endDate
         if (startDate.isAfter(endDate)) {
             throw new PayrollException(
                     "Ngày bắt đầu (" + startDate + ") phải trước hoặc bằng ngày kết thúc (" + endDate + ").");
         }
 
-        // [VALIDATION] startDate phải thuộc tháng/năm đã chọn
+        // startDate phải thuộc tháng/năm đã chọn
         if (startDate.getMonthValue() != request.getMonth() || startDate.getYear() != request.getYear()) {
             throw new PayrollException(
                     "Ngày bắt đầu phải nằm trong tháng " + request.getMonth() + "/" + request.getYear() + ".");
@@ -105,7 +119,7 @@ public class PayrollPeriodService {
         if (period.getStatus() != PayrollPeriodStatus.OPEN) {
             throw new PayrollException("Chỉ có thể đóng kỳ lương đang OPEN.");
         }
-        // [RULE] Không cho đóng kỳ khi còn payslip chưa PAID
+        // Không cho đóng kỳ khi còn payslip chưa PAID
         boolean hasUnpaidPayslips = payslipRepository
                 .existsByBatch_Period_PeriodIdAndStatusNot(periodId, PayslipStatus.PAID);
         if (hasUnpaidPayslips) {

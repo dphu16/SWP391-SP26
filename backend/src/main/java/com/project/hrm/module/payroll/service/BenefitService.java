@@ -59,7 +59,7 @@ public class BenefitService {
         Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Employee not found with ID: " + request.getEmployeeId() +
-                        ". Please verify the Employee ID and try again."));
+                                ". Please verify the Employee ID and try again."));
 
         Benefit benefit = benefitRepository.findById(request.getBenefitId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -106,9 +106,7 @@ public class BenefitService {
         // 1. Get all payslips for the year
         LocalDate startOfYear = LocalDate.of(year, 1, 1);
         LocalDate endOfYear = LocalDate.of(year, 12, 31);
-        
-        // Assuming we fetch all payslips and filter in memory for simplicity, 
-        // in a real app you'd want a specific query for this.
+
         List<Payslip> allPayslips = payslipRepository.findAllByEmployee_EmployeeIdOrderByCreatedAtDesc(employeeId);
         List<Payslip> yearPayslips = new ArrayList<>();
         for (Payslip p : allPayslips) {
@@ -127,19 +125,22 @@ public class BenefitService {
             totalGross = totalGross.add(p.getGrossSalary() != null ? p.getGrossSalary() : BigDecimal.ZERO);
             totalNet = totalNet.add(p.getNetSalary() != null ? p.getNetSalary() : BigDecimal.ZERO);
             totalTax = totalTax.add(p.getTaxAmount() != null ? p.getTaxAmount() : BigDecimal.ZERO);
-            totalInsurance = totalInsurance.add(p.getInsuranceAmount() != null ? p.getInsuranceAmount() : BigDecimal.ZERO);
-            totalCashAllowances = totalCashAllowances.add(p.getTotalAllowances() != null ? p.getTotalAllowances() : BigDecimal.ZERO);
+            totalInsurance = totalInsurance
+                    .add(p.getInsuranceAmount() != null ? p.getInsuranceAmount() : BigDecimal.ZERO);
+            totalCashAllowances = totalCashAllowances
+                    .add(p.getTotalAllowances() != null ? p.getTotalAllowances() : BigDecimal.ZERO);
         }
 
-        // 2. Get active benefits for the year (e.g., Health Care, Gym, and base Allowances)
-        List<EmployeeBenefit> activeBenefits = employeeBenefitRepository.findActiveBenefitsForPeriod(employeeId, startOfYear, endOfYear);
-        
+        // 2. Get active benefits for the year
+        List<EmployeeBenefit> activeBenefits = employeeBenefitRepository.findActiveBenefitsForPeriod(employeeId,
+                startOfYear, endOfYear);
+
         BigDecimal totalNonCashValue = BigDecimal.ZERO;
         List<TotalRewardStatementDTO.BenefitItemDTO> benefitItems = new ArrayList<>();
 
         for (EmployeeBenefit eb : activeBenefits) {
             BigDecimal value = eb.getAppliedValue() != null ? eb.getAppliedValue() : eb.getBenefit().getStandardValue();
-            
+
             if (value != null) {
                 if (eb.getBenefit().getBenefitType() != BenefitType.ALLOWANCE) {
                     totalNonCashValue = totalNonCashValue.add(value);
@@ -153,8 +154,8 @@ public class BenefitService {
             }
         }
 
-        // 3. Calculate Grand Total
-        // Net Salary + Tax Paid (Value to employee) + Insurance Paid + Non-Cash Benefits
+        // Net Salary + Tax Paid (Value to employee) + Insurance Paid + Non-Cash
+        // Benefits
         BigDecimal grandTotal = totalGross.add(totalNonCashValue);
 
         return TotalRewardStatementDTO.builder()

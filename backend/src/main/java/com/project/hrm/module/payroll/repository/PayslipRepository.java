@@ -27,7 +27,10 @@ public interface PayslipRepository extends JpaRepository<Payslip, UUID> {
     /** Lấy phiếu lương mới nhất của nhân viên dựa theo start_date của kỳ lương */
     Optional<Payslip> findFirstByEmployee_EmployeeIdOrderByPeriod_StartDateDesc(UUID employeeId);
 
-    /** Tổng net salary của tất cả payslip CONFIRMED trong một batch — dùng để tạo payment request */
+    /**
+     * Tổng net salary của tất cả payslip CONFIRMED trong một batch — dùng để tạo
+     * payment request
+     */
     @Query("SELECT COALESCE(SUM(p.netSalary), 0) FROM Payslip p WHERE p.batch.batchId = :batchId AND p.status = 'CONFIRMED'")
     BigDecimal sumNetSalaryByBatchId(@Param("batchId") UUID batchId);
 

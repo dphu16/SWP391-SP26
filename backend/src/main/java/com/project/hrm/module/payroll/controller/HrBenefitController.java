@@ -41,7 +41,6 @@ public class HrBenefitController {
     }
 
     /**
-     * Bug Fix #1: Soft-delete a benefit (sets is_active = false).
      * DELETE /api/v1/hr/benefits/{benefitId}
      * The record is preserved to maintain historical payslip data.
      */

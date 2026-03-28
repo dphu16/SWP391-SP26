@@ -14,9 +14,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * UR_F004: Finance xem lịch sử giao dịch ngân hàng.
- */
 @Service
 @RequiredArgsConstructor
 public class PaymentTransactionService {
@@ -47,7 +44,8 @@ public class PaymentTransactionService {
             var emp = txn.getPayslip().getEmployee();
             empName = emp.getFullName();
             empCode = emp.getEmployeeCode();
-            if (emp.getDepartment() != null) deptName = emp.getDepartment().getDeptName();
+            if (emp.getDepartment() != null)
+                deptName = emp.getDepartment().getDeptName();
         }
         return PaymentTransactionResponse.builder()
                 .txnId(txn.getTxnId())

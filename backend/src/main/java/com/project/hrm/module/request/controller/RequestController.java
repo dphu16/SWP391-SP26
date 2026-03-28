@@ -76,4 +76,13 @@ public class RequestController {
             @RequestParam("year") int year) {
         return ResponseEntity.ok(service.getLeaveBalance(employeeId, year).orElse(null));
     }
+
+    // --- 8. CẬP NHẬT ĐƠN (SỬA ĐƠN) ---
+    @PreAuthorize("isAuthenticated()")
+    @PutMapping("/{id}")
+    public ResponseEntity<Request> updateRequest(
+            @PathVariable("id") UUID id,
+            @RequestBody RequestDTO dto) {
+        return ResponseEntity.ok(service.updateRequest(id, dto));
+    }
 }

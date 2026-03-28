@@ -7,7 +7,6 @@ export type SidebarCapability =
   | "offboarding:manage"
   | "request:review"
   | "attendance:manage"
-  | "attendance:view"
   | "payroll:admin"
   | "performance:view"
   | "recruitment:view"
@@ -21,12 +20,11 @@ const capabilityRoles: Record<SidebarCapability, UserRole[]> = {
   "offboarding:manage": ["HR", "MANAGER"],
   "request:review": ["HR", "MANAGER"],
   "attendance:manage": ["HR", "MANAGER"],
-  "attendance:view": ["HR", "MANAGER", "EMPLOYEE", "FINANCE", "MENTOR"],
   "payroll:admin": ["HR", "MANAGER", "FINANCE"],
-  "performance:view": ["HR", "MANAGER", "EMPLOYEE", "MENTOR"],
+  "performance:view": ["HR", "MANAGER", "EMPLOYEE", "MENTOR", "INTERN", "PROBATION"],
   "recruitment:view": ["HR", "MANAGER"],
   "cnb:manage": ["HR", "MANAGER"],
-  "cnb:view": ["HR", "MANAGER", "EMPLOYEE", "FINANCE", "MENTOR"],
+  "cnb:view": ["HR", "MANAGER", "EMPLOYEE", "INTERN", "PROBATION", "FINANCE", "MENTOR"],
 };
 
 const routeCapabilityMap: Array<{
@@ -38,7 +36,7 @@ const routeCapabilityMap: Array<{
     { prefix: "/employees", capability: "employees:view" },
     { prefix: "/offboarding/requests", capability: "offboarding:manage" },
     { prefix: "/attendance/review", capability: "request:review" },
-    { prefix: "/attendance/view-schedule", capability: "attendance:view" },
+    { prefix: "/attendance/view-schedule", capability: "attendance:manage" },
     { prefix: "/attendance/create-schedule", capability: "attendance:manage" },
     { prefix: "/attendance/summary", capability: "attendance:manage" },
     { prefix: "/payroll/hr", capability: "payroll:admin" },

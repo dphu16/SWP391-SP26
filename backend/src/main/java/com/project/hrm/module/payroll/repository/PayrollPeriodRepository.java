@@ -15,4 +15,7 @@ public interface PayrollPeriodRepository extends JpaRepository<PayrollPeriod, UU
     Optional<PayrollPeriod> findByMonthAndYear(int month, int year);
 
     List<PayrollPeriod> findAllByStatusOrderByYearDescMonthDesc(PayrollPeriodStatus status);
-}
+
+    /** Lấy kỳ lương gần nhất (mới nhất theo năm/tháng) */
+    Optional<PayrollPeriod> findTopByOrderByYearDescMonthDesc();
+}
