@@ -165,6 +165,19 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     @Override
+    public ApplicationResponse rejectStage(UUID id) {
+        Application app = applicationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Not found application!"));
+        Job job = jobRepository.findById(app.getJob().getId())
+                .orElseThrow(() -> new RuntimeException("Not found job"));
+        app.setStatus(ApplicationStatus.REJECTED);
+        EmailRequest emailRequest = rejectGmail(app, job);
+        applicationRepository.save(app);
+        emailService.get("RejectEmail").sendEmail(emailRequest);
+        return mapToResponse(app);
+    }
+
+    @Override
     public ApplicationResponse lastStage(UUID id) {
         Application app = applicationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Not found application!"));

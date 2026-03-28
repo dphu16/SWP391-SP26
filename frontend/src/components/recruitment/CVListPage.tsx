@@ -178,14 +178,14 @@ const CVListPage: React.FC = () => {
         }
     };
 
-    const handleLastStage = async (appId: string) => {
-        if (!window.confirm("Are you sure you want to push this candidate to the HIRED stage?")) return;
+    const handleRejectStage = async (appId: string) => {
+        if (!window.confirm("Are you sure you want to reject this candidate?")) return;
         try {
-            await applicationService.lastStage(appId);
-            toastSuccess("Success", "Candidate pushed to last stage successfully");
-            setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: "HIRED" } : a));
+            await applicationService.rejectStage(appId);
+            toastSuccess("Success", "Candidate rejected successfully");
+            setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: "REJECTED" } : a));
         } catch (err: any) {
-            toastError("Error", err?.response?.data?.message || err?.response?.data || "Failed to push candidate to last stage");
+            toastError("Error", err?.response?.data?.message || err?.response?.data || "Failed to reject candidate");
         }
     };
 
@@ -424,11 +424,11 @@ const CVListPage: React.FC = () => {
                                                         )}
                                                         {app.status === "OFFER" && (
                                                             <button
-                                                                onClick={() => handleLastStage(app.id)}
-                                                                className="px-2 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-100 shadow-sm"
-                                                                title="Push Candidate to Final Stage"
+                                                                onClick={() => handleRejectStage(app.id)}
+                                                                className="px-2 py-1 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors border border-rose-100 shadow-sm"
+                                                                title="Reject Candidate"
                                                             >
-                                                                Confirm
+                                                                Reject
                                                             </button>
                                                         )}
                                                         {!["INTERVIEW", "OFFER", "HIRED"].includes(app.status || "") && (

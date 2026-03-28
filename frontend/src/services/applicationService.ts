@@ -49,8 +49,8 @@ export const applicationService = {
     nextStage: (ids: string[]) =>
         apiClient.post(`/api/app/list/next-stage`, ids),
 
-    lastStage: (id: string) =>
-        apiClient.put(`/api/app/last-stage/${id}`),
+    rejectStage: (id: string) =>
+        apiClient.put(`/api/app/reject-stage/${id}`),
 
     sendList: (deptId: string, ids: string[]) =>
         apiClient.post(`/api/interview/send/${deptId}`, ids),
