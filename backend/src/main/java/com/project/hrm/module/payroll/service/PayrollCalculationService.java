@@ -203,12 +203,16 @@ public class PayrollCalculationService {
         BigDecimal taxRate = BigDecimal.ZERO;
         BigDecimal insuranceRate = BigDecimal.ZERO;
 
-        // Nếu Employee đã Resigned hoặc ngày end_date trong kỳ lương nhỏ hơn ngày nghỉ
-        // -> nghỉ giữa chừng -> Không đóng Thuế/BH.
+        // Xác định trạng thái nhân viên để áp dụng quy tắc thuế & bảo hiểm:
+        // - RESIGNED / TERMINATED : Đã nghỉ việc hoàn toàn → miễn thuế TNCN & BH kỳ cuối
+        // - PENDING_OFFBOARD      : Đang trong quá trình offboard nhưng vẫn còn đi làm
+        //                           → tính thuế & BH bình thường như nhân viên OFFICIAL
+        // - Các trạng thái còn lại: tính đầy đủ
         Employee employee = profile.getEmployee();
-        boolean isResignedMidMonth = employee.getStatus() == EmployeeStatus.RESIGNED;
+        boolean isExemptFromTaxAndInsurance = employee.getStatus() == EmployeeStatus.RESIGNED
+                || employee.getStatus() == EmployeeStatus.TERMINATED;
 
-        if (!isResignedMidMonth) {
+        if (!isExemptFromTaxAndInsurance) {
             if (profile.getTaxCode() != null) {
                 taxRate = taxConfigRepository
                         .findActiveByCodeAndDate(profile.getTaxCode(), calculationDate)
