@@ -17,5 +17,6 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
     long countByJob_IdAndStatus(UUID jobId, ApplicationStatus status);
     long countByJob_Id(UUID jobId);
     List<Application> findByJob_IdAndStatusIsNot(UUID jobId, ApplicationStatus status);
+    List<Application> findByCandidate_EmailAndStatus(String email, ApplicationStatus status);
 
 }

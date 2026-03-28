@@ -3,22 +3,20 @@ import FilterBar from "../../components/ui/FilterBar";
 import type { FilterCategory } from "../../components/ui/FilterBar";
 import { Avatar, ErrorState, EmptyState } from "./shared";
 import SkeletonRow from "./shared/SkeletonRow";
-import ProgressBadge from "./onboarding/ProgressBadge";
-import StatusModal from "./onboarding/StatusModal";
+import { PROGRESS_STATUS_CONFIG } from "./shared/statusConfigs";
 import { useEmployeeOnboarding } from "./hooks/useEmployeeOnboarding";
 
 const ONBOARDING_FILTERS: FilterCategory[] = [
   {
     key: "status",
-    label: "Progress",
+    label: "Status",
     options: [
-      { label: "All Progress", value: "All Progress" },
-      { label: "Pending Review", value: "PENDING_REVIEW" },
-      { label: "Pending Verify", value: "PENDING_VERIFY" },
+      { label: "All Statuses", value: "All Statuses" },
+      { label: "Review", value: "PENDING_REVIEW" },
+      { label: "Verify", value: "PENDING_VERIFY" },
       { label: "Rejected", value: "REJECTED" },
-      { label: "Pending Activation", value: "PENDING_ACTIVATION" },
-      { label: "Password Created", value: "PASSWORD_CREATED" },
-      { label: "Completed", value: "COMPLETED" },
+      { label: "Activation", value: "PENDING_ACTIVATION" },
+      { label: "Done", value: "COMPLETED" },
     ],
   },
 ];
@@ -28,7 +26,8 @@ const COLUMNS = [
   { key: "candidateEmail", label: "Email" },
   { key: "candidatePhone", label: "Phone" },
   { key: "jobTitle", label: "Position" },
-  { key: "progressStatus", label: "Progress" },
+  { key: "progressStatus", label: "Status" },
+  { key: "actions", label: "Actions" },
 ];
 
 const EmployeeOnboarding: React.FC = () => {
@@ -38,8 +37,6 @@ const EmployeeOnboarding: React.FC = () => {
     filteredOnboarding,
     setSearchTerm,
     handleFilterChange,
-    statusModalApp,
-    setStatusModalApp,
     handleResubmit,
     handleCancel,
   } = useEmployeeOnboarding();
@@ -76,7 +73,7 @@ const EmployeeOnboarding: React.FC = () => {
                 {COLUMNS.map((col, idx) => (
                   <th
                     key={col.key}
-                    className={`px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light ${idx === 0 ? "pl-6" : ""}`}
+                    className={`px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light ${idx === 0 ? "pl-6" : ""} ${col.key === "actions" ? "text-right pr-6" : ""}`}
                   >
                     {col.label}
                   </th>
@@ -117,10 +114,52 @@ const EmployeeOnboarding: React.FC = () => {
                         )}
                       </td>
                       <td className="px-4 py-3.5">
-                        <ProgressBadge
-                          status={app.progressStatus}
-                          onClick={() => setStatusModalApp(app)}
-                        />
+                        {(() => {
+                           const status = app.progressStatus;
+                           const config = status ? PROGRESS_STATUS_CONFIG[status] : null;
+
+                           if (!config) return <span className="text-gray-400">—</span>;
+
+                           return (
+                             <div className="flex flex-col gap-1">
+                               <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${config.text}`}>
+                                 <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+                                 {config.label}
+                               </span>
+                               {status === "REJECTED" && app.rejectionReason && (
+                                 <span className="text-[10px] text-rose-500 max-w-[150px] line-clamp-1 italic px-1 cursor-help" title={app.rejectionReason}>
+                                   "{app.rejectionReason}"
+                                 </span>
+                                )}
+                             </div>
+                           );
+                        })()}
+                      </td>
+                      <td className="px-4 py-3.5 pr-6 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {(app.progressStatus === "PENDING_REVIEW" || app.progressStatus === "REJECTED") && (
+                            <button 
+                              onClick={() => handleResubmit(app)}
+                              className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-all group/btn"
+                              title="Edit Profile Info"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </button>
+                          )}
+                          {(app.progressStatus === "PENDING_REVIEW" || app.progressStatus === "PENDING_VERIFY" || app.progressStatus === "REJECTED") && (
+                            <button 
+                              onClick={() => handleCancel(app)}
+                              className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                              title="Cancel Onboarding"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -136,12 +175,7 @@ const EmployeeOnboarding: React.FC = () => {
         )}
       </div>
 
-      <StatusModal
-        app={statusModalApp}
-        onClose={() => setStatusModalApp(null)}
-        onResubmit={handleResubmit}
-        onCancel={handleCancel}
-      />
+
     </div>
   );
 };

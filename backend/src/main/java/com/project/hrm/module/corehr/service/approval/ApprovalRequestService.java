@@ -3,9 +3,7 @@ package com.project.hrm.module.corehr.service.approval;
 import com.project.hrm.module.corehr.dto.request.ApprovalActionDTO;
 import com.project.hrm.module.corehr.dto.response.ApprovalRequestResponseDTO;
 import com.project.hrm.module.corehr.entity.Employee;
-import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
-import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
@@ -59,12 +57,11 @@ public class ApprovalRequestService {
 
         @Transactional
         public ApprovalRequestResponseDTO processApprovalRequest(UUID requestId, ApprovalActionDTO actionDTO) {
-                // Validate: REJECT requires a reason
-                if (actionDTO.getAction() == RequestStatus.REJECTED
-                                && (actionDTO.getReason() == null || actionDTO.getReason().isBlank())) {
+                // Manager can only APPROVE - reject is no longer allowed
+                if (actionDTO.getAction() != RequestStatus.APPROVED) {
                         throw new BusinessRuleException(
                                         ErrorCode.INVALID_APPROVAL_ACTION,
-                                        "Reason is required when rejecting an approval request");
+                                        "Manager can only approve onboarding requests");
                 }
 
                 Request request = requestRepository.findById(requestId)
@@ -83,24 +80,13 @@ public class ApprovalRequestService {
                                                 ErrorCode.EMPLOYEE_NOT_FOUND,
                                                 "Employee not found with id: " + request.getEmployeeId()));
 
-                if (actionDTO.getAction() == RequestStatus.APPROVED) {
-                        request.setStatus(RequestStatus.APPROVED);
-                        employee.setEmpStatus(ProgressStatus.PENDING_VERIFY);
-                        employeeRepository.save(employee);
-
-                        // Auto-trigger activation email when status becomes APPROVAL
-                        activationService.sendActivationEmail(employee.getEmployeeId());
-                } else {
-                        request.setStatus(RequestStatus.REJECTED);
-                        request.setManagerComment(actionDTO.getReason());
-                        employee.setEmpStatus(ProgressStatus.REJECTED);
-                        if (employee.getUser() != null) {
-                                employee.getUser().setStatus(UserStatus.INACTIVE);
-                        }
-                        employee.setStatus(EmployeeStatus.TERMINATED);
-                }
-
+                request.setStatus(RequestStatus.APPROVED);
+                employee.setEmpStatus(ProgressStatus.PENDING_VERIFY);
                 employeeRepository.save(employee);
+
+                // Auto-trigger activation email when status becomes PENDING_VERIFY
+                activationService.sendActivationEmail(employee.getEmployeeId());
+
                 Request saved = requestRepository.save(request);
 
                 return toResponseDTO(saved);

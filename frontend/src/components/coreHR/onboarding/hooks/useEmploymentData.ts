@@ -16,6 +16,8 @@ export interface PositionOption {
   title: string;
   deptId?: string;
   deptName?: string;
+  baseSalaryMin?: number;
+  baseSalaryMax?: number;
 }
 
 export interface JobData {

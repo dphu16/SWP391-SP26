@@ -45,8 +45,7 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public List<JobResponse> getAllJob() {
-        List<Job> responses = jobRepository.
-                findByStatusIsNotOrderByPostedAtDesc(JobStatus.DRAFT);
+        List<Job> responses = jobRepository.findByStatusIsNotOrderByPostedAtDesc(JobStatus.DRAFT);
         for (Job i : responses) {
             if (i.getClosedAt().isBefore(OffsetDateTime.now())) {
                 i.setStatus(JobStatus.CLOSED);
@@ -93,7 +92,8 @@ public class JobServiceImpl implements JobService {
         List<Job> responses = jobRepository.findByStatus(status);
         for (Job i : responses) {
             long count = applicationRepository.countByJob_Id(i.getId());
-            if (i.getJobDetail().getMaxCv() <= count) i.setStatus(JobStatus.FILLED);
+            if (i.getJobDetail().getMaxCv() <= count)
+                i.setStatus(JobStatus.FILLED);
         }
         return responses.stream()
                 .map(this::mapToResponse)
@@ -103,8 +103,7 @@ public class JobServiceImpl implements JobService {
     @Override
     public JobResponse update(UUID id, CreateJobRequest request) {
         Job entity = jobRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Job not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
         JobDetail jobDetail = entity.getJobDetail();
         createJobDetail(jobDetail, request);
         entity.setJobDetail(jobDetail);
@@ -116,8 +115,7 @@ public class JobServiceImpl implements JobService {
     public JobResponse updateStatus(UUID id, JobStatus status) {
 
         Job entity = jobRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Job not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
 
         if (entity.getStatus().equals(JobStatus.CLOSED)) {
             throw new RuntimeException("Cannot update status of closed job");
@@ -135,13 +133,11 @@ public class JobServiceImpl implements JobService {
     @Override
     public void delete(UUID id) {
         Job entity = jobRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Job not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
         UUID job = entity.getJobDetail().getJobDetailId();
         jobRepository.delete(entity);
         JobDetail jobDetail = jobDetailRepository.findById(job)
-                .orElseThrow(() ->
-                        new RuntimeException("Job not found with id: " + job));
+                .orElseThrow(() -> new RuntimeException("Job not found with id: " + job));
         jobDetailRepository.delete(jobDetail);
 
     }
@@ -168,8 +164,7 @@ public class JobServiceImpl implements JobService {
     private void addJobFromRequest(Job entity, CreateJobRequest request) {
         if (request.getRequestId() != null) {
             JobRequest jobRequest = jobRequestRepository.findById(request.getRequestId())
-                    .orElseThrow(() ->
-                            new RuntimeException("Job Request not found"));
+                    .orElseThrow(() -> new RuntimeException("Job Request not found"));
 
             entity.setRequest(jobRequest);
             entity.setPos(jobRequest.getPos());

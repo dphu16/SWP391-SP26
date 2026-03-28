@@ -11,14 +11,14 @@ export const useEmployeeOnboarding = () => {
   const [onboardingEmployees, setOnboardingEmployees] = useState<Application[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusModalApp, setStatusModalApp] = useState<Application | null>(null);
+
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filter, setFilter] = useState({
     category: "status",
-    value: "All Progress",
+    value: "All Statuses",
   });
 
   useEffect(() => {
@@ -93,9 +93,7 @@ export const useEmployeeOnboarding = () => {
       await apiClient.delete(`/api/employees/${app.id}/cancel`);
       toastSuccess("Success", "Onboarding cancelled and profile deleted.");
       fetchData();
-      if (statusModalApp?.id === app.id) {
-        setStatusModalApp(null);
-      }
+
     } catch (err: unknown) {
       const message = (err as any)?.response?.data?.message ?? "Failed to cancel onboarding";
       toastError("Error", message);
@@ -110,8 +108,7 @@ export const useEmployeeOnboarding = () => {
     searchTerm,
     setSearchTerm,
     handleFilterChange,
-    statusModalApp,
-    setStatusModalApp,
+
     handleResubmit,
     handleCancel,
   };

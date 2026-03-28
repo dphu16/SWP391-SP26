@@ -36,7 +36,27 @@ const CandidateProfileCompletion: React.FC = () => {
     handleSubmit,
   } = useCandidateOnboarding();
 
-  const progressPct = Math.round((currentStep / STEPS.length) * 100);
+  const calculateProgress = () => {
+    const fields = [
+      formData.fullName,
+      formData.email,
+      formData.phone,
+      formData.dateOfBirth,
+      formData.citizenId,
+      formData.taxCode,
+      formData.address,
+      formData.departmentId,
+      formData.positionId,
+      formData.status,
+      formData.dateOfJoining,
+      formData.startDate,
+      formData.baseSalary > 0 ? "ok" : "",
+    ];
+    const filled = fields.filter((f) => !!f).length;
+    return Math.round((filled / fields.length) * 100);
+  };
+
+  const progressPct = calculateProgress();
 
   return (
     <>

@@ -15,7 +15,7 @@ import {
   type OffboardingResponse,
 } from "../../services/offboardingService";
 import { personnelChangeService, type PersonnelChangeResponseDTO } from "../../services/personnelChangeService";
-import { getLookupDepartments, getLookupPositionsByDeptId } from "../../services/lookupService";
+import { getLookupDepartments, getLookupPositionsByDeptId, getLookupPositions, type LookupPosition } from "../../services/lookupService";
 import {
   type AttendanceEmployee,
   LeaveModalContent,
@@ -120,6 +120,8 @@ const mapApiRequest = (r: RequestRecordApi): RequestRecord => {
 const Applications: React.FC = () => {
   const currentUser = useCurrentUser();
   const menuRef = useRef<HTMLDivElement>(null);
+  const isHR = currentUser?.roles?.some((r) => ["HR", "ROLE_HR"].includes(r));
+  const isManager = currentUser?.roles?.some((r) => ["MANAGER", "ROLE_MANAGER"].includes(r));
 
   // UI States
   const [modal, setModal] = useState<ModalType>(null);
@@ -137,7 +139,7 @@ const Applications: React.FC = () => {
 
   // Lookup & Extra Data States
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
-  const [positions, setPositions] = useState<{ id: string; name: string }[]>([]);
+  const [positions, setPositions] = useState<LookupPosition[]>([]);
   const [pcEmployee, setPcEmployee] = useState<AttendanceEmployee | null>(null);
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalanceResponse | null>(null);
   const [leaveBalanceLoading, setLeaveBalanceLoading] = useState(false);
@@ -175,13 +177,15 @@ const Applications: React.FC = () => {
           raw: {} as RequestRecordApi,
         }));
 
-      const myPcRequests = (pcReqs.data || []).map((pc): RequestRecord => ({
+      const myPcRequests = (isManager && !isHR) ? [] : (pcReqs.data || []).map((pc): RequestRecord => ({
         id: pc.changeId,
         type: "PersonnelChange",
         typeLabel: pc.changeType === "DEPARTMENT_TRANSFER" ? "Department Transfer"
           : "Salary Change",
         dateRequested: new Date(pc.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-        datesAffected: "—",
+        datesAffected: pc.hrConfirmedDate 
+          ? new Date(pc.hrConfirmedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          : "—",
         status: (pc.status === "PENDING" || pc.status === "MANAGER_APPROVED" ? "Pending"
           : pc.status === "HR_CONFIRMED" ? "Approved"
           : "Rejected") as AppStatus,
@@ -208,6 +212,8 @@ const Applications: React.FC = () => {
   useEffect(() => {
     if (modal === "PersonnelChange") {
       getLookupDepartments().then(setDepartments).catch(() => { });
+      // Fetch all positions for salary range validation if needed
+      getLookupPositions().then(setPositions).catch(() => { });
     }
   }, [modal]);
 
@@ -217,7 +223,7 @@ const Applications: React.FC = () => {
       if (formData.newDepartmentId) {
         getLookupPositionsByDeptId(formData.newDepartmentId)
           .then((data) => {
-            setPositions(data.map((p) => ({ id: p.id, name: p.name || p.title || "" })));
+            setPositions(data); // data is LookupPosition[]
             // Nếu position hiện tại không còn trong list mới, reset nó
             if (!data.some(p => p.id === formData.newPositionId)) {
               setFormData(prev => ({ ...prev, newPositionId: "" }));
@@ -225,8 +231,7 @@ const Applications: React.FC = () => {
           })
           .catch(() => { });
       } else {
-        // Nếu xóa department, có thể load lại toàn bộ positions hoặc xóa list positions
-        setPositions([]);
+        getLookupPositions().then(setPositions).catch(() => { });
         setFormData(prev => ({ ...prev, newPositionId: "" }));
       }
     }
@@ -283,6 +288,7 @@ const Applications: React.FC = () => {
         fullName: pc.employeeName,
         position: "",
         deptName: pc.departmentName || "",
+        positionId: pc.positionId?.toString() || ""
       });
       setFormData({
         ...BLANK_FORM,
@@ -328,7 +334,6 @@ const Applications: React.FC = () => {
     });
   };
 
-  // 🔴 [NÚT BẤM]: Bấm icon "Xóa / Hủy" ở danh sách Đơn
   const handleDelete = async (id: string, status: AppStatus, type: AppType) => {
     if (status !== "Pending") return;
     try {
@@ -349,7 +354,6 @@ const Applications: React.FC = () => {
     }
   };
 
-  // 🔴 [NÚT BẤM]: Submit Form (Tạo mới hoặc Lưu chỉnh sửa)
   const handleSubmit = async () => {
     if (!currentUser?.employeeId) return;
     setSubmitting(true);
@@ -375,11 +379,43 @@ const Applications: React.FC = () => {
       } else if (modal === "PersonnelChange") {
         if (!pcEmployee) throw new Error("Please select an employee.");
         if (!formData.reason) throw new Error("Please specify a reason.");
-        // If editing, cancel (reject) the old request first, then create a new one
-        if (editRequestId) {
-          await personnelChangeService.reject(editRequestId, "Cancelled and re-submitted with updated info.");
+        
+        const newSalaryVal = formData.newSalary ? Number(formData.newSalary) : undefined;
+        
+        // Validate salary range if changed
+        if (newSalaryVal !== undefined) {
+           // Use new position if specified, otherwise use current employee's position
+           const posId = formData.newPositionId || pcEmployee.positionId;
+           if (posId) {
+              const pos = positions.find(p => String(p.id).toLowerCase() === String(posId).toLowerCase());
+              if (pos) {
+                const bMin = pos.baseSalaryMin ?? 0;
+                const bMax = pos.baseSalaryMax ?? 9999999999999;
+                const actualMin = Math.min(bMin, bMax);
+                const actualMax = Math.max(bMin, bMax);
+
+                if (newSalaryVal < actualMin || newSalaryVal > actualMax) {
+                   throw new Error(`Vị trí này chỉ cho phép mức lương từ ${actualMin.toLocaleString("vi-VN")} VND đến ${actualMax.toLocaleString("vi-VN")} VND.`);
+                }
+              }
+           }
         }
-        await personnelChangeService.create({ employeeId: pcEmployee.employeeId, changeType: formData.pcType as any, reason: formData.reason, newDepartmentId: formData.newDepartmentId || undefined, newPositionId: formData.newPositionId || undefined, newTitle: formData.newTitle || undefined, newSalary: formData.newSalary ? Number(formData.newSalary) : undefined });
+        
+        const pcDto = { 
+          employeeId: pcEmployee.employeeId, 
+          changeType: formData.pcType as any, 
+          reason: formData.reason, 
+          newDepartmentId: formData.newDepartmentId || undefined, 
+          newPositionId: formData.newPositionId || undefined, 
+          newTitle: formData.newTitle || undefined, 
+          newSalary: formData.newSalary ? Number(formData.newSalary) : undefined 
+        };
+
+        if (editRequestId) {
+          await personnelChangeService.update(editRequestId, pcDto);
+        } else {
+          await personnelChangeService.create(pcDto);
+        }
         closeModal(); loadRequests(); setSubmitting(false); return;
       } else return;
 
@@ -450,25 +486,42 @@ const Applications: React.FC = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
-                {["Request Type", "Date Requested", "Dates Affected", "Status", "Action"].map((h) => (
-                  <th key={h} className="px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider">{h}</th>
-                ))}
+                <th className="px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider">Request Type</th>
+                {isHR && (
+                  <th className="px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider">Employee</th>
+                )}
+                <th className="px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider">Date Requested</th>
+                <th className="px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider">Dates Affected</th>
+                <th className="px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider">Status</th>
+                <th className="px-5 py-3 text-xs font-bold text-[#64748b] uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e2e8f0]">
               {loadingRequests ? (
-                <tr><td colSpan={5} className="px-5 py-8 text-center text-sm text-[#64748b]">Loading requests...</td></tr>
+                <tr><td colSpan={isHR ? 6 : 5} className="px-5 py-8 text-center text-sm text-[#64748b]">Loading requests...</td></tr>
               ) : requests.length === 0 ? (
-                <tr><td colSpan={5} className="px-5 py-8 text-center text-sm text-[#64748b]">No recent requests found.</td></tr>
+                <tr><td colSpan={isHR ? 6 : 5} className="px-5 py-8 text-center text-sm text-[#64748b]">No recent requests found.</td></tr>
               ) : (
                 requests.map((r) => (
                   <tr key={r.id} className="hover:bg-[#f8fafc] transition-colors">
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 text-sm text-[#475569]">
                       <div className="flex items-center space-x-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${typeBg[r.type]}`}>{typeIcon[r.type]}</div>
                         <span className="font-semibold text-[#1e293b] text-sm">{r.typeLabel}</span>
                       </div>
                     </td>
+                    {isHR && (
+                      <td className="px-5 py-4 text-sm text-[#475569]">
+                        {r.type === "PersonnelChange" && r.pcRaw ? (
+                          <div className="flex flex-col">
+                            <span className="font-medium text-[#1e293b]">{r.pcRaw.employeeName}</span>
+                            <span className="text-xs text-[#64748b]">{r.pcRaw.employeeCode}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[#64748b]">{currentUser?.fullName}</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-5 py-4 text-sm text-[#475569]">{r.dateRequested}</td>
                     <td className="px-5 py-4 text-sm text-[#475569]">{r.datesAffected}</td>
                     <td className="px-5 py-4">

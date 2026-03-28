@@ -17,6 +17,7 @@ export interface PersonnelChangeResponseDTO {
   employeeName: string;
   employeeCode: string;
   departmentName: string;
+  positionId: string;
   changeType: "DEPARTMENT_TRANSFER" | "SALARY_CHANGE";
   status: "PENDING" | "MANAGER_APPROVED" | "HR_CONFIRMED" | "REJECTED";
   reason: string;
@@ -64,6 +65,11 @@ const getEmployeeId = (): string => {
 export const personnelChangeService = {
   create: (dto: PersonnelChangeRequestDTO) =>
     apiClient.post<PersonnelChangeResponseDTO>("/api/personnel-changes", dto, {
+      headers: { "X-Employee-Id": getEmployeeId() },
+    }),
+
+  update: (changeId: string, dto: PersonnelChangeRequestDTO) =>
+    apiClient.put<PersonnelChangeResponseDTO>(`/api/personnel-changes/${changeId}`, dto, {
       headers: { "X-Employee-Id": getEmployeeId() },
     }),
 

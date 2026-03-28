@@ -40,12 +40,18 @@ import static org.mockito.Mockito.*;
 class JobServiceTest {
 
     // ─────────────────────────────── mocks ────────────────────────────────
-    @Mock private JobRepository         jobRepository;
-    @Mock private ApplicationRepository applicationRepository;
-    @Mock private JobDetailRepository   jobDetailRepository;
-    @Mock private EmployeeRepository    employeeRepository;
-    @Mock private PositionRepository    positionRepository;
-    @Mock private JobRequestRepository  jobRequestRepository;
+    @Mock
+    private JobRepository jobRepository;
+    @Mock
+    private ApplicationRepository applicationRepository;
+    @Mock
+    private JobDetailRepository jobDetailRepository;
+    @Mock
+    private EmployeeRepository employeeRepository;
+    @Mock
+    private PositionRepository positionRepository;
+    @Mock
+    private JobRequestRepository jobRequestRepository;
 
     @InjectMocks
     private JobServiceImpl jobService;
@@ -58,10 +64,10 @@ class JobServiceTest {
     private UUID deptId;
     private UUID jobRequestId;
 
-    private Job        job;
-    private JobDetail  jobDetail;
-    private Employee   employee;
-    private Position   position;
+    private Job job;
+    private JobDetail jobDetail;
+    private Employee employee;
+    private Position position;
     private Department department;
     private JobRequest jobRequest;
 
@@ -71,11 +77,11 @@ class JobServiceTest {
 
     @BeforeEach
     void setUp() {
-        jobId       = UUID.randomUUID();
+        jobId = UUID.randomUUID();
         jobDetailId = UUID.randomUUID();
-        employeeId  = UUID.randomUUID();
-        posId       = UUID.randomUUID();
-        deptId      = UUID.randomUUID();
+        employeeId = UUID.randomUUID();
+        posId = UUID.randomUUID();
+        deptId = UUID.randomUUID();
         jobRequestId = UUID.randomUUID();
 
         postedAt = OffsetDateTime.now().minusDays(1);
@@ -236,7 +242,7 @@ class JobServiceTest {
         @Test
         @DisplayName("end sau (now - 1 ngày) — pass guard 1, không throw")
         void create_endAfterNowMinusOneDay_passesGuard1() {
-            // end = now+30  >  now-1ngày → guard 1 pass
+            // end = now+30 > now-1ngày → guard 1 pass
             // start = now-1 < (now+30)-1ngày = now+29 → guard 2 pass
             CreateJobRequest req = buildRequestDirect(3, 100);
             req.setClosedTime(OffsetDateTime.now().plusDays(30));
@@ -252,7 +258,8 @@ class JobServiceTest {
         @DisplayName("start >= (end - 1 ngày) — ném RuntimeException")
         void create_startNotBeforeEndMinusOneDay_throwsRuntimeException() {
             // Guard: !start.isBefore(end - 1 ngày) → throw
-            // Trigger: end = now+30, end-1 = now+29, start = now+29 (bằng → không trước) → throw
+            // Trigger: end = now+30, end-1 = now+29, start = now+29 (bằng → không trước) →
+            // throw
             CreateJobRequest req = buildRequestDirect(3, 100);
             req.setClosedTime(OffsetDateTime.now().plusDays(30));
             req.setPostedTime(OffsetDateTime.now().plusDays(29));

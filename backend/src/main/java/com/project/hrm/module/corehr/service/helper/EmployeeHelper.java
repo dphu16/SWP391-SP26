@@ -8,6 +8,7 @@ import com.project.hrm.module.corehr.repository.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Component
@@ -40,5 +41,17 @@ public class EmployeeHelper {
     public Position findPositionOrThrow(UUID id) {
         return positionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Position not avaiable: " + id));
+    }
+
+    public void validateSalaryInPositionRange(Position position, BigDecimal salary) {
+        if (position == null || salary == null) return;
+        
+        if (position.getBaseSalaryMin() != null && salary.compareTo(position.getBaseSalaryMin()) < 0) {
+            throw new RuntimeException("Mức lương " + salary.toPlainString() + " thấp hơn mức tối thiểu (" + position.getBaseSalaryMin().toPlainString() + ") cho vị trí " + position.getTitle());
+        }
+        
+        if (position.getBaseSalaryMax() != null && salary.compareTo(position.getBaseSalaryMax()) > 0) {
+            throw new RuntimeException("Mức lương " + salary.toPlainString() + " cao hơn mức tối đa (" + position.getBaseSalaryMax().toPlainString() + ") cho vị trí " + position.getTitle());
+        }
     }
 }

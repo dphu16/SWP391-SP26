@@ -6,19 +6,18 @@ import com.project.hrm.module.corehr.dto.response.OnboardingListResponseDTO;
 import com.project.hrm.module.corehr.dto.response.OnboardingResponseDTO;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
+import com.project.hrm.module.recruitment.entity.Application;
 import com.project.hrm.module.recruitment.enums.ApplicationStatus;
 import com.project.hrm.module.corehr.mapper.OnboardingMapper;
 import com.project.hrm.module.corehr.repository.OnboardingRepository;
 import com.project.hrm.module.corehr.entity.*;
-import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
 import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.repository.RoleRepository;
 import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
+import com.project.hrm.module.recruitment.repository.ApplicationRepository;
 import com.project.hrm.module.request.entity.Request;
-import com.project.hrm.module.request.enums.RequestStatus;
-import com.project.hrm.module.request.enums.RequestType;
 import com.project.hrm.module.request.repository.RequestRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -37,19 +36,22 @@ public class OnboardingService implements IOnboardingService {
     private final RequestRepository requestRepository;
     private final EmployeeHelper employeeHelper;
     private final RoleRepository roleRepository;
+    private final ApplicationRepository recruitmentApplicationRepository;
 
     public OnboardingService(OnboardingRepository applicationRepository,
             EmployeeRepository employeeRepository,
             OnboardingCommandService onboaringCommandService,
             RequestRepository requestRepository,
             EmployeeHelper employeeHelper,
-            RoleRepository roleRepository) {
+            RoleRepository roleRepository,
+            ApplicationRepository recruitmentApplicationRepository) {
         this.applicationRepository = applicationRepository;
         this.employeeRepository = employeeRepository;
         this.onboaringCommandService = onboaringCommandService;
         this.requestRepository = requestRepository;
         this.employeeHelper = employeeHelper;
         this.roleRepository = roleRepository;
+        this.recruitmentApplicationRepository = recruitmentApplicationRepository;
     }
 
     @Override
@@ -63,17 +65,7 @@ public class OnboardingService implements IOnboardingService {
         List<OnboardingResponseDTO> onboardingEmployees = employeeRepository
                 .findByEmpStatusNot(ProgressStatus.COMPLETED)
                 .stream()
-                .map(emp -> {
-                    String rejectionReason = null;
-                    if (emp.getEmpStatus() == ProgressStatus.REJECTED) {
-                        rejectionReason = requestRepository
-                                .findTopByEmployeeIdAndRequestTypeAndStatusOrderByCreatedAtDesc(
-                                        emp.getEmployeeId(), RequestType.APPROVAL, RequestStatus.REJECTED)
-                                .map(r -> r.getManagerComment())
-                                .orElse(null);
-                    }
-                    return OnboardingMapper.fromEmployee(emp, rejectionReason);
-                })
+                .map(emp -> OnboardingMapper.fromEmployee(emp, null)) // No longer checking for rejection
                 .collect(Collectors.toList());
 
         return OnboardingListResponseDTO.builder()
@@ -95,10 +87,11 @@ public class OnboardingService implements IOnboardingService {
                         ErrorCode.EMPLOYEE_NOT_FOUND,
                         "Employee not found with id: " + employeeId));
 
-        if (employee.getEmpStatus() != ProgressStatus.REJECTED) {
+        // HR can only edit profiles that are in the review phase (PENDING_REVIEW)
+        if (employee.getEmpStatus() != ProgressStatus.PENDING_REVIEW) {
             throw new BusinessRuleException(
                     ErrorCode.INVALID_APPROVAL_ACTION,
-                    "Only rejected employees can be edited for resubmission");
+                    "Only profiles in PENDING_REVIEW state can be edited");
         }
 
         Personal personal = employee.getPersonal();
@@ -116,8 +109,9 @@ public class OnboardingService implements IOnboardingService {
         dto.setAvatarUrl(personal != null ? personal.getAvatar() : null);
         dto.setDepartmentId(employee.getDepartment() != null ? employee.getDepartment().getDeptId() : null);
         dto.setPositionId(employee.getPosition() != null ? employee.getPosition().getPositionId() : null);
-        dto.setMentorId(employee.getDepartment() != null && employee.getDepartment().getMentor() != null 
-                ? employee.getDepartment().getMentor().getEmployeeId() : null);
+        dto.setMentorId(employee.getDepartment() != null && employee.getDepartment().getMentor() != null
+                ? employee.getDepartment().getMentor().getEmployeeId()
+                : null);
         dto.setDateOfJoining(employee.getDateOfJoining());
         dto.setRole(resolvePrimaryRole(employee));
         dto.setStatus(employee.getStatus());
@@ -131,16 +125,17 @@ public class OnboardingService implements IOnboardingService {
 
     @Override
     @Transactional
-    public void resubmitRejectedEmployee(UUID employeeId, CreateNewHireDTO updatedData) {
+    public void updateOnboardingProfile(UUID employeeId, CreateNewHireDTO updatedData) {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new BusinessRuleException(
                         ErrorCode.EMPLOYEE_NOT_FOUND,
                         "Employee not found with id: " + employeeId));
 
-        if (employee.getEmpStatus() != ProgressStatus.REJECTED) {
+        // HR can only update profiles in PENDING_REVIEW state
+        if (employee.getEmpStatus() != ProgressStatus.PENDING_REVIEW) {
             throw new BusinessRuleException(
                     ErrorCode.INVALID_APPROVAL_ACTION,
-                    "Only rejected employees can be resubmitted");
+                    "Only profiles in PENDING_REVIEW state can be updated");
         }
 
         // Update employee fields
@@ -171,6 +166,9 @@ public class OnboardingService implements IOnboardingService {
         // Update contract info
         Contract contract = employee.getContract();
         if (contract != null) {
+            // Salary validation
+            employeeHelper.validateSalaryInPositionRange(employee.getPosition(), updatedData.getBaseSalary());
+
             contract.setContractNumber(updatedData.getContractNumber());
             contract.setStartDate(updatedData.getStartDate());
             contract.setEndDate(updatedData.getEndDate());
@@ -192,17 +190,12 @@ public class OnboardingService implements IOnboardingService {
             employee.getUser().getRoles().add(role);
         }
 
-        // Reset status for re-approval
-        employee.setEmpStatus(ProgressStatus.PENDING_REVIEW);
-        employee.setStatus(updatedData.getStatus() != null ? updatedData.getStatus() : EmployeeStatus.PROBATION);
-        employeeRepository.save(employee);
+        if (updatedData.getStatus() != null) {
+            employee.setStatus(updatedData.getStatus());
+        }
 
-        Request request = Request.builder()
-                .employeeId(employeeId)
-                .requestType(RequestType.APPROVAL)
-                .status(RequestStatus.PENDING)
-                .build();
-        requestRepository.save(request);
+        // Just update in-place within the review phase
+        employeeRepository.save(employee);
     }
 
     private com.project.hrm.module.corehr.enums.EmployeeRole resolvePrimaryRole(Employee employee) {
@@ -228,13 +221,27 @@ public class OnboardingService implements IOnboardingService {
                     "Cannot cancel a completed onboarding profile");
         }
 
-        // 1. Delete associated requests
+        // 1. Revert the linked recruitment Application from HIRED -> OFFER
+        // so the candidate reappears in the recruitment pipeline.
+        Personal personal = employee.getPersonal();
+        if (personal != null && personal.getEmail() != null) {
+            List<Application> hiredApps = recruitmentApplicationRepository
+                    .findByCandidate_EmailAndStatus(personal.getEmail(), ApplicationStatus.HIRED);
+            if (!hiredApps.isEmpty()) {
+                for (Application app : hiredApps) {
+                    app.setStatus(ApplicationStatus.OFFER);
+                }
+                recruitmentApplicationRepository.saveAll(hiredApps);
+            }
+        }
+
+        // 2. Delete associated approval requests
         List<Request> requests = requestRepository.findByEmployeeIdOrderByCreatedAtDesc(employeeId);
         if (!requests.isEmpty()) {
             requestRepository.deleteAll(requests);
         }
 
-        // 2. The Employee entity cascades delete to User, Personal, and Contract
+        // 3. Delete the Employee entity (cascades to User, Personal, Contract)
         employeeRepository.delete(employee);
     }
 }

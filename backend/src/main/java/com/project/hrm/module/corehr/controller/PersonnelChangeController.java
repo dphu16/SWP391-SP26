@@ -22,7 +22,7 @@ public class PersonnelChangeController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('HR')")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<PersonnelChangeResponseDTO> createRequest(
             @RequestBody PersonnelChangeRequestDTO dto,
             @RequestAttribute("employeeId") UUID requestedBy,
@@ -30,6 +30,18 @@ public class PersonnelChangeController {
         boolean isHr = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_HR") || a.getAuthority().equals("HR"));
         return ResponseEntity.ok(changeService.createRequest(dto, requestedBy, isHr));
+    }
+
+    @PutMapping("/{changeId}")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
+    public ResponseEntity<PersonnelChangeResponseDTO> updateRequest(
+            @PathVariable("changeId") UUID changeId,
+            @RequestBody PersonnelChangeRequestDTO dto,
+            @RequestAttribute("employeeId") UUID requestedBy,
+            org.springframework.security.core.Authentication authentication) {
+        boolean isHr = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_HR") || a.getAuthority().equals("HR"));
+        return ResponseEntity.ok(changeService.updateRequest(changeId, dto, requestedBy, isHr));
     }
 
     @GetMapping("/pending")
@@ -91,6 +103,22 @@ public class PersonnelChangeController {
             @RequestParam("reason") String reason,
             @RequestAttribute("employeeId") UUID rejectedBy) {
         return ResponseEntity.ok(changeService.reject(changeId, reason, rejectedBy, true));
+    }
+
+    /**
+     * General reject: available to the requester themselves to cancel their own request,
+     * or HR/Manager with appropriate permissions.
+     */
+    @PutMapping("/{changeId}/reject")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
+    public ResponseEntity<PersonnelChangeResponseDTO> reject(
+            @PathVariable("changeId") UUID changeId,
+            @RequestParam("reason") String reason,
+            @RequestAttribute("employeeId") UUID rejectedBy,
+            org.springframework.security.core.Authentication authentication) {
+        boolean isHr = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_HR") || a.getAuthority().equals("HR"));
+        return ResponseEntity.ok(changeService.rejectUnified(changeId, reason, rejectedBy, isHr));
     }
 
     /**

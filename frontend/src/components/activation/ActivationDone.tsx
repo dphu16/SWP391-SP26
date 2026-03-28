@@ -1,9 +1,19 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CenteredCard } from "./shared";
+import { removeToken, getToken } from "../../services/authService";
 
 const ActivationDone: React.FC = () => {
   const navigate = useNavigate();
+
+  // If another account is currently logged in, log it out automatically
+  // so the new employee can log in fresh with their activated credentials.
+  useEffect(() => {
+    if (getToken()) {
+      removeToken();
+    }
+  }, []);
+
   return (
     <CenteredCard>
       <div className="text-center space-y-4">
@@ -21,6 +31,11 @@ const ActivationDone: React.FC = () => {
           Your account has been set up successfully. You can now log in with
           your email and password.
         </p>
+        {getToken() === null && (
+          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Previous session has been logged out. Please sign in with your new account.
+          </p>
+        )}
         <button
           onClick={() => navigate("/login")}
           className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors"

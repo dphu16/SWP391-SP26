@@ -9,6 +9,8 @@ export interface LookupPosition {
     id: string;
     name: string;
     title?: string;
+    baseSalaryMin?: number;
+    baseSalaryMax?: number;
 }
 
 export const getLookupDepartments = async (): Promise<LookupDepartment[]> => {

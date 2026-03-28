@@ -5,6 +5,8 @@ import com.project.hrm.module.corehr.dto.request.EmergencyContactDTO;
 import com.project.hrm.module.corehr.dto.request.SetPasswordDTO;
 import com.project.hrm.module.corehr.dto.response.ActivationResponseDTO;
 import com.project.hrm.module.corehr.entity.*;
+import com.project.hrm.module.corehr.enums.EmployeeRole;
+import com.project.hrm.module.corehr.enums.AuthProvider;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
@@ -41,6 +43,7 @@ public class ActivationService {
         private final DependentRepository emergencyContactRepo;
         private final PasswordEncoder passwordEncoder;
         private final EmailService emailService;
+        private final RoleRepository roleRepo;
 
         private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -61,6 +64,27 @@ public class ActivationService {
                         user = userRepo.findByEmail(email).orElse(null);
 
                         if (user != null && user.getEmployee() == null) {
+                                user.setEmployee(employee);
+                                userRepo.save(user);
+                                employee.setUser(user);
+                        } else if (user == null) {
+                                // Defer the creation of the User until the manager confirms.
+                                // It creates the account exactly at the moment when an activation email is scheduled.
+                                user = User.builder()
+                                        .email(email)
+                                        .avatarUrl(employee.getPersonal().getAvatar())
+                                        .status(UserStatus.INACTIVE)
+                                        .provider(AuthProvider.LOCAL)
+                                        .roles(new java.util.HashSet<>())
+                                        .build();
+
+                                EmployeeRole roleEnum = EmployeeRole.ROLE_EMPLOYEE;
+
+                                Role role = roleRepo.findByName(roleEnum).orElse(null);
+                                if (role != null) {
+                                    user.getRoles().add(role);
+                                }
+
                                 user.setEmployee(employee);
                                 userRepo.save(user);
                                 employee.setUser(user);
@@ -91,8 +115,8 @@ public class ActivationService {
                                 .build();
                 activationTokenRepo.save(activationToken);
 
-                // Update employee status to PENDING_ACTIVATION
-                employee.setEmpStatus(ProgressStatus.PENDING_ACTIVATION);
+                // Update employee status to PENDING_VERIFY (Verification stage)
+                employee.setEmpStatus(ProgressStatus.PENDING_VERIFY);
                 employeeRepo.save(employee);
 
                 // Send email asynchronously
@@ -116,6 +140,12 @@ public class ActivationService {
 
                 Employee employee = activationToken.getEmployee();
                 User user = employee.getUser();
+
+                // Transition: PENDING_VERIFY -> PENDING_ACTIVATION (Successful verification)
+                if (employee.getEmpStatus() == ProgressStatus.PENDING_VERIFY) {
+                        employee.setEmpStatus(ProgressStatus.PENDING_ACTIVATION);
+                        employeeRepo.save(employee);
+                }
 
                 return ActivationResponseDTO.builder()
                                 .message("Token is valid")

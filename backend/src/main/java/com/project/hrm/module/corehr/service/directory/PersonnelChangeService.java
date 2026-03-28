@@ -68,6 +68,21 @@ public class PersonnelChangeService {
             throw new RuntimeException("Nhân viên thực tập không được phép thay đổi lương.");
         }
 
+        // Validate salary range if salary or position is changing
+        Position targetPosition = employee.getPosition();
+        if (dto.getNewPositionId() != null) {
+            targetPosition = employeeHelper.findPositionOrThrow(dto.getNewPositionId());
+        }
+        
+        BigDecimal targetSalary = dto.getNewSalary();
+        if (targetSalary == null && employee.getContract() != null) {
+            targetSalary = employee.getContract().getBaseSalary();
+        }
+        
+        if (targetSalary != null && targetPosition != null) {
+            employeeHelper.validateSalaryInPositionRange(targetPosition, targetSalary);
+        }
+
         Map<String, Object> oldValues = buildOldValues(employee, dto.getChangeType());
         Map<String, Object> newValues = buildNewValues(dto);
 
@@ -77,27 +92,31 @@ public class PersonnelChangeService {
             newValues.put("oldManagerApproved", false);
             newValues.put("newManagerApproved", false);
 
-            // Auto-approve the side(s) where the HR requestor is also the manager,
-            // to avoid a self-approval deadlock.
+            Employee requester = employeeHelper.findEmployeeOrThrow(requestedBy);
+            UUID requesterDeptId = requester.getDepartment() != null ? requester.getDepartment().getDeptId() : null;
+
             Department hrManagedDept = departmentRepository.findByManager_EmployeeId(requestedBy);
-            if (hrManagedDept != null) {
-                UUID oldDeptId = employee.getDepartment() != null ? employee.getDepartment().getDeptId() : null;
-                UUID newDeptId = null;
-                if (newValues.containsKey("departmentId")) {
-                    newDeptId = UUID.fromString(newValues.get("departmentId").toString());
-                }
-                if (hrManagedDept.getDeptId().equals(oldDeptId)) {
-                    newValues.put("oldManagerApproved", true);
-                }
-                if (hrManagedDept.getDeptId().equals(newDeptId)) {
-                    newValues.put("newManagerApproved", true);
-                }
-                // If HR manages both sides, skip manager approval entirely
-                boolean oldApproved = Boolean.TRUE.equals(newValues.get("oldManagerApproved"));
-                boolean newApproved = Boolean.TRUE.equals(newValues.get("newManagerApproved"));
-                if (oldApproved && newApproved) {
-                    initialStatus = PersonnelChangeStatus.MANAGER_APPROVED;
-                }
+            UUID managedDeptId = hrManagedDept != null ? hrManagedDept.getDeptId() : null;
+
+            UUID oldDeptId = employee.getDepartment() != null ? employee.getDepartment().getDeptId() : null;
+            UUID newDeptId = null;
+            if (newValues.containsKey("departmentId")) {
+                newDeptId = UUID.fromString(newValues.get("departmentId").toString());
+            }
+
+            if ((managedDeptId != null && managedDeptId.equals(oldDeptId)) ||
+                    (isHr && requesterDeptId != null && requesterDeptId.equals(oldDeptId))) {
+                newValues.put("oldManagerApproved", true);
+            }
+
+            if ((managedDeptId != null && managedDeptId.equals(newDeptId)) ||
+                    (isHr && requesterDeptId != null && requesterDeptId.equals(newDeptId))) {
+                newValues.put("newManagerApproved", true);
+            }
+
+            if (Boolean.TRUE.equals(newValues.get("oldManagerApproved")) &&
+                    Boolean.TRUE.equals(newValues.get("newManagerApproved"))) {
+                initialStatus = PersonnelChangeStatus.MANAGER_APPROVED;
             }
         }
 
@@ -112,6 +131,82 @@ public class PersonnelChangeService {
                 .managerApprovedBy(requestedBy)
                 .managerApprovedDate(java.time.LocalDateTime.now())
                 .build();
+
+        PersonnelChange saved = changeRepository.save(change);
+        return toResponseDTO(saved);
+    }
+
+    @Transactional
+    public PersonnelChangeResponseDTO updateRequest(UUID changeId, PersonnelChangeRequestDTO dto, UUID requestedBy,
+            boolean isHr) {
+        PersonnelChange change = findOrThrow(changeId);
+
+        if (change.getStatus() == PersonnelChangeStatus.HR_CONFIRMED
+                || change.getStatus() == PersonnelChangeStatus.REJECTED) {
+            throw new RuntimeException("Chỉ có thể sửa đổi yêu cầu ở trạng thái PENDING.");
+        }
+
+        Employee employee = employeeHelper.findEmployeeOrThrow(dto.getEmployeeId());
+
+        // Validate salary range if salary or position is changing
+        Position targetPosition = employee.getPosition();
+        if (dto.getNewPositionId() != null) {
+            targetPosition = employeeHelper.findPositionOrThrow(dto.getNewPositionId());
+        }
+
+        BigDecimal targetSalary = dto.getNewSalary();
+        if (targetSalary == null && employee.getContract() != null) {
+            targetSalary = employee.getContract().getBaseSalary();
+        }
+
+        if (targetSalary != null && targetPosition != null) {
+            employeeHelper.validateSalaryInPositionRange(targetPosition, targetSalary);
+        }
+
+        // Re-calculate values
+        Map<String, Object> oldValues = buildOldValues(employee, dto.getChangeType());
+        Map<String, Object> newValues = buildNewValues(dto);
+
+        PersonnelChangeStatus nextStatus = PersonnelChangeStatus.MANAGER_APPROVED;
+        if (dto.getChangeType() == PersonnelChangeType.DEPARTMENT_TRANSFER) {
+            nextStatus = PersonnelChangeStatus.PENDING;
+            newValues.put("oldManagerApproved", false);
+            newValues.put("newManagerApproved", false);
+
+            Employee requester = employeeHelper.findEmployeeOrThrow(requestedBy);
+            UUID requesterDeptId = requester.getDepartment() != null ? requester.getDepartment().getDeptId() : null;
+
+            Department hrManagedDept = departmentRepository.findByManager_EmployeeId(requestedBy);
+            UUID managedDeptId = hrManagedDept != null ? hrManagedDept.getDeptId() : null;
+
+            UUID oldDeptId = employee.getDepartment() != null ? employee.getDepartment().getDeptId() : null;
+            UUID newDeptId = null;
+            if (newValues.containsKey("departmentId")) {
+                newDeptId = UUID.fromString(newValues.get("departmentId").toString());
+            }
+
+            if ((managedDeptId != null && managedDeptId.equals(oldDeptId)) ||
+                    (isHr && requesterDeptId != null && requesterDeptId.equals(oldDeptId))) {
+                newValues.put("oldManagerApproved", true);
+            }
+
+            if ((managedDeptId != null && managedDeptId.equals(newDeptId)) ||
+                    (isHr && requesterDeptId != null && requesterDeptId.equals(newDeptId))) {
+                newValues.put("newManagerApproved", true);
+            }
+
+            if (Boolean.TRUE.equals(newValues.get("oldManagerApproved")) &&
+                    Boolean.TRUE.equals(newValues.get("newManagerApproved"))) {
+                nextStatus = PersonnelChangeStatus.MANAGER_APPROVED;
+            }
+        }
+
+        change.setEmployee(employee);
+        change.setChangeType(dto.getChangeType());
+        change.setStatus(nextStatus);
+        change.setReason(dto.getReason());
+        change.setOldValues(oldValues);
+        change.setNewValues(newValues);
 
         PersonnelChange saved = changeRepository.save(change);
         return toResponseDTO(saved);
@@ -206,35 +301,50 @@ public class PersonnelChangeService {
     }
 
     @Transactional
-    public PersonnelChangeResponseDTO reject(UUID changeId, String rejectReason, UUID rejectedBy, boolean isManager) {
+    public PersonnelChangeResponseDTO rejectUnified(UUID changeId, String rejectReason, UUID rejectedBy, boolean isHr) {
         PersonnelChange change = findOrThrow(changeId);
+
         if (change.getStatus() == PersonnelChangeStatus.HR_CONFIRMED) {
-            throw new RuntimeException("Không thể từ chối yêu cầu đã được xác nhận.");
+            throw new RuntimeException("Không thể từ chối yêu cầu đã hoàn tất xác nhận.");
         }
 
-        // Nếu là manager, kiểm tra xem họ có quyền quản lý phòng ban cũ hoặc mới (đối
-        // với điều chuyển)
-        if (isManager) {
-            Department managerDept = resolveManagerDepartment(rejectedBy);
-            UUID employeeDeptId = change.getEmployee().getDepartment() != null
-                    ? change.getEmployee().getDepartment().getDeptId()
-                    : null;
+        // Case 1: The requester wants to cancel their own request
+        if (change.getRequestedBy() != null && change.getRequestedBy().equals(rejectedBy)) {
+            // Requester can always cancel their own pending/approved request
+            change.setStatus(PersonnelChangeStatus.REJECTED);
+            change.setRejectReason("Hủy bởi người đề xuất: " + rejectReason);
+            change.setRejectedBy(rejectedBy);
+            return toResponseDTO(changeRepository.save(change));
+        }
 
-            boolean isAuthorized = false;
-            if (employeeDeptId != null && employeeDeptId.equals(managerDept.getDeptId())) {
-                isAuthorized = true;
-            } else if (change.getChangeType() == PersonnelChangeType.DEPARTMENT_TRANSFER) {
-                // Nếu là bộ phận mới, manager mới cũng được quyền từ chối (abort)
-                if (change.getNewValues() != null && change.getNewValues().containsKey("departmentId")) {
-                    UUID newDeptId = UUID.fromString(change.getNewValues().get("departmentId").toString());
-                    if (newDeptId.equals(managerDept.getDeptId())) {
-                        isAuthorized = true;
-                    }
+        // Case 2: HR rejection (already has isHr flag from controller)
+        if (isHr) {
+            change.setStatus(PersonnelChangeStatus.REJECTED);
+            change.setRejectReason(rejectReason);
+            change.setRejectedBy(rejectedBy);
+            return toResponseDTO(changeRepository.save(change));
+        }
+
+        // Case 3: Manager rejection (must verify authority)
+        Department managerDept = resolveManagerDepartment(rejectedBy);
+        UUID employeeDeptId = change.getEmployee().getDepartment() != null
+                ? change.getEmployee().getDepartment().getDeptId()
+                : null;
+
+        boolean isAuthorized = false;
+        if (employeeDeptId != null && employeeDeptId.equals(managerDept.getDeptId())) {
+            isAuthorized = true;
+        } else if (change.getChangeType() == PersonnelChangeType.DEPARTMENT_TRANSFER) {
+            if (change.getNewValues() != null && change.getNewValues().containsKey("departmentId")) {
+                UUID newDeptId = UUID.fromString(change.getNewValues().get("departmentId").toString());
+                if (newDeptId.equals(managerDept.getDeptId())) {
+                    isAuthorized = true;
                 }
             }
-            if (!isAuthorized) {
-                throw new RuntimeException("Bạn không có quyền từ chối yêu cầu này.");
-            }
+        }
+
+        if (!isAuthorized) {
+            throw new RuntimeException("Bạn không có quyền từ chối yêu cầu này.");
         }
 
         change.setStatus(PersonnelChangeStatus.REJECTED);
@@ -242,6 +352,11 @@ public class PersonnelChangeService {
         change.setRejectedBy(rejectedBy);
 
         return toResponseDTO(changeRepository.save(change));
+    }
+
+    @Transactional
+    public PersonnelChangeResponseDTO reject(UUID changeId, String rejectReason, UUID rejectedBy, boolean isManager) {
+        return rejectUnified(changeId, rejectReason, rejectedBy, !isManager);
     }
 
     /** Dành cho HR: lấy tất cả yêu cầu chờ xử lý */
@@ -451,6 +566,7 @@ public class PersonnelChangeService {
                 .employeeName(employeeName)
                 .employeeCode(employeeCode)
                 .departmentName(departmentName)
+                .positionId(employee != null && employee.getPosition() != null ? employee.getPosition().getPositionId() : null)
                 .changeType(change.getChangeType())
                 .status(change.getStatus())
                 .reason(change.getReason())

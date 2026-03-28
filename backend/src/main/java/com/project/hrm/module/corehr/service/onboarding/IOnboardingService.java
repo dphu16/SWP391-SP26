@@ -17,7 +17,7 @@ public interface IOnboardingService {
 
     CreateNewHireDTO getEmployeeForEdit(UUID employeeId);
 
-    void resubmitRejectedEmployee(UUID employeeId, CreateNewHireDTO updatedData);
+    void updateOnboardingProfile(UUID employeeId, CreateNewHireDTO updatedData);
 
     void cancelOnboarding(UUID employeeId);
 }

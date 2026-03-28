@@ -20,7 +20,7 @@ public class DropdownService {
     private final PositionRepository positionRepository;
 
     public DropdownService(DepartmentRepository departmentRepository,
-                         PositionRepository positionRepository) {
+            PositionRepository positionRepository) {
         this.departmentRepository = departmentRepository;
         this.positionRepository = positionRepository;
     }

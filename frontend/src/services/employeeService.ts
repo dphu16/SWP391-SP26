@@ -9,6 +9,7 @@ export interface AttendanceEmployeeDTO {
     positionTitle: string;
     position: string;
     deptName: string;
+    positionId: string;
 }
 
 export const searchEmployees = async (query: string): Promise<AttendanceEmployeeDTO[]> => {

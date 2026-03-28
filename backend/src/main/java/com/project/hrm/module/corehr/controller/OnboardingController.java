@@ -54,10 +54,10 @@ public class OnboardingController {
 
     @PutMapping("/employees/{employeeId}/resubmit")
     @PreAuthorize("hasRole('HR')")
-    public ResponseEntity<Void> resubmitRejectedEmployee(
+    public ResponseEntity<Void> updateOnboardingProfile(
             @PathVariable("employeeId") UUID employeeId,
             @Valid @RequestBody CreateNewHireDTO updatedData) {
-        onboardingService.resubmitRejectedEmployee(employeeId, updatedData);
+        onboardingService.updateOnboardingProfile(employeeId, updatedData);
         return ResponseEntity.ok().build();
     }
 

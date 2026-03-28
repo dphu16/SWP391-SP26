@@ -12,8 +12,8 @@ const OFFBOARDING_FILTERS = [
     options: [
       { label: "All Status", value: "ALL" },
       { label: "Pending", value: "PENDING" },
-      { label: "Approved by Mgr", value: "MANAGER_APPROVED" },
-      { label: "Confirmed by HR", value: "HR_CONFIRMED" },
+      { label: "Approved", value: "MANAGER_APPROVED" },
+      { label: "Confirmed", value: "HR_CONFIRMED" },
       { label: "Cancelled", value: "CANCELLED" },
       { label: "Completed", value: "COMPLETED" },
     ],
@@ -24,8 +24,7 @@ const OFFBOARDING_FILTERS = [
     options: [
       { label: "All Types", value: "ALL" },
       { label: "Resignation", value: "RESIGNATION" },
-      { label: "Special Proposal", value: "TERMINATED" },
-      { label: "Contract Expired", value: "CONTRACT_EXPIRED" },
+      { label: "Termination", value: "TERMINATED" },
     ],
   },
 ];

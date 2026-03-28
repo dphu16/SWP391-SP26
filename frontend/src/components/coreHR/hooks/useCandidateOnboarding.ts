@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import apiClient from "../../../services/apiClient";
-import { sendApprovalRequest } from "../../../services/approvalService";
 import type { CreateNewHireDTO } from "./types";
 import { makeDefaultFormData } from "../onboarding/formConstants";
+import { useEmploymentData } from "../onboarding/hooks/useEmploymentData";
 
 const API_URL = "/api/employees/new";
 
@@ -13,6 +13,7 @@ export const useCandidateOnboarding = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { positions } = useEmploymentData();
 
   const action = searchParams.get("action") || "init";
   const isResubmit = action === "resubmit";
@@ -109,15 +110,33 @@ export const useCandidateOnboarding = () => {
       const errors: FieldErrors = {};
 
       if (step === 0) {
-        if (!formData.fullName.trim())
+        if (!formData.fullName.trim()) {
           errors.fullName = "Full Name is required.";
+        } else if (/\d/.test(formData.fullName)) {
+          errors.fullName = "Full Name cannot contain numbers.";
+        }
+
         if (!formData.email.trim()) errors.email = "Email Address is required.";
         else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
           errors.email = "Invalid email format.";
         if (formData.phone && !/^[0-9+\-\s]{8,15}$/.test(formData.phone.trim()))
           errors.phone = "Invalid phone number format.";
-        if (!formData.dateOfBirth)
+        
+        if (!formData.dateOfBirth) {
           errors.dateOfBirth = "Date of Birth is required.";
+        } else {
+          const dob = new Date(formData.dateOfBirth);
+          const today = new Date();
+          let age = today.getFullYear() - dob.getFullYear();
+          const m = today.getMonth() - dob.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+            age--;
+          }
+          if (age < 18) {
+            errors.dateOfBirth = "Candidate must be at least 18 years old.";
+          }
+        }
+
         if (!formData.citizenId || formData.citizenId.trim().length === 0)
           errors.citizenId = "Citizen ID is required.";
         else if (formData.citizenId.trim().length < 9)
@@ -135,11 +154,46 @@ export const useCandidateOnboarding = () => {
         if (!formData.positionId)
           errors.positionId = "Please select a position.";
         if (!formData.status) errors.status = "Please select a target status.";
-        if (!formData.dateOfJoining)
+        
+        if (!formData.dateOfJoining) {
           errors.dateOfJoining = "Joining Date is required.";
+        } else {
+          const joiningDate = new Date(formData.dateOfJoining);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (joiningDate < today) {
+            errors.dateOfJoining = "Joining Date cannot be in the past.";
+          }
+        }
+
         if (!formData.startDate) errors.startDate = "Start Date is required.";
-        if (!formData.baseSalary || formData.baseSalary <= 0)
+        if (!formData.baseSalary || formData.baseSalary <= 0) {
           errors.baseSalary = "Base Salary must be greater than 0.";
+        } else {
+          // Calculate dynamically based on position
+          let minStr = "0";
+          let maxStr = "9.999.999.999.999";
+          let actualMin = 0;
+          let actualMax = 9999999999999;
+          
+          if (formData.positionId) {
+            const pos = positions.find(p => String(p.id) === String(formData.positionId));
+            if (pos) {
+              const bMin = (pos.baseSalaryMin !== undefined && pos.baseSalaryMin !== null) ? pos.baseSalaryMin : 0;
+              const bMax = (pos.baseSalaryMax !== undefined && pos.baseSalaryMax !== null) ? pos.baseSalaryMax : 9999999999999;
+              
+              actualMin = Math.min(bMin, bMax);
+              actualMax = Math.max(bMin, bMax);
+              minStr = actualMin.toLocaleString("vi-VN");
+              maxStr = actualMax.toLocaleString("vi-VN");
+            }
+          }
+
+          if (formData.baseSalary < actualMin || formData.baseSalary > actualMax) {
+            errors.baseSalary = `Hệ thống hoặc vị trí chỉ cho phép từ ${minStr} VND đến ${maxStr} VND.`;
+          }
+        }
+
         if (
           formData.endDate &&
           formData.startDate &&
@@ -155,7 +209,7 @@ export const useCandidateOnboarding = () => {
       }
       return null;
     },
-    [formData],
+    [formData, positions],
   );
 
   // Clear field error when user edits the field
@@ -209,29 +263,11 @@ export const useCandidateOnboarding = () => {
         const employeeId = response.data?.employeeId;
 
         if (employeeId) {
-          try {
-            await sendApprovalRequest(employeeId);
-            setToast({
-              message:
-                "Employee successfully created and approval request sent!",
-              type: "success",
-            });
-            setTimeout(() => navigate("/onboarding"), 1500);
-          } catch (err: any) {
-            const errorMsg =
-              err.response?.data?.message ||
-              err.response?.data?.error ||
-              err.message ||
-              "Unknown error";
-            setSubmitError(
-              `Employee created, but failed to send approval request: ${errorMsg}`,
-            );
-            setToast({
-              message: "Failed to send approval request.",
-              type: "error",
-            });
-            return;
-          }
+          setToast({
+            message: "Employee successfully created and submitted for manager approval!",
+            type: "success",
+          });
+          setTimeout(() => navigate("/onboarding"), 1500);
         } else {
           setToast({
             message: "Employee successfully created!",
@@ -273,6 +309,31 @@ export const useCandidateOnboarding = () => {
           message = data;
         }
       }
+
+      // Check for PostgreSQL numeric overflow error
+      if (
+        message.includes("numeric field overflow") ||
+        message.includes("precision 15, scale 2") ||
+        message.includes("10^13")
+      ) {
+        let maxMsg = "9.999.999.999.999";
+        let minMsg = "0";
+        
+        if (formData.positionId) {
+          const pos = positions.find((p) => String(p.id) === String(formData.positionId));
+          if (pos) {
+            const bMin = (pos.baseSalaryMin !== undefined && pos.baseSalaryMin !== null) ? pos.baseSalaryMin : 0;
+            const bMax = (pos.baseSalaryMax !== undefined && pos.baseSalaryMax !== null) ? pos.baseSalaryMax : 9999999999999;
+            minMsg = Math.min(bMin, bMax).toLocaleString("vi-VN");
+            maxMsg = Math.max(bMin, bMax).toLocaleString("vi-VN");
+          }
+        }
+        const exactMsg = `Hệ thống hoặc vị trí chỉ cho phép từ ${minMsg} VND đến ${maxMsg} VND.`;
+        setFieldErrors((prev) => ({ ...prev, baseSalary: exactMsg }));
+        setToast({ message: exactMsg, type: "error" });
+        return;
+      }
+
       setSubmitError(message);
       setToast({ message, type: "error" });
     } finally {

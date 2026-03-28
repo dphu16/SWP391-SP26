@@ -7,15 +7,18 @@ import com.project.hrm.module.corehr.entity.Employee;
 import com.project.hrm.module.corehr.repository.EmployeeRepository;
 import com.project.hrm.module.request.dto.RequestDTO;
 import com.project.hrm.module.request.dto.RequestResponseDTO;
+import com.project.hrm.module.corehr.entity.User;
+import com.project.hrm.module.corehr.repository.UserRepository;
 import com.project.hrm.module.request.entity.LeaveBalance;
 import com.project.hrm.module.request.entity.Request;
 import com.project.hrm.module.request.enums.RequestStatus;
 import com.project.hrm.module.request.enums.RequestType;
-
 import com.project.hrm.module.request.repository.LeaveBalanceRepository;
 import com.project.hrm.module.request.repository.RequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +44,7 @@ public class RequestService {
     private final LeaveBalanceRepository leaveBalanceRepo;
     private final AttendanceLogRepository attendanceLogRepo;
     private final WorkScheduleRepository workScheduleRepo;
+    private final UserRepository userRepo;
 
     // --- 1. TẠO YÊU CẦU MỚI (EMPLOYEE) ---
     @Transactional
@@ -75,7 +79,38 @@ public class RequestService {
     // --- 3. XEM TẤT CẢ KÈM TÊN NHÂN VIÊN & PHÒNG BAN (MANAGER) ---
     @Transactional(readOnly = true)
     public List<RequestResponseDTO> getAllRequestsForReview() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return java.util.Collections.emptyList();
+        }
+
+        String email = auth.getName();
+        User currentUser = userRepo.findByEmail(email).orElse(null);
+        if (currentUser == null) return java.util.Collections.emptyList();
+
+        Employee currentEmployee = currentUser.getEmployee();
+        UUID currentEmployeeId = (currentEmployee != null) ? currentEmployee.getEmployeeId() : null;
+        boolean isHR = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_HR"));
+
         return requestRepo.findAllByOrderByCreatedAtDesc().stream()
+                .filter(req -> {
+                    Employee requester = employeeRepo.findById(req.getEmployeeId()).orElse(null);
+                    if (requester == null) return false;
+
+                    // Onboarding Approval (APPROVAL type): ONLY visible to the assigned manager
+                    if (req.getRequestType() == RequestType.APPROVAL) {
+                        return currentEmployeeId != null && requester.getManager() != null &&
+                               requester.getManager().getEmployeeId().equals(currentEmployeeId);
+                    }
+
+                    // For other request types (LEAVE, OT, etc.)
+                    // HR role sees all regular requests
+                    if (isHR) return true;
+
+                    // Managers see only their subordinates' requests
+                    return currentEmployeeId != null && requester.getManager() != null &&
+                           requester.getManager().getEmployeeId().equals(currentEmployeeId);
+                })
                 .map(req -> {
                     Employee emp = employeeRepo.findById(req.getEmployeeId()).orElse(null);
 

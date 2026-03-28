@@ -501,10 +501,11 @@ const ReviewRequests: React.FC = () => {
                                         <td className="px-5 py-4">
                                             {activeTab === "Pending" ? (
                                                 <div className="flex items-center gap-2">
-                                                    {/* Phân nhánh duyệt cho HR */}
-                                                    {(entry.rawType === "OFFBOARDING" || entry.rawType === "PERSONNEL_CHANGE") &&
-                                                        (entry.rawOffboardingData?.status === "MANAGER_APPROVED" || entry.rawPersonnelData?.status === "MANAGER_APPROVED") &&
-                                                        hasRole("HR") ? (
+                                                    {/* Onboarding Approval or HR Confirmation for Offboarding/PC */}
+                                                    {(entry.rawType === "APPROVAL" || 
+                                                      ((entry.rawType === "OFFBOARDING" || entry.rawType === "PERSONNEL_CHANGE") &&
+                                                       (entry.rawOffboardingData?.status === "MANAGER_APPROVED" || entry.rawPersonnelData?.status === "MANAGER_APPROVED") &&
+                                                       hasRole("HR"))) ? (
                                                         <button onClick={() => approve(entry)} className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0d9488] hover:bg-[#0f766e] text-white text-xs font-bold rounded-lg shadow-sm transition-all">
                                                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
                                                             Confirm

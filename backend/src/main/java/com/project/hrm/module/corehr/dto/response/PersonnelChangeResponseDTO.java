@@ -21,6 +21,7 @@ public class PersonnelChangeResponseDTO {
     private String employeeName;
     private String employeeCode;
     private String departmentName;
+    private UUID positionId;
     private PersonnelChangeType changeType;
     private PersonnelChangeStatus status;
     private String reason;

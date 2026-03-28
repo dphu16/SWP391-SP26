@@ -31,5 +31,4 @@ public class Position {
     @Column(name = "base_salary_max", precision = 15, scale = 2)
     private BigDecimal baseSalaryMax;
 
-
 }

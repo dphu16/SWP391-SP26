@@ -8,6 +8,7 @@ export interface AttendanceEmployee {
     fullName: string;
     position: string;
     deptName: string;
+    positionId: string;
 }
 
 export const EmployeeSearch: React.FC<{
@@ -34,6 +35,7 @@ export const EmployeeSearch: React.FC<{
                         fullName: emp.fullName,
                         position: emp.positionTitle || emp.position,
                         deptName: emp.deptName,
+                        positionId: emp.positionId,
                     }))
                 );
             } catch {
