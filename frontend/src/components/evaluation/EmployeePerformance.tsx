@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { kpiService } from "../services/kpiService";
-import { getToken } from "../services/authService";
-import { decodeJwt } from "../utils/jwtDecode";
+import { kpiService } from "../../services/kpiService";
+import { getToken } from "../../services/authService";
+import { decodeJwt } from "../../utils/jwtDecode";
 
 const Icons = {
     // ... existing icons ...

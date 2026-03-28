@@ -1,6 +1,6 @@
-import { kpiService } from "../services/kpiService";
-import type { KpiLibrary, Department, KpiDetailDto, PerformanceCycle, CreateCycleRequest, PerformanceReview } from "../services/kpiService";
-import { getToken } from "../services/authService";
+import { kpiService } from "../../services/kpiService";
+import type { KpiLibrary, Department, KpiDetailDto, PerformanceCycle, CreateCycleRequest, PerformanceReview } from "../../services/kpiService";
+import { getToken } from "../../services/authService";
 
 
 
@@ -61,7 +61,7 @@ const Icons = {
 
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import type { GlobalStats, DepartmentLeaderboardItem } from "../services/kpiService";
+import type { GlobalStats, DepartmentLeaderboardItem } from "../../services/kpiService";
 
 
 const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) => void }) => {
@@ -223,7 +223,7 @@ const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) =>
 
     // New KPI Form State
     const KPI_CATEGORIES = ['FINANCIAL', 'CUSTOMER', 'PROCESS'] as const;
-    const MEASUREMENT_TYPES: { value: import('../services/kpiService').MeasurementType; label: string; desc: string }[] = [
+    const MEASUREMENT_TYPES: { value: import('../../services/kpiService').MeasurementType; label: string; desc: string }[] = [
         { value: 'NUMERIC', label: 'Numeric', desc: '' },
         { value: 'PERCENTAGE', label: 'Percentage', desc: '' },
         { value: 'BOOLEAN', label: 'Yes / No', desc: '' },
@@ -232,7 +232,7 @@ const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) =>
         name: string;
         category: string;
         defaultWeight: number;
-        measurementType: import('../services/kpiService').MeasurementType;
+        measurementType: import('../../services/kpiService').MeasurementType;
         description: string;
     }>({
         name: '',
@@ -577,7 +577,7 @@ const HRPerformance = (_props: { activeTab: string, setActiveTab: (t: string) =>
             const created = await kpiService.createKpiLibrary({
                 ...newKpi,
                 name: trimmedName,
-                measurementType: newKpi.measurementType as import('../services/kpiService').MeasurementType,
+                measurementType: newKpi.measurementType as import('../../services/kpiService').MeasurementType,
                 departmentId: selectedDeptId || undefined
             });
             setAllKpis(prev => [...prev, created]);

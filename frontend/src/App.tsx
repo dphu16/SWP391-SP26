@@ -15,7 +15,7 @@ import CheckInOut from "./components/attendance/CheckInOut";
 import Applications from "./components/attendance/Applications";
 import ReviewRequests from "./components/attendance/ReviewRequests";
 import AttendanceSummary from "./components/attendance/AttendanceSummary";
-import PerformanceModule from "./components/PerformanceModule";
+import PerformanceModule from "./components/evaluation/PerformanceModule";
 import PayrollModule from "./components/payroll/PayrollModule";
 import JobListPage from "./components/recruitment/JobListPage";
 import JobDetailPage from "./components/recruitment/JobDetailPage";
