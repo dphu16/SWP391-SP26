@@ -1,0 +1,15 @@
+package com.project.hrm.module.evaluation.repository;
+
+import com.project.hrm.module.evaluation.entity.TrainingParticipant;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface TrainingParticipantRepository extends JpaRepository<TrainingParticipant, UUID> {
+    List<TrainingParticipant> findByEmployee_EmployeeId(UUID employeeId);
+    boolean existsByEmployee_EmployeeIdAndCourse_CourseUrl(UUID employeeId, String courseUrl);
+}
+

@@ -1,0 +1,57 @@
+import apiClient from "./apiClient";
+import type { Application } from "../types";
+export const applicationService = {
+    getByJobId: (jobId: string, status: string) => apiClient.get<Application[]>(`/api/app/job/${jobId}`, { params: { status } }),
+    getAppsNoInterview: (jobId: string) => apiClient.get<Application[]>(`/api/app/job/${jobId}/no`),
+    getAppsHaveInterview: (jobId: string) => apiClient.get<Application[]>(`/api/app/job/${jobId}/have`),
+
+    // Status can be updated via PUT /api/applications/{id}/status 
+    updateStatus: (id: string, status: string) => apiClient.put<Application>(`/api/applications/${id}/status`, null, { params: { status } }),
+
+    // Upload CV (Internal / HR)
+    applyJob: (formData: FormData) => apiClient.post(`/api/app`, formData),
+
+    // Upload CV (Public Candidate)
+    applyJobCandidate: (formData: FormData) => apiClient.post(`/api/app/candidate`, formData),
+
+    updateApplication: (id: string, formData: FormData) => apiClient.put(`/api/app/${id}`, formData),
+
+    deleteApplication: (id: string) => apiClient.delete(`/api/app/${id}`),
+
+    getById: (id: string) => apiClient.get<Application>(`/api/app/${id}`),
+
+    reviewCV: (data: { applicationId: string; reviewerId: string; result: "PASSED" | "FAILED"; comment: string }) =>
+        apiClient.post<{ id: string; appId: string; reviewerId: string; reviewerName: string; comment: string; result: string }>(`/api/cvReview`, { appId: data.applicationId, reviewerId: data.reviewerId, comment: data.comment, result: data.result }),
+
+    getCVReview: (applicationId: string) =>
+        apiClient.get<{ id: string; appId: string; reviewerId: string; reviewerName: string; comment: string; result: string }>(`/api/cvReview/${applicationId}`),
+
+    setDateLimit: (data: { applicationId: string; startTime: string; endTime: string }) =>
+        apiClient.post(`/api/app/date-limit`, { id: data.applicationId, start: data.startTime, end: data.endTime }),
+
+    scheduleInterview: (data: { appId: string; interviewerId: string; scheduleTime: string }) =>
+        apiClient.post<{ id: string; appId: string; interviewerId: string; interviewerName: string; scheduleTime: string; status: string; feedback: string | null; score: number | null; }>(`/api/interview`, {
+            appId: data.appId,
+            interviewerId: data.interviewerId,
+            scheduleTime: data.scheduleTime,
+            status: "SCHEDULED"
+        }),
+
+    getInterview: (appId: string) =>
+        apiClient.get<{ id: string; appId: string; interviewerId: string; interviewerName: string; scheduleTime: string; status: string; feedback: string | null; score: number | null; }[]>(`/api/interview/${appId}`),
+
+    getInterviewByHr: (hrId: string) =>
+        apiClient.get<{ id: string; appId: string; interviewerId: string; interviewerName: string; scheduleTime: string; status: string; feedback: string | null; score: number | null; }[]>(`/api/interview/list/${hrId}`),
+
+    updateInterviewResult: (id: string, data: { appId: string; interviewerId: string; scheduleTime: string; status: "COMPLETED" | "CANCELLED"; feedback: string; score: number }) =>
+        apiClient.patch<{ id: string; appId: string; interviewerId: string; interviewerName: string; scheduleTime: string; status: string; feedback: string | null; score: number | null; }>(`/api/interview/${id}/result`, data),
+
+    nextStage: (ids: string[]) =>
+        apiClient.post(`/api/app/list/next-stage`, ids),
+
+    rejectStage: (id: string) =>
+        apiClient.put(`/api/app/reject-stage/${id}`),
+
+    sendList: (deptId: string, ids: string[]) =>
+        apiClient.post(`/api/interview/send/${deptId}`, ids),
+};

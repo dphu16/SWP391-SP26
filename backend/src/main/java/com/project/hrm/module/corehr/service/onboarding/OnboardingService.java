@@ -1,0 +1,249 @@
+package com.project.hrm.module.corehr.service.onboarding;
+
+import com.project.hrm.module.corehr.dto.request.CreateNewHireDTO;
+import com.project.hrm.module.corehr.dto.response.NewHireResponseDTO;
+import com.project.hrm.module.corehr.dto.response.OnboardingListResponseDTO;
+import com.project.hrm.module.corehr.dto.response.OnboardingResponseDTO;
+import com.project.hrm.module.corehr.enums.ProgressStatus;
+import com.project.hrm.module.corehr.repository.EmployeeRepository;
+import com.project.hrm.module.recruitment.entity.Application;
+import com.project.hrm.module.recruitment.enums.ApplicationStatus;
+import com.project.hrm.module.corehr.mapper.OnboardingMapper;
+import com.project.hrm.module.corehr.repository.OnboardingRepository;
+import com.project.hrm.module.corehr.entity.*;
+import com.project.hrm.module.corehr.enums.UserStatus;
+import com.project.hrm.module.corehr.exception.BusinessRuleException;
+import com.project.hrm.module.corehr.enums.ErrorCode;
+import com.project.hrm.module.corehr.repository.RoleRepository;
+import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
+import com.project.hrm.module.recruitment.repository.ApplicationRepository;
+import com.project.hrm.module.request.entity.Request;
+import com.project.hrm.module.request.repository.RequestRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
+
+@Service
+public class OnboardingService implements IOnboardingService {
+
+    private final OnboardingRepository applicationRepository;
+    private final EmployeeRepository employeeRepository;
+    private final OnboardingCommandService onboaringCommandService;
+    private final RequestRepository requestRepository;
+    private final EmployeeHelper employeeHelper;
+    private final RoleRepository roleRepository;
+    private final ApplicationRepository recruitmentApplicationRepository;
+
+    public OnboardingService(OnboardingRepository applicationRepository,
+            EmployeeRepository employeeRepository,
+            OnboardingCommandService onboaringCommandService,
+            RequestRepository requestRepository,
+            EmployeeHelper employeeHelper,
+            RoleRepository roleRepository,
+            ApplicationRepository recruitmentApplicationRepository) {
+        this.applicationRepository = applicationRepository;
+        this.employeeRepository = employeeRepository;
+        this.onboaringCommandService = onboaringCommandService;
+        this.requestRepository = requestRepository;
+        this.employeeHelper = employeeHelper;
+        this.roleRepository = roleRepository;
+        this.recruitmentApplicationRepository = recruitmentApplicationRepository;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OnboardingListResponseDTO getOnboardingList(Pageable pageable) {
+        Page<OnboardingResponseDTO> hiredApplications = applicationRepository
+                .findByStatus(ApplicationStatus.OFFER, pageable)
+                .map(OnboardingMapper::toDTO);
+
+        // Strip the sorting to prevent mapping errors since Employee lacks 'createdAt' property
+        PageRequest employeePageRequest = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.unsorted());
+
+        Page<OnboardingResponseDTO> onboardingEmployees = employeeRepository
+                .findByEmpStatusNot(ProgressStatus.COMPLETED, employeePageRequest)
+                .map(emp -> OnboardingMapper.fromEmployee(emp, null));
+
+        return OnboardingListResponseDTO.builder()
+                .hiredApplications(hiredApplications)
+                .onboardingEmployees(onboardingEmployees)
+                .build();
+    }
+
+    @Override
+    public NewHireResponseDTO createNewHire(CreateNewHireDTO request) {
+        return onboaringCommandService.createNewHire(request);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CreateNewHireDTO getEmployeeForEdit(UUID employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new BusinessRuleException(
+                        ErrorCode.EMPLOYEE_NOT_FOUND,
+                        "Employee not found with id: " + employeeId));
+
+        // HR can only edit profiles that are in the review phase (PENDING_REVIEW)
+        if (employee.getEmpStatus() != ProgressStatus.PENDING_REVIEW) {
+            throw new BusinessRuleException(
+                    ErrorCode.INVALID_APPROVAL_ACTION,
+                    "Only profiles in PENDING_REVIEW state can be edited");
+        }
+
+        Personal personal = employee.getPersonal();
+        Contract contract = employee.getContract();
+
+        CreateNewHireDTO dto = new CreateNewHireDTO();
+        dto.setFullName(employee.getFullName());
+        dto.setPhone(personal != null ? personal.getPhone() : null);
+        dto.setEmail(personal != null ? personal.getEmail() : null);
+        dto.setGender(personal != null ? personal.getGender() : null);
+        dto.setAddress(personal != null ? personal.getAddress() : null);
+        dto.setCitizenId(personal != null ? personal.getCitizenId() : null);
+        dto.setTaxCode(personal != null ? personal.getTaxCode() : null);
+        dto.setDateOfBirth(personal != null ? personal.getDateOfBirth() : null);
+        dto.setAvatarUrl(personal != null ? personal.getAvatar() : null);
+        dto.setDepartmentId(employee.getDepartment() != null ? employee.getDepartment().getDeptId() : null);
+        dto.setPositionId(employee.getPosition() != null ? employee.getPosition().getPositionId() : null);
+        dto.setMentorId(employee.getDepartment() != null && employee.getDepartment().getMentor() != null
+                ? employee.getDepartment().getMentor().getEmployeeId()
+                : null);
+        dto.setDateOfJoining(employee.getDateOfJoining());
+        dto.setRole(resolvePrimaryRole(employee));
+        dto.setStatus(employee.getStatus());
+        dto.setContractNumber(contract != null ? contract.getContractNumber() : null);
+        dto.setStartDate(contract != null ? contract.getStartDate() : null);
+        dto.setEndDate(contract != null ? contract.getEndDate() : null);
+        dto.setBaseSalary(contract != null ? contract.getBaseSalary() : null);
+
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public void updateOnboardingProfile(UUID employeeId, CreateNewHireDTO updatedData) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new BusinessRuleException(
+                        ErrorCode.EMPLOYEE_NOT_FOUND,
+                        "Employee not found with id: " + employeeId));
+
+        // HR can only update profiles in PENDING_REVIEW state
+        if (employee.getEmpStatus() != ProgressStatus.PENDING_REVIEW) {
+            throw new BusinessRuleException(
+                    ErrorCode.INVALID_APPROVAL_ACTION,
+                    "Only profiles in PENDING_REVIEW state can be updated");
+        }
+
+        // Update employee fields
+        employee.setFullName(updatedData.getFullName());
+        if (updatedData.getDepartmentId() != null) {
+            employee.setDepartment(employeeHelper.findDepartmentOrThrow(updatedData.getDepartmentId()));
+        }
+        if (updatedData.getPositionId() != null) {
+            employee.setPosition(employeeHelper.findPositionOrThrow(updatedData.getPositionId()));
+        }
+        // Manager and Mentor are now determined by Department level.
+        // Direct employee.manager field is removed.
+        employee.setDateOfJoining(updatedData.getDateOfJoining());
+
+        // Update personal info
+        Personal personal = employee.getPersonal();
+        if (personal != null) {
+            personal.setEmail(updatedData.getEmail());
+            personal.setPhone(updatedData.getPhone());
+            personal.setGender(updatedData.getGender());
+            personal.setAddress(updatedData.getAddress());
+            personal.setCitizenId(updatedData.getCitizenId());
+            personal.setTaxCode(updatedData.getTaxCode());
+            personal.setDateOfBirth(updatedData.getDateOfBirth());
+            personal.setAvatar(updatedData.getAvatarUrl());
+        }
+
+        // Update contract info
+        Contract contract = employee.getContract();
+        if (contract != null) {
+            // Salary validation
+            employeeHelper.validateSalaryInPositionRange(employee.getPosition(), updatedData.getBaseSalary());
+
+            contract.setContractNumber(updatedData.getContractNumber());
+            contract.setStartDate(updatedData.getStartDate());
+            contract.setEndDate(updatedData.getEndDate());
+            contract.setBaseSalary(updatedData.getBaseSalary());
+        }
+
+        // Update user email if changed
+        if (employee.getUser() != null && updatedData.getEmail() != null) {
+            employee.getUser().setEmail(updatedData.getEmail());
+            employee.getUser().setStatus(UserStatus.INACTIVE);
+        }
+
+        if (employee.getUser() != null && updatedData.getRole() != null) {
+            Role role = roleRepository.findByName(updatedData.getRole())
+                    .orElseThrow(() -> new BusinessRuleException(
+                            ErrorCode.INVALID_APPROVAL_ACTION,
+                            "Role not found: " + updatedData.getRole()));
+            employee.getUser().getRoles().clear();
+            employee.getUser().getRoles().add(role);
+        }
+
+        if (updatedData.getStatus() != null) {
+            employee.setStatus(updatedData.getStatus());
+        }
+
+        // Just update in-place within the review phase
+        employeeRepository.save(employee);
+    }
+
+    private com.project.hrm.module.corehr.enums.EmployeeRole resolvePrimaryRole(Employee employee) {
+        if (employee == null || employee.getUser() == null) {
+            return null;
+        }
+
+        Role primaryRole = employee.getUser().getPrimaryRole();
+        return primaryRole != null ? primaryRole.getName() : null;
+    }
+
+    @Override
+    @Transactional
+    public void cancelOnboarding(UUID employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new BusinessRuleException(
+                        ErrorCode.EMPLOYEE_NOT_FOUND,
+                        "Employee not found with id: " + employeeId));
+
+        if (employee.getEmpStatus() == ProgressStatus.COMPLETED) {
+            throw new BusinessRuleException(
+                    ErrorCode.INVALID_APPROVAL_ACTION,
+                    "Cannot cancel a completed onboarding profile");
+        }
+
+        // 1. Revert the linked recruitment Application from HIRED -> OFFER
+        // so the candidate reappears in the recruitment pipeline.
+        Personal personal = employee.getPersonal();
+        if (personal != null && personal.getEmail() != null) {
+            List<Application> hiredApps = recruitmentApplicationRepository
+                    .findByCandidate_EmailAndStatus(personal.getEmail(), ApplicationStatus.HIRED);
+            if (!hiredApps.isEmpty()) {
+                for (Application app : hiredApps) {
+                    app.setStatus(ApplicationStatus.OFFER);
+                }
+                recruitmentApplicationRepository.saveAll(hiredApps);
+            }
+        }
+
+        // 2. Delete associated approval requests
+        List<Request> requests = requestRepository.findByEmployeeIdOrderByCreatedAtDesc(employeeId);
+        if (!requests.isEmpty()) {
+            requestRepository.deleteAll(requests);
+        }
+
+        // 3. Delete the Employee entity (cascades to User, Personal, Contract)
+        employeeRepository.delete(employee);
+    }
+}

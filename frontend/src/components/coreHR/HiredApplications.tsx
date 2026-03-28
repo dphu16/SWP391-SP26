@@ -1,0 +1,150 @@
+import React from "react";
+import FilterBar from "../../components/ui/FilterBar";
+import { Avatar, ErrorState, EmptyState } from "./shared";
+import SkeletonRow from "./shared/SkeletonRow";
+import Pagination from "./shared/Pagination";
+import { useHiredApplications } from "./hooks/useHiredApplications";
+
+interface HiredApplicationsProps {
+  onAction?: (employeeId: string, actionType: "init" | "continue") => void;
+}
+
+const COLUMNS = [
+  { key: "candidateName", label: "Candidate" },
+  { key: "candidateEmail", label: "Email" },
+  { key: "candidatePhone", label: "Phone" },
+  { key: "jobTitle", label: "Position" },
+];
+
+const HiredApplications: React.FC<HiredApplicationsProps> = ({ onAction }) => {
+  const {
+    loading,
+    error,
+    filteredHired,
+    setSearchTerm,
+    handleFilterChange,
+    handleAction,
+    currentPage,
+    setCurrentPage,
+    pageData,
+  } = useHiredApplications(onAction);
+
+  if (error && !loading) {
+    return (
+      <ErrorState message={error} onRetry={() => window.location.reload()} />
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold tracking-tight text-text-primary-light font-heading">
+          Candidate Profiles
+        </h1>
+        <p className="text-text-secondary-light text-sm">
+          Initialize onboarding profiles for hired candidates.
+        </p>
+      </div>
+
+      <FilterBar 
+        onSearch={setSearchTerm} 
+        onFilterChange={handleFilterChange} 
+        searchPlaceholder="Search candidates by name, email, phone or title..."
+        filterKeys={["position"]}
+      />
+
+      <div className="rounded-2xl border border-border-light bg-surface-light overflow-hidden shadow-card animate-fade-in">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="sticky top-0 z-10 bg-surface-light">
+              <tr className="border-b border-gray-100">
+                {COLUMNS.map((col, idx) => (
+                  <th
+                    key={col.key}
+                    className={`px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light ${idx === 0 ? "pl-6" : ""}`}
+                  >
+                    {col.label}
+                  </th>
+                ))}
+                <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light text-center sticky right-0 bg-surface-light">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50 text-sm">
+              {loading
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <SkeletonRow key={i} />
+                  ))
+                : filteredHired.map((app) => (
+                    <tr
+                      key={app.id}
+                      className="table-row-hover group hover:bg-gray-50/80"
+                    >
+                      <td className="px-4 py-3.5 pl-6">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={app.candidateName || "?"} />
+                          <div className="font-semibold text-text-primary-light leading-snug">
+                            {app.candidateName}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-text-primary-light">
+                        {app.candidateEmail || (
+                          <span className="text-text-muted-light">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className="text-xs font-medium text-text-secondary-light bg-gray-100 px-2 py-0.5 rounded-md">
+                          {app.candidatePhone || "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-text-primary-light">
+                        {app.jobTitle || (
+                          <span className="text-text-muted-light">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-center sticky right-0 bg-surface-light">
+                        <div className="flex items-center justify-center">
+                          <button
+                            onClick={() => handleAction(app, "init")}
+                            title="Fill Profile"
+                            className="p-2 rounded-full text-primary hover:text-white hover:bg-primary transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              className="w-4 h-4 translate-x-0.5"
+                            >
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+            </tbody>
+          </table>
+        </div>
+
+        {!loading && filteredHired.length === 0 && (
+          <EmptyState
+            title="No candidates found"
+            description="Hired candidates ready for onboarding will appear here."
+          />
+        )}
+        {!loading && filteredHired.length > 0 && pageData.totalPages > 1 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pageData.totalPages}
+            totalElements={pageData.totalElements}
+            pageSize={pageData.size}
+            onPageChange={setCurrentPage}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default HiredApplications;
