@@ -3,8 +3,8 @@ import ManagerPerformance from "./ManagerPerformance";
 import HRPerformance from "./HRPerformance";
 import EmployeePerformance from "./EmployeePerformance";
 import MentorPerformance from "./MentorPerformance";
-import { getToken } from "../services/authService";
-import { decodeJwt } from "../utils/jwtDecode";
+import { getToken } from "../../services/authService";
+import { decodeJwt } from "../../utils/jwtDecode";
 
 const PerformanceModule = () => {
     const [userRoles, setUserRoles] = useState<string[]>([]);
