@@ -33,11 +33,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Service chịu trách nhiệm tính toán lương cho từng nhân viên trong một batch.
- * Logic: Đọc salary_profile → lấy config thuế/bảo hiểm → tính gross → tính net
- * → lưu payslip.
- */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -60,10 +56,10 @@ public class PayrollCalculationService {
     @Transactional
     public List<Payslip> calculateBatch(UUID batchId, List<UUID> employeeIds) {
         PayrollBatch batch = batchRepository.findById(batchId)
-                .orElseThrow(() -> new ResourceNotFoundException("Batch không tồn tại: " + batchId));
+                .orElseThrow(() -> new ResourceNotFoundException("Batch not found: " + batchId));
 
         if (batch.getStatus() != PayrollBatchStatus.DRAFT && batch.getStatus() != PayrollBatchStatus.VALIDATED) {
-            throw new PayrollException("Batch không ở trạng thái DRAFT hoặc VALIDATED, không thể tính lương lại.");
+            throw new PayrollException("Batch is not in DRAFT or VALIDATED status. Cannot recalculate payroll.");
         }
 
         // Xóa các payslip cũ trong batch (nếu có) để tránh lỗi Duplicate Key
@@ -73,11 +69,11 @@ public class PayrollCalculationService {
         LocalDate startDate = batch.getPeriod().getStartDate();
         List<Payslip> results = new ArrayList<>();
 
-        // 1. Lấy dữ liệu điểm danh
+        //Lấy dữ liệu điểm danh
         List<AttendanceAggregationDTO> allAttendances = attendanceLogRepository.aggregateAttendanceByPeriod(startDate,
                 calculationDate);
 
-        // 2. Lấy dữ liệu Đánh giá KPI (Tìm Cycle gần nhất đang CLOSED hoặc ACTIVE)
+        //Lấy dữ liệu Đánh giá KPI (Tìm Cycle gần nhất đang CLOSED hoặc ACTIVE)
         PerformanceCycles currentCycle = performanceCyclesRepository
                 .findFirstByStatusOrderByCreatedAtDesc(CycleStatus.CLOSED)
                 .orElse(performanceCyclesRepository.findFirstByStatusOrderByCreatedAtDesc(CycleStatus.ACTIVE)
@@ -103,16 +99,12 @@ public class PayrollCalculationService {
                 Payslip payslip = calculateForEmployee(batch, employeeId, attendance, kpiScore, startDate,
                         calculationDate);
                 results.add(payslipRepository.save(payslip));
-                log.info("Tính lương thành công cho nhân viên {} trong batch {}", employeeId, batchId);
+                log.info("Salary calculated successfully for employee {} in batch {}", employeeId, batchId);
             } catch (Exception e) {
-                log.error("Lỗi tính lương nhân viên {} trong batch {}: {}", employeeId, batchId, e.getMessage());
+                log.error("Error calculating salary for employee {} in batch {}: {}", employeeId, batchId, e.getMessage());
                 // Tiếp tục xử lý các nhân viên còn lại, không dừng toàn bộ batch
             }
         }
-
-        // Trạng thái Batch không còn tự động chuyển sang VALIDATED ở đây.
-        // Nó sẽ giữ nguyên là DRAFT và chỉ chuyển sang VALIDATED khi HR duyệt tất cả
-        // các phiếu lương.
 
         return results;
     }
@@ -120,29 +112,28 @@ public class PayrollCalculationService {
     private Payslip calculateForEmployee(PayrollBatch batch, UUID employeeId,
             AttendanceAggregationDTO attendance, double kpiScore,
             LocalDate startDate, LocalDate calculationDate) {
-        // 1. Lấy hồ sơ lương đang hiệu lực
+        //Lấy hồ sơ lương đang hiệu lực
         SalaryProfile profile = salaryProfileRepository
                 .findActiveByEmployeeIdAndDate(employeeId, calculationDate)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Không tìm thấy hồ sơ lương cho nhân viên: " + employeeId));
+                        "No payroll records for this employee were found: " + employeeId));
 
         BigDecimal baseSalary = profile.getBaseSalary();
 
-        // 2. Định nghĩa số công chuẩn của tháng (22 hoặc 20/21 cho tháng 2)
+        //Định nghĩa số công chuẩn của tháng (22 hoặc 20/21 cho tháng 2)
         int standardWorkingDays = 22;
         if (startDate.getMonthValue() == 2) {
             standardWorkingDays = startDate.isLeapYear() ? 21 : 20;
         }
 
-        // 3. Tính OT pay (OT = 1.5x lương giờ)
+        //Tính OT pay (OT = 1.5x lương giờ)
         BigDecimal hourlyRate = baseSalary.divide(BigDecimal.valueOf(standardWorkingDays * 8L), 2,
                 RoundingMode.HALF_UP);
         BigDecimal otPay = hourlyRate.multiply(BigDecimal.valueOf(1.5))
                 .multiply(attendance.getTotalOtHours())
                 .setScale(2, RoundingMode.HALF_UP);
 
-        // 4. Lọc và tính khấu trừ theo giờ thực tế cho các trạng thái đi muộn, về sớm,
-        // thiếu thẻ
+        //Lọc và tính khấu trừ theo giờ thực tế cho các trạng thái đi muộn, về sớm,
         List<AttendanceLog> periodLogs = attendanceLogRepository.findByEmployeeIdAndDateBetween(employeeId, startDate,
                 calculationDate);
         Set<LocalDate> publicHolidays = VietnamPublicHoliday.getHolidays(startDate.getYear());
@@ -170,7 +161,7 @@ public class PayrollCalculationService {
 
         BigDecimal totalAbsentEquivalent = totalShortfallHours.divide(BigDecimal.valueOf(8), 2, RoundingMode.HALF_UP);
 
-        log.info("Nhân viên {}: Thiếu tổng cộng {} giờ làm việc (không tính ngày lễ), khấu trừ: {}",
+        log.info("Employee {}: Lacking a total of {} working hours (excluding holidays), deduction: {}",
                 employeeId, totalShortfallHours, absentDeduction);
 
         // 5. Thưởng KPI
@@ -196,18 +187,18 @@ public class PayrollCalculationService {
         // tổng phụ cấp từ profile + dynamic benefits + KPI
         BigDecimal totalAllowances = kpiBonus.add(dynamicAllowances);
 
-        // 6. Tính gross
+        // Tính gross
         BigDecimal grossSalary = baseSalary.add(otPay).add(totalAllowances).subtract(absentDeduction);
 
-        // 7. Lấy tỷ lệ thuế & bảo hiểm theo ngày hiệu lực
+        //Lấy tỷ lệ thuế & bảo hiểm theo ngày hiệu lực
         BigDecimal taxRate = BigDecimal.ZERO;
         BigDecimal insuranceRate = BigDecimal.ZERO;
 
         // Xác định trạng thái nhân viên để áp dụng quy tắc thuế & bảo hiểm:
-        // - RESIGNED / TERMINATED : Đã nghỉ việc hoàn toàn → miễn thuế TNCN & BH kỳ cuối
-        // - PENDING_OFFBOARD      : Đang trong quá trình offboard nhưng vẫn còn đi làm
-        //                           → tính thuế & BH bình thường như nhân viên OFFICIAL
-        // - Các trạng thái còn lại: tính đầy đủ
+        //RESIGNED / TERMINATED : Đã nghỉ việc hoàn toàn --> miễn thuế TNCN & BH kỳ cuối
+        //PENDING_OFFBOARD      : Đang trong quá trình offboard nhưng vẫn còn đi làm
+        //tính thuế & BH bình thường như nhân viên OFFICIAL
+        //Các trạng thái còn lại: tính đầy đủ
         Employee employee = profile.getEmployee();
         boolean isExemptFromTaxAndInsurance = employee.getStatus() == EmployeeStatus.RESIGNED
                 || employee.getStatus() == EmployeeStatus.TERMINATED;
@@ -255,22 +246,22 @@ public class PayrollCalculationService {
         List<PayslipDetail> details = new ArrayList<>();
         if (kpiBonus.compareTo(BigDecimal.ZERO) > 0) {
             details.add(PayslipDetail.builder()
-                    .payslip(payslip).itemName("Thưởng KPI")
+                    .payslip(payslip).itemName("KPI Bonus")
                     .amount(kpiBonus).type(PayslipDetailType.ALLOWANCE).build());
         }
         if (taxAmount.compareTo(BigDecimal.ZERO) > 0) {
             details.add(PayslipDetail.builder()
-                    .payslip(payslip).itemName("Thuế TNCN (" + profile.getTaxCode() + ")")
+                    .payslip(payslip).itemName("Personal Income Tax (" + profile.getTaxCode() + ")")
                     .amount(taxAmount).type(PayslipDetailType.DEDUCTION).build());
         }
         if (insuranceAmount.compareTo(BigDecimal.ZERO) > 0) {
             details.add(PayslipDetail.builder()
-                    .payslip(payslip).itemName("Bảo hiểm (" + profile.getInsuranceCode() + ")")
+                    .payslip(payslip).itemName("Insurance (" + profile.getInsuranceCode() + ")")
                     .amount(insuranceAmount).type(PayslipDetailType.DEDUCTION).build());
         }
         if (otPay.compareTo(BigDecimal.ZERO) > 0) {
             details.add(PayslipDetail.builder()
-                    .payslip(payslip).itemName("Lương tăng ca")
+                    .payslip(payslip).itemName("Overtime Pay")
                     .amount(otPay).type(PayslipDetailType.ALLOWANCE).build());
         }
 

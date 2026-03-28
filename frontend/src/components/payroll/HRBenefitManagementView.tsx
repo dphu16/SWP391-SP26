@@ -427,7 +427,7 @@ const HRBenefitManagementView: React.FC = () => {
                                                 {b.isActive && (
                                                     <button
                                                         onClick={() => setDeletingBenefitId(b.benefitId)}
-                                                        title="Vô hiệu hóa benefit"
+                                                        title="Disable benefit"
                                                         className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                                                     >
                                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

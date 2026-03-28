@@ -38,6 +38,7 @@ public class BenefitService {
     private final EmployeeRepository employeeRepository;
     private final PayslipRepository payslipRepository;
 
+    //tạo benefits
     @Transactional
     public Benefit createBenefit(BenefitRequest request) {
         Benefit benefit = Benefit.builder()
@@ -50,10 +51,12 @@ public class BenefitService {
         return benefitRepository.save(benefit);
     }
 
+    //Lấy tất cả các benefit
     public Page<Benefit> getAllBenefits(Pageable pageable) {
         return benefitRepository.findAll(pageable);
     }
 
+    //caapss phát benefit cho employee
     @Transactional
     public EmployeeBenefitResponse assignBenefitToEmployee(AssignBenefitRequest request) {
         Employee employee = employeeRepository.findById(request.getEmployeeId())
@@ -88,6 +91,7 @@ public class BenefitService {
                 .build();
     }
 
+    //xoa benefit
     @Transactional
     public void deleteBenefit(UUID benefitId) {
         Benefit benefit = benefitRepository.findById(benefitId)

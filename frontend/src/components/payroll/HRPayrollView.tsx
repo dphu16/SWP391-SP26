@@ -233,7 +233,7 @@ const CreatePeriodModal: React.FC<{ onCreated: () => void; onClose: () => void }
     const create = async () => {
         // Validate ngay trên UI nếu HR điền cả 2 field
         if (startDate && endDate && startDate > endDate) {
-            setErr("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.");
+            setErr("Start date must be before or equal to end date.");
             return;
         }
         setBusy(true); setErr("");
