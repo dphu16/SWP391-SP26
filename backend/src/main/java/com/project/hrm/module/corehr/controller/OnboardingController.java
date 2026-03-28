@@ -60,4 +60,11 @@ public class OnboardingController {
         onboardingService.resubmitRejectedEmployee(employeeId, updatedData);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/employees/{employeeId}/cancel")
+    @PreAuthorize("hasRole('HR')")
+    public ResponseEntity<Void> cancelOnboarding(@PathVariable("employeeId") UUID employeeId) {
+        onboardingService.cancelOnboarding(employeeId);
+        return ResponseEntity.ok().build();
+    }
 }

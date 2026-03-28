@@ -42,6 +42,7 @@ const OffboardingRequests: React.FC = () => {
     selectedRequest,
     setSelectedRequest,
     handleCreateRequest,
+    handleCancelRequest,
   } = useOffboardingRequests();
 
   return (
@@ -71,6 +72,7 @@ const OffboardingRequests: React.FC = () => {
         loading={loading}
         filteredRequests={filteredRequests}
         onViewDetail={setSelectedRequest}
+        onCancelRequest={handleCancelRequest}
       />
 
       {/* Modals */}

@@ -7,24 +7,12 @@ export const applicationService = {
     updateStatus: (id: string, status: string) => apiClient.put<Application>(`/api/applications/${id}/status`, null, { params: { status } }),
 
     // Upload CV (Internal / HR)
-    applyJob: (formData: FormData) => apiClient.post(`/api/app`, formData, {
-        headers: {
-            "Content-Type": "multipart/form-data",
-        }
-    }),
+    applyJob: (formData: FormData) => apiClient.post(`/api/app`, formData),
 
     // Upload CV (Public Candidate)
-    applyJobCandidate: (formData: FormData) => apiClient.post(`/api/app/candidate`, formData, {
-        headers: {
-            "Content-Type": "multipart/form-data",
-        }
-    }),
+    applyJobCandidate: (formData: FormData) => apiClient.post(`/api/app/candidate`, formData),
 
-    updateApplication: (id: string, formData: FormData) => apiClient.put(`/api/app/${id}`, formData, {
-        headers: {
-            "Content-Type": "multipart/form-data",
-        }
-    }),
+    updateApplication: (id: string, formData: FormData) => apiClient.put(`/api/app/${id}`, formData),
 
     deleteApplication: (id: string) => apiClient.delete(`/api/app/${id}`),
 

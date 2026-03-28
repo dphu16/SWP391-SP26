@@ -31,6 +31,7 @@ public class EmployeeDetailDTO {
     private LocalDate dateOfJoining;
     private Set<String> roles;
     private String positionTitle;
+    private UUID deptId;
     private String deptName;
     private EmployeeStatus statusEmp;
     private UserStatus status;
@@ -38,4 +39,9 @@ public class EmployeeDetailDTO {
     private LocalDate startDate;
     private LocalDate endDate;
     private String contractStatus;
+
+    private String managerName;
+    private String managerAvatar;
+    private String mentorName;
+    private String mentorAvatar;
 }

@@ -50,13 +50,13 @@ public class OffboardingService implements IOffboardingService {
     }
 
     @Override
-    public List<OffboardingResponseDTO> getActiveRequests() {
-        return queryService.getActiveRequests();
+    public List<OffboardingResponseDTO> getActiveRequests(UUID deptId) {
+        return queryService.getActiveRequests(deptId);
     }
 
     @Override
-    public List<OffboardingResponseDTO> getPendingRequests() {
-        return queryService.getPendingRequests();
+    public List<OffboardingResponseDTO> getPendingRequests(UUID deptId) {
+        return queryService.getPendingRequests(deptId);
     }
 
     @Override

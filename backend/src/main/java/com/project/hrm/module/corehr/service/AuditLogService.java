@@ -1,7 +1,9 @@
 package com.project.hrm.module.corehr.service;
 
+import com.project.hrm.module.corehr.dto.response.AuditLogResponseDTO;
 import com.project.hrm.module.corehr.entity.AuditLog;
 import com.project.hrm.module.corehr.repository.AuditLogRepository;
+import com.project.hrm.module.corehr.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,7 +17,8 @@ import java.util.UUID;
 public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
-    private final com.project.hrm.module.corehr.repository.UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final com.project.hrm.module.corehr.repository.EmployeeRepository employeeRepository;
 
     public void recordAction(
             String entityType,
@@ -29,6 +32,22 @@ public class AuditLogService {
             String description) {
 
         try {
+            // Do not log updates that have no actual change
+            if ("UPDATE".equalsIgnoreCase(actionType)) {
+                String safeOld = oldValue == null ? "" : oldValue.trim();
+                String safeNew = newValue == null ? "" : newValue.trim();
+                if (safeOld.equals(safeNew)) {
+                    return;
+                }
+            }
+            // Validation: Ensure the affectedUserId (Employee ID) exists in the employees table
+            if (affectedUserId != null) {
+                if (!employeeRepository.existsById(affectedUserId)) {
+                    log.warn("Attempted to log action for non-existent employee ID: {}. Setting to null to avoid FK violation.", affectedUserId);
+                    affectedUserId = null;
+                }
+            }
+
             AuditLog auditLog = AuditLog.builder()
                     .entityType(entityType)
                     .entityName(entityType)
@@ -47,7 +66,7 @@ public class AuditLogService {
         }
     }
 
-    public List<com.project.hrm.module.corehr.dto.response.AuditLogResponseDTO> getEmployeeActivityLogs(
+    public List<AuditLogResponseDTO> getEmployeeActivityLogs(
             UUID employeeId) {
         return auditLogRepository.findByAffectedUserIdOrderByCreatedAtDesc(employeeId).stream()
                 .map(logEntry -> {
@@ -64,7 +83,7 @@ public class AuditLogService {
                                 .orElse(actor);
                     }
 
-                    return com.project.hrm.module.corehr.dto.response.AuditLogResponseDTO.builder()
+                    return AuditLogResponseDTO.builder()
                             .id(logEntry.getId())
                             .timestamp(logEntry.getCreatedAt())
                             .actor(actor)

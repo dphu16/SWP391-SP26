@@ -51,12 +51,15 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/activation/verify").permitAll()
                                                 .requestMatchers("/api/activation/set-password").permitAll()
                                                 .requestMatchers("/api/activation/emergency-contact").permitAll()
+                                                .requestMatchers("/api/activation/avatar").permitAll()
                                                 .requestMatchers("/api/activation/bank-account").permitAll()
                                                 .requestMatchers("/oauth2/**").permitAll()
                                                 .requestMatchers("/api/jobs/candidate/**").permitAll()
                                                 .requestMatchers("/api/app/candidate/**").permitAll()
                                                 .requestMatchers("/ws/**").permitAll()
                                                 .requestMatchers("/cv/**").permitAll()
+                                                .requestMatchers("/avatars/**").permitAll()
+                                                .requestMatchers("/error").permitAll()
 
                                                 .anyRequest().authenticated())
 

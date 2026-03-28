@@ -5,7 +5,6 @@ import com.project.hrm.module.corehr.dto.response.PersonnelChangeResponseDTO;
 import com.project.hrm.module.corehr.service.directory.PersonnelChangeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,23 +22,34 @@ public class PersonnelChangeController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<PersonnelChangeResponseDTO> createRequest(
             @RequestBody PersonnelChangeRequestDTO dto,
-            @RequestAttribute("employeeId") UUID requestedBy) {
-        return ResponseEntity.ok(changeService.createRequest(dto, requestedBy));
+            @RequestAttribute("employeeId") UUID requestedBy,
+            org.springframework.security.core.Authentication authentication) {
+        boolean isHr = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_HR") || a.getAuthority().equals("HR"));
+        return ResponseEntity.ok(changeService.createRequest(dto, requestedBy, isHr));
     }
 
     @GetMapping("/pending")
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
-    public ResponseEntity<List<PersonnelChangeResponseDTO>> getPendingRequests() {
-        return ResponseEntity.ok(changeService.getPendingRequests());
+    public ResponseEntity<List<PersonnelChangeResponseDTO>> getPendingRequests(
+            @RequestAttribute("employeeId") UUID employeeId,
+            org.springframework.security.core.Authentication authentication) {
+        boolean isHr = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_HR") || a.getAuthority().equals("HR"));
+        if (isHr) {
+            return ResponseEntity.ok(changeService.getPendingRequests());
+        }
+        return ResponseEntity.ok(changeService.getPendingRequestsForManager(employeeId));
     }
 
     @GetMapping("/my-requests")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE', 'FINANCE')")
     public ResponseEntity<List<PersonnelChangeResponseDTO>> getMyRequests(
-            @RequestAttribute("employeeId") UUID employeeId) {
+            @RequestAttribute(name = "employeeId", required = false) UUID employeeId) {
+        if (employeeId == null) return ResponseEntity.ok(java.util.List.of());
         return ResponseEntity.ok(changeService.getMyRequests(employeeId));
     }
 
@@ -59,19 +69,44 @@ public class PersonnelChangeController {
         return ResponseEntity.ok(changeService.hrConfirm(changeId, hrEmployeeId));
     }
 
-    @PutMapping("/{changeId}/reject")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
-    public ResponseEntity<PersonnelChangeResponseDTO> reject(
+    /**
+     * HR reject: không giới hạn phòng
+     */
+    @PutMapping("/{changeId}/hr-reject")
+    @PreAuthorize("hasRole('HR')")
+    public ResponseEntity<PersonnelChangeResponseDTO> hrReject(
             @PathVariable("changeId") UUID changeId,
             @RequestParam("reason") String reason,
             @RequestAttribute("employeeId") UUID rejectedBy) {
-        return ResponseEntity.ok(changeService.reject(changeId, reason, rejectedBy));
+        return ResponseEntity.ok(changeService.reject(changeId, reason, rejectedBy, false));
     }
 
+    /**
+     * Manager reject: chỉ được từ chối yêu cầu của nhân viên trong phòng mình
+     */
+    @PutMapping("/{changeId}/manager-reject")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<PersonnelChangeResponseDTO> managerReject(
+            @PathVariable("changeId") UUID changeId,
+            @RequestParam("reason") String reason,
+            @RequestAttribute("employeeId") UUID rejectedBy) {
+        return ResponseEntity.ok(changeService.reject(changeId, reason, rejectedBy, true));
+    }
+
+    /**
+     * HR: xem lịch sử thay đổi của bất kỳ nhân viên nào
+     */
     @GetMapping("/employee/{employeeId}")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR')")
     public ResponseEntity<List<PersonnelChangeResponseDTO>> getEmployeeHistory(
-            @PathVariable("employeeId") UUID employeeId) {
-        return ResponseEntity.ok(changeService.getEmployeeHistory(employeeId));
+            @PathVariable("employeeId") UUID employeeId,
+            @RequestAttribute("employeeId") UUID managerId,
+            org.springframework.security.core.Authentication authentication) {
+        boolean isHr = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_HR") || a.getAuthority().equals("HR"));
+        if (isHr) {
+            return ResponseEntity.ok(changeService.getEmployeeHistory(employeeId));
+        }
+        return ResponseEntity.ok(changeService.getEmployeeHistoryForManager(employeeId, managerId));
     }
 }

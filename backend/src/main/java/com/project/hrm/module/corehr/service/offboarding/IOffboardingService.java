@@ -26,16 +26,14 @@ public interface IOffboardingService {
     /** HR điền ngày nghỉ chính thức & xác nhận */
     OffboardingResponseDTO hrConfirm(UUID offboardingId, HRConfirmOffboardingDTO dto, UUID hrEmployeeId);
 
-    // ── BRD 3.2: Hủy yêu cầu ──
-
     /** Hủy yêu cầu offboarding (HR, Manager, hoặc Employee) */
     OffboardingResponseDTO cancelOffboarding(UUID offboardingId, CancelOffboardingDTO dto, UUID cancelledBy);
 
     // ── Query ──
 
-    List<OffboardingResponseDTO> getActiveRequests();
+    List<OffboardingResponseDTO> getActiveRequests(UUID deptId);
 
-    List<OffboardingResponseDTO> getPendingRequests();
+    List<OffboardingResponseDTO> getPendingRequests(UUID deptId);
 
     OffboardingResponseDTO getOffboardingById(UUID offboardingId);
 

@@ -166,7 +166,7 @@ const SchedulePage: React.FC = () => {
                                                             onClick={() => handleToggleReview(interview)}
                                                             className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all shadow-sm ${isActive ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}
                                                         >
-                                                            {isActive ? "Close Panel" : "Review Application"}
+                                                            {isActive ? "Close Panel" : "Review"}
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -284,11 +284,18 @@ const SchedulePage: React.FC = () => {
                                                                         </div>
 
                                                                         <div className="w-full bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm relative group aspect-[1/1.414]">
-                                                                            <iframe
-                                                                                src={`http://localhost:8080${appDetail.cvUrl}#toolbar=0&navpanes=0&view=FitH`}
+                                                                            <object
+                                                                                data={`http://localhost:8080${appDetail.cvUrl}#navpanes=0&view=FitH`}
+                                                                                type="application/pdf"
                                                                                 className="absolute top-0 left-0 w-full h-full border-none"
-                                                                                title="Candidate CV Viewer"
-                                                                            />
+                                                                                aria-label="Candidate CV Viewer"
+                                                                            >
+                                                                                <embed
+                                                                                    src={`http://localhost:8080${appDetail.cvUrl}#navpanes=0&view=FitH`}
+                                                                                    type="application/pdf"
+                                                                                    className="absolute top-0 left-0 w-full h-full border-none"
+                                                                                />
+                                                                            </object>
                                                                         </div>
                                                                     </div>
                                                                 </div>

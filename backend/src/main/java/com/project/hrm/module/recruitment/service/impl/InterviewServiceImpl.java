@@ -14,8 +14,8 @@ import com.project.hrm.module.recruitment.entity.Job;
 import com.project.hrm.module.recruitment.enums.ApplicationStatus;
 import com.project.hrm.module.recruitment.enums.InterviewStatus;
 import com.project.hrm.module.recruitment.repository.*;
+import com.project.hrm.module.recruitment.service.EmailService;
 import com.project.hrm.module.recruitment.service.InterviewService;
-import com.project.hrm.module.recruitment.service.email.RealInterview;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -34,7 +35,7 @@ public class InterviewServiceImpl implements InterviewService {
     private final InterviewRepository interviewRepository;
     private final EmployeeRepository employeeRepository;
     private final DepartmentRepository departmentRepository;
-    private final RealInterview realInterview;
+    private final Map<String, EmailService> emailService;
     private final JobRepository jobRepository;
 
     @Override
@@ -66,7 +67,7 @@ public class InterviewServiceImpl implements InterviewService {
             Job job = jobRepository.findById(app.getJob().getId())
                     .orElseThrow(() -> new RuntimeException("Not found job."));
             EmailRequest emailRequest = realDay(app, job, entity);
-            realInterview.sendEmail(emailRequest);
+            emailService.get("RealInterview").sendEmail(emailRequest);
         }
 
         return mapToResponse(entity);

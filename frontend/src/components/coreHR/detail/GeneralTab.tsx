@@ -18,7 +18,7 @@ interface GeneralTabProps {
   onDetailUpdated: (d: EmployeeDetailDTO) => void;
 }
 
-const EDITABLE_FIELDS = ["phone", "email", "address"] as const;
+const EDITABLE_FIELDS = ["phone", "address"] as const;
 type EditableField = (typeof EDITABLE_FIELDS)[number];
 
 const GeneralTab: React.FC<GeneralTabProps> = ({
@@ -31,13 +31,13 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
   const { user, hasRole } = useAuth();
   const isOwner = user?.employeeId === employeeId;
   const isHR = hasRole("HR");
-  const canEdit = isOwner || isHR;
+  const isManager = hasRole("MANAGER");
+  const canEdit = (isOwner || isHR) && !isManager;
 
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     phone: "",
     address: "",
-    email: "",
   });
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -62,7 +62,6 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
     setEditForm({
       phone: detail.phone || "",
       address: detail.address || "",
-      email: detail.email || "",
     });
     setEditError(null);
     setEditSuccess(false);
@@ -120,12 +119,6 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
   };
 
   const editableFieldConfig = [
-    {
-      label: "Email Address",
-      field: "email" as EditableField,
-      type: "email",
-      required: false,
-    },
     {
       label: "Phone Number",
       field: "phone" as EditableField,
@@ -214,6 +207,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
             value={formatDate(detail.dateOfBirth)}
           />
           <InfoRow label="Citizen ID" value={detail.citizenId} />
+          <InfoRow label="Email Address" value={detail.email} />
           <InfoRow label="Employee Code" value={detail.employeeCode} />
           <InfoRow label="Tax Code" value={detail.taxCode} />
           <InfoRow
@@ -257,7 +251,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
       <SectionCard
         title="Emergency Contact"
         action={
-          isHR ? (
+          (isHR && !isManager) ? (
             !isEditingDep ? (
               <IconButton
                 title="Edit emergency contact"

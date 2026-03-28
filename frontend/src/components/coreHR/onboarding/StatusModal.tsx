@@ -14,7 +14,8 @@ const StatusModal: React.FC<{
   app: Application | null;
   onClose: () => void;
   onResubmit?: (app: Application) => void;
-}> = ({ app, onClose, onResubmit }) => {
+  onCancel?: (app: Application) => void;
+}> = ({ app, onClose, onResubmit, onCancel }) => {
   if (!app) return null;
 
   const currentIndex = STEPS.findIndex((s) => s.key === app.progressStatus);
@@ -131,9 +132,20 @@ const StatusModal: React.FC<{
           </div>
         )}
 
+        {onCancel && (
+          <button
+            onClick={() => {
+              onCancel(app);
+            }}
+            className="mt-5 w-full py-2.5 rounded-xl border border-rose-200 bg-white text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+          >
+            Cancel Onboarding
+          </button>
+        )}
+
         <button
           onClick={onClose}
-          className="mt-5 w-full py-2.5 rounded-xl bg-gray-100 text-sm font-semibold text-text-primary-light hover:bg-gray-200 transition-colors cursor-pointer"
+          className="mt-3 w-full py-2.5 rounded-xl bg-gray-100 text-sm font-semibold text-text-primary-light hover:bg-gray-200 transition-colors cursor-pointer"
         >
           Close
         </button>

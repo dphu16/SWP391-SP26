@@ -46,7 +46,7 @@ export const sidebarConfig: SidebarSection[] = [
             key: "offboarding",
             label: "Offboarding",
             path: "/offboarding/requests",
-            roles: ["HR", "MANAGER"] as UserRole[],
+            roles: ["HR", "MANAGER"]  as UserRole[],
             activeMatchPaths: ["/offboarding/history"],
           },
         ],

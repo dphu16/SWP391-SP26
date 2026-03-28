@@ -5,9 +5,6 @@ import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,6 +58,14 @@ public class Employee {
 
         @OneToOne(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
         private Contract contract;
+
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "manager_id")
+        private Employee manager;
+
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "mentor_id")
+        private Employee mentor;
 
         @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
         @Builder.Default

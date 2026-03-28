@@ -181,16 +181,22 @@ const Header: React.FC = () => {
     avatarColors[(currentUser.name.charCodeAt(0) ?? 0) % avatarColors.length];
   const avatarInitials = currentUser.name.slice(0, 2).toUpperCase();
 
+  const isAiChat = location.pathname === "/ai-chat";
+
   return (
     <>
       <header className="relative h-16 flex-shrink-0 bg-surface-light border-b border-border-light flex items-center justify-between px-6 z-30">
-        {/* ── Left: Breadcrumb ── */}
-        <Breadcrumb />
+        {/* ── Left: Breadcrumb / Portal Slot ── */}
+        <div className="flex items-center gap-4">
+          {!isAiChat && <Breadcrumb />}
+          <div id="ai-chat-header-left" className="empty:hidden" />
+        </div>
 
         {/* ── Right: Actions ── */}
         <div className="flex items-center gap-2">
+          <div id="ai-chat-header-right" className="empty:hidden" />
           {/* AI Chat (Visible to HR and MANAGER only) */}
-          {(currentUser.role === "HR" || currentUser.role === "MANAGER") && (
+          {!isAiChat && (currentUser.role === "HR") && (
             <button
               className="relative p-2 rounded-lg text-text-secondary-light hover:bg-gray-100 hover:text-text-primary-light transition-colors cursor-pointer"
               aria-label="AI Chat"

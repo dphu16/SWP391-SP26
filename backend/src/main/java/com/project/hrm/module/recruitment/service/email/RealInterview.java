@@ -1,6 +1,7 @@
 package com.project.hrm.module.recruitment.service.email;
 
 import com.project.hrm.module.recruitment.dto.request.EmailRequest;
+import com.project.hrm.module.recruitment.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -9,12 +10,13 @@ import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
 
-@Service
+@Service("RealInterview")
 @RequiredArgsConstructor
-public class RealInterview {
+public class RealInterview implements EmailService {
     private final JavaMailSender mailSender;
 
     @Async
+    @Override
     public void sendEmail(EmailRequest request) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 

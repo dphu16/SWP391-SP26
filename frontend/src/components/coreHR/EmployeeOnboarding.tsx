@@ -41,6 +41,7 @@ const EmployeeOnboarding: React.FC = () => {
     statusModalApp,
     setStatusModalApp,
     handleResubmit,
+    handleCancel,
   } = useEmployeeOnboarding();
 
   if (error && !loading) {
@@ -139,6 +140,7 @@ const EmployeeOnboarding: React.FC = () => {
         app={statusModalApp}
         onClose={() => setStatusModalApp(null)}
         onResubmit={handleResubmit}
+        onCancel={handleCancel}
       />
     </div>
   );

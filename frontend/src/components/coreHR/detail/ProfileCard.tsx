@@ -1,6 +1,6 @@
 import React from "react";
 import { Avatar } from "../shared";
-import { MailIcon, PhoneIcon, LocationIcon, BuildingIcon } from "./Icons";
+import { MailIcon, PhoneIcon, LocationIcon } from "./Icons";
 import type { EmployeeDetailDTO } from "./types";
 import { getStatusCfg } from "./types";
 
@@ -66,39 +66,40 @@ const ProfileCard: React.FC<{ detail: EmployeeDetailDTO }> = ({ detail }) => {
         </div>
       </div>
 
-      <div className="border-t border-border-light px-6 py-5 space-y-4">
+      <div className="border-t border-border-light px-6 py-5 space-y-5">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light mb-1">
-            Department
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light mb-2.5">
+            Direct Manager
           </p>
-          <div className="flex items-center gap-2">
-            <span className="text-text-secondary-light">
-              <BuildingIcon />
-            </span>
-            <p className="text-sm font-medium text-text-primary-light">
-              {detail.deptName || "—"}
-            </p>
+          <div className="flex items-center gap-3 bg-gray-50/50 p-2.5 rounded-xl border border-gray-100/50 hover:bg-gray-50 transition-colors cursor-default group">
+            <Avatar
+              name={detail.managerName || "?"}
+              url={detail.managerAvatar}
+              size="sm"
+            />
+            <div className="min-w-0">
+              <p className="text-[13px] font-bold text-text-primary-light truncate group-hover:text-primary transition-colors">
+                {detail.managerName || "Not Assigned"}
+              </p>
+            </div>
           </div>
         </div>
+
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light mb-1">
-            Role
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary-light mb-2.5">
+            Mentor
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {detail.roles && detail.roles.length > 0 ? (
-              detail.roles.map((r, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center text-xs font-medium text-text-secondary-light bg-gray-100 px-2.5 py-1 rounded-lg"
-                >
-                  {r.replace("ROLE_", "")}
-                </span>
-              ))
-            ) : (
-              <span className="text-sm font-medium text-text-muted-light">
-                —
-              </span>
-            )}
+          <div className="flex items-center gap-3 bg-gray-50/50 p-2.5 rounded-xl border border-gray-100/50 hover:bg-gray-50 transition-colors cursor-default group">
+            <Avatar
+              name={detail.mentorName || "?"}
+              url={detail.mentorAvatar}
+              size="sm"
+            />
+            <div className="min-w-0">
+              <p className="text-[13px] font-bold text-text-primary-light truncate group-hover:text-primary transition-colors">
+                {detail.mentorName || "Not Assigned"}
+              </p>
+            </div>
           </div>
         </div>
       </div>

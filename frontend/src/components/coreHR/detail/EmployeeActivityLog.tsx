@@ -172,7 +172,7 @@ const EmployeeActivityLog: React.FC<EmployeeActivityLogProps> = ({ employeeId })
 
   if (!logs || logs.length === 0) {
     return (
-      <div className="p-8 border rounded-2xl bg-white shadow-sm text-center">
+      <div className="p-8 rounded-2xl bg-white shadow-sm text-center">
         <div className="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
           <ClockIcon className="w-8 h-8 text-gray-400" />
         </div>

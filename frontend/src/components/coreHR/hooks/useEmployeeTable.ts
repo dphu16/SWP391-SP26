@@ -57,10 +57,12 @@ export const useEmployeeTable = (
           params,
         });
         setEmployees(res.data.content);
+        // Spring Boot 3.x nests pagination info inside "page" object
+        const pg = res.data.page;
         setPageInfo({
-          totalElements: res.data.totalElements,
-          totalPages: res.data.totalPages || 1,
-          size: res.data.size || 10,
+          totalElements: pg?.totalElements ?? 0,
+          totalPages: pg?.totalPages || 1,
+          size: pg?.size || 10,
         });
       } catch (err: unknown) {
         if (err instanceof Error && "response" in err) {
@@ -83,9 +85,21 @@ export const useEmployeeTable = (
     [toastError, filterCategory, filterValue],
   );
 
+  // Reset to page 0 whenever search or filter criteria change
+  useEffect(() => {
+    if (page !== 0) {
+      setPage(0); // This triggers the effect below which will re-fetch
+    } else {
+      fetchEmployees(0, searchQuery);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, filterCategory, filterValue]);
+
+  // Fetch when page changes (including the reset above)
   useEffect(() => {
     fetchEmployees(page, searchQuery);
-  }, [page, searchQuery, filterCategory, filterValue, fetchEmployees]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   // ── Selection ──
   const allSelected =

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useSearchParams, useLocation } from "react-router-dom";
+import { useSearchParams, useLocation, Link } from "react-router-dom";
 import { applicationService } from "../../services/applicationService";
 import type { Application } from "../../types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
@@ -28,13 +28,13 @@ const CVListPage: React.FC = () => {
     }, [searchParams, location.state]);
 
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-    const [formMode, setFormMode] = useState<"CREATE" | "UPDATE">("CREATE");
     const [selectedApp, setSelectedApp] = useState<Application | null>(null);
     const [applicantName, setApplicantName] = useState("");
     const [applicantEmail, setApplicantEmail] = useState("");
     const [applicantPhone, setApplicantPhone] = useState("");
     const [applicantCv, setApplicantCv] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
 
     const [selectedApps, setSelectedApps] = useState<string[]>([]);
     const [isSubmittingNextStage, setIsSubmittingNextStage] = useState(false);
@@ -83,18 +83,9 @@ const CVListPage: React.FC = () => {
         }
     };
 
-    const handleOpenCreateModal = () => {
-        setFormMode("CREATE");
-        setSelectedApp(null);
-        setApplicantName("");
-        setApplicantEmail("");
-        setApplicantPhone("");
-        setApplicantCv(null);
-        setIsFormModalOpen(true);
-    };
+
 
     const handleOpenUpdateModal = (app: Application) => {
-        setFormMode("UPDATE");
         setSelectedApp(app);
         setApplicantName(app.fullName || "");
         setApplicantEmail(app.email || "");
@@ -106,33 +97,23 @@ const CVListPage: React.FC = () => {
     const handleCloseModal = () => {
         setIsFormModalOpen(false);
         setSelectedApp(null);
+        setFormError(null);
     };
 
     const handleSubmitCandidate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!jobId && formMode === "CREATE") {
-            toastError("Error", "Missing job ID.");
-            return;
-        }
+        if (!selectedApp) return;
 
         if (!applicantName || !applicantEmail || !applicantPhone) {
             toastError("Validation Error", "Please fill in all required fields.");
             return;
         }
 
-        if (formMode === "CREATE" && !applicantCv) {
-            toastError("Validation Error", "Please attach a CV.");
-            return;
-        }
-
         try {
             setIsSubmitting(true);
+            setFormError(null);
             const formData = new FormData();
-            if (formMode === "CREATE") {
-                formData.append("jobId", jobId as string);
-            } else if (selectedApp) {
-                formData.append("jobId", selectedApp.jobId);
-            }
+            formData.append("jobId", selectedApp.jobId);
             formData.append("fullName", applicantName);
             formData.append("email", applicantEmail);
             formData.append("phone", applicantPhone);
@@ -140,13 +121,8 @@ const CVListPage: React.FC = () => {
                 formData.append("cvUrl", applicantCv);
             }
 
-            if (formMode === "CREATE") {
-                await applicationService.applyJob(formData);
-                toastSuccess("Success", "Candidate created successfully!");
-            } else if (selectedApp) {
-                await applicationService.updateApplication(selectedApp.id, formData);
-                toastSuccess("Success", "Candidate updated successfully!");
-            }
+            await applicationService.updateApplication(selectedApp.id, formData);
+            toastSuccess("Success", "Candidate updated successfully!");
 
             handleCloseModal();
             // Refresh list
@@ -155,7 +131,9 @@ const CVListPage: React.FC = () => {
                 setApplications(res.data);
             }
         } catch (err: any) {
-            toastError("Error", err?.response?.data?.message || "Could not submit candidate data.");
+            const msg = err?.response?.data?.message || "Could not submit candidate data.";
+            setFormError(msg);
+            toastError("Error", msg);
         } finally {
             setIsSubmitting(false);
         }
@@ -223,16 +201,18 @@ const CVListPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <div>
+                        <Link
+                            to="/recruitment/jobs"
+                            className="hover:text-primary transition-colors flex items-center gap-1 text-sm font-medium text-text-secondary-light mb-2"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            Back
+                        </Link>
                         <h1 className="text-2xl font-bold font-heading text-text-primary-light tracking-tight">
                             List of {applications.length > 0 && applications[0].jobTitle ? applications[0].jobTitle : "for Job"}
                         </h1>
-                        <p className="mt-0.5 text-sm font-medium text-text-secondary-light mb-2">
-                            <Link to="/dashboard" className="hover:text-primary transition-colors">Home</Link>
-                            <span className="mx-2">&gt;</span>
-                            <Link to="/recruitment/jobs" className="hover:text-primary transition-colors">Job Postings</Link>
-                            <span className="mx-2">&gt;</span>
-                            <span className="text-text-primary-light">Applications</span>
-                        </p>
                     </div>
                 </div>
 
@@ -249,12 +229,6 @@ const CVListPage: React.FC = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </div>
-                    <button
-                        onClick={handleOpenCreateModal}
-                        className="px-4 py-2 bg-primary text-white font-medium rounded-xl hover:bg-primary-hover transition-colors shadow-sm whitespace-nowrap"
-                    >
-                        Create Candidate
-                    </button>
                 </div>
             </div>
 
@@ -481,7 +455,7 @@ const CVListPage: React.FC = () => {
                         <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-slide-up">
                             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                                 <h3 className="text-xl font-bold text-gray-900">
-                                    {formMode === "CREATE" ? "Create Candidate" : "Update Candidate"}
+                                    Update Candidate
                                 </h3>
                                 <button
                                     onClick={handleCloseModal}
@@ -491,6 +465,12 @@ const CVListPage: React.FC = () => {
                                 </button>
                             </div>
                             <form onSubmit={handleSubmitCandidate} className="p-6 space-y-5">
+                                {formError && (
+                                    <div className="p-4 rounded-xl bg-red-50 border border-red-100 flex items-center gap-3 text-red-700 animate-fade-in text-sm font-medium">
+                                        <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        {formError}
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <div className="space-y-1">
                                         <label className="text-sm font-medium text-gray-700">Full Name</label>
@@ -523,19 +503,18 @@ const CVListPage: React.FC = () => {
                                             type="email"
                                             required
                                             value={applicantEmail}
-                                            onChange={(e) => setApplicantEmail(e.target.value)}
-                                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                            readOnly
+                                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-100 cursor-not-allowed text-gray-500 shadow-sm focus:outline-none transition-all"
                                             placeholder="john@example.com"
                                         />
                                     </div>
                                     <div className="space-y-1 flex flex-col justify-end">
                                         <label className="text-sm font-medium text-gray-700 mb-1">
-                                            CV (PDF only) {formMode === "UPDATE" && <span className="text-gray-400 font-normal ml-1">(Leave blank to keep current)</span>}
+                                            CV (PDF only) <span className="text-gray-400 font-normal ml-1">(Leave blank to keep current)</span>
                                         </label>
                                         <input
                                             type="file"
                                             accept=".pdf"
-                                            required={formMode === "CREATE"}
                                             onChange={(e) => {
                                                 if (e.target.files && e.target.files.length > 0) {
                                                     setApplicantCv(e.target.files[0]);
@@ -560,17 +539,7 @@ const CVListPage: React.FC = () => {
                                         disabled={isSubmitting}
                                         className="px-5 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                     >
-                                        {isSubmitting ? (
-                                            <>
-                                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                                Saving...
-                                            </>
-                                        ) : (
-                                            formMode === "CREATE" ? "Create Candidate" : "Update Candidate"
-                                        )}
+                                        Update Candidate
                                     </button>
                                 </div>
                             </form>

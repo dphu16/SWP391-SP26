@@ -1,18 +1,20 @@
 package com.project.hrm.module.recruitment.service.email;
 
 import com.project.hrm.module.recruitment.dto.request.EmailRequest;
+import com.project.hrm.module.recruitment.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-@Service
+@Service("RejectEmail")
 @RequiredArgsConstructor
-public class RejectEmail {
+public class RejectEmail implements EmailService {
     private final JavaMailSender mailSender;
 
     @Async
+    @Override
     public void sendEmail(EmailRequest request) {
 
         String subject = "Interview Invitation - " + request.getTitle();

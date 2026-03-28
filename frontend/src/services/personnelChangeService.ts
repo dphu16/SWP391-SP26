@@ -2,7 +2,7 @@ import apiClient from "./apiClient";
 
 export interface PersonnelChangeRequestDTO {
   employeeId: string;
-  changeType: "DEPARTMENT_TRANSFER" | "SALARY_CHANGE" | "DISCIPLINE" | "REWARD";
+  changeType: "DEPARTMENT_TRANSFER" | "SALARY_CHANGE";
   reason: string;
   newDepartmentId?: string;
   newPositionId?: string;
@@ -17,7 +17,7 @@ export interface PersonnelChangeResponseDTO {
   employeeName: string;
   employeeCode: string;
   departmentName: string;
-  changeType: "DEPARTMENT_TRANSFER" | "SALARY_CHANGE" | "DISCIPLINE" | "REWARD";
+  changeType: "DEPARTMENT_TRANSFER" | "SALARY_CHANGE";
   status: "PENDING" | "MANAGER_APPROVED" | "HR_CONFIRMED" | "REJECTED";
   reason: string;
   oldValues: Record<string, unknown>;

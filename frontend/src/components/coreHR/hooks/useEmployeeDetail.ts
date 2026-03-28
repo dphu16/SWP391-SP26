@@ -25,15 +25,21 @@ export const useEmployeeDetail = () => {
 
   useEffect(() => {
     if (!isValidUUID(id)) return;
+    const controller = new AbortController();
+
     const fetchEmployeeDetail = async () => {
       try {
         setLoading(true);
         setError(null);
         const res = await apiClient.get<EmployeeDetailDTO>(
           `${API_BASE}/${id}/view-detail`,
+          { signal: controller.signal }
         );
         setDetail(res.data);
       } catch (err: unknown) {
+        const anyErr = err as any;
+        if (anyErr?.name === "CanceledError" || anyErr?.code === "ERR_CANCELED") return;
+
         if (err instanceof Error && "response" in err) {
           const axErr = err as {
             response?: { status: number; statusText: string };
@@ -47,21 +53,31 @@ export const useEmployeeDetail = () => {
           setError("Đã xảy ra lỗi không xác định.");
         }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
     fetchEmployeeDetail();
+
+    return () => controller.abort();
   }, [id]);
 
   useEffect(() => {
     if (!isValidUUID(id)) return;
+    const controller = new AbortController();
+
     const fetchDependents = async () => {
       try {
         const res = await apiClient.get<DependentDTO[]>(
           `/api/v1/employees/${id}/dependents`,
+          { signal: controller.signal }
         );
         setDependents(res.data);
       } catch (err: unknown) {
+        const anyErr = err as any;
+        if (anyErr?.name === "CanceledError" || anyErr?.code === "ERR_CANCELED") return;
+
         if (err instanceof Error && "response" in err) {
           const axErr = err as { response?: { status: number } };
           if (axErr.response?.status !== 404) setDependents([]);
@@ -69,6 +85,8 @@ export const useEmployeeDetail = () => {
       }
     };
     fetchDependents();
+
+    return () => controller.abort();
   }, [id]);
 
   return {

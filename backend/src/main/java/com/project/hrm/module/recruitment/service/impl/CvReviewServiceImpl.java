@@ -14,12 +14,13 @@ import com.project.hrm.module.recruitment.repository.ApplicationRepository;
 import com.project.hrm.module.recruitment.repository.CvReviewRepository;
 import com.project.hrm.module.recruitment.repository.JobRepository;
 import com.project.hrm.module.recruitment.service.CvReviewService;
-import com.project.hrm.module.recruitment.service.email.RejectEmail;
+import com.project.hrm.module.recruitment.service.EmailService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -30,7 +31,7 @@ public class CvReviewServiceImpl implements CvReviewService {
     private final CvReviewRepository cvReviewRepository;
     private final EmployeeRepository employeeRepository;
     private final JobRepository jobRepository;
-    private final RejectEmail rejectEmail;
+    private final Map<String, EmailService> emailService;
 
     @Override
     public CvReviewResponse create(CvReviewRequest request) {
@@ -51,7 +52,7 @@ public class CvReviewServiceImpl implements CvReviewService {
             Job job = jobRepository.findById(app.getJob().getId())
                     .orElseThrow(() -> new RuntimeException("Not found job"));
             EmailRequest emailRequest = rejectGmail(app, job);
-            rejectEmail.sendEmail(emailRequest);
+            emailService.get("RejectEmail").sendEmail(emailRequest);
         }
         entity.setCreatedAt(OffsetDateTime.now());
         cvReviewRepository.save(entity);

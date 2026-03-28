@@ -18,7 +18,7 @@ public class EmployeeService implements IEmployeeService {
     }
 
     @Override
-    public Page getAllEmployees(Pageable pageable) {
+    public Page<com.project.hrm.module.corehr.dto.request.EmployeeDTO> getAllEmployees(Pageable pageable) {
         return queryService.getAllEmployees(pageable);
     }
 
@@ -35,8 +35,8 @@ public class EmployeeService implements IEmployeeService {
     @Override
     public Page<com.project.hrm.module.corehr.dto.request.EmployeeDTO> searchEmployees(String q, String fullName,
             String employeeCode, String phoneNumber, String department, String position, String role, String status,
-            Pageable pageable) {
+            UUID deptId, Pageable pageable) {
         return queryService.searchEmployees(q, fullName, employeeCode, phoneNumber, department, position, role, status,
-                pageable);
+                deptId, pageable);
     }
 }

@@ -1,4 +1,4 @@
-package com.project.hrm.module.corehr.exception;
+package com.project.hrm.module.corehr.enums;
 
 public enum ErrorCode {
 

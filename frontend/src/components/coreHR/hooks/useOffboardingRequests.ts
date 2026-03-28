@@ -66,6 +66,26 @@ export const useOffboardingRequests = () => {
     }
   };
 
+  const handleCancelRequest = async (request: OffboardingResponse) => {
+    const reason = window.prompt("Reason for cancellation:");
+    if (reason === null) return;
+    if (!reason.trim()) {
+      toastError("Error", "Cancel reason is required");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await offboardingService.cancel(request.offboardingId, { cancelReason: reason.trim() });
+      success("Success", "Request cancelled");
+      fetchRequests();
+    } catch (err: unknown) {
+      const message = (err as any)?.response?.data?.message ?? "Failed to cancel request";
+      toastError("Error", message);
+      setLoading(false);
+    }
+  };
+
   const filteredRequests = useMemo(() => {
     return requests.filter((r) => {
       const matchStatus = filterStatus === "ALL" || r.status === filterStatus;
@@ -103,5 +123,6 @@ export const useOffboardingRequests = () => {
     setFilterType,
     handleFilterChange,
     handleCreateRequest,
+    handleCancelRequest,
   };
 };

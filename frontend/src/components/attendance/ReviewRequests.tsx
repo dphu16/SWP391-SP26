@@ -512,6 +512,8 @@ const ReviewRequests: React.FC = () => {
                                                     ) : (entry.rawType === "OFFBOARDING" || entry.rawType === "PERSONNEL_CHANGE") &&
                                                         (entry.rawOffboardingData?.status === "MANAGER_APPROVED" || entry.rawPersonnelData?.status === "MANAGER_APPROVED") ? (
                                                         <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-[#fef3c7] text-[#854d0e]">Awaiting HR Confirm</span>
+                                                    ) : (entry.rawType === "PERSONNEL_CHANGE" && entry.rawPersonnelData?.changeType === "DEPARTMENT_TRANSFER" && entry.rawPersonnelData?.status === "PENDING" && hasRole("HR")) ? (
+                                                        <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-[#e0f2fe] text-[#0284c7]">Awaiting Managers Confirmation</span>                                                        
                                                     ) : (
                                                         <>
                                                             <button onClick={() => approve(entry)} className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0d9488] hover:bg-[#0f766e] text-white text-xs font-bold rounded-lg shadow-sm transition-all">

@@ -17,16 +17,15 @@ export interface Employee {
   statusEmp: string;
 }
 
-// Spring Boot Page<T> response wrapper
+// Spring Boot 3.x Page<T> response wrapper
 export interface PageResponse<T> {
   content: T[];
-  totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number;
-  first: boolean;
-  last: boolean;
-  empty: boolean;
+  page: {
+    totalElements: number;
+    totalPages: number;
+    size: number;
+    number: number;
+  };
 }
 
 export interface NavItem {

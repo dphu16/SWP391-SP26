@@ -13,7 +13,7 @@ import com.project.hrm.module.corehr.entity.*;
 import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
-import com.project.hrm.module.corehr.exception.ErrorCode;
+import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.repository.RoleRepository;
 import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
 import com.project.hrm.module.request.entity.Request;
@@ -212,5 +212,29 @@ public class OnboardingService implements IOnboardingService {
 
         Role primaryRole = employee.getUser().getPrimaryRole();
         return primaryRole != null ? primaryRole.getName() : null;
+    }
+
+    @Override
+    @Transactional
+    public void cancelOnboarding(UUID employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new BusinessRuleException(
+                        ErrorCode.EMPLOYEE_NOT_FOUND,
+                        "Employee not found with id: " + employeeId));
+
+        if (employee.getEmpStatus() == ProgressStatus.COMPLETED) {
+            throw new BusinessRuleException(
+                    ErrorCode.INVALID_APPROVAL_ACTION,
+                    "Cannot cancel a completed onboarding profile");
+        }
+
+        // 1. Delete associated requests
+        List<Request> requests = requestRepository.findByEmployeeIdOrderByCreatedAtDesc(employeeId);
+        if (!requests.isEmpty()) {
+            requestRepository.deleteAll(requests);
+        }
+
+        // 2. The Employee entity cascades delete to User, Personal, and Contract
+        employeeRepository.delete(employee);
     }
 }

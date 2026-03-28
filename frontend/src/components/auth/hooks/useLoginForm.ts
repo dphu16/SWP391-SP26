@@ -66,18 +66,17 @@ export const useLoginForm = () => {
     let valid = true;
 
     if (!email.trim()) {
-      next.email = "Please enter your email.";
+      next.email = "Vui lòng nhập email.";
       valid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      next.email = "Please enter a valid email address.";
+      next.email = "Email không hợp lệ.";
       valid = false;
     }
-
     if (!password) {
-      next.password = "Please enter your password.";
+      next.password = "Vui lòng nhập mật khẩu.";
       valid = false;
     } else if (password.length < 6) {
-      next.password = "Password must be at least 6 characters.";
+      next.password = "Mật khẩu phải có ít nhất 6 ký tự.";
       valid = false;
     }
 

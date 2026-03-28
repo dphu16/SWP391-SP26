@@ -15,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -43,14 +45,19 @@ public class EmployeeController {
     @GetMapping("/hr/employees")
     @PreAuthorize("hasAnyRole('HR', 'MANAGER')")
     public ResponseEntity<Page<EmployeeDTO>> getAllEmployees(
+            @RequestAttribute(value = "employeeId", required = false) UUID currentEmployeeId,
+            Authentication authentication,
             @PageableDefault(size = 10, sort = "fullName") Pageable pageable) {
-        Page<EmployeeDTO> result = employeeService.searchEmployees(null, null, null, null, null, null, null, "OFFICIAL",
-                pageable);
+
+        UUID filterDeptId = getMemberFilterDeptId(currentEmployeeId, authentication);
+
+        Page<EmployeeDTO> result = employeeService.searchEmployees(null, null, null, null, null, null, null, null,
+                filterDeptId, pageable);
         return ResponseEntity.ok(result);
     }
 
     @GetMapping("employee/{id}/view-detail")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE', 'INTERN', 'PROBATION')")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE', 'FINANCE')")
     public ResponseEntity<EmployeeDetailDTO> getEmployeeDetail(
             @PathVariable("id") UUID id) {
 
@@ -59,7 +66,7 @@ public class EmployeeController {
     }
 
     @PutMapping("/employees/{id}/edit")
-    @PreAuthorize("hasRole('HR')")
+    @PreAuthorize("hasRole('HR') and !hasRole('MANAGER')")
     public ResponseEntity<EmployeeDetailDTO> updateEmployee(
             @PathVariable("id") UUID id,
             @Valid @RequestBody EmployeeChangeDTO req) {
@@ -69,6 +76,8 @@ public class EmployeeController {
 
     @GetMapping("/employees/search")
     public ResponseEntity<Page<EmployeeDTO>> searchEmployees(
+            @RequestAttribute(value = "employeeId", required = false) UUID currentEmployeeId,
+            Authentication authentication,
             @RequestParam(value = "fullName", required = false) String fullName,
             @RequestParam(value = "employeeCode", required = false) String employeeCode,
             @RequestParam(value = "phoneNumber", required = false) String phoneNumber,
@@ -83,9 +92,30 @@ public class EmployeeController {
             throw new IllegalArgumentException("Phone number contains invalid characters.");
         }
 
+        UUID filterDeptId = getMemberFilterDeptId(currentEmployeeId, authentication);
+
         Page<EmployeeDTO> result = employeeService.searchEmployees(
-                q, fullName, employeeCode, phoneNumber, department, position, role, status, pageable);
+                q, fullName, employeeCode, phoneNumber, department, position, role, status, filterDeptId, pageable);
         return ResponseEntity.ok(result);
+    }
+
+    private UUID getMemberFilterDeptId(UUID currentEmployeeId, Authentication authentication) {
+        if (currentEmployeeId != null && authentication != null) {
+            boolean isHR = hasRole(authentication, "ROLE_HR");
+            boolean isManager = hasRole(authentication, "ROLE_MANAGER");
+
+            if (isManager && !isHR) {
+                EmployeeDetailDTO manager = employeeService.getEmployeeDetail(currentEmployeeId);
+                return manager.getDeptId();
+            }
+        }
+        return null;
+    }
+
+    private boolean hasRole(Authentication authentication, String role) {
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(r -> r.equals(role));
     }
 
     // Employee views profile
@@ -98,7 +128,7 @@ public class EmployeeController {
 
     // Employee self-update (phone, email, address)
     @PutMapping("/employees/self-update")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() and !hasRole('MANAGER')")
     public ResponseEntity<EmployeeDetailDTO> selfUpdate(
             @RequestAttribute("employeeId") UUID employeeId,
             @RequestBody EmployeeSelfUpdateDTO dto) {
@@ -123,7 +153,7 @@ public class EmployeeController {
 
     // Get Employee Activity Logs
     @GetMapping("/employees/{id}/activity-logs")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE','FINANCE')")
     public ResponseEntity<List<com.project.hrm.module.corehr.dto.response.AuditLogResponseDTO>> getEmployeeActivityLogs(
             @PathVariable("id") UUID employeeId) {
         return ResponseEntity.ok(auditLogService.getEmployeeActivityLogs(employeeId));

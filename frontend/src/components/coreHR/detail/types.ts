@@ -25,6 +25,10 @@ export interface EmployeeDetailDTO {
   deptName: string;
   statusEmp: string;
   status: string;
+  managerName?: string;
+  managerAvatar?: string;
+  mentorName?: string;
+  mentorAvatar?: string;
   contracts?: ContractDTO[];
 }
 

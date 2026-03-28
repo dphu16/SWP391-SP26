@@ -9,7 +9,7 @@ import com.project.hrm.module.corehr.enums.EmployeeStatus;
 import com.project.hrm.module.corehr.enums.ProgressStatus;
 import com.project.hrm.module.corehr.enums.UserStatus;
 import com.project.hrm.module.corehr.exception.BusinessRuleException;
-import com.project.hrm.module.corehr.exception.ErrorCode;
+import com.project.hrm.module.corehr.enums.ErrorCode;
 import com.project.hrm.module.corehr.repository.*;
 import com.project.hrm.module.corehr.service.helper.EmailService;
 import lombok.RequiredArgsConstructor;
@@ -148,11 +148,8 @@ public class ActivationService {
 
                 // Hash and save the new password
                 user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+                // Password set, remains in PENDING_ACTIVATION until profile is complete
                 userRepo.save(user);
-
-                // Transition: PENDING_ACTIVATION → PASSWORD_CREATED
-                employee.setEmpStatus(ProgressStatus.PASSWORD_CREATED);
-                employeeRepo.save(employee);
 
                 log.info("Password set for employee: {} ({})", employee.getFullName(), employee.getEmployeeId());
 
@@ -161,7 +158,7 @@ public class ActivationService {
                                 .employeeName(employee.getFullName())
                                 .email(user.getEmail())
                                 .employeeId(employee.getEmployeeId())
-                                .currentStep(ProgressStatus.PASSWORD_CREATED.name())
+                                .currentStep(ProgressStatus.PENDING_ACTIVATION.name())
                                 .build();
         }
 
@@ -189,11 +186,7 @@ public class ActivationService {
                 contact.setAddress(dto.getAddress());
                 emergencyContactRepo.save(contact);
 
-                // Transition: PASSWORD_CREATED → COMPLETED
-                employee.setEmpStatus(ProgressStatus.COMPLETED);
-                employee.getUser().setStatus(UserStatus.ACTIVE);
-                employeeRepo.save(employee);
-
+                // Remains in PENDING_ACTIVATION until final step
                 log.info("Emergency contact saved for employee: {} ({})",
                                 employee.getFullName(), employee.getEmployeeId());
 
@@ -201,7 +194,7 @@ public class ActivationService {
                                 .message("Emergency contact saved successfully")
                                 .employeeName(employee.getFullName())
                                 .employeeId(employee.getEmployeeId())
-                                .currentStep(ProgressStatus.COMPLETED.name())
+                                .currentStep(ProgressStatus.PENDING_ACTIVATION.name())
                                 .build();
         }
 
@@ -237,7 +230,9 @@ public class ActivationService {
                 bankAccount.setAccountHolderName(dto.getAccountHolderName());
                 bankAccountRepo.save(bankAccount);
 
-                // Transition: PASSWORD_CREATED → targetStatus (OFFICIAL / INTERN / PROBATION)
+                // Transition: PENDING_ACTIVATION → COMPLETED (Final step)
+                employee.setEmpStatus(ProgressStatus.COMPLETED);
+                
                 EmployeeStatus finalStatus = employee.getStatus();
                 if (finalStatus == null) {
                         finalStatus = EmployeeStatus.OFFICIAL;
@@ -324,9 +319,15 @@ public class ActivationService {
                         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
                         // Save the avatarUrl to the path that can be served by the web config
-                        String avatarUrl = "/api/uploads/avatars/" + fileName;
+                        String avatarUrl = "/avatars/" + fileName;
                         user.setAvatarUrl(avatarUrl);
                         userRepo.save(user);
+
+                        // Also update personal info if it exists
+                        if (employee.getPersonal() != null) {
+                                employee.getPersonal().setAvatar(avatarUrl);
+                        }
+                        employeeRepo.save(employee);
 
                         log.info("Avatar uploaded successfully for employee: {} ({})", employee.getFullName(), employee.getEmployeeId());
 
