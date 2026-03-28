@@ -56,7 +56,7 @@ public class BenefitService {
         return benefitRepository.findAll(pageable);
     }
 
-    //caapss phát benefit cho employee
+    //cấp phát benefit cho employee
     @Transactional
     public EmployeeBenefitResponse assignBenefitToEmployee(AssignBenefitRequest request) {
         Employee employee = employeeRepository.findById(request.getEmployeeId())
@@ -91,7 +91,7 @@ public class BenefitService {
                 .build();
     }
 
-    //xoa benefit
+    //xoa benefit su dung soft delete
     @Transactional
     public void deleteBenefit(UUID benefitId) {
         Benefit benefit = benefitRepository.findById(benefitId)
@@ -135,7 +135,7 @@ public class BenefitService {
                     .add(p.getTotalAllowances() != null ? p.getTotalAllowances() : BigDecimal.ZERO);
         }
 
-        // 2. Get active benefits for the year
+        //Nhận các benefit đã active dành cho nhân viên
         List<EmployeeBenefit> activeBenefits = employeeBenefitRepository.findActiveBenefitsForPeriod(employeeId,
                 startOfYear, endOfYear);
 
@@ -159,7 +159,6 @@ public class BenefitService {
         }
 
         // Net Salary + Tax Paid (Value to employee) + Insurance Paid + Non-Cash
-        // Benefits
         BigDecimal grandTotal = totalGross.add(totalNonCashValue);
 
         return TotalRewardStatementDTO.builder()
