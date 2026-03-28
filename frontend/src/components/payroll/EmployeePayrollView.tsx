@@ -466,10 +466,18 @@ const EmployeePayrollView: React.FC = () => {
                                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer">
                                     {Icon.print}<span className="hidden lg:inline">Print</span>
                                 </button>
-                                <button onClick={() => setShowModal(true)}
-                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold hover:from-amber-600 hover:to-orange-600 transition-all cursor-pointer shadow-sm">
-                                    {Icon.help}<span className="hidden lg:inline">Inquiry</span>
-                                </button>
+                                {detail?.status === "PAID" ? (
+                                    <div
+                                        title="Payslip has been paid. Inquiries are closed for this period."
+                                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-semibold text-emerald-600 cursor-not-allowed select-none">
+                                        {Icon.checkCircle}<span className="hidden lg:inline">Salary Paid</span>
+                                    </div>
+                                ) : (
+                                    <button onClick={() => setShowModal(true)}
+                                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold hover:from-amber-600 hover:to-orange-600 transition-all cursor-pointer shadow-sm">
+                                        {Icon.help}<span className="hidden lg:inline">Inquiry</span>
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -683,10 +691,18 @@ const EmployeePayrollView: React.FC = () => {
                             <h3 className="text-sm font-bold text-slate-800">Inquiry History</h3>
                             <p className="text-xs text-slate-400 mt-0.5">{inquiries.length} inquiries submitted</p>
                         </div>
-                        <button onClick={() => setShowModal(true)}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 cursor-pointer">
-                            {Icon.help} New Inquiry
-                        </button>
+                        {detail?.status === "PAID" ? (
+                            <div
+                                title="Salary has been paid. Inquiries are closed for this period."
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-600 cursor-not-allowed select-none">
+                                {Icon.checkCircle} Salary Paid
+                            </div>
+                        ) : (
+                            <button onClick={() => setShowModal(true)}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 cursor-pointer">
+                                {Icon.help} New Inquiry
+                            </button>
+                        )}
                     </div>
 
                     {inquiries.length === 0 ? (

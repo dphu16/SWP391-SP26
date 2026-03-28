@@ -43,6 +43,14 @@ public class SalaryInquiryService {
             throw new AccessDeniedException("Bạn không có quyền thắc mắc về phiếu lương này.");
         }
 
+        // [RULE] Không cho phép thắc mắc khi phiếu lương đã được thanh toán (PAID).
+        // Lương đã chi trả — mọi sai sót cần làm việc trực tiếp với HR ngoài hệ thống.
+        if (payslip.getStatus() == com.project.hrm.module.payroll.enums.PayslipStatus.PAID) {
+            throw new PayrollException(
+                    "Phiếu lương tháng " + payslip.getPeriod().getMonth() + "/" + payslip.getPeriod().getYear()
+                    + " đã được thanh toán. Không thể gửi thắc mắc cho kỳ lương đã chi trả.");
+        }
+
         // [RULE] Chỉ cho phép thắc mắc đối với kỳ lương mới nhất mà nhân viên có phiếu lương
         Optional<Payslip> latestPayslipOpt = payslipRepository
                 .findFirstByEmployee_EmployeeIdOrderByPeriod_StartDateDesc(employeeId);

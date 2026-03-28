@@ -47,12 +47,11 @@ public class FinanceController {
 
     /**
      * GET /api/v1/finance/payroll/payment-requests
-     * Finance xem toàn bộ lịch sử yêu cầu.
+     * Finance xem toàn bộ lịch sử yêu cầu (PENDING + PAID + REJECTED).
      */
     @GetMapping("/payment-requests")
     public ResponseEntity<ApiResponse<List<PaymentRequestResponse>>> getAllRequests() {
-        // Reuse my requests với approverId — hoặc tạo thêm method findAll nếu cần
-        return ResponseEntity.ok(ApiResponse.ok(paymentRequestService.getPendingRequests()));
+        return ResponseEntity.ok(ApiResponse.ok(paymentRequestService.getAllRequests()));
     }
 
     /**

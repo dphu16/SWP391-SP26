@@ -12,6 +12,9 @@ public interface PaymentRequestRepository extends JpaRepository<PaymentRequest, 
 
     List<PaymentRequest> findAllByStatusOrderByCreatedAtDesc(PaymentRequestStatus status);
 
+    /** Toàn bộ requests, mới nhất trước — dùng cho Finance xem Request History */
+    List<PaymentRequest> findAllByOrderByCreatedAtDesc();
+
     List<PaymentRequest> findAllByRequester_EmployeeIdOrderByCreatedAtDesc(UUID requesterId);
 
     boolean existsByPayrollBatch_BatchIdAndType(UUID batchId, PaymentRequestType type);
