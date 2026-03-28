@@ -29,7 +29,10 @@ const TaxInsuranceReport: React.FC = () => {
 
             const sentBatchIds = new Set<string>();
             myReqs.forEach(req => {
-                if (req.type === "TAX_INSURANCE" && req.payrollBatchId) {
+                // Chỉ block gửi lại khi request đang PENDING (chờ Finance duyệt) hoặc đã PAID.
+                // Nếu REJECTED → cho phép HR gửi lại bình thường.
+                if (req.type === "TAX_INSURANCE" && req.payrollBatchId &&
+                    (req.status === "PENDING" || req.status === "PAID")) {
                     sentBatchIds.add(req.payrollBatchId);
                 }
             });

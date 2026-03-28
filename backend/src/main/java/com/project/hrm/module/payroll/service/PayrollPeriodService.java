@@ -47,6 +47,22 @@ public class PayrollPeriodService {
                     + " hiện tại trước khi tạo kỳ mới.");
         }
 
+        // [RULE] Kỳ lương phải được tạo tuần tự theo từng tháng, không được bỏ qua tháng.
+        // Ví dụ: nếu kỳ gần nhất là tháng 2/2025, chỉ được tạo tháng 3/2025.
+        periodRepository.findTopByOrderByYearDescMonthDesc().ifPresent(latestPeriod -> {
+            YearMonth latestYM = YearMonth.of(latestPeriod.getYear(), latestPeriod.getMonth());
+            YearMonth requestedYM = YearMonth.of(request.getYear(), request.getMonth());
+            YearMonth expectedNextYM = latestYM.plusMonths(1);
+
+            if (!requestedYM.equals(expectedNextYM)) {
+                throw new PayrollException(
+                        "Kỳ lương phải được tạo tuần tự. Kỳ tiếp theo phải là tháng "
+                        + expectedNextYM.getMonthValue() + "/" + expectedNextYM.getYear()
+                        + " (hiện tại kỳ gần nhất là tháng "
+                        + latestPeriod.getMonth() + "/" + latestPeriod.getYear() + ").");
+            }
+        });
+
         // Khi tạo kỳ mới, tự động chuyển tất cả kỳ PAID → CLOSED (lưu trữ lịch sử)
         List<PayrollPeriod> paidPeriods = periodRepository
                 .findAllByStatusOrderByYearDescMonthDesc(PayrollPeriodStatus.PAID);
