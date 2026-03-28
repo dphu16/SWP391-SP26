@@ -4,11 +4,15 @@ import { jobService } from "../../services/jobService";
 import type { Job } from "../ui/types";
 import { LoadingSpinner, ErrorMessage } from "./StatusDisplay";
 import { useToast } from "../ui/Toast";
+import { useAuth } from "../../hooks/useAuth";
+
 
 const JobDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { error: toastError } = useToast();
+    const { user } = useAuth();
+
 
     const [job, setJob] = useState<Job | null>(null);
     const [loading, setLoading] = useState(true);
@@ -87,7 +91,7 @@ const JobDetailPage: React.FC = () => {
                         </svg>
                         List Candidate
                     </button>
-                    {(job.status === "DRAFT" || job.status === "CLOSED") && (
+                    {user?.employeeId === job.hrId && (job.status === "DRAFT" || job.status === "CLOSED") && (
                         <button
                             onClick={() => navigate(`/recruitment/jobs/edit/${job.id}`)}
                             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors shadow-sm"

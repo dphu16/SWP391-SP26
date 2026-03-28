@@ -16,6 +16,8 @@ public interface ApplicationService {
     ApplicationResponse setDateLimit(DateLimitRequest request);
     List<ApplicationResponse> nextStage(List<UUID> ids);
     ApplicationResponse lastStage(UUID id);
+    List<ApplicationResponse> listAppsNoInterview(UUID jobId);
+    List<ApplicationResponse> listAppsHaveInterview(UUID jobId);
     void delete(UUID id);
 
 }

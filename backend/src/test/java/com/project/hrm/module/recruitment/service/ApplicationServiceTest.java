@@ -248,7 +248,7 @@ class ApplicationServiceTest {
         @DisplayName("Co ket qua -> tra ve danh sach da map dung")
         void getAppByJobIdAndStatus_hasResults_returnsMappedList() {
             when(applicationRepository.findByJob_IdAndStatus(
-                    eq(jobId), eq(ApplicationStatus.APPLIED), any(Sort.class)))
+                    eq(jobId), eq(ApplicationStatus.APPLIED)))
                     .thenReturn(List.of(sampleApp));
 
             List<ApplicationResponse> responses =
@@ -261,34 +261,34 @@ class ApplicationServiceTest {
         @Test
         @DisplayName("Khong co ket qua -> tra ve danh sach rong")
         void getAppByJobIdAndStatus_noResults_returnsEmptyList() {
-            when(applicationRepository.findByJob_IdAndStatus(any(), any(), any(Sort.class)))
+            when(applicationRepository.findByJob_IdAndStatus(any(), any()))
                     .thenReturn(List.of());
 
             assertTrue(applicationService
                     .getAppByJobIdAndStatus(jobId, ApplicationStatus.REJECTED).isEmpty());
         }
 
-        @Test
-        @DisplayName("Sort dung thu tu: score DESC -> candidate.fullName ASC")
-        void getAppByJobIdAndStatus_usesCorrectSort() {
-            when(applicationRepository.findByJob_IdAndStatus(any(), any(), any(Sort.class)))
-                    .thenReturn(List.of());
-
-            applicationService.getAppByJobIdAndStatus(jobId, ApplicationStatus.APPLIED);
-
-            verify(applicationRepository).findByJob_IdAndStatus(
-                    eq(jobId),
-                    eq(ApplicationStatus.APPLIED),
-                    argThat(sort -> {
-                        List<Sort.Order> orders = sort.toList();
-                        return orders.size() == 2
-                                && orders.get(0).getProperty().equals("score")
-                                && orders.get(0).isDescending()
-                                && orders.get(1).getProperty().equals("candidate.fullName")
-                                && orders.get(1).isAscending();
-                    })
-            );
-        }
+//        @Test
+//        @DisplayName("Sort dung thu tu: score DESC -> candidate.fullName ASC")
+//        void getAppByJobIdAndStatus_usesCorrectSort() {
+//            when(applicationRepository.findByJob_IdAndStatus(any(), any()))
+//                    .thenReturn(List.of());
+//
+//            applicationService.getAppByJobIdAndStatus(jobId, ApplicationStatus.APPLIED);
+//
+//            verify(applicationRepository).findByJob_IdAndStatus(
+//                    eq(jobId),
+//                    eq(ApplicationStatus.APPLIED),
+//                    argThat(sort -> {
+//                        List<Sort.Order> orders = sort.toList();
+//                        return orders.size() == 2
+//                                && orders.get(0).getProperty().equals("score")
+//                                && orders.get(0).isDescending()
+//                                && orders.get(1).getProperty().equals("candidate.fullName")
+//                                && orders.get(1).isAscending();
+//                    })
+//            );
+//        }
     }
 
     // ══════════════════════════════════════════════════════════════════════

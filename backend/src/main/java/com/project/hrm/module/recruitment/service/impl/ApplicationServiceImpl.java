@@ -15,7 +15,6 @@ import com.project.hrm.module.recruitment.repository.CandidateRepository;
 import com.project.hrm.module.recruitment.repository.JobRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -81,12 +80,9 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Override
     public List<ApplicationResponse> getAppByJobIdAndStatus(UUID id, ApplicationStatus status) {
-        Sort sort = Sort.by(
-                Sort.Order.desc("score"),
-                Sort.Order.asc("candidate.fullName")
-        );
+
         List<Application> applications =
-                applicationRepository.findByJob_IdAndStatus(id, status, sort);
+                applicationRepository.findByJob_IdAndStatus(id, status);
 
 
         return applications.stream()
@@ -198,6 +194,22 @@ public class ApplicationServiceImpl implements ApplicationService {
         }
 
         return mapToResponse(app);
+    }
+
+    @Override
+    public List<ApplicationResponse> listAppsNoInterview(UUID jobId) {
+        List<Application> list = applicationRepository.findAppByJobAndWithoutInterview(jobId);
+        return list.stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
+    public List<ApplicationResponse> listAppsHaveInterview(UUID jobId) {
+        List<Application> list = applicationRepository.findAppByJobAndHasInterview(jobId);
+        return list.stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     @Override

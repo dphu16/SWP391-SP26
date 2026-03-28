@@ -19,6 +19,8 @@ const CVListPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [editingStatusId, setEditingStatusId] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<string>((location.state as any)?.status || searchParams.get("status") || "APPLIED");
+    const [interviewFilter, setInterviewFilter] = useState<string>("ALL");
+
 
     useEffect(() => {
         const s = (location.state as any)?.status || searchParams.get("status");
@@ -42,7 +44,38 @@ const CVListPage: React.FC = () => {
 
     useEffect(() => {
         setSelectedApps([]);
+        setInterviewFilter("ALL");
     }, [statusFilter]);
+
+
+    const fetchApplications = React.useCallback(async () => {
+        if (!jobId) return;
+        try {
+            setLoading(true);
+            let res;
+            if (statusFilter === "INTERVIEW") {
+                if (interviewFilter === "NO_SCHEDULE") {
+                    res = await applicationService.getAppsNoInterview(jobId);
+                } else if (interviewFilter === "HAVE_SCHEDULE") {
+                    res = await applicationService.getAppsHaveInterview(jobId);
+                } else {
+                    res = await applicationService.getByJobId(jobId, statusFilter);
+                }
+            } else {
+                res = await applicationService.getByJobId(jobId, statusFilter);
+            }
+            setApplications(res.data);
+            setError(null);
+        } catch (err: any) {
+            setError(err?.response?.data?.message || "Failed to fetch candidates/CVs.");
+        } finally {
+            setLoading(false);
+        }
+    }, [jobId, statusFilter, interviewFilter]);
+
+    useEffect(() => {
+        fetchApplications();
+    }, [fetchApplications]);
 
     const handleNextStage = async () => {
         if (selectedApps.length === 0) return;
@@ -51,10 +84,7 @@ const CVListPage: React.FC = () => {
             await applicationService.nextStage(selectedApps);
             toastSuccess("Success", "Moved candidates to next stage successfully");
             setSelectedApps([]);
-            if (jobId) {
-                const res = await applicationService.getByJobId(jobId, statusFilter);
-                setApplications(res.data);
-            }
+            fetchApplications();
         } catch (err: any) {
             toastError("Error", err?.response?.data?.message || err?.response?.data || "Failed to move to next stage");
         } finally {
@@ -125,11 +155,7 @@ const CVListPage: React.FC = () => {
             toastSuccess("Success", "Candidate updated successfully!");
 
             handleCloseModal();
-            // Refresh list
-            if (jobId) {
-                const res = await applicationService.getByJobId(jobId, statusFilter);
-                setApplications(res.data);
-            }
+            fetchApplications();
         } catch (err: any) {
             const msg = err?.response?.data?.message || "Could not submit candidate data.";
             setFormError(msg);
@@ -139,27 +165,7 @@ const CVListPage: React.FC = () => {
         }
     };
 
-    useEffect(() => {
-        if (!jobId) {
-            setError("No Job ID provided.");
-            setLoading(false);
-            return;
-        }
 
-        const fetchApplications = async () => {
-            try {
-                setLoading(true);
-                const res = await applicationService.getByJobId(jobId, statusFilter);
-                setApplications(res.data);
-            } catch (err: any) {
-                setError(err?.response?.data?.message || "Failed to fetch candidates/CVs.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchApplications();
-    }, [jobId, statusFilter]);
 
     const handleUpdateStatus = async (appId: string, newStatus: string) => {
         try {
@@ -217,6 +223,17 @@ const CVListPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-4 w-full sm:w-auto">
+                    {statusFilter === "INTERVIEW" && (
+                        <select
+                            value={interviewFilter}
+                            onChange={(e) => setInterviewFilter(e.target.value)}
+                            className="px-4 py-2 rounded-xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-medium text-text-secondary-light"
+                        >
+                            <option value="ALL">All Candidates</option>
+                            <option value="NO_SCHEDULE">No Schedule</option>
+                            <option value="HAVE_SCHEDULE">Have Schedule</option>
+                        </select>
+                    )}
                     <div className="relative w-full sm:w-64">
                         <input
                             type="text"

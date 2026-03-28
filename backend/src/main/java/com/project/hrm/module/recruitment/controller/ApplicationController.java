@@ -95,4 +95,25 @@ public class ApplicationController {
         return ResponseEntity.ok(responses);
     }
 
+    @GetMapping("/job/{jobId}/no")
+    @PreAuthorize("hasRole('HR')")
+    public ResponseEntity<List<ApplicationResponse>> getAppsNoInterview(
+            @PathVariable("jobId") UUID jobId
+    ) {
+
+        return ResponseEntity.ok(
+                applicationService.listAppsNoInterview(jobId)
+        );
+    }
+
+    @GetMapping("/job/{jobId}/have")
+    @PreAuthorize("hasRole('HR')")
+    public ResponseEntity<List<ApplicationResponse>> getAppsHaveInterview(
+            @PathVariable("jobId") UUID jobId
+    ) {
+
+        return ResponseEntity.ok(
+                applicationService.listAppsHaveInterview(jobId)
+        );
+    }
 }
