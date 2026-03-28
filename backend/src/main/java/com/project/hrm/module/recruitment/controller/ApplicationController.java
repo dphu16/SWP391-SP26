@@ -81,10 +81,10 @@ public class ApplicationController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/last-stage/{id}")
+    @PutMapping("/reject-stage/{id}")
     @PreAuthorize("hasRole('HR')")
-    public ResponseEntity<ApplicationResponse> lastStage(@PathVariable("id") UUID id) {
-        ApplicationResponse response = applicationService.lastStage(id);
+    public ResponseEntity<ApplicationResponse> rejectStage(@PathVariable("id") UUID id) {
+        ApplicationResponse response = applicationService.rejectStage(id);
         return ResponseEntity.ok(response);
     }
 
