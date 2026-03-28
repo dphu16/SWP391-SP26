@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -57,7 +56,7 @@ public class OnboardingService implements IOnboardingService {
     @Transactional(readOnly = true)
     public OnboardingListResponseDTO getOnboardingList(Pageable pageable) {
         List<OnboardingResponseDTO> hiredApplications = applicationRepository
-                .findByStatus(ApplicationStatus.HIRED, pageable)
+                .findByStatus(ApplicationStatus.OFFER, pageable)
                 .map(OnboardingMapper::toDTO)
                 .getContent();
 
@@ -189,7 +188,8 @@ public class OnboardingService implements IOnboardingService {
                     .orElseThrow(() -> new BusinessRuleException(
                             ErrorCode.INVALID_APPROVAL_ACTION,
                             "Role not found: " + updatedData.getRole()));
-            employee.getUser().setRoles(Set.of(role));
+            employee.getUser().getRoles().clear();
+            employee.getUser().getRoles().add(role);
         }
 
         // Reset status for re-approval

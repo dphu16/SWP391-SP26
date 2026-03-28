@@ -15,6 +15,8 @@ import com.project.hrm.module.corehr.repository.UserRepository;
 import com.project.hrm.module.corehr.dto.response.NewHireResponseDTO;
 import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
 import com.project.hrm.module.corehr.enums.AuthProvider;
+import com.project.hrm.module.recruitment.entity.Application;
+import com.project.hrm.module.recruitment.service.ApplicationService;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -27,15 +29,14 @@ public class OnboardingCommandService {
     private final OnboardingRepository onboardingRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final ApplicationService applicationService;
 
-    public OnboardingCommandService(EmployeeHelper employeeHelper,
-            OnboardingRepository onboardingRepository,
-            UserRepository userRepository,
-            RoleRepository roleRepository) {
+    public OnboardingCommandService(EmployeeHelper employeeHelper, OnboardingRepository onboardingRepository, UserRepository userRepository, RoleRepository roleRepository, ApplicationService applicationService) {
         this.employeeHelper = employeeHelper;
         this.onboardingRepository = onboardingRepository;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.applicationService = applicationService;
     }
 
     @Transactional
@@ -80,6 +81,8 @@ public class OnboardingCommandService {
                     .roles(new java.util.HashSet<>())
                     .build();
 
+
+
             // Determinating role by department name as per business rule
             EmployeeRole roleEnum = EmployeeRole.ROLE_EMPLOYEE;
             if (department != null && department.getDeptName() != null) {
@@ -107,7 +110,7 @@ public class OnboardingCommandService {
         Employee saved = employeeHelper.save(employee);
 
         if (request.getSourceApplicationId() != null) {
-            onboardingRepository.deleteById(request.getSourceApplicationId());
+            applicationService.lastStage(request.getSourceApplicationId());
         }
 
         return NewHireMapper.toResponseDTO(saved);
