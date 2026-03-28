@@ -131,8 +131,7 @@ public class PaymentRequestService {
 
     //Finance: Duyệt hoặc từ chối yêu cầu thanh toán.
     @Transactional
-    public PaymentRequestResponse reviewRequest(UUID approverId, UUID requestId,
-            ReviewPaymentRequestRequest request) {
+    public PaymentRequestResponse reviewRequest(UUID approverId, UUID requestId, ReviewPaymentRequestRequest request) {
         PaymentRequest paymentRequest = findOrThrow(requestId);
 
         if (paymentRequest.getStatus() != PaymentRequestStatus.PENDING) {
@@ -212,8 +211,7 @@ public class PaymentRequestService {
                 for (PaymentRequest taxReq : pendingTaxRequests) {
                     taxReq.setStatus(PaymentRequestStatus.REJECTED);
                     taxReq.setFinanceNote(
-                            "Auto-rejected: salary payment request was rejected by Finance. " +
-                            "HR must revise the payroll and resubmit the Tax & Insurance report.");
+                            "Auto-rejected: salary payment request was rejected by Finance. ");
                 }
                 paymentRequestRepository.saveAll(pendingTaxRequests);
             }
