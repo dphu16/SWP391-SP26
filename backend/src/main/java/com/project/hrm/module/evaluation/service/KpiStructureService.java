@@ -49,6 +49,14 @@ public class KpiStructureService {
 
     @Transactional
     public KpiStructure assignKpisToDepartment(AssignKpiRequest request) {
+        double totalWeight = request.getDetails() != null
+                ? request.getDetails().stream().mapToDouble(AssignKpiRequest.KpiDetailDto::getWeight).sum()
+                : 0.0;
+
+        if (totalWeight != 100.0) {
+            throw new RuntimeException("Total weight of all KPIs in the structure must equal 100% for publishing to employees.");
+        }
+
         KpiStructure saved = saveStructureOnly(request);
         publishToEmployees(saved, request);
         return saved;
@@ -72,10 +80,6 @@ public class KpiStructureService {
         double totalWeight = request.getDetails() != null
                 ? request.getDetails().stream().mapToDouble(AssignKpiRequest.KpiDetailDto::getWeight).sum()
                 : 0.0;
-
-        if (totalWeight != 100.0) {
-            throw new RuntimeException("Total weight of all KPIs in the structure must equal 100%");
-        }
 
         if (request.getDetails() != null) {
             for (AssignKpiRequest.KpiDetailDto dto : request.getDetails()) {

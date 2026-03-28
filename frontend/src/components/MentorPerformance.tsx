@@ -28,11 +28,6 @@ const Icons = {
         <svg viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6">
             <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
         </svg>
-    ),
-    download: (
-        <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-        </svg>
     )
 };
 
@@ -61,7 +56,9 @@ const MentorPerformance = () => {
     const [activeEvidenceIndex, setActiveEvidenceIndex] = useState(0);
     const [actionLoading, setActionLoading] = useState(false);
     const [actionMessage, setActionMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
-    const [blobUrls, setBlobUrls] = useState<Record<number, string>>({});
+    const [evidenceBlobUrl, setEvidenceBlobUrl] = useState<string | null>(null);
+    const [evidenceFetchLoading, setEvidenceFetchLoading] = useState(false);
+    const [evidenceFetchError, setEvidenceFetchError] = useState<string | null>(null);
 
     const averageScore = useMemo(() => {
         const values = [teamwork, communication, technical, adaptability].map(v => typeof v === 'number' ? v : 0);
@@ -85,6 +82,7 @@ const MentorPerformance = () => {
 
         const review = await kpiService.getActiveReview(activeMenteeId);
         if (review?.reviewId) {
+            // Sync with the backend's active cycle
             if (review.cycle) {
                 setActiveCycle(review.cycle);
             }
@@ -116,6 +114,7 @@ const MentorPerformance = () => {
                 setMentees(menteesData);
                 if (menteesData.length > 0) setActiveMenteeId(menteesData[0].employeeId || menteesData[0].id);
 
+                // Find active cycle: Priority 1: ACTIVE coverage today, Priority 2: Latest ACTIVE, Priority 3: Latest ANY
                 if (cycles && cycles.length > 0) {
                     const now = new Date();
                     const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -154,36 +153,53 @@ const MentorPerformance = () => {
         loadEvidences();
     }, [activeGoalId]);
 
-    // Fetch blob URLs với token để tránh 401
+    // Handle fetching evidence blob with authentication
     useEffect(() => {
-        // Cleanup blob URLs cũ
-        Object.values(blobUrls).forEach(url => window.URL.revokeObjectURL(url));
-        setBlobUrls({});
+        const currentEvidence = evidences[activeEvidenceIndex];
+        if (!currentEvidence?.fileUrl) {
+            setEvidenceBlobUrl(null);
+            setEvidenceFetchError(null);
+            return;
+        }
 
-        const fetchBlobUrls = async () => {
-            const token = getToken();
-            const entries: Record<number, string> = {};
-            for (let i = 0; i < evidences.length; i++) {
-                try {
-                    const response = await fetch(evidences[i].fileUrl, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    const blob = await response.blob();
-                    entries[i] = window.URL.createObjectURL(blob);
-                } catch {
-                    entries[i] = '';
+        const fetchBlob = async () => {
+            setEvidenceFetchLoading(true);
+            setEvidenceFetchError(null);
+            try {
+                const token = getToken();
+                const fileUrl = currentEvidence.fileUrl.startsWith('http') 
+                    ? currentEvidence.fileUrl 
+                    : `http://localhost:8080${currentEvidence.fileUrl}`;
+                
+                const response = await fetch(fileUrl, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to load file: ${response.status} ${response.statusText}`);
                 }
+
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                setEvidenceBlobUrl(blobUrl);
+            } catch (err: any) {
+                console.error("Fetch evidence error:", err);
+                setEvidenceFetchError(err.message || 'Error loading file');
+            } finally {
+                setEvidenceFetchLoading(false);
             }
-            setBlobUrls(entries);
         };
 
-        if (evidences.length > 0) fetchBlobUrls();
+        fetchBlob();
 
-        // Cleanup khi unmount
         return () => {
-            Object.values(blobUrls).forEach(url => window.URL.revokeObjectURL(url));
+            if (evidenceBlobUrl) {
+                URL.revokeObjectURL(evidenceBlobUrl);
+            }
         };
-    }, [evidences]);
+    }, [activeEvidenceIndex, evidences]);
 
     const handleUpdateGoalStatus = async (status: 'COMPLETED' | 'ACKNOWLEDGED', reason?: string) => {
         if (!activeGoalId) return;
@@ -224,6 +240,7 @@ const MentorPerformance = () => {
                 adaptabilityScore: adaptability as number
             });
             setAssessmentFeedback({ type: 'success', text: 'Assessment submitted successfully!' });
+            // Reload to show current values from backend
             await loadMenteeDetails();
         } catch (err) {
             setAssessmentFeedback({ type: 'error', text: 'Failed to submit assessment' });
@@ -284,21 +301,33 @@ const MentorPerformance = () => {
                             ) : (
                                 <div className="space-y-6">
                                     <div className="relative aspect-video bg-surface-2-light rounded-3xl overflow-hidden border border-border-light group flex items-center justify-center">
-                                        {evidences[activeEvidenceIndex].fileUrl.toLowerCase().endsWith('.pdf') ? (
-                                            <iframe
-                                                src={blobUrls[activeEvidenceIndex] || ''}
-                                                className="w-full h-full border-0"
-                                                title="Evidence PDF"
-                                            />
-                                        ) : (
-                                            <img
-                                                src={blobUrls[activeEvidenceIndex] || ''}
-                                                className="w-full h-full object-contain"
-                                                alt="Evidence"
-                                            />
-                                        )}
+                                        {evidenceFetchLoading ? (
+                                            <div className="flex flex-col items-center gap-3">
+                                                <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                                                <p className="text-[10px] font-black text-text-muted-light animate-pulse uppercase tracking-widest">Loading secure file...</p>
+                                            </div>
+                                        ) : evidenceFetchError ? (
+                                            <div className="text-center p-10">
+                                                <div className="text-rose-500 font-black text-sm mb-2 uppercase tracking-tight">Failed to load evidence</div>
+                                                <div className="text-[10px] text-text-muted-light font-bold">{evidenceFetchError}</div>
+                                            </div>
+                                        ) : evidenceBlobUrl ? (
+                                            evidences[activeEvidenceIndex].fileUrl.toLowerCase().endsWith('.pdf') ? (
+                                                <iframe
+                                                    src={evidenceBlobUrl}
+                                                    className="w-full h-full border-0"
+                                                    title="Evidence PDF"
+                                                />
+                                            ) : (
+                                                <img
+                                                    src={evidenceBlobUrl}
+                                                    className="w-full h-full object-contain"
+                                                    alt="Evidence"
+                                                />
+                                            )
+                                        ) : null}
 
-                                        {/* Goal Status Badge */}
+                                        {/* Goal Status Badge - Only show when Approved or Rejected */}
                                         <div className="absolute top-4 left-4 flex gap-2">
                                             {(() => {
                                                 const currentGoalStatus = goals.find(g => g.goalId === activeGoalId)?.status;
@@ -347,57 +376,31 @@ const MentorPerformance = () => {
                                                     onClick={() => setActiveEvidenceIndex(idx)}
                                                     className={`w-16 h-16 rounded-xl border-2 cursor-pointer overflow-hidden transition-all ${activeEvidenceIndex === idx ? 'border-primary ring-4 ring-primary/20 scale-110' : 'border-transparent opacity-60 hover:opacity-100'}`}
                                                 >
-                                                    <img src={blobUrls[idx] || ''} className="w-full h-full object-cover" />
+                                                    <img src={e.fileUrl} className="w-full h-full object-cover" />
                                                 </div>
                                             ))}
                                         </div>
-                                        <div className="flex gap-4 items-center">
-                                            {evidences.length > 0 && (
-                                                <button
-                                                    onClick={() => {
-                                                        const currentEv = evidences[activeEvidenceIndex];
-                                                        const fileName = currentEv.fileUrl.split('/').pop() || 'evidence';
-                                                        kpiService.downloadFile(currentEv.fileUrl, fileName);
-                                                    }}
-                                                    className="p-3 bg-primary/10 text-primary rounded-2xl hover:bg-primary/20 transition-all flex items-center gap-2 border border-primary/20"
-                                                    title="Download File"
-                                                >
-                                                    {Icons.download}
-                                                    <span className="text-xs font-bold uppercase tracking-widest">Download</span>
-                                                </button>
+                                        <div className="flex flex-col gap-4">
+                                            {goals.find(g => g.goalId === activeGoalId)?.status === 'SUBMITTED' && (
+                                                <div className="flex gap-4 justify-end">
+                                                    <button
+                                                        onClick={() => handleUpdateGoalStatus('COMPLETED')}
+                                                        disabled={actionLoading}
+                                                        className="px-8 py-3 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50"
+                                                    >
+                                                        APPROVE GOAL
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleUpdateGoalStatus('ACKNOWLEDGED')}
+                                                        disabled={actionLoading}
+                                                        className="px-8 py-3 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 transition-all shadow-lg shadow-rose-200 disabled:opacity-50"
+                                                    >
+                                                        REJECT GOAL
+                                                    </button>
+                                                </div>
                                             )}
-                                            <div className="flex flex-col gap-4">
-                                                {goals.find(g => g.goalId === activeGoalId)?.status === 'SUBMITTED' && (
-                                                    <div className="flex gap-4 justify-end">
-                                                        <button
-                                                            onClick={() => handleUpdateGoalStatus('COMPLETED')}
-                                                            disabled={actionLoading}
-                                                            className="px-8 py-3 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50"
-                                                        >
-                                                            APPROVE GOAL
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleUpdateGoalStatus('ACKNOWLEDGED')}
-                                                            disabled={actionLoading}
-                                                            className="px-8 py-3 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 transition-all shadow-lg shadow-rose-200 disabled:opacity-50"
-                                                        >
-                                                            REJECT GOAL
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
                                         </div>
                                     </div>
-
-                                    {/* Employee Note */}
-                                    {goals.find(g => g.goalId === activeGoalId)?.employeeNote && (
-                                        <div className="mt-8 p-6 bg-surface-2-light/50 border border-border-light rounded-3xl">
-                                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted-light mb-3">Employee's Note</h3>
-                                            <p className="text-sm font-medium text-text-secondary-light italic leading-relaxed">
-                                                "{goals.find(g => g.goalId === activeGoalId)?.employeeNote}"
-                                            </p>
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>
