@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { kpiService } from "../services/kpiService";
-import type { PerformanceReview, TeamStats } from "../services/kpiService";
+import { kpiService } from "../../services/kpiService";
+import type { PerformanceReview, TeamStats } from "../../services/kpiService";
 
 
 

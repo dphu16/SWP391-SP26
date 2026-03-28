@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Icon, fmt, getErrMsg, Badge } from "./PayrollModule";
 import {
-    getFinancePendingRequests, reviewPaymentRequest,
-    getFinanceBatchPayslips, getFinanceTaxReport, downloadPaymentReport, getTransactionHistory,
+    getFinancePendingRequests, getFinanceAllRequests, reviewPaymentRequest,
+    getFinanceBatchPayslips, getFinanceTaxReport, downloadPaymentReport,
     type PaymentRequestResponse, type ReviewPaymentRequestRequest,
-    type PayslipResponse, type TaxReportResponse, type PaymentTransactionResponse
+    type PayslipResponse, type TaxReportResponse
 } from "../../services/payrollService";
 
 const REQUEST_STATUS: Record<string, { label: string; dot: string; text: string; bg: string; border: string }> = {
@@ -282,9 +282,9 @@ const FinancePayrollView: React.FC = () => {
     const [approveItem, setApproveItem] = useState<PaymentRequestResponse | null>(null);
     const [rejectItem, setRejectItem]   = useState<PaymentRequestResponse | null>(null);
     const [viewDetailItem, setViewDetailItem] = useState<PaymentRequestResponse | null>(null);
-    const [transactions, setTransactions] = useState<PaymentTransactionResponse[]>([]);
-    const [txnLoad, setTxnLoad] = useState(false);
-    const [showTxnHistory, setShowTxnHistory] = useState(false);
+    const [allRequests, setAllRequests] = useState<PaymentRequestResponse[]>([]);
+    const [histLoad, setHistLoad] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
 
     const loadRequests = useCallback(async () => {
         setReqLoad(true);
@@ -297,23 +297,16 @@ const FinancePayrollView: React.FC = () => {
 
     useEffect(() => { loadRequests(); }, [loadRequests]);
 
-    const loadTransactions = useCallback(async () => {
-        setTxnLoad(true);
-        try { setTransactions(await getTransactionHistory()); }
+    const loadAllRequests = useCallback(async () => {
+        setHistLoad(true);
+        try { setAllRequests(await getFinanceAllRequests()); }
         catch (e) { console.error(e); }
-        finally { setTxnLoad(false); }
+        finally { setHistLoad(false); }
     }, []);
 
-    // Load transactions once when section first opened
-    const handleToggleTxnHistory = () => {
-        if (!showTxnHistory && transactions.length === 0) loadTransactions();
-        setShowTxnHistory(v => !v);
-    };
-
-    const TXN_STATUS: Record<string, { dot: string; text: string; bg: string; border: string }> = {
-        PENDING: { dot: "bg-amber-500", text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
-        SUCCESS: { dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-        FAILED:  { dot: "bg-rose-500", text: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200" },
+    const handleToggleHistory = () => {
+        if (!showHistory && allRequests.length === 0) loadAllRequests();
+        setShowHistory(v => !v);
     };
 
     const pending         = requests.filter(r => r.status === "PENDING").length;
@@ -468,65 +461,87 @@ const FinancePayrollView: React.FC = () => {
                 </div>
             </div>
 
-            {/* ── Transaction History (UR_F004) ── */}
+            {/* ── Request History ── */}
             <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm overflow-hidden mb-4">
                 <button
-                    onClick={handleToggleTxnHistory}
+                    onClick={handleToggleHistory}
                     className="w-full px-5 py-4 border-b border-[#f1f5f9] flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-sky-50 flex items-center justify-center">
-                            <svg className="w-4 h-4 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <div className="w-8 h-8 rounded-xl bg-violet-50 flex items-center justify-center">
+                            <svg className="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         </div>
                         <div className="text-left">
-                            <h3 className="text-[15px] font-bold text-[#0f172a]">Transaction History</h3>
-                            <p className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider">Bank payment records</p>
+                            <h3 className="text-[15px] font-bold text-[#0f172a]">Request History</h3>
+                            <p className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider">All payment requests — including paid &amp; rejected</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        {transactions.length > 0 && (
-                            <span className="text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-1 rounded-full">{transactions.length} records</span>
+                        {allRequests.length > 0 && (
+                            <span className="text-xs font-bold bg-violet-50 text-violet-700 border border-violet-200 px-2.5 py-1 rounded-full">{allRequests.length} records</span>
                         )}
-                        <svg className={`w-5 h-5 text-slate-400 transition-transform ${showTxnHistory ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        <svg className={`w-5 h-5 text-slate-400 transition-transform ${showHistory ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </div>
                 </button>
 
-                {showTxnHistory && (
+                {showHistory && (
                     <div className="overflow-x-auto">
-                        {txnLoad ? (
-                            <div className="py-12 flex justify-center"><div className="w-7 h-7 border-[3px] border-sky-500 border-t-transparent rounded-full animate-spin" /></div>
-                        ) : transactions.length === 0 ? (
-                            <div className="py-12 text-center"><p className="text-sm text-slate-400 font-semibold">No transaction records found.</p></div>
+                        {histLoad ? (
+                            <div className="py-12 flex justify-center"><div className="w-7 h-7 border-[3px] border-violet-500 border-t-transparent rounded-full animate-spin" /></div>
+                        ) : allRequests.length === 0 ? (
+                            <div className="py-12 text-center"><p className="text-sm text-slate-400 font-semibold">No request history found.</p></div>
                         ) : (
-                            <table className="w-full text-sm">
+                            <table className="w-full text-sm table-fixed">
+                                <colgroup>
+                                    <col className="w-28" />
+                                    <col className="w-28" />
+                                    <col className="w-32" />
+                                    <col className="w-36" />
+                                    <col className="w-auto" />
+                                    <col className="w-28" />
+                                    <col className="w-36" />
+                                </colgroup>
                                 <thead>
                                     <tr className="border-b border-[#e2e8f0]">
-                                        <th className="px-5 py-3 text-left text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Bank Ref#</th>
-                                        <th className="px-4 py-3 text-left text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Employee</th>
-                                        <th className="px-4 py-3 text-left text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Department</th>
-                                        <th className="px-4 py-3 text-right text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Amount</th>
-                                        <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Status</th>
-                                        <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">Date</th>
+                                        <th className="px-5 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Request ID</th>
+                                        <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Type</th>
+                                        <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Amount</th>
+                                        <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Submitted By</th>
+                                        <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">HR Note</th>
+                                        <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Status</th>
+                                        <th className="px-4 py-3 text-center text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Created At</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[#f1f5f9]">
-                                    {transactions.map(txn => {
-                                        const st = TXN_STATUS[txn.status] ?? TXN_STATUS.PENDING;
-                                        const date = txn.createdAt ? new Date(txn.createdAt).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+                                    {allRequests.map(r => {
+                                        const date = r.createdAt
+                                            ? new Date(r.createdAt).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                                            : "—";
                                         return (
-                                            <tr key={txn.txnId} className="hover:bg-slate-50 transition-colors">
-                                                <td className="px-5 py-3.5 font-mono text-xs text-sky-700 font-bold">{txn.bankReferenceNo || <span className="text-slate-300">—</span>}</td>
-                                                <td className="px-4 py-3.5">
-                                                    <div className="font-semibold text-slate-800 text-[13px]">{txn.employeeName || "—"}</div>
-                                                    <div className="text-[10px] text-slate-400 font-mono">{txn.employeeCode}</div>
+                                            <tr key={r.requestId} className="hover:bg-slate-50 transition-colors group">
+                                                <td className="px-5 py-3.5 text-center">
+                                                    <div className="font-bold text-[#0f172a] font-mono text-xs group-hover:text-violet-600 transition-colors">#{r.requestId.substring(0, 8)}</div>
+                                                    <div className="text-[10px] text-[#64748b] font-mono mt-0.5">Batch: {r.payrollBatchId.substring(0, 8)}</div>
                                                 </td>
-                                                <td className="px-4 py-3.5 text-[13px] text-slate-600">{txn.departmentName || "—"}</td>
-                                                <td className="px-4 py-3.5 text-right font-black text-emerald-700 tabular-nums">{fmt(txn.amount)}</td>
                                                 <td className="px-4 py-3.5 text-center">
-                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${st.bg} ${st.text} ${st.border}`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                                                        {txn.status}
+                                                    <span className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-bold border ${REQUEST_TYPE[r.type]?.bg} ${REQUEST_TYPE[r.type]?.text} ${REQUEST_TYPE[r.type]?.border}`}>
+                                                        {REQUEST_TYPE[r.type]?.label ?? r.type}
                                                     </span>
+                                                </td>
+                                                <td className="px-4 py-3.5 text-center">
+                                                    <span className="font-black text-[#0f172a] tabular-nums">{fmt(r.totalAmountRequested)}</span>
+                                                </td>
+                                                <td className="px-4 py-3.5 text-center">
+                                                    <span className="text-xs font-semibold text-slate-700">{r.requesterName || "—"}</span>
+                                                </td>
+                                                <td className="px-4 py-3.5 text-center">
+                                                    <p className="text-xs text-[#334155] font-medium leading-snug">{r.hrNote || "—"}</p>
+                                                    {r.financeNote && (
+                                                        <p className="text-[10px] text-rose-500 font-medium mt-0.5 italic">{r.financeNote}</p>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3.5 text-center">
+                                                    <Badge status={r.status} cfg={REQUEST_STATUS} />
                                                 </td>
                                                 <td className="px-4 py-3.5 text-center text-xs text-slate-500 whitespace-nowrap">{date}</td>
                                             </tr>

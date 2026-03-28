@@ -51,22 +51,35 @@ public class PaymentRequestService {
         // Tính toán số tiền dựa trên loại yêu cầu
         BigDecimal totalAmount;
         if (request.getType() == PaymentRequestType.TAX_INSURANCE) {
-            // [RULE] Chỉ block nếu đang có request TAX_INSURANCE đang PENDING (chờ Finance duyệt).
-            // Không block nếu request cũ đã REJECTED hoặc PAID (cho phép gửi lại sau khi cố khū).
-            boolean hasPendingRequest = paymentRequestRepository
-                    .existsByPayrollBatch_BatchIdAndTypeAndStatus(
+            // [RULE] Chỉ block nếu đang có request TAX_INSURANCE đang PENDING hoặc đã PAID.
+            // Không block nếu request cũ đã REJECTED (cho phép gửi lại sau khi Finance từ chối).
+            boolean hasActiveRequest = paymentRequestRepository
+                    .existsByPayrollBatch_BatchIdAndTypeAndStatusIn(
                             batch.getBatchId(),
                             PaymentRequestType.TAX_INSURANCE,
-                            PaymentRequestStatus.PENDING);
-            if (hasPendingRequest) {
+                            List.of(PaymentRequestStatus.PENDING, PaymentRequestStatus.PAID));
+            if (hasActiveRequest) {
                 throw new PayrollException(
-                        "Báo cáo Thuế & Bảo hiểm cho kỳ lương này đang chờ Finance duyệt (PENDING). Không thể gửi lại.");
+                        "Báo cáo Thuế & Bảo hiểm cho kỳ lương này đang chờ Finance duyệt (PENDING) hoặc đã được thanh toán (PAID). Không thể gửi lại.");
             }
 
             BigDecimal pit = payslipRepository.sumTaxAmountByBatchId(batch.getBatchId());
             BigDecimal ins = payslipRepository.sumInsuranceAmountByBatchId(batch.getBatchId());
             totalAmount = pit.add(ins);
         } else {
+            // [RULE] Chỉ 1 SALARY request được phép tồn tại ở trạng thái PENDING hoặc PAID trên mỗi batch.
+            // PENDING = đang chờ Finance duyệt → không cho gửi thêm.
+            // PAID = đã thanh toán → không cho gửi lại.
+            // REJECTED = Finance từ chối → HR được phép gửi lại.
+            boolean hasActiveSalaryRequest = paymentRequestRepository
+                    .existsByPayrollBatch_BatchIdAndTypeAndStatusIn(
+                            batch.getBatchId(),
+                            PaymentRequestType.SALARY,
+                            List.of(PaymentRequestStatus.PENDING, PaymentRequestStatus.PAID));
+            if (hasActiveSalaryRequest) {
+                throw new PayrollException(
+                        "Yêu cầu chi lương cho kỳ này đang chờ Finance duyệt (PENDING) hoặc đã được thanh toán (PAID). Không thể gửi thêm.");
+            }
             totalAmount = payslipRepository.sumNetSalaryByBatchId(batch.getBatchId());
         }
 
@@ -221,6 +234,13 @@ public class PaymentRequestService {
     @Transactional(readOnly = true)
     public List<PaymentRequestResponse> getPendingRequests() {
         return paymentRequestRepository.findAllByStatusOrderByCreatedAtDesc(PaymentRequestStatus.PENDING)
+                .stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    /** Finance: Xem toàn bộ lịch sử yêu cầu (PENDING + PAID + REJECTED) */
+    @Transactional(readOnly = true)
+    public List<PaymentRequestResponse> getAllRequests() {
+        return paymentRequestRepository.findAllByOrderByCreatedAtDesc()
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 

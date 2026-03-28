@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
-import { kpiService } from "../services/kpiService";
-import { getToken } from "../services/authService";
-import { decodeJwt } from "../utils/jwtDecode";
+import { kpiService } from "../../services/kpiService";
+import { getToken } from "../../services/authService";
+import { decodeJwt } from "../../utils/jwtDecode";
 
 const Icons = {
     checkCircle: (
