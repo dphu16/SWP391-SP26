@@ -40,36 +40,34 @@ public class PayslipService {
         private final PayslipDetailRepository payslipDetailRepository;
         private final BankAccountRepository bankAccountRepository;
 
-        /** Employee: Xem danh sách phiếu lương của chính mình */
+        //Employee: Xem danh sách phiếu lương của chính mình
         @Transactional(readOnly = true)
         public List<PayslipResponse> getMyPayslips(UUID employeeId) {
                 return payslipRepository.findAllByEmployee_EmployeeIdOrderByCreatedAtDesc(employeeId)
                                 .stream().map(this::toResponse).collect(Collectors.toList());
         }
 
-        /** Employee: Xem chi tiết 1 phiếu lương — chỉ được xem của chính mình */
+        //Employee: Xem chi tiết 1 phiếu lương — chỉ được xem của chính mình
         @Transactional(readOnly = true)
         public PayslipResponse getMyPayslip(UUID payslipId, UUID requestingEmployeeId) {
                 Payslip payslip = findOrThrow(payslipId);
                 if (!payslip.getEmployee().getEmployeeId().equals(requestingEmployeeId)) {
-                        throw new AccessDeniedException("Bạn không có quyền xem phiếu lương này.");
+                        throw new AccessDeniedException("You do not have permission to view this payslip.");
                 }
                 return toResponse(payslip);
         }
 
-        /** HR: Xem tất cả payslip trong một batch */
+        //HR: Xem tất cả payslip trong một batch
         @Transactional(readOnly = true)
         public List<PayslipResponse> getPayslipsByBatch(UUID batchId) {
                 return payslipRepository.findAllByBatch_BatchId(batchId)
                                 .stream().map(this::toResponse).collect(Collectors.toList());
         }
 
-        /** HR: Tính lương cho toàn bộ employee trong batch (hoặc demo) */
+        //HR: Tính lương cho toàn bộ employee trong batch
         @Transactional
         public List<PayslipResponse> calculateForBatch(UUID batchId) {
-                // Tạm thời demo: Tính lương cho tất cả Employee.
-                // Thực tế có thể phân trang hoặc lấy theo Status = ACTIVE hoặc RESIGNED trong
-                // tháng
+                // Tạm thời: tính lương cho tất cả Employee đang active
                 List<Employee> employees = employeeRepository.findAll();
                 List<UUID> empIds = employees.stream().map(Employee::getEmployeeId).collect(Collectors.toList());
                 // Gọi sang calculationService.calculateBatch
@@ -77,7 +75,7 @@ public class PayslipService {
                 return generated.stream().map(this::toResponse).collect(Collectors.toList());
         }
 
-        /** HR: Xem Tax & Insurance Report cho 1 batch */
+        //HR: Xem Tax & Insurance Report cho 1 batch
         @Transactional(readOnly = true)
         public List<com.project.hrm.module.payroll.dto.ResponseDTO.TaxReportResponse> getTaxReportByBatch(
                         UUID batchId) {
@@ -109,7 +107,7 @@ public class PayslipService {
                 }).collect(Collectors.toList());
         }
 
-        /** HR: Xác nhận (confirm) toàn bộ phiếu lương trong batch */
+        //HR: Xác nhận (confirm) toàn bộ phiếu lương trong batch
         @Transactional
         public List<PayslipResponse> validateAllInBatch(UUID batchId) {
                 List<Payslip> payslips = payslipRepository.findAllByBatch_BatchId(batchId);
@@ -124,12 +122,12 @@ public class PayslipService {
                 return saved.stream().map(this::toResponse).collect(Collectors.toList());
         }
 
-        /** HR: Xác nhận (confirm) một phiếu lương — chỉ được confirm khi đang DRAFT */
+        //HR: Xác nhận (confirm) một phiếu lương — chỉ được confirm khi đang DRAFT
         @Transactional
         public PayslipResponse confirmPayslip(UUID payslipId) {
                 Payslip payslip = findOrThrow(payslipId);
                 if (payslip.getStatus() != PayslipStatus.DRAFT) {
-                        throw new PayrollException("Chỉ có thể xác nhận phiếu lương đang ở trạng thái DRAFT.");
+                        throw new PayrollException("Only DRAFT payslips can be confirmed.");
                 }
                 payslip.setStatus(PayslipStatus.CONFIRMED);
                 payslip.setConfirmedAt(OffsetDateTime.now());
@@ -138,17 +136,13 @@ public class PayslipService {
                 return toResponse(saved);
         }
 
-        /**
-         * UR_HR004: HR chỉnh sửa thủ công chi tiết phiếu lương (allowance/deduction).
-         * Chỉ được phép khi payslip đang DRAFT.
-         * Toàn bộ details cũ sẽ bị xóa và thay thế bằng danh sách mới.
-         * Sau đó tự động tính lại totalAllowances, totalDeductions, grossSalary, netSalary.
-         */
+
+        //HR chỉnh sửa thủ công chi tiết phiếu lương (allowance/deduction).
         @Transactional
         public PayslipResponse updatePayslipDetails(UUID payslipId, UpdatePayslipDetailRequest req) {
                 Payslip payslip = findOrThrow(payslipId);
                 if (payslip.getStatus() != PayslipStatus.DRAFT) {
-                        throw new PayrollException("Chỉ có thể chỉnh sửa chi tiết phiếu lương đang ở trạng thái DRAFT.");
+                        throw new PayrollException("Payslip details can only be edited when status is DRAFT.");
                 }
 
                 // Xóa chi tiết hiện tại (để Hibernate xử lý orphan removal)
@@ -193,7 +187,7 @@ public class PayslipService {
                 payslip.setTotalDeductions(totalDeductions);
                 payslip.setGrossSalary(grossSalary);
                 payslip.setNetSalary(netSalary);
-                // thuế và bảo hiểm bây giờ được gói gọn trong khoản khấu trừ thủ công nếu HR thêm vào
+                // Thuế và bảo hiểm được gói gọn trong khoản khấu trừ thủ công nếu HR thêm vào
                 payslip.setTaxAmount(BigDecimal.ZERO);
                 payslip.setInsuranceAmount(BigDecimal.ZERO);
 
@@ -201,12 +195,12 @@ public class PayslipService {
                 return toResponse(saved);
         }
 
-        /** HR: Huỷ phiếu lương — chỉ được huỷ khi chưa PAID */
+        //HR: Huỷ phiếu lương — chỉ được huỷ khi chưa PAID
         @Transactional
         public PayslipResponse cancelPayslip(UUID payslipId) {
                 Payslip payslip = findOrThrow(payslipId);
                 if (payslip.getStatus() == PayslipStatus.PAID) {
-                        throw new PayrollException("Không thể huỷ phiếu lương đã thanh toán.");
+                        throw new PayrollException("Cannot cancel a payslip that has already been paid.");
                 }
                 payslip.setStatus(PayslipStatus.CANCELLED);
                 Payslip saved = payslipRepository.save(payslip);
@@ -237,7 +231,7 @@ public class PayslipService {
         private Payslip findOrThrow(UUID payslipId) {
                 return payslipRepository.findById(payslipId)
                                 .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Phiếu lương không tồn tại: " + payslipId));
+                                                "Payslip not found: " + payslipId));
         }
 
         public PayslipResponse toResponse(Payslip p) {
@@ -256,6 +250,7 @@ public class PayslipService {
                 return PayslipResponse.builder()
                                 .payslipId(p.getPayslipId())
                                 .employeeId(p.getEmployee().getEmployeeId())
+                                .employeeCode(p.getEmployee().getEmployeeCode())
                                 .employeeName(p.getEmployee().getFullName())
                                 .departmentName(p.getEmployee().getDepartment() != null ? p.getEmployee().getDepartment().getDeptName() : "N/A")
                                 .bankName(bank != null ? bank.getBankName() : null)

@@ -12,11 +12,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.text.DecimalFormat;
-import java.text.NumberFormat;
+import java.text.Normalizer;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Locale;
-import java.text.Normalizer;
 
 @Service
 @RequiredArgsConstructor
@@ -32,8 +30,6 @@ public class PdfGeneratorService {
             Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20);
             Font headFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
             Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 12);
-
-            // TODO: Lý tưởng nhất là dùng font Unicode cho tiếng Việt. Tạm dùng font cơ bản cho demo.
 
             // Tiêu đề
             Paragraph title = new Paragraph("PAYSLIP", titleFont);
@@ -128,22 +124,26 @@ public class PdfGeneratorService {
             infoTable.addCell(createCell(formatDate(request.getCreatedAt()), normalFont));
             document.add(infoTable);
 
-            PdfPTable table = new PdfPTable(5);
+            PdfPTable table = new PdfPTable(6);
             table.setWidthPercentage(100);
-            table.setWidths(new float[]{1.5f, 3f, 2f, 2.5f, 2.5f});
+            table.setWidths(new float[]{1.5f, 2.5f, 2f, 2.5f, 2.5f, 2f});
             
-            table.addCell(createCell("Emp ID", headFont));
+            table.addCell(createCell("Emp Code", headFont));
             table.addCell(createCell("Employee Name", headFont));
             table.addCell(createCell("Bank Name", headFont));
-            table.addCell(createCell("Bank Account", headFont));
+            table.addCell(createCell("Account Holder", headFont));
+            table.addCell(createCell("Account Number", headFont));
             table.addCell(createCell("Net Salary (VND)", headFont));
 
             for (PayslipResponse p : payslips) {
-                table.addCell(createCell(p.getEmployeeId() != null ? p.getEmployeeId().toString().substring(0, 8) : "N/A", normalFont));
-                table.addCell(createCell(p.getEmployeeName(), normalFont));
-                // TODO: Cập nhật khi thực thể Employee có thông tin ngân hàng
-                table.addCell(createCell("N/A", normalFont));
-                table.addCell(createCell("N/A", normalFont));
+                // Hiển thị employee code thay vì UUID
+                String empCode = p.getEmployeeCode() != null ? p.getEmployeeCode()
+                        : (p.getEmployeeId() != null ? p.getEmployeeId().toString().substring(0, 8) : "N/A");
+                table.addCell(createCell(empCode, normalFont));
+                table.addCell(createCell(p.getEmployeeName() != null ? p.getEmployeeName() : "N/A", normalFont));
+                table.addCell(createCell(p.getBankName() != null ? p.getBankName() : "N/A", normalFont));
+                table.addCell(createCell(p.getAccountHolderName() != null ? p.getAccountHolderName() : "N/A", normalFont));
+                table.addCell(createCell(p.getAccountNumber() != null ? p.getAccountNumber() : "N/A", normalFont));
                 table.addCell(createCell(formatCurrency(p.getNetSalary()), normalFont));
             }
             

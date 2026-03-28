@@ -31,7 +31,7 @@ public class HRPayrollController {
     @PostMapping("/periods")
     public ResponseEntity<ApiResponse<PayrollPeriodResponse>> createPeriod(
             @Valid @RequestBody CreatePayrollPeriodRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok("Tạo kỳ lương thành công.", periodService.createPeriod(request)));
+        return ResponseEntity.ok(ApiResponse.ok("Payroll period created successfully.", periodService.createPeriod(request)));
     }
 
     /** GET /api/v1/hr/payroll/periods — Danh sách tất cả kỳ lương */
@@ -49,7 +49,7 @@ public class HRPayrollController {
     /** PUT /api/v1/hr/payroll/periods/{periodId}/close — Đóng kỳ lương */
     @PutMapping("/periods/{periodId}/close")
     public ResponseEntity<ApiResponse<PayrollPeriodResponse>> closePeriod(@PathVariable("periodId") UUID periodId) {
-        return ResponseEntity.ok(ApiResponse.ok("Đóng kỳ lương thành công.", periodService.closePeriod(periodId)));
+        return ResponseEntity.ok(ApiResponse.ok("Payroll period closed successfully.", periodService.closePeriod(periodId)));
     }
 
     /**
@@ -57,7 +57,7 @@ public class HRPayrollController {
      */
     @PostMapping("/batches/{batchId}/calculate")
     public ResponseEntity<ApiResponse<List<PayslipResponse>>> calculatePayslips(@PathVariable("batchId") UUID batchId) {
-        return ResponseEntity.ok(ApiResponse.ok("Đã chạy lương cho Batch.", payslipService.calculateForBatch(batchId)));
+        return ResponseEntity.ok(ApiResponse.ok("Payroll calculated for batch.", payslipService.calculateForBatch(batchId)));
     }
 
     /**
@@ -77,7 +77,7 @@ public class HRPayrollController {
     @PutMapping("/batches/{batchId}/validate-all")
     public ResponseEntity<ApiResponse<List<PayslipResponse>>> validateAll(@PathVariable("batchId") UUID batchId) {
         return ResponseEntity
-                .ok(ApiResponse.ok("Đã xác nhận tất cả phiếu lương.", payslipService.validateAllInBatch(batchId)));
+                .ok(ApiResponse.ok("All payslips confirmed.", payslipService.validateAllInBatch(batchId)));
     }
 
     /**
@@ -96,14 +96,14 @@ public class HRPayrollController {
     @PutMapping("/payslips/{payslipId}/confirm")
     public ResponseEntity<ApiResponse<PayslipResponse>> confirmPayslip(@PathVariable("payslipId") UUID payslipId) {
         return ResponseEntity
-                .ok(ApiResponse.ok("Xác nhận phiếu lương thành công.", payslipService.confirmPayslip(payslipId)));
+                .ok(ApiResponse.ok("Payslip confirmed successfully.", payslipService.confirmPayslip(payslipId)));
     }
 
     /** PUT /api/v1/hr/payroll/payslips/{payslipId}/cancel — Huỷ phiếu lương */
     @PutMapping("/payslips/{payslipId}/cancel")
     public ResponseEntity<ApiResponse<PayslipResponse>> cancelPayslip(@PathVariable("payslipId") UUID payslipId) {
         return ResponseEntity
-                .ok(ApiResponse.ok("Huỷ phiếu lương thành công.", payslipService.cancelPayslip(payslipId)));
+                .ok(ApiResponse.ok("Payslip cancelled successfully.", payslipService.cancelPayslip(payslipId)));
     }
 
     /**
@@ -115,7 +115,7 @@ public class HRPayrollController {
             @PathVariable("payslipId") UUID payslipId,
             @Valid @RequestBody UpdatePayslipDetailRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(
-                "Cập nhật chi tiết phiếu lương thành công.",
+                "Payslip details updated successfully.",
                 payslipService.updatePayslipDetails(payslipId, request)));
     }
 
@@ -138,7 +138,7 @@ public class HRPayrollController {
             @RequestAttribute("employeeId") UUID requesterId,
             @Valid @RequestBody CreatePaymentRequestRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(
-                "Yêu cầu thanh toán đã được gửi sang Finance.",
+                "Payment request submitted to Finance.",
                 paymentRequestService.createRequest(requesterId, request)));
     }
 
@@ -167,7 +167,7 @@ public class HRPayrollController {
             @RequestAttribute("employeeId") UUID responderId,
             @Valid @RequestBody RespondToInquiryRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(
-                "Phản hồi đã được gửi thành công.",
+                "Response submitted successfully.",
                 inquiryService.respondToInquiry(responderId, request)));
     }
 

@@ -16,6 +16,7 @@ public class PayslipResponse {
 
     private UUID payslipId;
     private UUID employeeId;
+    private String employeeCode;
     private String employeeName;
     private String departmentName;
 

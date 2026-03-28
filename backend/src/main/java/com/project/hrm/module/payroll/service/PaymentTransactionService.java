@@ -21,14 +21,14 @@ public class PaymentTransactionService {
     private final PaymentTransactionRepository transactionRepository;
     private final PaymentBatchRepository paymentBatchRepository;
 
-    /** Lấy toàn bộ lịch sử giao dịch, mới nhất trước */
+    //Lấy toàn bộ lịch sử giao dịch, mới nhất trước
     @Transactional(readOnly = true)
     public List<PaymentTransactionResponse> getAllTransactions() {
         return transactionRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    /** Lấy danh sách giao dịch theo payment batch cụ thể */
+    //Lấy danh sách giao dịch theo payment batch cụ thể
     @Transactional(readOnly = true)
     public List<PaymentTransactionResponse> getTransactionsByBatch(UUID paymentBatchId) {
         // Kiểm tra batch tồn tại

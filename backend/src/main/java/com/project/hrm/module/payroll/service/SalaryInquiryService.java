@@ -30,35 +30,31 @@ public class SalaryInquiryService {
     private final SalaryInquiryRepository inquiryRepository;
     private final PayslipRepository payslipRepository;
 
-    // ===================== EMPLOYEE =====================
 
-    /** Employee: Tạo thắc mắc về phiếu lương của mình */
+    //Tạo thắc mắc về phiếu lương của mình
     @Transactional
     public SalaryInquiryDto createInquiry(UUID employeeId, CreateSalaryInquiryRequest request) {
         Payslip payslip = payslipRepository.findById(request.getPayslipId())
-                .orElseThrow(() -> new ResourceNotFoundException("Phiếu lương không tồn tại."));
+                .orElseThrow(() -> new ResourceNotFoundException("Payslip not found."));
 
-        // [RULE] Employee chỉ được thắc mắc về phiếu lương của chính mình
+        //Employee chỉ được thắc mắc về phiếu lương của chính mình
         if (!payslip.getEmployee().getEmployeeId().equals(employeeId)) {
-            throw new AccessDeniedException("Bạn không có quyền thắc mắc về phiếu lương này.");
+            throw new AccessDeniedException("You do not have permission to submit an inquiry for this payslip.");
         }
 
-        // [RULE] Không cho phép thắc mắc khi phiếu lương đã được thanh toán (PAID).
-        // Lương đã chi trả — mọi sai sót cần làm việc trực tiếp với HR ngoài hệ thống.
+        //Không cho phép thắc mắc khi phiếu lương đã được thanh toán (PAID).
         if (payslip.getStatus() == com.project.hrm.module.payroll.enums.PayslipStatus.PAID) {
-            throw new PayrollException(
-                    "Phiếu lương tháng " + payslip.getPeriod().getMonth() + "/" + payslip.getPeriod().getYear()
-                    + " đã được thanh toán. Không thể gửi thắc mắc cho kỳ lương đã chi trả.");
+            throw new PayrollException("This payslip has already been paid. Salary inquiries are closed for paid periods.");
         }
 
-        // [RULE] Chỉ cho phép thắc mắc đối với kỳ lương mới nhất mà nhân viên có phiếu lương
+        //Chỉ cho phép thắc mắc đối với kỳ lương mới nhất mà nhân viên có phiếu lương
         Optional<Payslip> latestPayslipOpt = payslipRepository
                 .findFirstByEmployee_EmployeeIdOrderByPeriod_StartDateDesc(employeeId);
 
         if (latestPayslipOpt.isPresent()) {
             Payslip latestPayslip = latestPayslipOpt.get();
             if (!latestPayslip.getPeriod().getPeriodId().equals(payslip.getPeriod().getPeriodId())) {
-                throw new PayrollException("Kỳ lương này đã qua. Hãy gửi thắc mắc cho kỳ lương mới nhất.");
+                throw new PayrollException("This payroll period is already closed. Please submit an inquiry for the latest period.");
             }
         }
 
@@ -76,7 +72,7 @@ public class SalaryInquiryService {
         return toDto(inquiryRepository.save(inquiry), false);
     }
 
-    /** Employee: Xem danh sách thắc mắc của mình */
+    //Employee: Xem danh sách thắc mắc của mình
     @Transactional(readOnly = true)
     public List<SalaryInquiryDto> getMyInquiries(UUID employeeId) {
         return inquiryRepository
@@ -86,9 +82,9 @@ public class SalaryInquiryService {
                 .collect(Collectors.toList());
     }
 
-    // ===================== HR =====================
 
-    /** HR: Xem tất cả các ticket */
+
+    //HR: Xem tất cả các ticket
     @Transactional(readOnly = true)
     public List<SalaryInquiryDto> getAllInquiries() {
         return inquiryRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))
@@ -97,30 +93,28 @@ public class SalaryInquiryService {
                 .collect(Collectors.toList());
     }
 
-    /** HR: Chuyển ticket sang IN_PROGRESS khi bắt đầu xử lý */
+    //HR: Chuyển ticket sang IN_PROGRESS khi bắt đầu xử lý
     @Transactional
     public SalaryInquiryDto markInProgress(UUID inquiryId) {
         SalaryInquiry inquiry = findOrThrow(inquiryId);
         if (inquiry.getStatus() != SalaryInquiryStatus.OPEN) {
-            throw new PayrollException("Ticket không ở trạng thái OPEN.");
+            throw new PayrollException("Inquiry is not in OPEN status.");
         }
         inquiry.setStatus(SalaryInquiryStatus.IN_PROGRESS);
         return toDto(inquiryRepository.save(inquiry), true);
     }
 
-    /**
-     * HR: Phản hồi thắc mắc.
-     * Tạo entity SalaryInquiryResponse (không phải DTO) để lưu vào DB.
-     */
+
+    //HR: Phản hồi thắc mắc.
     @Transactional
     public SalaryInquiryDto respondToInquiry(UUID responderId, RespondToInquiryRequest request) {
         SalaryInquiry inquiry = findOrThrow(request.getInquiryId());
 
         if (inquiry.getStatus() == SalaryInquiryStatus.RESOLVED) {
-            throw new PayrollException("Ticket này đã được xử lý rồi.");
+            throw new PayrollException("This inquiry has already been resolved.");
         }
         if (inquiry.getResponse() != null) {
-            throw new PayrollException("Ticket này đã có câu trả lời chính thức. Không thể ghi đè.");
+            throw new PayrollException("This inquiry already has an official response. Cannot overwrite.");
         }
 
         Employee responder = new Employee();
@@ -142,13 +136,13 @@ public class SalaryInquiryService {
         return toDto(inquiryRepository.save(inquiry), true);
     }
 
-    /** HR: Từ chối thắc mắc */
+    //HR: Từ chối thắc mắc
     @Transactional
     public SalaryInquiryDto rejectInquiry(UUID responderId, UUID inquiryId, String reason) {
         SalaryInquiry inquiry = findOrThrow(inquiryId);
         if (inquiry.getStatus() == SalaryInquiryStatus.RESOLVED
                 || inquiry.getStatus() == SalaryInquiryStatus.REJECTED) {
-            throw new PayrollException("Ticket đã được xử lý, không thể thay đổi trạng thái.");
+            throw new PayrollException("This inquiry has already been closed and cannot be changed.");
         }
 
         Employee responder = new Employee();
@@ -157,7 +151,7 @@ public class SalaryInquiryService {
         SalaryInquiryResponse responseEntity = SalaryInquiryResponse.builder()
                 .inquiry(inquiry)
                 .responder(responder)
-                .officialResponse("TỪ CHỐI: " + reason)
+                .officialResponse("Reject: " + reason)
                 .build();
 
         inquiry.setResponse(responseEntity);
@@ -167,17 +161,12 @@ public class SalaryInquiryService {
         return toDto(inquiryRepository.save(inquiry), true);
     }
 
-    // ===================== PRIVATE HELPERS =====================
 
     private SalaryInquiry findOrThrow(UUID id) {
         return inquiryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Thắc mắc không tồn tại: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Inquiry not found: " + id));
     }
 
-    /**
-     * Convert entity SalaryInquiry → DTO SalaryInquiryDto.
-     * @param includeInternalNote true = HR (thấy internal_note), false = Employee (không thấy)
-     */
     private SalaryInquiryDto toDto(SalaryInquiry inquiry, boolean includeInternalNote) {
         SalaryInquiryDto.HrResponseDetail hrDetail = null;
 
