@@ -29,12 +29,6 @@ public class PaymentRequestService {
     private final PayslipRepository payslipRepository;
     private final PayrollPeriodRepository payrollPeriodRepository;
 
-    /**
-     * HR: Tạo yêu cầu thanh toán lương gửi sang Finance.
-     * [RULE] Batch phải ở trạng thái PROCESSED (đã tính toán xong và validate).
-     * [RULE] Số tiền request = tổng net salary của các payslip CONFIRMED trong
-     * batch.
-     */
     @Transactional
     public PaymentRequestResponse createRequest(UUID requesterId, CreatePaymentRequestRequest request) {
         PayrollBatch batch = payrollBatchRepository.findById(request.getPayrollBatchId())

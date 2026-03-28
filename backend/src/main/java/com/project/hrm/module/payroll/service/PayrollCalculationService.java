@@ -54,10 +54,6 @@ public class PayrollCalculationService {
     private final EmployeeBenefitRepository employeeBenefitRepository;
 
     /**
-     * Chạy lương cho toàn bộ nhân viên trong một batch.
-     * Mỗi nhân viên sẽ được tạo 1 payslip DRAFT.
-     * Gọi từ HR sau khi tạo batch.
-     *
      * @param batchId     ID của batch cần chạy
      * @param employeeIds Danh sách nhân viên cần tính lương
      */
@@ -115,7 +111,8 @@ public class PayrollCalculationService {
         }
 
         // Trạng thái Batch không còn tự động chuyển sang VALIDATED ở đây.
-        // Nó sẽ giữ nguyên là DRAFT và chỉ chuyển sang VALIDATED khi HR duyệt tất cả các phiếu lương.
+        // Nó sẽ giữ nguyên là DRAFT và chỉ chuyển sang VALIDATED khi HR duyệt tất cả
+        // các phiếu lương.
 
         return results;
     }
@@ -182,7 +179,7 @@ public class PayrollCalculationService {
             kpiBonus = BigDecimal.valueOf(2000000);
         }
 
-        // 5.5 FETCH DYNAMIC BENEFITS
+        // FETCH DYNAMIC BENEFITS
         List<EmployeeBenefit> activeBenefits = employeeBenefitRepository.findActiveBenefitsForPeriod(employeeId,
                 startDate, calculationDate);
         BigDecimal dynamicAllowances = BigDecimal.ZERO;

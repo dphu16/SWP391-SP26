@@ -19,14 +19,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * API dành cho Employee.
- * Quyền: ROLE_EMPLOYEE
- * Base path: /api/v1/my
- *
- * Lấy employeeId từ Security Context (JWT token) — không cho phép truyền qua param
- * để tránh employee xem lương của người khác.
- */
 @RestController
 @RequestMapping("/api/v1/my")
 @RequiredArgsConstructor
@@ -36,8 +28,6 @@ public class EmployeePayrollController {
     private final PayslipService payslipService;
     private final SalaryInquiryService salaryInquiryService;
     private final PdfGeneratorService pdfGeneratorService;
-
-    // ===================== PAYSLIP =====================
 
     /**
      * GET /api/v1/my/payslips
@@ -73,12 +63,11 @@ public class EmployeePayrollController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", "Payslip_" + payslip.getMonth() + "_" + payslip.getYear() + ".pdf");
+        headers.setContentDispositionFormData("attachment",
+                "Payslip_" + payslip.getMonth() + "_" + payslip.getYear() + ".pdf");
 
         return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
     }
-
-    // ===================== INQUIRY =====================
 
     /**
      * GET /api/v1/my/inquiries
@@ -100,8 +89,6 @@ public class EmployeePayrollController {
             @Valid @RequestBody CreateSalaryInquiryRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(
                 "Thắc mắc đã được gửi thành công.",
-                salaryInquiryService.createInquiry(employeeId, request)
-        ));
+                salaryInquiryService.createInquiry(employeeId, request)));
     }
 }
-

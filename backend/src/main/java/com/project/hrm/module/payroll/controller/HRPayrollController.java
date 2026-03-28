@@ -14,19 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * API dành cho HR.
- * Quyền: ROLE_HR
- * Base path: /api/v1/hr/payroll
- *
- * Luồng chính:
- *   1. Tạo kỳ lương (period)
- *   2. Tạo batch trong kỳ
- *   3. Kích hoạt chạy lương (calculate)
- *   4. Validate & confirm từng payslip
- *   5. Gửi yêu cầu thanh toán sang Finance
- *   6. Xử lý thắc mắc nhân viên
- */
 @RestController
 @RequestMapping("/api/v1/hr/payroll")
 @RequiredArgsConstructor
@@ -39,8 +26,6 @@ public class HRPayrollController {
     private final PaymentRequestService paymentRequestService;
     private final PayrollCalculationService calculationService;
     private final FinanceAccountRepository financeAccountRepository;
-
-    // ===================== PERIOD =====================
 
     /** POST /api/v1/hr/payroll/periods — Tạo kỳ lương mới */
     @PostMapping("/periods")
@@ -67,49 +52,63 @@ public class HRPayrollController {
         return ResponseEntity.ok(ApiResponse.ok("Đóng kỳ lương thành công.", periodService.closePeriod(periodId)));
     }
 
-    // ===================== BATCH & PAYSLIPS =====================
-
-    /** POST /api/v1/hr/payroll/batches/{batchId}/calculate — Yêu cầu chạy toán lương */
+    /**
+     * POST /api/v1/hr/payroll/batches/{batchId}/calculate — Yêu cầu chạy toán lương
+     */
     @PostMapping("/batches/{batchId}/calculate")
     public ResponseEntity<ApiResponse<List<PayslipResponse>>> calculatePayslips(@PathVariable("batchId") UUID batchId) {
         return ResponseEntity.ok(ApiResponse.ok("Đã chạy lương cho Batch.", payslipService.calculateForBatch(batchId)));
     }
 
-    /** GET /api/v1/hr/payroll/batches/{batchId}/payslips — Danh sách payslip trong batch */
+    /**
+     * GET /api/v1/hr/payroll/batches/{batchId}/payslips — Danh sách payslip trong
+     * batch
+     */
     @GetMapping("/batches/{batchId}/payslips")
-    public ResponseEntity<ApiResponse<List<PayslipResponse>>> getPayslipsByBatch(@PathVariable("batchId") UUID batchId) {
+    public ResponseEntity<ApiResponse<List<PayslipResponse>>> getPayslipsByBatch(
+            @PathVariable("batchId") UUID batchId) {
         return ResponseEntity.ok(ApiResponse.ok(payslipService.getPayslipsByBatch(batchId)));
     }
 
-    /** PUT /api/v1/hr/payroll/batches/{batchId}/validate-all — Xác nhận tất cả payslip trong batch */
+    /**
+     * PUT /api/v1/hr/payroll/batches/{batchId}/validate-all — Xác nhận tất cả
+     * payslip trong batch
+     */
     @PutMapping("/batches/{batchId}/validate-all")
     public ResponseEntity<ApiResponse<List<PayslipResponse>>> validateAll(@PathVariable("batchId") UUID batchId) {
-        return ResponseEntity.ok(ApiResponse.ok("Đã xác nhận tất cả phiếu lương.", payslipService.validateAllInBatch(batchId)));
+        return ResponseEntity
+                .ok(ApiResponse.ok("Đã xác nhận tất cả phiếu lương.", payslipService.validateAllInBatch(batchId)));
     }
 
-    /** GET /api/v1/hr/payroll/batches/{batchId}/tax-report — Danh sách Tax Report trong batch */
+    /**
+     * GET /api/v1/hr/payroll/batches/{batchId}/tax-report — Danh sách Tax Report
+     * trong batch
+     */
     @GetMapping("/batches/{batchId}/tax-report")
-    public ResponseEntity<ApiResponse<List<TaxReportResponse>>> getTaxReportByBatch(@PathVariable("batchId") UUID batchId) {
+    public ResponseEntity<ApiResponse<List<TaxReportResponse>>> getTaxReportByBatch(
+            @PathVariable("batchId") UUID batchId) {
         return ResponseEntity.ok(ApiResponse.ok(payslipService.getTaxReportByBatch(batchId)));
     }
 
-    /** PUT /api/v1/hr/payroll/payslips/{payslipId}/confirm — Xác nhận phiếu lương */
+    /**
+     * PUT /api/v1/hr/payroll/payslips/{payslipId}/confirm — Xác nhận phiếu lương
+     */
     @PutMapping("/payslips/{payslipId}/confirm")
     public ResponseEntity<ApiResponse<PayslipResponse>> confirmPayslip(@PathVariable("payslipId") UUID payslipId) {
-        return ResponseEntity.ok(ApiResponse.ok("Xác nhận phiếu lương thành công.", payslipService.confirmPayslip(payslipId)));
+        return ResponseEntity
+                .ok(ApiResponse.ok("Xác nhận phiếu lương thành công.", payslipService.confirmPayslip(payslipId)));
     }
 
     /** PUT /api/v1/hr/payroll/payslips/{payslipId}/cancel — Huỷ phiếu lương */
     @PutMapping("/payslips/{payslipId}/cancel")
     public ResponseEntity<ApiResponse<PayslipResponse>> cancelPayslip(@PathVariable("payslipId") UUID payslipId) {
-        return ResponseEntity.ok(ApiResponse.ok("Huỷ phiếu lương thành công.", payslipService.cancelPayslip(payslipId)));
+        return ResponseEntity
+                .ok(ApiResponse.ok("Huỷ phiếu lương thành công.", payslipService.cancelPayslip(payslipId)));
     }
 
     /**
      * PUT /api/v1/hr/payroll/payslips/{payslipId}/details
-     * UR_HR004: HR chỉnh sửa thủ công chi tiết phiếu lương (allowance/deduction).
      * Chỉ được phép khi payslip đang ở trạng thái DRAFT.
-     * Body: danh sách đầy đủ các dòng chi tiết — sẽ thay thế hoàn toàn chi tiết cũ.
      */
     @PutMapping("/payslips/{payslipId}/details")
     public ResponseEntity<ApiResponse<PayslipResponse>> updatePayslipDetails(
@@ -117,22 +116,18 @@ public class HRPayrollController {
             @Valid @RequestBody UpdatePayslipDetailRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(
                 "Cập nhật chi tiết phiếu lương thành công.",
-                payslipService.updatePayslipDetails(payslipId, request)
-        ));
+                payslipService.updatePayslipDetails(payslipId, request)));
     }
-
-    // ===================== FINANCE ACCOUNTS =====================
 
     /**
      * GET /api/v1/hr/payroll/finance-accounts/active
-     * HR lấy danh sách tài khoản nguồn đang hoạt động để chọn khi gửi yêu cầu thanh toán.
+     * HR lấy danh sách tài khoản nguồn đang hoạt động để chọn khi gửi yêu cầu thanh
+     * toán.
      */
     @GetMapping("/finance-accounts/active")
     public ResponseEntity<ApiResponse<List<FinanceAccount>>> getActiveFinanceAccounts() {
         return ResponseEntity.ok(ApiResponse.ok(financeAccountRepository.findAllByStatus("ACTIVE")));
     }
-
-    // ===================== PAYMENT REQUEST =====================
 
     /**
      * POST /api/v1/hr/payroll/payment-requests
@@ -144,8 +139,7 @@ public class HRPayrollController {
             @Valid @RequestBody CreatePaymentRequestRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(
                 "Yêu cầu thanh toán đã được gửi sang Finance.",
-                paymentRequestService.createRequest(requesterId, request)
-        ));
+                paymentRequestService.createRequest(requesterId, request)));
     }
 
     /** GET /api/v1/hr/payroll/payment-requests/my — Lịch sử yêu cầu HR đã gửi */
@@ -154,8 +148,6 @@ public class HRPayrollController {
             @RequestAttribute("employeeId") UUID requesterId) {
         return ResponseEntity.ok(ApiResponse.ok(paymentRequestService.getMyRequests(requesterId)));
     }
-
-    // ===================== INQUIRIES =====================
 
     /** GET /api/v1/hr/payroll/inquiries — Tất cả ticket */
     @GetMapping("/inquiries")
@@ -176,8 +168,7 @@ public class HRPayrollController {
             @Valid @RequestBody RespondToInquiryRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(
                 "Phản hồi đã được gửi thành công.",
-                inquiryService.respondToInquiry(responderId, request)
-        ));
+                inquiryService.respondToInquiry(responderId, request)));
     }
 
     /** PUT /api/v1/hr/payroll/inquiries/{inquiryId}/reject — Từ chối thắc mắc */
