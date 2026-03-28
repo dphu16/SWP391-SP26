@@ -144,8 +144,18 @@ const MentorPerformance = () => {
             if (!activeGoalId) return;
             try {
                 const evidenceData = await kpiService.getGoalEvidences(activeGoalId);
-                setEvidences(evidenceData || []);
-                setActiveEvidenceIndex(0);
+                let filtered: any[] = evidenceData || [];
+
+                // If employee resubmitted (any PENDING or APPROVED exists),
+                // hide all previously REJECTED evidences — show only the new submission.
+                const hasActiveEvidence = filtered.some(e => e.status !== 'REJECTED');
+                if (hasActiveEvidence) {
+                    filtered = filtered.filter(e => e.status !== 'REJECTED');
+                }
+
+                setEvidences(filtered);
+                // Always show the latest (last) evidence
+                setActiveEvidenceIndex(filtered.length > 0 ? filtered.length - 1 : 0);
             } catch (err) {
                 setEvidences([]);
             }
@@ -349,58 +359,27 @@ const MentorPerformance = () => {
                                             })()}
                                         </div>
 
-                                        {/* Navigation */}
-                                        {evidences.length > 1 && (
-                                            <>
-                                                <button
-                                                    onClick={() => setActiveEvidenceIndex(prev => Math.max(0, prev - 1))}
-                                                    className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/80 rounded-full shadow-lg hover:bg-white transition-all opacity-0 group-hover:opacity-100"
-                                                >
-                                                    {Icons.chevronLeft}
-                                                </button>
-                                                <button
-                                                    onClick={() => setActiveEvidenceIndex(prev => Math.min(evidences.length - 1, prev + 1))}
-                                                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/80 rounded-full shadow-lg hover:bg-white transition-all opacity-0 group-hover:opacity-100"
-                                                >
-                                                    {Icons.chevronRight}
-                                                </button>
-                                            </>
-                                        )}
                                     </div>
 
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex gap-2">
-                                            {evidences.map((e, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    onClick={() => setActiveEvidenceIndex(idx)}
-                                                    className={`w-16 h-16 rounded-xl border-2 cursor-pointer overflow-hidden transition-all ${activeEvidenceIndex === idx ? 'border-primary ring-4 ring-primary/20 scale-110' : 'border-transparent opacity-60 hover:opacity-100'}`}
-                                                >
-                                                    <img src={e.fileUrl} className="w-full h-full object-cover" />
-                                                </div>
-                                            ))}
+                                    {/* Approve / Reject buttons */}
+                                    {goals.find(g => g.goalId === activeGoalId)?.status === 'SUBMITTED' && (
+                                        <div className="flex gap-4 justify-end pt-2">
+                                            <button
+                                                onClick={() => handleUpdateGoalStatus('COMPLETED')}
+                                                disabled={actionLoading}
+                                                className="px-8 py-3 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50"
+                                            >
+                                                APPROVE GOAL
+                                            </button>
+                                            <button
+                                                onClick={() => handleUpdateGoalStatus('ACKNOWLEDGED')}
+                                                disabled={actionLoading}
+                                                className="px-8 py-3 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 transition-all shadow-lg shadow-rose-200 disabled:opacity-50"
+                                            >
+                                                REJECT GOAL
+                                            </button>
                                         </div>
-                                        <div className="flex flex-col gap-4">
-                                            {goals.find(g => g.goalId === activeGoalId)?.status === 'SUBMITTED' && (
-                                                <div className="flex gap-4 justify-end">
-                                                    <button
-                                                        onClick={() => handleUpdateGoalStatus('COMPLETED')}
-                                                        disabled={actionLoading}
-                                                        className="px-8 py-3 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50"
-                                                    >
-                                                        APPROVE GOAL
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleUpdateGoalStatus('ACKNOWLEDGED')}
-                                                        disabled={actionLoading}
-                                                        className="px-8 py-3 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 transition-all shadow-lg shadow-rose-200 disabled:opacity-50"
-                                                    >
-                                                        REJECT GOAL
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
                         </div>

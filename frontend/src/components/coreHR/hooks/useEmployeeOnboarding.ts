@@ -12,6 +12,14 @@ export const useEmployeeOnboarding = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [pageData, setPageData] = useState({
+    totalElements: 0,
+    totalPages: 0,
+    size: 10,
+    number: 0,
+  });
+  const [currentPage, setCurrentPage] = useState(0);
+
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,8 +63,21 @@ export const useEmployeeOnboarding = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiClient.get<OnboardingListResponse>(API_URL);
-      setOnboardingEmployees(response.data.onboardingEmployees ?? []);
+      const response = await apiClient.get<OnboardingListResponse>(API_URL, {
+        params: {
+          page: currentPage,
+          size: pageData.size,
+        },
+      });
+      setOnboardingEmployees(response.data.onboardingEmployees?.content ?? []);
+      if (response.data.onboardingEmployees) {
+        setPageData({
+          totalElements: response.data.onboardingEmployees.totalElements,
+          totalPages: response.data.onboardingEmployees.totalPages,
+          size: response.data.onboardingEmployees.size,
+          number: response.data.onboardingEmployees.number,
+        });
+      }
     } catch (err: unknown) {
       if (err instanceof Error && "response" in err) {
         const axErr = err as {
@@ -77,7 +98,7 @@ export const useEmployeeOnboarding = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage, pageData.size]);
 
   const handleResubmit = (app: Application) => {
     navigate(`/onboarding/${app.id}/profile?action=resubmit`);
@@ -111,5 +132,9 @@ export const useEmployeeOnboarding = () => {
 
     handleResubmit,
     handleCancel,
+    
+    currentPage,
+    setCurrentPage,
+    pageData,
   };
 };

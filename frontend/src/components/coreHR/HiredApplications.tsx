@@ -2,6 +2,7 @@ import React from "react";
 import FilterBar from "../../components/ui/FilterBar";
 import { Avatar, ErrorState, EmptyState } from "./shared";
 import SkeletonRow from "./shared/SkeletonRow";
+import Pagination from "./shared/Pagination";
 import { useHiredApplications } from "./hooks/useHiredApplications";
 
 interface HiredApplicationsProps {
@@ -23,6 +24,9 @@ const HiredApplications: React.FC<HiredApplicationsProps> = ({ onAction }) => {
     setSearchTerm,
     handleFilterChange,
     handleAction,
+    currentPage,
+    setCurrentPage,
+    pageData,
   } = useHiredApplications(onAction);
 
   if (error && !loading) {
@@ -127,6 +131,15 @@ const HiredApplications: React.FC<HiredApplicationsProps> = ({ onAction }) => {
           <EmptyState
             title="No candidates found"
             description="Hired candidates ready for onboarding will appear here."
+          />
+        )}
+        {!loading && filteredHired.length > 0 && pageData.totalPages > 1 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pageData.totalPages}
+            totalElements={pageData.totalElements}
+            pageSize={pageData.size}
+            onPageChange={setCurrentPage}
           />
         )}
       </div>

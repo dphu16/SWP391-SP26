@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import org.springframework.data.domain.Page;
+
 import java.util.List;
 
 @Data
@@ -13,6 +15,6 @@ import java.util.List;
 @Builder
 public class OnboardingListResponseDTO {
 
-    private List<OnboardingResponseDTO> hiredApplications;
-    private List<OnboardingResponseDTO> onboardingEmployees;
+    private Page<OnboardingResponseDTO> hiredApplications;
+    private Page<OnboardingResponseDTO> onboardingEmployees;
 }

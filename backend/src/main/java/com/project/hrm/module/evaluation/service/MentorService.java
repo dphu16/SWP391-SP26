@@ -59,7 +59,7 @@ public class MentorService {
     @Transactional
     public List<GoalEvidence> getEvidencesByGoal(UUID goalId) {
         List<GoalEvidence> evidences = evidenceRepository.findByGoal_GoalId(goalId);
-        
+
         // Backward compatibility: If no GoalEvidence rows exist but EmployeeGoal has an imageUrl, wrap it.
         if (evidences.isEmpty()) {
             com.project.hrm.module.evaluation.entity.EmployeeGoal goal = employeeGoalRepository.findById(goalId).orElse(null);
@@ -68,13 +68,25 @@ public class MentorService {
                 legacyEvidence.setGoal(goal);
                 legacyEvidence.setFileUrl(goal.getImageUrl());
                 legacyEvidence.setStatus(com.project.hrm.module.evaluation.enums.EvidenceStatus.PENDING);
-                
+
                 // Save it to database so it can be approved/rejected
                 GoalEvidence saved = evidenceRepository.save(legacyEvidence);
                 return List.of(saved);
             }
         }
-        
+
+        // If there are any PENDING or APPROVED evidences (employee resubmitted),
+        // only show those — hide old REJECTED ones.
+        boolean hasActiveEvidences = evidences.stream()
+                .anyMatch(e -> e.getStatus() != com.project.hrm.module.evaluation.enums.EvidenceStatus.REJECTED);
+
+        if (hasActiveEvidences) {
+            return evidences.stream()
+                    .filter(e -> e.getStatus() != com.project.hrm.module.evaluation.enums.EvidenceStatus.REJECTED)
+                    .toList();
+        }
+
+        // All rejected (no resubmission yet) — show all so mentor can see history
         return evidences;
     }
 

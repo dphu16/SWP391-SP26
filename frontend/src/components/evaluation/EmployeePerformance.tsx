@@ -366,7 +366,14 @@ const EmployeePerformance = () => {
                     </div>
                     <div className="bg-white dark:bg-surface-dark p-6 rounded-2xl border border-border-light shadow-sm">
                         <div className="text-[10px] font-black text-text-muted-light uppercase tracking-widest mb-1">Final Rating</div>
-                        <div className="text-2xl font-black text-emerald-500 italic uppercase">{activeReview.rating || 'PENDING'}</div>
+                        <div className="text-2xl font-black text-emerald-500 italic uppercase">
+                            {activeReview.rating || (
+                                activeReview.overallScore >= 90 ? 'Outstanding' :
+                                activeReview.overallScore >= 80 ? 'Exceeds Expectations' :
+                                activeReview.overallScore >= 65 ? 'Meets Expectations' :
+                                activeReview.overallScore > 0   ? 'Needs Improvement' : 'Processing'
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -816,7 +823,7 @@ const EmployeePerformance = () => {
                                     <span className="text-xs font-black text-amber-800 uppercase tracking-widest">Note from Management</span>
                                 </div>
                                 <p className="text-sm text-amber-900/70 font-medium italic whitespace-pre-wrap">
-                                    {activeReview.rating}
+                                    {activeReview.rating ? activeReview.rating : 'No additional comments provided.'}
                                 </p>
                             </div>
                         </div>

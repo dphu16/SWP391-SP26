@@ -3,6 +3,7 @@ import FilterBar from "../../components/ui/FilterBar";
 import type { FilterCategory } from "../../components/ui/FilterBar";
 import { Avatar, ErrorState, EmptyState } from "./shared";
 import SkeletonRow from "./shared/SkeletonRow";
+import Pagination from "./shared/Pagination";
 import { PROGRESS_STATUS_CONFIG } from "./shared/statusConfigs";
 import { useEmployeeOnboarding } from "./hooks/useEmployeeOnboarding";
 
@@ -39,6 +40,9 @@ const EmployeeOnboarding: React.FC = () => {
     handleFilterChange,
     handleResubmit,
     handleCancel,
+    currentPage,
+    setCurrentPage,
+    pageData,
   } = useEmployeeOnboarding();
 
   if (error && !loading) {
@@ -148,7 +152,7 @@ const EmployeeOnboarding: React.FC = () => {
                               </svg>
                             </button>
                           )}
-                          {(app.progressStatus === "PENDING_REVIEW" || app.progressStatus === "PENDING_VERIFY" || app.progressStatus === "REJECTED") && (
+                          {(app.progressStatus === "PENDING_REVIEW" || app.progressStatus === "REJECTED") && (
                             <button 
                               onClick={() => handleCancel(app)}
                               className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
@@ -171,6 +175,15 @@ const EmployeeOnboarding: React.FC = () => {
           <EmptyState
             title="No onboarding employees in progress"
             description="Employees with incomplete onboarding will appear here."
+          />
+        )}
+        {!loading && filteredOnboarding.length > 0 && pageData.totalPages > 1 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pageData.totalPages}
+            totalElements={pageData.totalElements}
+            pageSize={pageData.size}
+            onPageChange={setCurrentPage}
           />
         )}
       </div>

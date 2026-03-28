@@ -41,7 +41,7 @@ public class MentorAssessment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mentor_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personal", "contracts", "dependents", "user", "department", "position", "manager"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personal", "contract", "dependents", "user", "department", "position", "manager", "mentor"})
     private Employee mentor;
 
     @CreationTimestamp

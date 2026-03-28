@@ -286,7 +286,7 @@ export const PersonnelChangeModalContent: React.FC<{
     pcEmployee: AttendanceEmployee | null;
     setPcEmployee: (emp: AttendanceEmployee | null) => void;
     departments: { id: string; name: string }[];
-    positions: { id: string; name: string }[];
+    positions: { id: string; name?: string; title?: string }[];
 }> = ({ formData, setFormData, pcEmployee, setPcEmployee, departments, positions }) => (
     <div className="space-y-4">
         <div>
@@ -341,7 +341,7 @@ export const PersonnelChangeModalContent: React.FC<{
                     >
                         <option value="">Select Position...</option>
                         {positions.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
+                            <option key={p.id} value={p.id}>{p.title || p.name || p.id}</option>
                         ))}
                     </select>
                 </div>

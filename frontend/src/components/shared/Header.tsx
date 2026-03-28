@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getToken, removeToken } from "../../services/authService";
+import { getToken, removeToken, getRefreshToken } from "../../services/authService";
+import { broadcastLogout } from "../../services/authService";
 import { decodeJwt } from "../../utils/jwtDecode";
-import apiClient from "../../services/apiClient";
+import apiClient, { setLoggingOut } from "../../services/apiClient";
 import Breadcrumb from "../navigation/Breadcrumb";
 
 
@@ -313,17 +314,30 @@ const Header: React.FC = () => {
                   label="Logout"
                   onClick={async () => {
                     setDropdownOpen(false);
+
+                    // ── Step 1: Set logout guard FIRST to prevent the Axios interceptor
+                    //    from auto-refreshing the access token during the API call ──
+                    setLoggingOut(true);
+
+                    // ── Step 2: Clear all tokens from storage immediately so that no
+                    //    in-flight request or background poll can use them ──
+                    const refreshToken = getRefreshToken();
+                    removeToken();
+                    localStorage.removeItem("hrm_ai_messages");
+                    localStorage.removeItem("hrm_ai_activeExtractedData");
+                    localStorage.removeItem("hrm_ai_activeFileBase64");
+
+                    // ── Step 2b: Broadcast logout to all other tabs (BroadcastChannel + storage event) ──
+                    broadcastLogout();
+
+                    // ── Step 3: Tell the backend to invalidate the refresh token in DB ──
                     try {
-                      await apiClient.post("/api/auth/logout");
+                      await apiClient.post("/api/auth/logout", { refreshToken });
                     } catch (error) {
-                      console.error("Logout error", error);
+                      // Even if the API call fails, the user is already logged out locally
+                      console.error("Logout API error (ignored):", error);
                     } finally {
-                      // Clear AI chat history on logout
-                      localStorage.removeItem("hrm_ai_messages");
-                      localStorage.removeItem("hrm_ai_activeExtractedData");
-                      localStorage.removeItem("hrm_ai_activeFileBase64");
-                      
-                      removeToken();
+                      setLoggingOut(false);
                       navigate("/login", { replace: true });
                     }
                   }}

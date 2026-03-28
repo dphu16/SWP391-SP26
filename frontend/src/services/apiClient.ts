@@ -7,12 +7,20 @@ import {
   saveRefreshToken,
   removeToken,
   refreshAccessToken,
+  getIsLoggedOut,
 } from "./authService";
 
 const apiClient = axios.create({
   baseURL: "/",
   headers: { "Content-Type": "application/json" },
 });
+
+// ── Logout guard: blocks all token refresh attempts during/after logout ──
+let isLoggingOut = false;
+
+export function setLoggingOut(value: boolean) {
+  isLoggingOut = value;
+}
 
 // ── Refresh-lock: prevent multiple concurrent refresh calls ──
 let isRefreshing = false;
@@ -65,6 +73,11 @@ apiClient.interceptors.response.use(
     // Don't try to refresh on auth endpoints themselves (prevents infinite loops)
     const url = originalRequest.url || "";
     if (url.includes("/api/auth/")) {
+      return Promise.reject(error);
+    }
+
+    // ── LOGOUT GUARD: Do NOT refresh if logout is in progress OR already logged out ──
+    if (isLoggingOut || getIsLoggedOut()) {
       return Promise.reject(error);
     }
 

@@ -7,6 +7,8 @@ import {
   saveToken,
   saveRefreshToken,
   refreshAccessToken,
+  subscribeCrossTabLogout,
+  getIsLoggedOut,
 } from "../../services/authService";
 import { decodeJwt } from "../../utils/jwtDecode";
 import type { UserRole } from "../../hooks/useAuth";
@@ -64,9 +66,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // ── Cross-tab logout listener: if another tab logs out, force logout here too ──
+  useEffect(() => {
+    const unsubscribe = subscribeCrossTabLogout(() => {
+      // Clear any remaining tokens on this tab
+      removeToken();
+      // Hard redirect so all React state is reset cleanly
+      window.location.replace("/login");
+    });
+    return unsubscribe;
+  }, []);
+
   // When the access token is missing or invalid, try to restore session
   // using the refresh token before forcing a redirect to login.
   useEffect(() => {
+    // Do NOT refresh if this tab (or another tab) has already logged out
+    if (getIsLoggedOut()) return;
+
     if (!payload && !isRefreshing) {
       const refreshToken = getRefreshToken();
       if (refreshToken) {

@@ -15,7 +15,8 @@ function subscribeToStorage(callback: () => void) {
 
 export type UserRole =
     | "HR" | "MANAGER" | "EMPLOYEE"
-    | "FINANCE" | "MENTOR";
+    | "FINANCE" | "MENTOR"
+    | "INTERN" | "PROBATION";
 
 export interface AuthUser {
     username: string;

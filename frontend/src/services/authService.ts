@@ -1,6 +1,21 @@
 const TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
 const REMEMBER_ME_KEY = "remember_me";
+const LOGOUT_EVENT_KEY = "logout_event";
+
+// ── In-memory logout flag (module-level, survives re-renders, clears on reload) ──
+let _isLoggedOut = false;
+
+export function getIsLoggedOut(): boolean {
+  return _isLoggedOut;
+}
+
+// ── BroadcastChannel for real-time cross-tab communication ──
+// Falls back gracefully if BroadcastChannel is unavailable.
+const _channel: BroadcastChannel | null =
+  typeof BroadcastChannel !== "undefined"
+    ? new BroadcastChannel("hrm_auth")
+    : null;
 
 export interface LoginRequest {
   email: string;
@@ -92,6 +107,60 @@ export function removeToken(): void {
   localStorage.removeItem(REMEMBER_ME_KEY);
   sessionStorage.removeItem(REMEMBER_ME_KEY);
   window.dispatchEvent(new Event("auth-change"));
+}
+
+/**
+ * Broadcast a logout event to all other tabs.
+ * Call this AFTER removeToken() so storage is already cleared.
+ * Uses BroadcastChannel (realtime) + localStorage event (fallback).
+ */
+export function broadcastLogout(): void {
+  _isLoggedOut = true;
+
+  // BroadcastChannel – direct, no-storage-flush needed
+  if (_channel) {
+    _channel.postMessage({ type: "LOGOUT" });
+  }
+
+  // localStorage fallback: other tabs listen via the native "storage" event.
+  // We write a timestamp so repeated logouts always trigger a new event.
+  localStorage.setItem(LOGOUT_EVENT_KEY, String(Date.now()));
+  // Remove immediately so the key doesn't persist; the event already fired.
+  localStorage.removeItem(LOGOUT_EVENT_KEY);
+}
+
+/**
+ * Register cross-tab logout listeners on a tab.
+ * The provided `onLogout` callback will execute when another tab logs out.
+ * Returns a cleanup function to deregister listeners.
+ */
+export function subscribeCrossTabLogout(onLogout: () => void): () => void {
+  // BroadcastChannel handler
+  const channelHandler = (event: MessageEvent) => {
+    if (event.data?.type === "LOGOUT") {
+      _isLoggedOut = true;
+      onLogout();
+    }
+  };
+  if (_channel) {
+    _channel.addEventListener("message", channelHandler);
+  }
+
+  // localStorage storage-event fallback
+  const storageHandler = (event: StorageEvent) => {
+    if (event.key === LOGOUT_EVENT_KEY) {
+      _isLoggedOut = true;
+      onLogout();
+    }
+  };
+  window.addEventListener("storage", storageHandler);
+
+  return () => {
+    if (_channel) {
+      _channel.removeEventListener("message", channelHandler);
+    }
+    window.removeEventListener("storage", storageHandler);
+  };
 }
 
 export function isAuthenticated(): boolean {

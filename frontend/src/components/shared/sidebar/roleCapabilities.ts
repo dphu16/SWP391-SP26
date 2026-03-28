@@ -19,12 +19,12 @@ const capabilityRoles: Record<SidebarCapability, UserRole[]> = {
   "onboarding:manage": ["HR"],
   "offboarding:manage": ["HR", "MANAGER"],
   "request:review": ["HR", "MANAGER"],
-  "attendance:manage": ["HR", "MANAGER"],
+  "attendance:manage": ["HR", "MANAGER","EMPLOYEE","FINANCE"],
   "payroll:admin": ["HR", "MANAGER", "FINANCE"],
-  "performance:view": ["HR", "MANAGER", "EMPLOYEE", "MENTOR", "INTERN", "PROBATION"],
+  "performance:view": ["HR", "MANAGER", "EMPLOYEE", "MENTOR"],
   "recruitment:view": ["HR", "MANAGER"],
   "cnb:manage": ["HR", "MANAGER"],
-  "cnb:view": ["HR", "MANAGER", "EMPLOYEE", "INTERN", "PROBATION", "FINANCE", "MENTOR"],
+  "cnb:view": ["HR", "MANAGER", "EMPLOYEE", "FINANCE", "MENTOR"],
 };
 
 const routeCapabilityMap: Array<{

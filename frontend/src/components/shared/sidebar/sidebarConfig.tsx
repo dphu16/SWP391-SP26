@@ -159,7 +159,7 @@ export const sidebarConfig: SidebarSection[] = [
         label: "Performance",
         path: "/performance",
         icon: Icons.performance,
-        roles: ["HR", "MANAGER"] as UserRole[],
+        roles: ["HR", "MANAGER", "EMPLOYEE", "MENTOR"] as UserRole[],
       },
     ],
   },

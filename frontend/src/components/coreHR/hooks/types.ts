@@ -17,15 +17,13 @@ export interface Employee {
   statusEmp: string;
 }
 
-// Spring Boot 3.x Page<T> response wrapper
+// Spring Boot Page<T> response wrapper
 export interface PageResponse<T> {
   content: T[];
-  page: {
-    totalElements: number;
-    totalPages: number;
-    size: number;
-    number: number;
-  };
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
 }
 
 export interface NavItem {
@@ -56,8 +54,8 @@ export interface Application {
 
 // New API response: GET /api/applications/hired
 export interface OnboardingListResponse {
-  hiredApplications: Application[];
-  onboardingEmployees: Application[];
+  hiredApplications: PageResponse<Application>;
+  onboardingEmployees: PageResponse<Application>;
 }
 
 // DTO để tạo nhân viên mới (POST /api/employees/new)

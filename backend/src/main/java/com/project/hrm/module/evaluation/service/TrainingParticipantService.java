@@ -13,6 +13,8 @@ import com.project.hrm.module.evaluation.dto.PlanTrainingRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.annotation.PostConstruct;
+import org.springframework.jdbc.core.JdbcTemplate;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -24,15 +26,28 @@ public class TrainingParticipantService {
     private final TrainingCourseRepository courseRepository;
     private final EmployeeRepository employeeRepository;
     private final PerformanceReviewsRepository reviewRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public TrainingParticipantService(TrainingParticipantRepository repository,
                                      TrainingCourseRepository courseRepository,
                                      EmployeeRepository employeeRepository,
-                                     PerformanceReviewsRepository reviewRepository) {
+                                     PerformanceReviewsRepository reviewRepository,
+                                     JdbcTemplate jdbcTemplate) {
         this.repository = repository;
         this.courseRepository = courseRepository;
         this.employeeRepository = employeeRepository;
         this.reviewRepository = reviewRepository;
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @PostConstruct
+    public void dropObsoleteCheckConstraint() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE training_participants DROP CONSTRAINT IF EXISTS training_participants_status_check;");
+            System.out.println(">>> Successfully dropped obsolete DB constraint: training_participants_status_check");
+        } catch (Exception e) {
+            System.err.println(">>> Could not drop check constraint (might not exist): " + e.getMessage());
+        }
     }
 
     @Transactional

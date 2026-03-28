@@ -45,6 +45,9 @@ export const useActivation = () => {
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   useEffect(() => {
     if (!token) {
       setError("No activation token found in the URL.");
@@ -108,7 +111,20 @@ export const useActivation = () => {
       setInfo(res);
       setStep(2);
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to set password.");
+      const serverError = err?.response?.data;
+      
+      // Update: Server returns errors as List<Map<String, String>>
+      if (Array.isArray(serverError?.errors)) {
+        const errorMap: Record<string, string> = {};
+        serverError.errors.forEach((errObj: any) => {
+          if (errObj.field && errObj.message) {
+            errorMap[errObj.field] = errObj.message;
+          }
+        });
+        setErrors(errorMap);
+      }
+      
+      setError(serverError?.message || "Failed to set password.");
     } finally {
       setLoading(false);
     }
@@ -147,8 +163,20 @@ export const useActivation = () => {
       setInfo(res);
       setStep(3); // Go to Avatar Upload
     } catch (err: any) {
+      const serverError = err?.response?.data;
+
+      if (Array.isArray(serverError?.errors)) {
+        const errorMap: Record<string, string> = {};
+        serverError.errors.forEach((errObj: any) => {
+          if (errObj.field && errObj.message) {
+            errorMap[errObj.field] = errObj.message;
+          }
+        });
+        setErrors(errorMap);
+      }
+
       setError(
-        err?.response?.data?.message || "Failed to save emergency contact.",
+        serverError?.message || "Failed to save emergency contact.",
       );
     } finally {
       setLoading(false);
@@ -220,7 +248,19 @@ export const useActivation = () => {
       });
       setDone(true);
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to save bank account.");
+      const serverError = err?.response?.data;
+
+      if (Array.isArray(serverError?.errors)) {
+        const errorMap: Record<string, string> = {};
+        serverError.errors.forEach((errObj: any) => {
+          if (errObj.field && errObj.message) {
+            errorMap[errObj.field] = errObj.message;
+          }
+        });
+        setErrors(errorMap);
+      }
+
+      setError(serverError?.message || "Failed to save bank account.");
     } finally {
       setLoading(false);
     }
@@ -264,5 +304,10 @@ export const useActivation = () => {
 
     avatarFile,
     setAvatarFile,
+
+    showNewPassword,
+    setShowNewPassword,
+    showConfirmPassword,
+    setShowConfirmPassword,
   };
 };

@@ -525,71 +525,9 @@ const ManagerPerformance = () => {
                                                         Acknowledged
                                                     </div>
                                                 ) : kpi.status === 'SUBMITTED' ? (
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <button
-                                                            onClick={async () => {
-                                                                try {
-                                                                    await kpiService.updateEmployeeGoalStatus(kpi.goalId, 'COMPLETED');
-                                                                    const updated = await kpiService.getGoalsByEmployeeAndCycle(activeEmployee!.employeeId, activeCycleId!);
-                                                                    const allLibs = await kpiService.getAllKpiLibraries();
-                                                                    const formatted = updated.map((g: any) => {
-                                                                        const lib = allLibs.find(l => l.libId === (g.kpiLibrary?.libId || g.kpiLibraryId));
-                                                                        const mt = lib?.measurementType || "NUMERIC";
-                                                                        return {
-                                                                            goalId: g.goalId,
-                                                                            cycleId: g.cycle?.cycleId,
-                                                                            kpiLibraryId: g.kpiLibrary?.libId || g.kpiLibraryId,
-                                                                            name: g.title || lib?.name || "Unknown",
-                                                                            category: lib?.category || g.kpiLibrary?.category || "N/A",
-                                                                            description: lib?.description || "",
-                                                                            measurementType: mt,
-                                                                            weight: g.weight || lib?.defaultWeight || 0,
-                                                                            status: g.status,
-                                                                            _targetValue: String(g.targetValue || 0),
-                                                                            _isAssigned: !!g.targetValue && g.targetValue > 0
-                                                                        };
-                                                                    });
-                                                                    setKpis(formatted);
-                                                                } catch (e: any) {
-                                                                    setActionMessage({ type: 'error', text: e.response?.data?.message || 'Failed to approve' });
-                                                                }
-                                                            }}
-                                                            className="px-3 py-1.5 bg-emerald-500 text-white hover:bg-emerald-600 text-[10px] font-bold rounded-lg uppercase tracking-widest transition-all"
-                                                        >
-                                                            Approve
-                                                        </button>
-                                                        <button
-                                                            onClick={async () => {
-                                                                try {
-                                                                    await kpiService.updateEmployeeGoalStatus(kpi.goalId, 'ACKNOWLEDGED', 'Rejected by Manager');
-                                                                    const updated = await kpiService.getGoalsByEmployeeAndCycle(activeEmployee!.employeeId, activeCycleId!);
-                                                                    const allLibs = await kpiService.getAllKpiLibraries();
-                                                                    const formatted = updated.map((g: any) => {
-                                                                        const lib = allLibs.find(l => l.libId === (g.kpiLibrary?.libId || g.kpiLibraryId));
-                                                                        const mt = lib?.measurementType || "NUMERIC";
-                                                                        return {
-                                                                            goalId: g.goalId,
-                                                                            cycleId: g.cycle?.cycleId,
-                                                                            kpiLibraryId: g.kpiLibrary?.libId || g.kpiLibraryId,
-                                                                            name: g.title || lib?.name || "Unknown",
-                                                                            category: lib?.category || g.kpiLibrary?.category || "N/A",
-                                                                            description: lib?.description || "",
-                                                                            measurementType: mt,
-                                                                            weight: g.weight || lib?.defaultWeight || 0,
-                                                                            status: g.status,
-                                                                            _targetValue: String(g.targetValue || 0),
-                                                                            _isAssigned: !!g.targetValue && g.targetValue > 0
-                                                                        };
-                                                                    });
-                                                                    setKpis(formatted);
-                                                                } catch (e: any) {
-                                                                    setActionMessage({ type: 'error', text: e.response?.data?.message || 'Failed to reject' });
-                                                                }
-                                                            }}
-                                                            className="px-3 py-1.5 bg-rose-500 text-white hover:bg-rose-600 text-[10px] font-bold rounded-lg uppercase tracking-widest transition-all"
-                                                        >
-                                                            Reject
-                                                        </button>
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 text-indigo-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-indigo-500/20">
+                                                        <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd"/></svg>
+                                                        Pending Mentor
                                                     </div>
                                                 ) : kpi.status === 'COMPLETED' ? (
                                                     <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-emerald-500/20">

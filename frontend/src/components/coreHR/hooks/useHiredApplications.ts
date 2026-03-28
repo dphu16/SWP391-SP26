@@ -13,6 +13,14 @@ export const useHiredApplications = (
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [pageData, setPageData] = useState({
+    totalElements: 0,
+    totalPages: 0,
+    size: 10,
+    number: 0,
+  });
+  const [currentPage, setCurrentPage] = useState(0);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filter, setFilter] = useState({
@@ -54,8 +62,21 @@ export const useHiredApplications = (
     try {
       setLoading(true);
       setError(null);
-      const response = await apiClient.get<OnboardingListResponse>(API_URL);
-      setHiredApplications(response.data.hiredApplications ?? []);
+      const response = await apiClient.get<OnboardingListResponse>(API_URL, {
+        params: {
+          page: currentPage,
+          size: pageData.size,
+        },
+      });
+      setHiredApplications(response.data.hiredApplications?.content ?? []);
+      if (response.data.hiredApplications) {
+        setPageData({
+          totalElements: response.data.hiredApplications.totalElements,
+          totalPages: response.data.hiredApplications.totalPages,
+          size: response.data.hiredApplications.size,
+          number: response.data.hiredApplications.number,
+        });
+      }
     } catch (err: unknown) {
       if (err instanceof Error && "response" in err) {
         const axErr = err as {
@@ -76,7 +97,7 @@ export const useHiredApplications = (
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage, pageData.size]);
 
   const handleAction = (app: Application, actionType: "init" | "continue") => {
     const params = new URLSearchParams({
@@ -98,5 +119,9 @@ export const useHiredApplications = (
     setSearchTerm,
     handleFilterChange,
     handleAction,
+    
+    currentPage,
+    setCurrentPage,
+    pageData,
   };
 };

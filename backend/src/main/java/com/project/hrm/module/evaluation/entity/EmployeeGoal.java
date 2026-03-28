@@ -25,7 +25,7 @@ public class EmployeeGoal {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personal", "contract", "dependent", "user", "department", "position", "manager"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personal", "contract", "dependents", "user", "department", "position", "manager", "mentor"})
     private Employee employee;
 
     @ManyToOne(fetch = FetchType.LAZY)

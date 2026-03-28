@@ -19,13 +19,15 @@ import com.project.hrm.module.corehr.service.helper.EmployeeHelper;
 import com.project.hrm.module.recruitment.repository.ApplicationRepository;
 import com.project.hrm.module.request.entity.Request;
 import com.project.hrm.module.request.repository.RequestRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class OnboardingService implements IOnboardingService {
@@ -57,16 +59,16 @@ public class OnboardingService implements IOnboardingService {
     @Override
     @Transactional(readOnly = true)
     public OnboardingListResponseDTO getOnboardingList(Pageable pageable) {
-        List<OnboardingResponseDTO> hiredApplications = applicationRepository
+        Page<OnboardingResponseDTO> hiredApplications = applicationRepository
                 .findByStatus(ApplicationStatus.OFFER, pageable)
-                .map(OnboardingMapper::toDTO)
-                .getContent();
+                .map(OnboardingMapper::toDTO);
 
-        List<OnboardingResponseDTO> onboardingEmployees = employeeRepository
-                .findByEmpStatusNot(ProgressStatus.COMPLETED)
-                .stream()
-                .map(emp -> OnboardingMapper.fromEmployee(emp, null)) // No longer checking for rejection
-                .collect(Collectors.toList());
+        // Strip the sorting to prevent mapping errors since Employee lacks 'createdAt' property
+        PageRequest employeePageRequest = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.unsorted());
+
+        Page<OnboardingResponseDTO> onboardingEmployees = employeeRepository
+                .findByEmpStatusNot(ProgressStatus.COMPLETED, employeePageRequest)
+                .map(emp -> OnboardingMapper.fromEmployee(emp, null));
 
         return OnboardingListResponseDTO.builder()
                 .hiredApplications(hiredApplications)

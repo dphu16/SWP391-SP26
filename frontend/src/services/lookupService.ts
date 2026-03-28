@@ -7,8 +7,10 @@ export interface LookupDepartment {
 
 export interface LookupPosition {
     id: string;
-    name: string;
-    title?: string;
+    title: string;
+    name?: string;        // alias kept for backward compat (some APIs may still use it)
+    deptId?: string;
+    deptName?: string;
     baseSalaryMin?: number;
     baseSalaryMax?: number;
 }

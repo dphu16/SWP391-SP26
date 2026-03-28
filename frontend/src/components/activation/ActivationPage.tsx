@@ -45,6 +45,10 @@ const ActivationPage: React.FC = () => {
     setAccountHolderName,
     avatarFile,
     setAvatarFile,
+    showNewPassword,
+    setShowNewPassword,
+    showConfirmPassword,
+    setShowConfirmPassword,
   } = activationProps;
 
   // ── Error / no-token state ──
@@ -120,6 +124,10 @@ const ActivationPage: React.FC = () => {
                 confirmPassword={confirmPassword}
                 setConfirmPassword={setConfirmPassword}
                 errors={errors}
+                showNewPassword={showNewPassword}
+                setShowNewPassword={setShowNewPassword}
+                showConfirmPassword={showConfirmPassword}
+                setShowConfirmPassword={setShowConfirmPassword}
               />
             )}
 
